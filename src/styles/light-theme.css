@@ -1,0 +1,94 @@
+/* Light Theme Variables */
+:root[data-theme="light"] {
+  /* Light Theme Colors */
+  --color-background: #ffffff;
+  --color-surface: #f8f9fa;
+  --color-surface-hover: #f1f3f4;
+  --color-sidebar: #ffffff;
+  
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #9ca3af;
+  
+  --color-accent: #3b82f6;
+  --color-accent-hover: #2563eb;
+  --color-accent-light: rgba(59, 130, 246, 0.1);
+  
+  --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
+  
+  --color-input-bg: #ffffff;
+  --color-input-border: #d1d5db;
+  --color-input-focus: #3b82f6;
+  
+  /* Keep invoice preview the same */
+  --color-invoice-bg: #ffffff;
+  --color-invoice-text: #1d1d1f;
+  --color-invoice-text-secondary: #86868b;
+  
+  /* Shadows for light theme */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Light theme specific overrides */
+:root[data-theme="light"] .company-logo {
+  filter: none;
+  opacity: 1;
+}
+
+:root[data-theme="light"] .company-logo:hover {
+  opacity: 0.8;
+}
+
+:root[data-theme="light"] .invoice-logo {
+  filter: none;
+  opacity: 1;
+}
+
+:root[data-theme="light"] .app-header {
+  background: var(--color-background);
+  border-bottom: 1px solid var(--color-border);
+}
+
+:root[data-theme="light"] .preview-panel {
+  background: #f8f9fa;
+}
+
+:root[data-theme="light"] .invoice-preview {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme="light"] .dark-preview .theme-circle {
+  background: #3b82f6;
+}
+
+:root[data-theme="light"] .dark-preview .theme-bar {
+  background: #d1d5db;
+}
+
+/* Light theme scrollbars */
+:root[data-theme="light"] .input-panel::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+
+:root[data-theme="light"] .input-panel::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+}
+
+:root[data-theme="light"] .input-panel::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+:root[data-theme="light"] .preview-panel::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+
+:root[data-theme="light"] .preview-panel::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+}
+
+:root[data-theme="light"] .sidebar-content::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+}

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test New Invoice Button</title>
+</head>
+<body>
+    <h1>Testing New Invoice Button</h1>
+    <script>
+        // Test if the page loads at all
+        console.log('=== STARTING TEST ===');
+        
+        // Load the actual page
+        fetch('http://localhost:3000')
+            .then(response => response.text())
+            .then(html => {
+                console.log('✅ Page loaded successfully');
+                
+                // Create iframe to test functionality
+                const iframe = document.createElement('iframe');
+                iframe.src = 'http://localhost:3000';
+                iframe.style.width = '100%';
+                iframe.style.height = '800px';
+                document.body.appendChild(iframe);
+                
+                // Wait for iframe to load
+                iframe.onload = function() {
+                    console.log('✅ Iframe loaded');
+                    
+                    // Test after delay
+                    setTimeout(() => {
+                        try {
+                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            const app = iframe.contentWindow.app;
+                            const sidebar = iframeDoc.querySelector('.app-sidebar');
+                            const newBtn = iframeDoc.querySelector('.new-invoice-btn');
+                            
+                            console.log('🔍 App object:', !!app);
+                            console.log('🔍 Sidebar element:', !!sidebar);
+                            console.log('🔍 New invoice button:', !!newBtn);
+                            
+                            if (newBtn) {
+                                console.log('🔥 CLICKING BUTTON');
+                                newBtn.click();
+                                console.log('🔥 BUTTON CLICKED');
+                            } else {
+                                console.error('❌ NEW INVOICE BUTTON NOT FOUND');
+                            }
+                            
+                        } catch (error) {
+                            console.error('❌ Test failed:', error);
+                        }
+                    }, 2000);
+                };
+            })
+            .catch(error => {
+                console.error('❌ Failed to load page:', error);
+            });
+    </script>
+</body>
+</html>

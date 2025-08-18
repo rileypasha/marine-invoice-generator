@@ -1,0 +1,86 @@
+@media print {
+  /* Hide non-printable elements */
+  .app-header,
+  .input-panel,
+  .tab-navigation,
+  .action-buttons,
+  .trash-icon,
+  .remove-line-item {
+    display: none !important;
+  }
+
+  /* Reset page margins */
+  @page {
+    margin: 0.5in;
+    size: letter;
+  }
+
+  /* Full width for print */
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+
+  .app-container {
+    height: auto;
+  }
+
+  .main-content {
+    display: block;
+  }
+
+  .preview-panel {
+    padding: 0;
+    background: white;
+  }
+
+  .invoice-preview {
+    box-shadow: none;
+    padding: 0;
+    max-width: 100%;
+  }
+
+  /* Ensure proper page breaks */
+  .invoice-section {
+    page-break-inside: avoid;
+  }
+
+  .invoice-table {
+    page-break-inside: avoid;
+  }
+
+  /* Print-specific text adjustments */
+  .invoice-header h2 {
+    color: black;
+  }
+
+  .total-final {
+    color: black;
+  }
+
+  /* Remove shadows and borders for cleaner print */
+  .card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+
+  /* Ensure logos print properly */
+  .invoice-logo {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Table styling for print */
+  .invoice-table th {
+    background: #f5f5f5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ensure colors print */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
