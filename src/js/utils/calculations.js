@@ -49,7 +49,13 @@ export function calculateTotals(lineItems, markupRate, isTaxable, vesselWeight) 
   lineItems.forEach(item => {
     const cost = calculateLineItemCost(item);
     baseCost += cost;
-    subtotal += applyMarkup(cost, markupRate);
+    
+    // Skip markup for Labor items since $80/$120 rates are already marked up
+    if (item.jobType === 'Manual Entry' && item.itemType === 'Labor') {
+      subtotal += cost; // Use cost directly without markup
+    } else {
+      subtotal += applyMarkup(cost, markupRate);
+    }
   });
   
   const clearanceFee = calculateClearanceFee(vesselWeight);

@@ -44,7 +44,7 @@ export class Sidebar {
       <div class="sidebar-content">
         <div class="sidebar-section">
           <div class="section-header">
-            <h3>Recent</h3>
+            <h3>Saved</h3>
           </div>
           <div class="invoice-list" id="recent-list">
             <div class="empty-state">
@@ -78,7 +78,7 @@ export class Sidebar {
       </div>
       
       <div class="sidebar-footer">
-        <div class="user-section" id="user-section" style="display: none;">
+        <button class="user-section" id="user-section" style="display: none;" title="Settings">
           <div class="user-info">
             <div class="user-avatar">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -91,15 +91,7 @@ export class Sidebar {
               <div class="user-email" id="user-email">user@example.com</div>
             </div>
           </div>
-          <div class="user-actions">
-            <button class="action-btn" id="settings-btn" title="Settings">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="m12 1 2.09 6.26L22 9l-6.26 2.09L14 17l-2.09-6.26L4 9l6.26-2.09L12 1z"/>
-              </svg>
-            </button>
-          </div>
-        </div>
+        </button>
         
         <div class="auth-section" id="auth-section">
           <button class="auth-btn primary" id="sign-in-btn">Sign In</button>
@@ -170,31 +162,44 @@ export class Sidebar {
     console.log('🔍 Sign-in button found:', !!signInBtn);
     
     if (signInBtn) {
-      signInBtn.addEventListener('click', () => {
+      console.log('✅ Sign-in button found, adding click listener');
+      signInBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         console.log('🔐 Sign-in button clicked');
+        console.log('🔍 AuthModal available:', !!this.authModal);
+        
         try {
           if (!this.authModal) {
             console.error('❌ AuthModal not available');
+            alert('Authentication system not available');
             return;
           }
+          
+          console.log('📺 Calling authModal.show(signin)...');
           this.authModal.show('signin');
           console.log('✅ AuthModal.show() called successfully');
         } catch (error) {
           console.error('❌ Error showing auth modal:', error);
+          alert(`Error: ${error.message}`);
         }
       });
     } else {
       console.error('❌ Sign-in button not found!');
+      console.log('🔍 Available buttons:', this.sidebar.querySelectorAll('button'));
     }
     
     this.sidebar.querySelector('#sign-up-btn').addEventListener('click', () => {
       this.authModal.show('signup');
     });
     
-    // Settings button
-    this.sidebar.querySelector('#settings-btn').addEventListener('click', () => {
-      this.settingsModal.show();
-    });
+    // User section click - opens settings
+    const userSection = this.sidebar.querySelector('#user-section');
+    if (userSection) {
+      userSection.addEventListener('click', () => {
+        this.settingsModal.show();
+      });
+    }
   }
   
   setupSubscriptions() {
@@ -216,7 +221,7 @@ export class Sidebar {
     
     if (user) {
       // Show user section
-      userSection.style.display = 'block';
+      userSection.style.display = 'flex';
       authSection.style.display = 'none';
       
       // Update user info
@@ -230,15 +235,15 @@ export class Sidebar {
   }
   
   refreshInvoiceList() {
-    this.updateRecentList();
+    this.updateSavedList();
     this.updateDraftsList();
   }
   
-  updateRecentList() {
+  updateSavedList() {
     const container = this.sidebar.querySelector('#recent-list');
-    const recent = this.invoiceStorage.getRecentItems(5);
+    const saved = this.invoiceStorage.getSavedItems(5);
     
-    if (recent.length === 0) {
+    if (saved.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -248,12 +253,12 @@ export class Sidebar {
             <line x1="16" y1="17" x2="8" y2="17"/>
             <polyline points="10,9 9,9 8,9"/>
           </svg>
-          <p>No recent invoices</p>
+          <p>No saved invoices</p>
           <span>Create your first invoice to get started</span>
         </div>
       `;
     } else {
-      container.innerHTML = recent.map(item => this.createInvoiceItem(item)).join('');
+      container.innerHTML = saved.map(item => this.createInvoiceItem(item)).join('');
     }
   }
   
@@ -279,12 +284,13 @@ export class Sidebar {
   createInvoiceItem(item) {
     const isCompleted = item.status === 'completed';
     const relativeTime = this.getRelativeTime(item.updatedAt);
+    const isAutoSave = item.title.includes('Auto-Save');
     
     return `
       <div class="invoice-item ${item.status}" data-id="${item.id}">
         <div class="invoice-item-content" data-action="load">
           <div class="invoice-item-header">
-            <div class="invoice-title">${this.truncateText(item.title, 25)}</div>
+            <div class="invoice-title" title="${item.title}">${item.title}</div>
             <div class="invoice-status ${item.status}">
               ${isCompleted ? 
                 '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>' :
@@ -294,16 +300,10 @@ export class Sidebar {
           </div>
           <div class="invoice-item-meta">
             <span class="invoice-vessel">${item.metadata.vesselName || 'No vessel'}</span>
-            <span class="invoice-time">${relativeTime}</span>
+            ${!isAutoSave ? `<span class="invoice-time">${relativeTime}</span>` : ''}
           </div>
         </div>
         <div class="invoice-item-actions">
-          <button class="action-btn" data-action="duplicate" title="Duplicate">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-            </svg>
-          </button>
           <button class="action-btn danger" data-action="delete" title="Delete">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3,6 5,6 21,6"/>
@@ -327,9 +327,6 @@ export class Sidebar {
       switch (action) {
         case 'load':
           this.loadInvoice(id);
-          break;
-        case 'duplicate':
-          this.duplicateInvoice(id);
           break;
         case 'delete':
           this.deleteInvoice(id);

@@ -35,11 +35,11 @@ export class CustomerForm {
     
     this.customerPhone.addEventListener('input', (e) => {
       const cleaned = e.target.value.replace(/\D/g, '');
-      if (cleaned.length <= 10) {
-        const formatted = formatPhoneNumber(cleaned);
-        e.target.value = formatted;
-        this.state.updateCustomer({ customerPhone: formatted });
-      }
+      // Limit to 10 digits max
+      const limited = cleaned.slice(0, 10);
+      const formatted = formatPhoneNumber(limited);
+      e.target.value = formatted;
+      this.state.updateCustomer({ customerPhone: formatted });
     });
   }
   

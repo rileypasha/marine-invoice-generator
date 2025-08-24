@@ -10,16 +10,16 @@
   --color-text-secondary: #6b7280;
   --color-text-tertiary: #9ca3af;
   
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
-  --color-accent-light: rgba(59, 130, 246, 0.1);
+  --color-accent: #19c37d;
+  --color-accent-hover: #1a7f5a;
+  --color-accent-light: rgba(25, 195, 125, 0.1);
   
   --color-border: #e5e7eb;
   --color-border-light: #f3f4f6;
   
   --color-input-bg: #ffffff;
   --color-input-border: #d1d5db;
-  --color-input-focus: #3b82f6;
+  --color-input-focus: #19c37d;
   
   /* Keep invoice preview the same */
   --color-invoice-bg: #ffffff;
@@ -61,7 +61,7 @@
 }
 
 :root[data-theme="light"] .dark-preview .theme-circle {
-  background: #3b82f6;
+  background: #19c37d;
 }
 
 :root[data-theme="light"] .dark-preview .theme-bar {

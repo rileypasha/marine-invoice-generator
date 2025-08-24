@@ -5,6 +5,7 @@ export class InvoiceStorage {
     this.draftsKey = 'marine_drafts';
     this.autoSaveInterval = null;
     this.listeners = [];
+    this.isPerformingAutoSave = false; // Prevent concurrent auto-saves
     
     this.setupAutoSave();
   }
@@ -179,6 +180,16 @@ export class InvoiceStorage {
     return combined.slice(0, limit);
   }
   
+  // Get saved items (completed invoices only, not drafts)
+  getSavedItems(limit = 10) {
+    const invoices = this.getUserInvoices();
+    
+    // Sort by most recent first
+    invoices.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    
+    return invoices.slice(0, limit);
+  }
+  
   // Search invoices and drafts
   searchInvoices(query) {
     const invoices = this.getUserInvoices();
@@ -208,8 +219,13 @@ export class InvoiceStorage {
   }
   
   performAutoSave() {
+    // Prevent concurrent auto-save operations
+    if (this.isPerformingAutoSave) return;
+    
     const currentUser = this.userManager.getCurrentUser();
     if (!currentUser || !currentUser.preferences?.autoSave) return;
+    
+    this.isPerformingAutoSave = true;
     
     // Get current invoice state from app
     if (window.app && window.app.state) {
@@ -217,17 +233,37 @@ export class InvoiceStorage {
       
       // Only auto-save if there's meaningful content
       if (this.hasContent(currentState)) {
-        // Check if we have an existing auto-save draft
+        // Check if we have existing auto-save drafts and clean up duplicates
         const drafts = this.getUserDrafts();
-        const autoSaveDraft = drafts.find(d => d.title.includes('Auto-saved'));
+        const autoSaveDrafts = drafts.filter(d => d.title.includes('Auto-Save'));
         
-        if (autoSaveDraft) {
-          this.saveDraft(currentState, autoSaveDraft.title, autoSaveDraft.id);
+        let targetAutoSave = null;
+        
+        if (autoSaveDrafts.length > 1) {
+          // Sort by updatedAt, keep most recent, remove others
+          const sortedDrafts = autoSaveDrafts.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+          targetAutoSave = sortedDrafts[0]; // Keep the most recent
+          const draftsToRemove = sortedDrafts.slice(1); // Remove the rest
+          
+          draftsToRemove.forEach(draft => {
+            this.deleteDraft(draft.id);
+          });
+        } else if (autoSaveDrafts.length === 1) {
+          targetAutoSave = autoSaveDrafts[0];
+        }
+        
+        if (targetAutoSave) {
+          // Update existing auto-save
+          this.saveDraft(currentState, targetAutoSave.title, targetAutoSave.id);
         } else {
-          this.saveDraft(currentState, `Auto-saved ${new Date().toLocaleTimeString()}`);
+          // Create new auto-save
+          this.saveDraft(currentState, 'Auto-Save');
         }
       }
     }
+    
+    // Reset the flag
+    this.isPerformingAutoSave = false;
   }
   
   // Helper methods

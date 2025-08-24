@@ -9,10 +9,16 @@
     display: none !important;
   }
 
-  /* Reset page margins */
+  /* Reset page margins and force single page */
   @page {
     margin: 0.5in;
     size: letter;
+  }
+  
+  /* Force everything to fit on one page */
+  html, body {
+    height: 100vh;
+    overflow: hidden;
   }
 
   /* Full width for print */
@@ -39,15 +45,41 @@
     box-shadow: none;
     padding: 0;
     max-width: 100%;
+    max-height: 100vh;
+    overflow: hidden;
+    transform-origin: top left;
   }
 
-  /* Ensure proper page breaks */
+  /* Disable page breaks to force single page */
   .invoice-section {
-    page-break-inside: avoid;
+    page-break-inside: auto;
+    break-inside: auto;
   }
 
   .invoice-table {
-    page-break-inside: avoid;
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+  
+  /* Scale content to fit if needed */
+  .main-content {
+    transform-origin: top left;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+  
+  /* Compact spacing for print */
+  .invoice-section {
+    margin-bottom: 15px;
+  }
+  
+  .invoice-table {
+    font-size: 12px;
+  }
+  
+  .invoice-totals .total-row {
+    padding: 2px 0;
+    font-size: 12px;
   }
 
   /* Print-specific text adjustments */

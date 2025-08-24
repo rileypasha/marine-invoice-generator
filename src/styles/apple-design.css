@@ -137,8 +137,9 @@ body {
 .input-panel {
   background: var(--color-surface);
   border-right: 0.5px solid var(--color-border-light);
-  padding: var(--space-6) var(--space-4);
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .input-panel::-webkit-scrollbar {

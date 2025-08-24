@@ -75,6 +75,7 @@ export class Preview {
   updateLineItems(scope) {
     this.lineItemsContainer.innerHTML = '';
     
+    // Add regular line items
     scope.lineItems.forEach(item => {
       if (!item.jobType || !item.description) return;
       
@@ -85,46 +86,84 @@ export class Preview {
       const cost = calculateLineItemCost(item);
       const totalWithMarkup = applyMarkup(cost, scope.markupRate);
       
+      // Create service type display (hide "Manual Entry" text)
+      let serviceTypeDisplay = item.jobType;
+      if (item.jobType === 'Manual Entry') {
+        serviceTypeDisplay = item.itemType || 'Service';
+      } else if (item.itemType) {
+        serviceTypeDisplay += ` - ${item.itemType}`;
+      }
+      
+      // Add labor hours info if it's a labor item or Agent Services
+      let laborInfo = '';
+      if ((item.itemType === 'Labor' || item.jobType === 'Agent Services') && (item.laborHours || item.otHours)) {
+        const regularHours = item.laborHours || 0;
+        const otHours = item.otHours || 0;
+        if (regularHours > 0 && otHours > 0) {
+          laborInfo = ` (${regularHours}hrs + ${otHours}hrs OT)`;
+        } else if (regularHours > 0) {
+          laborInfo = ` (${regularHours}hrs)`;
+        } else if (otHours > 0) {
+          laborInfo = ` (${otHours}hrs OT)`;
+        }
+      }
+      
       row.innerHTML = `
-        <td>${item.description}</td>
-        <td>${item.jobType}${item.itemType ? ` - ${item.itemType}` : ''}</td>
+        <td>${item.description}${laborInfo}</td>
+        <td>${serviceTypeDisplay}</td>
         <td class="cost-cell">${formatCurrency(cost)}</td>
         <td class="total-with-markup">${formatCurrency(totalWithMarkup)}</td>
-        <td>
-          <span class="trash-icon" data-id="${item.id}" style="cursor: pointer;">🗑️</span>
-        </td>
       `;
-      
-      // Add trash icon listener
-      const trashIcon = row.querySelector('.trash-icon');
-      trashIcon.addEventListener('click', () => {
-        this.state.removeLineItem(item.id);
-      });
       
       this.lineItemsContainer.appendChild(row);
     });
+    
+    // Clearance fee is now handled as a regular line item in the state
   }
   
   updateTotals(state) {
-    const totals = calculateTotals(
-      state.scope.lineItems,
-      state.scope.markupRate,
-      state.scope.isTaxable,
-      state.vessel.weight
-    );
+    // Calculate totals without adding clearance fee separately since it's now a line item
+    let subtotal = 0;
+    let baseCost = 0;
     
-    this.subtotal.textContent = formatCurrency(totals.subtotal);
-    this.clearanceFee.textContent = formatCurrency(totals.clearanceFee);
+    state.scope.lineItems.forEach(item => {
+      const cost = calculateLineItemCost(item);
+      baseCost += cost;
+      
+      // Skip markup for Labor items and Clearance Fee since they're already fixed amounts
+      if ((item.jobType === 'Manual Entry' && item.itemType === 'Labor') || 
+          item.jobType === 'Clearance Fee') {
+        subtotal += cost; // Use cost directly without markup
+      } else {
+        subtotal += applyMarkup(cost, state.scope.markupRate);
+      }
+    });
+    
+    this.subtotal.textContent = formatCurrency(subtotal);
+    
+    // Hide clearance fee row since it's now a line item
+    const clearanceFeeRow = document.querySelector('.preview-clearance-fee').closest('.total-row');
+    if (clearanceFeeRow) {
+      clearanceFeeRow.style.display = 'none';
+    }
+    
+    const tax = state.scope.isTaxable ? subtotal * 0.0875 : 0;
+    const total = subtotal + tax;
     
     if (state.scope.isTaxable) {
       this.taxRow.style.display = 'flex';
-      this.taxAmount.textContent = formatCurrency(totals.tax);
+      this.taxAmount.textContent = formatCurrency(tax);
     } else {
       this.taxRow.style.display = 'none';
     }
     
-    this.total.textContent = formatCurrency(totals.total);
-    this.grossProfitAmount.textContent = formatCurrency(totals.grossProfit);
-    this.grossProfitPercent.textContent = formatPercentage(totals.grossProfitPercent);
+    this.total.textContent = formatCurrency(total);
+    
+    // Calculate gross profit (markup portion only)
+    const grossProfit = subtotal - baseCost;
+    const grossProfitPercent = baseCost > 0 ? (grossProfit / baseCost) * 100 : 0;
+    
+    this.grossProfitAmount.textContent = formatCurrency(grossProfit);
+    this.grossProfitPercent.textContent = formatPercentage(grossProfitPercent);
   }
 }

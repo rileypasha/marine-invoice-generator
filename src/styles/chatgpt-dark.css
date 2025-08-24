@@ -182,8 +182,10 @@ body {
 .input-panel {
   background: var(--color-sidebar);
   border-right: 1px solid var(--color-border);
-  padding: var(--space-4);
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
 
 .input-panel::-webkit-scrollbar {
@@ -210,7 +212,9 @@ body {
   background: var(--color-surface);
   border-radius: var(--radius-md);
   padding: 2px;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
+  flex-shrink: 0;
+  margin: var(--space-4) var(--space-4) var(--space-3) var(--space-4);
 }
 
 .tab-button {
@@ -240,6 +244,21 @@ body {
 .tab-button.active {
   background: var(--color-background);
   color: var(--color-text-primary);
+}
+
+/* Tab Panel Visibility */
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.visible {
+  display: block;
+}
+
+.tab-content {
+  flex: 1;
+  padding: 0 var(--space-4);
+  overflow-y: auto;
 }
 
 /* Dark Form Elements */
@@ -373,6 +392,10 @@ input[type="number"] {
   background: rgba(248, 250, 252, 0.5);
   border-radius: var(--radius-sm);
   border: 1px solid rgba(225, 232, 237, 0.2);
+  overflow-x: auto;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .invoice-section h3 {
@@ -381,7 +404,55 @@ input[type="number"] {
   color: var(--color-invoice-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-4);
+  padding-top: var(--space-2);
+}
+
+/* FINAL WORKING TABLE */
+.invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+}
+
+.invoice-table th {
+  background: #f8f9fa;
+  padding: 8px;
+  border: 1px solid #ddd;
+  font-size: 10px;
+  font-weight: bold;
+  color: #666;
+  text-align: center;
+}
+
+.invoice-table td {
+  padding: 8px;
+  border: 1px solid #ddd;
+  background: white;
+  color: #333;
+  font-size: 12px;
+}
+
+.invoice-table td:first-child {
+  text-align: left;
+  width: 35%;
+}
+
+.invoice-table td:nth-child(2) {
+  text-align: left;
+  width: 25%;
+}
+
+.invoice-table td:nth-child(3) {
+  text-align: right;
+  width: 18%;
+  font-weight: bold;
+}
+
+.invoice-table td:nth-child(4) {
+  text-align: right;
+  width: 22%;
+  font-weight: bold;
 }
 
 .invoice-details {
@@ -401,42 +472,152 @@ input[type="number"] {
   color: var(--color-invoice-text-secondary);
 }
 
+/* Clean Financial Summary */
+.invoice-summary {
+  margin-top: var(--space-6);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.invoice-summary-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+}
+
+.invoice-summary-line:last-child {
+  border-bottom: none;
+  font-weight: var(--font-semibold);
+  font-size: var(--text-base);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 2px solid var(--color-border);
+}
+
+.invoice-summary-line .label {
+  color: var(--color-text-secondary);
+}
+
+.invoice-summary-line .value {
+  color: var(--color-text-primary);
+  font-weight: var(--font-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.invoice-summary-line:last-child .value {
+  color: var(--color-accent);
+}
+
+/* Simple Invoice Totals */
+.invoice-totals {
+  margin-top: 24px;
+  padding: 20px;
+  background: white;
+  border: 1px solid #dee2e6;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.total-row:last-child {
+  border-bottom: none;
+}
+
+.total-row.total-final {
+  font-weight: 600;
+  font-size: 16px;
+  padding-top: 12px;
+  border-top: 2px solid #dee2e6;
+  margin-top: 8px;
+}
+
+.total-row span:first-child {
+  color: #6c757d;
+}
+
+.total-row span:last-child {
+  color: #212529;
+  font-weight: 500;
+}
+
+.total-row.total-final span:last-child {
+  color: #28a745;
+}
+
 /* Dark Action Buttons Area */
 .action-buttons {
   display: flex;
   gap: var(--space-2);
-  padding: var(--space-4);
+  padding: var(--space-3) var(--space-4);
   background: var(--color-sidebar);
   border-top: 1px solid var(--color-border);
-  justify-content: center;
-  margin-top: var(--space-4);
+  justify-content: flex-start;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  min-height: 60px;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Button Groups */
+.button-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.button-group.save-group {
+  margin-right: 8px;
+}
+
+.button-group.export-group {
+  border-left: 1px solid var(--color-border);
+  padding-left: 12px;
 }
 
 /* ChatGPT Style Buttons */
 .btn {
-  padding: var(--space-1) var(--space-3);
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
   font-weight: var(--font-medium);
   font-family: var(--font-system);
-  cursor: pointer;
-  transition: var(--transition);
-  min-width: 100px;
-  display: inline-flex;
+  min-height: 36px;
+  min-width: 55px;
+  display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
   gap: var(--space-1);
 }
 
 .btn-primary {
   background: var(--color-accent);
   color: white;
+  border-color: var(--color-accent);
 }
 
 .btn-primary:hover {
   background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
   transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(76, 175, 80, 0.3);
 }
 
 .btn-secondary {
@@ -448,6 +629,53 @@ input[type="number"] {
 .btn-secondary:hover {
   background: var(--color-surface-hover);
   border-color: var(--color-text-tertiary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Optimize text buttons for single line layout */
+#compose-email,
+#print-invoice,
+#generate-pdf {
+  min-width: 52px;
+  padding: 8px 10px;
+}
+
+#save-invoice {
+  min-width: 55px;
+}
+
+#save-draft {
+  min-width: 50px;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  .action-buttons {
+    gap: 4px;
+    padding: 12px 16px;
+    overflow-x: auto;
+  }
+  
+  .button-group {
+    gap: 4px;
+  }
+  
+  .button-group.export-group {
+    padding-left: 8px;
+  }
+  
+  .btn {
+    min-width: 48px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  
+  #compose-email,
+  #print-invoice,
+  #generate-pdf {
+    min-width: 42px;
+  }
 }
 
 /* Radio buttons for dark theme */

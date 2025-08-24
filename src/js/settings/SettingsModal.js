@@ -65,17 +65,6 @@ export class SettingsModal {
                   <span class="toggle-slider"></span>
                 </label>
               </div>
-              
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Email notifications</label>
-                  <span class="setting-description">Receive updates about your invoices</span>
-                </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="email-notifications-toggle" checked>
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
             </div>
             
             <div class="settings-section" id="account-section">
@@ -202,13 +191,11 @@ export class SettingsModal {
   
   saveSettings() {
     const autoSave = this.modal.querySelector('#auto-save-toggle').checked;
-    const emailNotifications = this.modal.querySelector('#email-notifications-toggle').checked;
     
     // Save to user preferences
     if (this.userManager.isAuthenticated()) {
       this.userManager.updatePreferences({
-        autoSave,
-        emailNotifications
+        autoSave
       });
     }
     
@@ -255,10 +242,8 @@ export class SettingsModal {
       // Update preferences toggles
       if (user.preferences) {
         const autoSaveToggle = this.modal.querySelector('#auto-save-toggle');
-        const emailToggle = this.modal.querySelector('#email-notifications-toggle');
         
         autoSaveToggle.checked = user.preferences.autoSave !== false;
-        emailToggle.checked = user.preferences.emailNotifications !== false;
       }
     } else {
       accountSection.style.display = 'none';

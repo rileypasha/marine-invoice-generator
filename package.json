@@ -15,7 +15,10 @@
     "watch:css": "tailwindcss -i ./src/styles/main.css -o ./dist/styles/main.css --watch",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",
-    "dist:mac": "electron-builder --mac"
+    "dist:mac": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
+    "dist:all": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --mac --linux",
+    "dist:clean": "rm -rf release/",
+    "release": "npm run dist:clean && npm run build && npm run dist:all"
   },
   "keywords": [
     "invoice",
@@ -59,25 +62,62 @@
     "appId": "com.marinegroup.invoice",
     "productName": "Marine Invoice Generator",
     "directories": {
-      "output": "dist"
+      "output": "release"
     },
+    "files": [
+      "dist/**/*",
+      "assets/**/*",
+      "electron.js",
+      "package.json"
+    ],
     "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico",
-      "publisherName": "Marine Group"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64"]
+        }
+      ],
+      "publisherName": "Marine Group",
+      "requestedExecutionLevel": "asInvoker",
+      "extraResources": [],
+      "extraFiles": []
     },
     "nsis": {
-      "oneClick": false,
-      "perMachine": true,
-      "allowToChangeInstallationDirectory": true
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Marine Invoice Generator",
+      "allowElevation": false,
+      "installerIcon": null,
+      "uninstallerIcon": null
     },
     "mac": {
       "category": "public.app-category.business",
-      "icon": "assets/icon.icns",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "identity": null,
+      "target": {
+        "target": "dmg",
+        "arch": ["x64"]
+      }
     },
     "dmg": {
+      "title": "Marine Invoice Generator",
+      "icon": null,
+      "window": {
+        "width": 540,
+        "height": 380
+      },
       "contents": [
         {
           "x": 130,
@@ -90,6 +130,13 @@
           "path": "/Applications"
         }
       ]
+    },
+    "linux": {
+      "target": {
+        "target": "AppImage",
+        "arch": ["x64"]
+      },
+      "category": "Office"
     }
   }
 }

@@ -7,6 +7,11 @@ export class UserManager {
     
     this.initTestUser();
     this.loadUserFromStorage();
+    
+    // Auto-sign in test user if not already authenticated (for development)
+    if (!this.isAuthenticated()) {
+      this.autoSignInTestUser();
+    }
   }
   
   // Initialize a test user for development
@@ -24,8 +29,7 @@ export class UserManager {
         createdAt: new Date().toISOString(),
         preferences: {
           theme: 'dark',
-          autoSave: true,
-          emailNotifications: true
+          autoSave: true
         }
       };
       
@@ -92,8 +96,7 @@ export class UserManager {
         createdAt: new Date().toISOString(),
         preferences: {
           theme: 'dark',
-          autoSave: true,
-          emailNotifications: true
+          autoSave: true
         }
       };
       
@@ -236,5 +239,25 @@ export class UserManager {
     
     localStorage.setItem(this.sessionKey, JSON.stringify(sessionData));
     localStorage.setItem(this.storageKey, JSON.stringify(this.currentUser));
+  }
+  
+  // Auto-sign in test user for development
+  autoSignInTestUser() {
+    try {
+      const testEmail = 'test@marinegroup.com';
+      
+      const existingUsers = this.getAllUsers();
+      const testUser = existingUsers.find(u => u.email === testEmail);
+      
+      if (testUser) {
+        console.log('🧪 Auto-signing in test user:', testEmail);
+        this.currentUser = testUser;
+        this.saveSession(true); // Remember the test user
+        this.notify();
+        console.log('✅ Test user signed in automatically');
+      }
+    } catch (error) {
+      console.error('❌ Failed to auto-sign in test user:', error);
+    }
   }
 }

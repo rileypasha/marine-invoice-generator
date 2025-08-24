@@ -9,17 +9,10 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="header-content">
-                <img src="https://i.imgur.com/A9K1ByZ.png" alt="Marine Group" class="company-logo">
-                <h1>Invoice Generator</h1>
-            </div>
-        </header>
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Input Panel (Left Side - 40%) -->
+            <!-- Input Panel -->
             <section class="input-panel">
                 <!-- Tab Navigation -->
                 <nav class="tab-navigation">
@@ -53,20 +46,16 @@
                     <!-- Customer Tab -->
                     <div class="tab-panel" data-section="customer">
                         <div class="form-group">
-                            <label for="estimator-name">Estimator Name</label>
-                            <input type="text" id="estimator-name" class="form-input" placeholder="Enter estimator name">
-                        </div>
-                        <div class="form-group">
-                            <label for="customer-name">Customer Name</label>
+                            <label for="customer-name">Name</label>
                             <input type="text" id="customer-name" class="form-input" placeholder="Enter customer name">
                         </div>
                         <div class="form-group">
-                            <label for="customer-email">Customer Email</label>
+                            <label for="customer-email">Email</label>
                             <input type="email" id="customer-email" class="form-input" placeholder="Enter customer email">
                             <span class="email-error error-message"></span>
                         </div>
                         <div class="form-group">
-                            <label for="customer-phone">Customer Phone</label>
+                            <label for="customer-phone">Phone</label>
                             <input type="tel" id="customer-phone" class="form-input" placeholder="Enter customer phone">
                         </div>
                     </div>
@@ -75,24 +64,18 @@
                     <div class="tab-panel" data-section="scope">
                         <div class="scope-controls">
                             <div class="form-group">
-                                <label for="markup-rate">Markup Rate</label>
+                                <label for="markup-rate">Markup</label>
                                 <select id="markup-rate" class="form-input">
                                     <option value="2.5">2.5%</option>
                                     <option value="12.5">12.5%</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Taxable</label>
-                                <div class="radio-group">
-                                    <label>
-                                        <input type="radio" name="taxable" value="no" id="taxable-no" checked>
-                                        Non-taxable
-                                    </label>
-                                    <label>
-                                        <input type="radio" name="taxable" value="yes" id="taxable-yes">
-                                        Taxable (8.75%)
-                                    </label>
-                                </div>
+                                <label for="taxable-select">Tax</label>
+                                <select id="taxable-select" class="form-input">
+                                    <option value="no" selected>Non-taxable</option>
+                                    <option value="yes">Taxable (8.75%)</option>
+                                </select>
                             </div>
                         </div>
 
@@ -106,13 +89,19 @@
 
                 <!-- Action Buttons -->
                 <div class="action-buttons">
-                    <button id="compose-email" class="btn btn-secondary">Email</button>
-                    <button id="print-invoice" class="btn btn-secondary">Print</button>
-                    <button id="generate-pdf" class="btn btn-primary">PDF</button>
+                    <div class="button-group save-group">
+                        <button id="save-invoice" class="btn btn-primary">Save</button>
+                        <button id="save-draft" class="btn btn-secondary">Draft</button>
+                    </div>
+                    <div class="button-group export-group">
+                        <button id="compose-email" class="btn btn-secondary">Email</button>
+                        <button id="print-invoice" class="btn btn-secondary">Print</button>
+                        <button id="generate-pdf" class="btn btn-secondary">PDF</button>
+                    </div>
                 </div>
             </section>
 
-            <!-- Preview Panel (Right Side - 60%) -->
+            <!-- Preview Panel -->
             <section class="preview-panel">
                 <div class="invoice-preview card">
                     <div class="invoice-header">
@@ -145,11 +134,10 @@
                         <table class="invoice-table">
                             <thead>
                                 <tr>
-                                    <th>Description</th>
+                                    <th>Item</th>
                                     <th>Type</th>
                                     <th>Cost</th>
-                                    <th>Total (w/ Markup)</th>
-                                    <th></th>
+                                    <th>Total</th>
                                 </tr>
                             </thead>
                             <tbody id="preview-line-items">
@@ -163,7 +151,7 @@
                             </div>
                             <div class="total-row">
                                 <span>Clearance Fee:</span>
-                                <span class="preview-clearance-fee">$950.00</span>
+                                <span class="preview-clearance-fee">$0.00</span>
                             </div>
                             <div class="total-row tax-row" style="display: none;">
                                 <span>Tax (8.75%):</span>
@@ -171,7 +159,7 @@
                             </div>
                             <div class="total-row total-final">
                                 <span><strong>Total:</strong></span>
-                                <span class="preview-total"><strong>$950.00</strong></span>
+                                <span class="preview-total"><strong>$0.00</strong></span>
                             </div>
                             <div class="total-row">
                                 <span>Gross Profit:</span>
@@ -190,36 +178,76 @@
 
     <!-- Line Item Template -->
     <template id="line-item-template">
-        <div class="line-item-row" data-row="">
-            <div class="line-item-fields">
-                <select class="job-type-select form-input">
-                    <option value="">Select Job Type</option>
-                    <option value="Manual Entry">Manual Entry</option>
-                    <option value="Pilotage">Pilotage</option>
-                    <option value="Car Rental">Car Rental</option>
-                    <option value="Trash Removal">Trash Removal</option>
-                    <option value="Good Stew">Good Stew</option>
-                    <option value="Crew Placement">Crew Placement</option>
-                    <option value="Agent Services">Agent Services</option>
-                </select>
-                <select class="item-type-select form-input" style="display: none;">
-                    <option value="">Select Item Type</option>
-                    <option value="Labor">Labor</option>
-                    <option value="Material">Material</option>
-                    <option value="Subcontractor">Subcontractor</option>
-                </select>
-                <input type="number" class="manual-cost-input form-input" placeholder="Cost" min="0" step="0.01" style="display: none;">
-                <input type="number" class="labor-hours-input form-input" placeholder="Regular Hours" min="0" step="0.5" style="display: none;">
-                <input type="number" class="ot-hours-input form-input" placeholder="OT Hours" min="0" step="0.5" style="display: none;">
-                <input type="text" class="description-input form-input" placeholder="Description">
-                <button class="remove-line-item" aria-label="Remove item">×</button>
+        <div class="line-item-card" data-row="">
+            <div class="line-item-header">
+                <div class="line-item-number">Item <span class="item-number"></span><span class="item-description"></span></div>
+                <button class="remove-line-item" aria-label="Remove item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="line-item-content">
+                <!-- Primary Field: Job Type -->
+                <div class="field-group primary-field">
+                    <label class="field-label required">Service Type</label>
+                    <select class="job-type-select form-input">
+                        <option value="">Select Service Type</option>
+                        <option value="Manual Entry">Manual Entry</option>
+                        <option value="Pilotage">Pilotage</option>
+                        <option value="Car Rental">Car Rental</option>
+                        <option value="Trash Removal">Trash Removal</option>
+                        <option value="Good Stew">Good Stew</option>
+                        <option value="Crew Placement">Crew Placement</option>
+                        <option value="Agent Services">Agent Services</option>
+                    </select>
+                </div>
+
+                <!-- Secondary Fields: Type-specific inputs -->
+                <div class="secondary-fields" style="display: none;">
+                    <!-- Manual Entry Fields -->
+                    <div class="field-group manual-entry-fields" style="display: none;">
+                        <label class="field-label required">Item Type</label>
+                        <select class="item-type-select form-input">
+                            <option value="">Select Item Type</option>
+                            <option value="Labor">Labor</option>
+                            <option value="Material">Material</option>
+                            <option value="Subcontractor">Subcontractor</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group manual-cost-field" style="display: none;">
+                        <label class="field-label required">Cost</label>
+                        <input type="text" class="manual-cost-input form-input" placeholder="Enter cost amount">
+                    </div>
+
+                    <!-- Labor Fields -->
+                    <div class="field-row labor-fields" style="display: none;">
+                        <div class="field-group">
+                            <label class="field-label">Hours</label>
+                            <div class="input-with-suffix" data-suffix="hrs">
+                                <input type="number" class="labor-hours-input form-input" placeholder="0.0" min="0" step="0.5">
+                            </div>
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label">OT Hours</label>
+                            <div class="input-with-suffix" data-suffix="hrs">
+                                <input type="number" class="ot-hours-input form-input" placeholder="0.0" min="0" step="0.5">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Description Field -->
+                <div class="field-group description-field" style="display: none;">
+                    <label class="field-label required">Description</label>
+                    <input type="text" class="description-input form-input" placeholder="Enter description">
+                </div>
             </div>
         </div>
     </template>
-
-    <!-- Include PDF libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <script type="module" src="js/standalone-app.js"></script>
 </body>
 </html>

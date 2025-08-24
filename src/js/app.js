@@ -12,6 +12,7 @@ import { AuthModal } from './auth/AuthModal.js';
 import { ThemeManager } from './settings/ThemeManager.js';
 import { SettingsModal } from './settings/SettingsModal.js';
 import { InvoiceStorage } from './storage/InvoiceStorage.js';
+import { PromptModal } from './components/PromptModal.js';
 import { generatePDF } from './exports/pdf.js';
 import { composeEmail } from './exports/email.js';
 import { printInvoice } from './exports/print.js';
@@ -34,6 +35,7 @@ class InvoiceApp {
     // Initialize UI components
     this.authModal = new AuthModal(this.userManager);
     this.settingsModal = new SettingsModal(this.userManager, this.themeManager);
+    this.promptModal = new PromptModal();
     
     // Initialize invoice state and components
     this.state = new InvoiceState();
@@ -160,9 +162,19 @@ class InvoiceApp {
   }
   
   initActionButtons() {
+    const saveBtn = document.getElementById('save-invoice');
+    const saveDraftBtn = document.getElementById('save-draft');
     const pdfBtn = document.getElementById('generate-pdf');
     const emailBtn = document.getElementById('compose-email');
     const printBtn = document.getElementById('print-invoice');
+    
+    saveBtn.addEventListener('click', () => {
+      this.saveInvoice();
+    });
+    
+    saveDraftBtn.addEventListener('click', () => {
+      this.saveDraft();
+    });
     
     pdfBtn.addEventListener('click', () => {
       generatePDF();
@@ -370,4 +382,73 @@ InvoiceApp.prototype.createNewInvoice = function() {
   }
   
   console.log('✅ New invoice created - all forms cleared');
+};
+
+// Save invoice as completed/final
+InvoiceApp.prototype.saveInvoice = async function() {
+  if (!this.userManager.isAuthenticated()) {
+    console.log('User not authenticated, showing auth modal');
+    this.authModal.show('signin');
+    return;
+  }
+  
+  const currentState = this.state.getState();
+  
+  if (!this.invoiceStorage.hasContent(currentState)) {
+    await this.promptModal.showAlert('Cannot Save', 'Please add some content before saving');
+    return;
+  }
+  
+  try {
+    const title = await this.promptModal.show('Save Invoice', 'Enter a name for this invoice:', 'Untitled Invoice');
+    if (title === null) return; // User cancelled
+    
+    const finalTitle = title.trim() || 'Untitled Invoice';
+    
+    const id = this.invoiceStorage.saveInvoice(currentState, finalTitle);
+    
+    if (id) {
+      await this.promptModal.showAlert('Success', 'Invoice saved successfully!');
+      this.sidebar.refreshInvoiceList();
+    } else {
+      await this.promptModal.showAlert('Error', 'Failed to save invoice');
+    }
+  } catch (error) {
+    console.error('Error saving invoice:', error);
+    await this.promptModal.showAlert('Error', 'Error saving invoice: ' + error.message);
+  }
+};
+
+// Save as draft
+InvoiceApp.prototype.saveDraft = async function() {
+  if (!this.userManager.isAuthenticated()) {
+    console.log('User not authenticated, showing auth modal');
+    this.authModal.show('signin');
+    return;
+  }
+  
+  const currentState = this.state.getState();
+  
+  if (!this.invoiceStorage.hasContent(currentState)) {
+    await this.promptModal.showAlert('Cannot Save Draft', 'Please add some content before saving as draft');
+    return;
+  }
+  
+  try {
+    const title = await this.promptModal.show('Save Draft', 'Enter a name for this draft:', 'Untitled Draft');
+    if (title === null) return; // User cancelled
+    
+    const finalTitle = title.trim() || 'Untitled Draft';
+    const id = this.invoiceStorage.saveDraft(currentState, finalTitle);
+    
+    if (id) {
+      await this.promptModal.showAlert('Success', 'Draft saved successfully!');
+      this.sidebar.refreshInvoiceList();
+    } else {
+      await this.promptModal.showAlert('Error', 'Failed to save draft');
+    }
+  } catch (error) {
+    console.error('Error saving draft:', error);
+    await this.promptModal.showAlert('Error', 'Error saving draft: ' + error.message);
+  }
 };

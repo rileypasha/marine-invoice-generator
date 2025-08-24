@@ -10,16 +10,20 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      webSecurity: false // Allow loading local files
+      webSecurity: false, // Allow loading local files
+      experimentalFeatures: false,
+      allowRunningInsecureContent: false,
+      plugins: false,
+      // Disable media features that might require ffmpeg
+      backgroundThrottling: false
     },
     icon: path.join(__dirname, 'assets/icon.ico')
   });
 
-  // Load the index.html file
-  // For now, load the standalone version directly
-  mainWindow.loadFile(path.join(__dirname, 'src/standalone.html'));
+  // Load the webpack-built version (same as localhost:3000)
+  mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
   
-  // Open DevTools in development
+  // Open DevTools in development mode
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools();
   }

@@ -37,3 +37,9 @@ test-*.png
 pic.png
 pic2.png
 me.png
+# Release builds
+release/
+*.exe
+*.dmg
+*.AppImage
+*.zip

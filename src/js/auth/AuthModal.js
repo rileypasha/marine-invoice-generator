@@ -17,7 +17,7 @@ export class AuthModal {
           
           <div class="auth-header">
             <img src="https://i.imgur.com/A9K1ByZ.png" alt="Marine Group" class="auth-logo">
-            <h2 class="auth-title">Welcome to Marine Invoice Generator</h2>
+            <h2 class="auth-title">Welcome to MG Global Invoices</h2>
             <p class="auth-subtitle">Sign in to save your invoices and access your history</p>
           </div>
           
@@ -31,7 +31,7 @@ export class AuthModal {
             
             <div class="form-group" id="name-group" style="display: none;">
               <label for="auth-name">Full Name</label>
-              <input type="text" id="auth-name" placeholder="Enter your full name" required>
+              <input type="text" id="auth-name" placeholder="Enter your full name">
             </div>
             
             <div class="form-group">
@@ -39,14 +39,38 @@ export class AuthModal {
               <input type="email" id="auth-email" placeholder="Enter your email" required>
             </div>
             
-            <div class="form-group">
+            <div class="form-group password-group">
               <label for="auth-password">Password</label>
-              <input type="password" id="auth-password" placeholder="Enter your password" required>
+              <div class="password-input-wrapper">
+                <input type="password" id="auth-password" placeholder="Enter your password" required>
+                <button type="button" class="password-toggle" data-target="auth-password">
+                  <svg class="eye-icon eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <svg class="eye-icon eye-closed" style="display: none;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                </button>
+              </div>
             </div>
             
-            <div class="form-group" id="confirm-password-group" style="display: none;">
+            <div class="form-group password-group" id="confirm-password-group" style="display: none;">
               <label for="auth-confirm-password">Confirm Password</label>
-              <input type="password" id="auth-confirm-password" placeholder="Confirm your password">
+              <div class="password-input-wrapper">
+                <input type="password" id="auth-confirm-password" placeholder="Confirm your password">
+                <button type="button" class="password-toggle" data-target="auth-confirm-password">
+                  <svg class="eye-icon eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <svg class="eye-icon eye-closed" style="display: none;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                </button>
+              </div>
             </div>
             
             <div class="form-group remember-me" id="remember-group">
@@ -82,6 +106,9 @@ export class AuthModal {
   attachListeners() {
     // Modern input interactions
     this.setupModernInputs();
+    
+    // Password visibility toggles
+    this.setupPasswordToggles();
     
     // Close modal
     this.modal.querySelector('.auth-modal-close').addEventListener('click', () => {
@@ -132,7 +159,9 @@ export class AuthModal {
     
     // Update form
     const nameGroup = this.modal.querySelector('#name-group');
+    const nameInput = this.modal.querySelector('#auth-name');
     const confirmGroup = this.modal.querySelector('#confirm-password-group');
+    const confirmInput = this.modal.querySelector('#auth-confirm-password');
     const rememberGroup = this.modal.querySelector('#remember-group');
     const submitBtn = this.modal.querySelector('.btn-text');
     const switchText = this.modal.querySelector('.switch-text');
@@ -140,7 +169,9 @@ export class AuthModal {
     
     if (mode === 'signup') {
       nameGroup.style.display = 'block';
+      nameInput.setAttribute('required', '');
       confirmGroup.style.display = 'block';
+      confirmInput.setAttribute('required', '');
       rememberGroup.style.display = 'none';
       submitBtn.textContent = 'Create Account';
       switchText.textContent = 'Already have an account?';
@@ -148,7 +179,9 @@ export class AuthModal {
       switchBtn.dataset.mode = 'signin';
     } else {
       nameGroup.style.display = 'none';
+      nameInput.removeAttribute('required');
       confirmGroup.style.display = 'none';
+      confirmInput.removeAttribute('required');
       rememberGroup.style.display = 'block';
       submitBtn.textContent = 'Sign In';
       switchText.textContent = "Don't have an account?";
@@ -209,8 +242,13 @@ export class AuthModal {
       
       if (result && result.success) {
         console.log('✅ Authentication successful');
-        this.hide();
-        this.clearForm();
+        // Show success message briefly before hiding
+        this.showSuccess(`Welcome, ${result.user.name}!`);
+        
+        setTimeout(() => {
+          this.hide();
+          this.clearForm();
+        }, 1000);
       } else {
         console.log('❌ Authentication failed:', result?.error || 'Unknown error');
         this.showError(result?.error || 'Authentication failed');
@@ -252,6 +290,18 @@ export class AuthModal {
     const errorDiv = this.modal.querySelector('.auth-error');
     errorDiv.textContent = message;
     errorDiv.style.display = 'block';
+    errorDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+    errorDiv.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+    errorDiv.style.color = '#ef4444';
+  }
+  
+  showSuccess(message) {
+    const errorDiv = this.modal.querySelector('.auth-error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    errorDiv.style.background = 'rgba(34, 197, 94, 0.1)';
+    errorDiv.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+    errorDiv.style.color = '#22c55e';
   }
   
   clearError() {
@@ -370,6 +420,29 @@ export class AuthModal {
       // Change event for debugging
       checkbox.addEventListener('change', () => {
         console.log('🔲 Checkbox state changed:', checkbox.id, checkbox.checked);
+      });
+    });
+  }
+  
+  setupPasswordToggles() {
+    const toggleButtons = this.modal.querySelectorAll('.password-toggle');
+    
+    toggleButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const targetId = button.dataset.target;
+        const input = this.modal.querySelector(`#${targetId}`);
+        const eyeOpen = button.querySelector('.eye-open');
+        const eyeClosed = button.querySelector('.eye-closed');
+        
+        if (input.type === 'password') {
+          input.type = 'text';
+          eyeOpen.style.display = 'none';
+          eyeClosed.style.display = 'block';
+        } else {
+          input.type = 'password';
+          eyeOpen.style.display = 'block';
+          eyeClosed.style.display = 'none';
+        }
       });
     });
   }
