@@ -177,12 +177,10 @@ export class SettingsModal {
   }
   
   saveSettings() {
-    const autoSave = this.modal.querySelector('#auto-save-toggle').checked;
-    
     // Save to user preferences
     if (this.userManager.isAuthenticated()) {
       this.userManager.updatePreferences({
-        autoSave
+        // Settings saved
       });
     }
     
@@ -227,11 +225,7 @@ export class SettingsModal {
       accountSection.style.display = 'block';
       
       // Update preferences toggles
-      if (user.preferences) {
-        const autoSaveToggle = this.modal.querySelector('#auto-save-toggle');
-        
-        autoSaveToggle.checked = user.preferences.autoSave !== false;
-      }
+      // Preferences are handled by theme settings
     } else {
       accountSection.style.display = 'none';
     }
