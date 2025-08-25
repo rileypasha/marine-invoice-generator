@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "webpack serve --mode development",
-    "build": "webpack --mode production && npm run prisma:reset",
+    "build": "webpack --mode production && npm run prisma:migrate",
     "test": "jest",
     "test:unit": "jest test/unit",
     "test:e2e": "playwright test",
@@ -23,7 +23,7 @@
     "release": "npm run dist:clean && npm run build && npm run dist:all",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "prisma:reset": "prisma migrate deploy --skip-seed",
+    "prisma:reset": "prisma migrate deploy",
     "dev:server": "node server/server.js",
     "start:prod": "node server/server.js"
   },
