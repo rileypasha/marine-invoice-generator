@@ -1,4 +1,6 @@
 const express = require('express');
+const session = require('express-session');
+const SQLiteStore = require('connect-sqlite3')(session);
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -19,6 +21,22 @@ const logger = pino({
 
 const prisma = new PrismaClient();
 const app = express();
+
+// Session middleware - must come before other middleware
+app.use(session({
+  store: new SQLiteStore({
+    db: 'sessions.db',
+    dir: './data'
+  }),
+  secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
 
 // Middleware
 app.use(helmet({
@@ -58,7 +76,29 @@ app.get('/health', (req, res) => {
 
 // API routes
 const apiRouter = require('./routes/api');
+const masterRouter = require('./routes/master');
+const authRouter = require('./routes/auth');
+const { loadUser, requireMaster } = require('./middleware/auth');
+
+// Load user from session for all requests
+app.use(loadUser);
+
+// Auth routes (login/logout)
+app.use('/api/auth', authRouter);
+
+// Standard API routes
 app.use('/api/v1', apiRouter);
+
+// Master dashboard API routes
+app.use('/api/master', masterRouter);
+
+// Master dashboard UI routes (protected)
+app.get('/master', requireMaster, (req, res) => {
+  res.sendFile(path.join(__dirname, '../src/master/dashboard.html'));
+});
+
+// Serve master assets
+app.use('/master', express.static(path.join(__dirname, '../src/master')));
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

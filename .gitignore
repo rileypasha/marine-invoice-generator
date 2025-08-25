@@ -27,6 +27,10 @@ Thumbs.db
 logs/
 *.log
 
+# Session data
+data/sessions.db
+data/*.db
+
 # Test files
 test-*.html
 test-*.png

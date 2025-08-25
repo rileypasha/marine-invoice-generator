@@ -10,12 +10,46 @@ router.post('/invoice/save', requireApiKey, async (req, res) => {
   try {
     const { title, data, metadata } = req.body;
     
+    // Extract fields from data for dashboard display
+    let extractedFields = {};
+    if (data) {
+      extractedFields = {
+        // User info from session
+        userId: req.user?.id,
+        userName: req.user?.name || data.estimatorName,
+        userEmail: req.user?.email || data.estimatorEmail,
+        
+        // Vessel info
+        vesselName: data.vesselName || null,
+        vesselWeight: data.vesselWeight ? parseFloat(data.vesselWeight) : null,
+        vesselBeam: data.vesselBeam ? parseFloat(data.vesselBeam) : null,
+        
+        // Customer info
+        customerName: data.customerName || null,
+        customerEmail: data.customerEmail || null,
+        customerPhone: data.customerPhone || null,
+        
+        // Financial info
+        subtotal: data.subtotal ? parseFloat(data.subtotal) : 0,
+        taxAmount: data.taxAmount ? parseFloat(data.taxAmount) : 0,
+        total: data.total ? parseFloat(data.total) : 0,
+        grossProfit: data.grossProfit ? parseFloat(data.grossProfit) : 0,
+        profitPercent: data.profitPercent ? parseFloat(data.profitPercent) : 0,
+        
+        // Additional fields
+        market: data.market || null,
+        invoiceNumber: data.invoiceNumber || null,
+        status: 'saved', // Mark as saved when user saves
+        savedAt: new Date()
+      };
+    }
+    
     const invoice = await prisma.invoice.create({
       data: {
         title: title || 'Untitled Invoice',
         data: JSON.stringify(data),
         metadata: metadata ? JSON.stringify(metadata) : null,
-        userId: req.user?.id
+        ...extractedFields
       }
     });
     
@@ -51,14 +85,54 @@ router.put('/invoice/:id', requireApiKey, async (req, res) => {
   try {
     const { title, data, metadata, status } = req.body;
     
+    // Extract fields from data for dashboard display
+    let extractedFields = {};
+    if (data) {
+      extractedFields = {
+        // User info from session
+        userName: req.user?.name || data.estimatorName,
+        userEmail: req.user?.email || data.estimatorEmail,
+        
+        // Vessel info
+        vesselName: data.vesselName || null,
+        vesselWeight: data.vesselWeight ? parseFloat(data.vesselWeight) : null,
+        vesselBeam: data.vesselBeam ? parseFloat(data.vesselBeam) : null,
+        
+        // Customer info
+        customerName: data.customerName || null,
+        customerEmail: data.customerEmail || null,
+        customerPhone: data.customerPhone || null,
+        
+        // Financial info
+        subtotal: data.subtotal ? parseFloat(data.subtotal) : 0,
+        taxAmount: data.taxAmount ? parseFloat(data.taxAmount) : 0,
+        total: data.total ? parseFloat(data.total) : 0,
+        grossProfit: data.grossProfit ? parseFloat(data.grossProfit) : 0,
+        profitPercent: data.profitPercent ? parseFloat(data.profitPercent) : 0,
+        
+        // Additional fields
+        market: data.market || null,
+        invoiceNumber: data.invoiceNumber || null,
+        savedAt: new Date()
+      };
+    }
+    
+    const updateData = {
+      title,
+      data: data ? JSON.stringify(data) : undefined,
+      metadata: metadata ? JSON.stringify(metadata) : undefined,
+      status: status || 'saved',
+      ...extractedFields
+    };
+    
+    // Remove undefined values
+    Object.keys(updateData).forEach(key => 
+      updateData[key] === undefined && delete updateData[key]
+    );
+    
     const invoice = await prisma.invoice.update({
       where: { id: req.params.id },
-      data: {
-        title,
-        data: data ? JSON.stringify(data) : undefined,
-        metadata: metadata ? JSON.stringify(metadata) : undefined,
-        status
-      }
+      data: updateData
     });
     
     res.json({ success: true, invoice });

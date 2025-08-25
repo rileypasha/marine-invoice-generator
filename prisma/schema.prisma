@@ -3,24 +3,58 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model Invoice {
-  id          String   @id @default(uuid())
-  title       String
-  status      String   @default("draft")
-  data        String   // JSON string of invoice data
-  metadata    String?
-  userId      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  submittedAt DateTime?
+  id            String   @id @default(uuid())
+  invoiceNumber String?
+  title         String
+  status        String   @default("saved") // saved, archived, draft
+  data          String   // JSON string of invoice data
+  metadata      String?
   
-  user        User?     @relation(fields: [userId], references: [id])
-  submissions InvoiceSubmission[]
-  revisions   InvoiceRevision[]
+  // User info
+  userId        String?
+  userName      String?
+  userEmail     String?
+  
+  // Vessel info (extracted from data for quick filtering)
+  vesselName    String?
+  vesselWeight  Float?
+  vesselBeam    Float?
+  
+  // Customer info (extracted from data for quick filtering)
+  customerName  String?
+  customerEmail String?
+  customerPhone String?
+  
+  // Financial (extracted from data for dashboard display)
+  subtotal      Float    @default(0)
+  taxAmount     Float    @default(0)
+  total         Float    @default(0)
+  grossProfit   Float    @default(0)
+  profitPercent Float    @default(0)
+  
+  // Additional metadata
+  market        String?  // Market/City field
+  notes         String?
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  savedAt       DateTime @default(now())
+  submittedAt   DateTime?
+  
+  // Relations
+  user          User?     @relation(fields: [userId], references: [id])
+  submissions   InvoiceSubmission[]
+  revisions     InvoiceRevision[]
+  
+  @@index([status, savedAt])
+  @@index([userEmail])
+  @@index([customerName])
 }
 
 model InvoiceSubmission {
@@ -50,7 +84,7 @@ model User {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String?
-  role      String   @default("user")
+  role      String   @default("standard") // standard, master
   apiKey    String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
