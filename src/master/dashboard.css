@@ -1,4 +1,4 @@
-/* Master Dashboard - Marine Group Theme */
+/* Master Dashboard - Dark Theme with Green Accent */
 
 * {
     margin: 0;
@@ -7,10 +7,10 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: #212121;
     min-height: 100vh;
-    color: #333;
+    color: #ececf1;
 }
 
 .dashboard-container {
@@ -21,8 +21,8 @@ body {
 
 /* Header */
 .dashboard-header {
-    background: white;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    background: #171717;
+    border-bottom: 1px solid #424242;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -51,7 +51,7 @@ body {
 .header-left h1 {
     font-size: 1.75rem;
     font-weight: 600;
-    color: #1e3c72;
+    color: #ececf1;
 }
 
 .header-right {
@@ -68,12 +68,12 @@ body {
 
 .user-email {
     font-size: 0.95rem;
-    color: #666;
+    color: #c5c5d2;
 }
 
 .user-badge {
-    background: linear-gradient(135deg, #1e3c72, #2a5298);
-    color: white;
+    background: #19c37d;
+    color: #171717;
     padding: 0.25rem 0.75rem;
     border-radius: 20px;
     font-size: 0.75rem;
@@ -83,21 +83,21 @@ body {
 }
 
 .btn-logout {
-    background: #dc3545;
-    color: white;
-    border: none;
+    background: transparent;
+    color: #c5c5d2;
+    border: 1px solid #424242;
     padding: 0.5rem 1.25rem;
-    border-radius: 5px;
+    border-radius: 6px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s ease;
     font-size: 0.95rem;
 }
 
 .btn-logout:hover {
-    background: #c82333;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border-color: #dc3545;
 }
 
 /* Stats Bar */
@@ -111,28 +111,28 @@ body {
 }
 
 .stat-card {
-    background: white;
+    background: #2a2a2a;
     padding: 1.5rem;
     border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s;
+    border: 1px solid #424242;
+    transition: all 0.2s ease;
 }
 
 .stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    background: #303030;
+    border-color: #19c37d;
 }
 
 .stat-value {
     font-size: 2rem;
     font-weight: 700;
-    color: #1e3c72;
+    color: #19c37d;
     margin-bottom: 0.5rem;
 }
 
 .stat-label {
     font-size: 0.875rem;
-    color: #666;
+    color: #8e8ea0;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 500;
@@ -148,10 +148,10 @@ body {
 
 /* Filters Section */
 .filters-section {
-    background: white;
+    background: #2a2a2a;
     padding: 1.5rem;
     border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border: 1px solid #424242;
     margin-bottom: 2rem;
 }
 
@@ -168,7 +168,7 @@ body {
 
 .filter-group label {
     font-size: 0.9rem;
-    color: #666;
+    color: #c5c5d2;
     font-weight: 500;
     min-width: 100px;
 }
@@ -177,11 +177,12 @@ body {
 .date-input,
 .select-input {
     padding: 0.5rem 1rem;
-    border: 1px solid #ddd;
-    border-radius: 5px;
+    border: 1px solid #424242;
+    border-radius: 6px;
     font-size: 0.95rem;
-    transition: all 0.3s;
-    background: white;
+    transition: all 0.2s ease;
+    background: #212121;
+    color: #ececf1;
 }
 
 .search-input {
@@ -201,46 +202,48 @@ body {
 .date-input:focus,
 .select-input:focus {
     outline: none;
-    border-color: #2a5298;
-    box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+    border-color: #19c37d;
+    box-shadow: 0 0 0 3px rgba(25, 195, 125, 0.1);
 }
 
 .btn-primary,
 .btn-secondary {
     padding: 0.5rem 1.25rem;
     border: none;
-    border-radius: 5px;
+    border-radius: 6px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s ease;
     font-size: 0.95rem;
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #1e3c72, #2a5298);
-    color: white;
+    background: #19c37d;
+    color: #171717;
     margin-right: 0.5rem;
 }
 
 .btn-primary:hover {
+    background: #1a7f5a;
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(30, 60, 114, 0.3);
 }
 
 .btn-secondary {
-    background: #6c757d;
-    color: white;
+    background: transparent;
+    color: #c5c5d2;
+    border: 1px solid #424242;
 }
 
 .btn-secondary:hover {
-    background: #5a6268;
+    background: #303030;
+    border-color: #8e8ea0;
 }
 
 /* Table Section */
 .table-section {
-    background: white;
+    background: #2a2a2a;
     border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border: 1px solid #424242;
     overflow: hidden;
 }
 
@@ -250,7 +253,7 @@ body {
 }
 
 .invoices-table thead {
-    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    background: #171717;
 }
 
 .invoices-table thead th {
@@ -258,16 +261,17 @@ body {
     text-align: left;
     font-size: 0.875rem;
     font-weight: 600;
-    color: white;
+    color: #19c37d;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     position: relative;
     cursor: pointer;
     user-select: none;
+    border-bottom: 1px solid #424242;
 }
 
 .invoices-table thead th:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(25, 195, 125, 0.05);
 }
 
 .sort-icon {
@@ -277,29 +281,29 @@ body {
 }
 
 .invoices-table tbody tr {
-    border-bottom: 1px solid #eee;
-    transition: all 0.2s;
+    border-bottom: 1px solid #353535;
+    transition: all 0.2s ease;
 }
 
 .invoices-table tbody tr:hover {
-    background: #f8f9fa;
+    background: #303030;
 }
 
 .invoices-table tbody td {
     padding: 1rem;
     font-size: 0.95rem;
-    color: #333;
+    color: #ececf1;
 }
 
 .invoice-link {
-    color: #2a5298;
+    color: #19c37d;
     font-weight: 500;
     text-decoration: none;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
 }
 
 .invoice-link:hover {
-    color: #1e3c72;
+    color: #1a7f5a;
     text-decoration: underline;
 }
 
@@ -311,15 +315,15 @@ body {
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
-    background: #2a5298;
-    color: white;
+    transition: all 0.2s ease;
+    background: #19c37d;
+    color: #171717;
     margin-right: 0.5rem;
 }
 
 .btn-view:hover,
 .action-btn:hover {
-    background: #1e3c72;
+    background: #1a7f5a;
     transform: translateY(-1px);
 }
 
@@ -327,14 +331,14 @@ body {
 .loading-indicator {
     text-align: center;
     padding: 3rem;
-    color: #666;
+    color: #8e8ea0;
 }
 
 .spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid #e9ecef;
-    border-top-color: #2a5298;
+    border: 3px solid #424242;
+    border-top-color: #19c37d;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 1rem;
@@ -347,7 +351,7 @@ body {
 .no-results {
     text-align: center;
     padding: 3rem;
-    color: #666;
+    color: #8e8ea0;
     font-size: 1.1rem;
 }
 
@@ -358,24 +362,25 @@ body {
     justify-content: center;
     align-items: center;
     gap: 1rem;
-    background: #f8f9fa;
+    background: #212121;
+    border-top: 1px solid #424242;
 }
 
 .btn-page {
     padding: 0.5rem 1rem;
-    border: 1px solid #ddd;
-    background: white;
-    color: #333;
-    border-radius: 5px;
+    border: 1px solid #424242;
+    background: transparent;
+    color: #c5c5d2;
+    border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     font-weight: 500;
 }
 
 .btn-page:hover:not(:disabled) {
-    background: #2a5298;
-    color: white;
-    border-color: #2a5298;
+    background: #19c37d;
+    color: #171717;
+    border-color: #19c37d;
 }
 
 .btn-page:disabled {
@@ -384,14 +389,14 @@ body {
 }
 
 .page-info {
-    color: #666;
+    color: #8e8ea0;
     font-size: 0.95rem;
 }
 
 #currentPage,
 #totalPages {
     font-weight: 600;
-    color: #2a5298;
+    color: #19c37d;
 }
 
 /* Modal */
@@ -402,7 +407,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(4px);
     z-index: 1000;
     padding: 2rem;
@@ -410,11 +415,12 @@ body {
 }
 
 .modal-content {
-    background: white;
+    background: #2a2a2a;
     max-width: 900px;
     margin: 0 auto;
     border-radius: 10px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    border: 1px solid #424242;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     animation: slideIn 0.3s ease-out;
 }
 
@@ -431,7 +437,7 @@ body {
 
 .modal-header {
     padding: 1.5rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #424242;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -440,14 +446,14 @@ body {
 .modal-header h2 {
     font-size: 1.5rem;
     font-weight: 600;
-    color: #1e3c72;
+    color: #ececf1;
 }
 
 .modal-close {
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: #666;
+    color: #8e8ea0;
     cursor: pointer;
     width: 36px;
     height: 36px;
@@ -455,12 +461,12 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
 }
 
 .modal-close:hover {
-    background: #f8f9fa;
-    color: #333;
+    background: #303030;
+    color: #ececf1;
 }
 
 .modal-body {
@@ -469,10 +475,30 @@ body {
 
 .modal-footer {
     padding: 1.5rem;
-    border-top: 1px solid #eee;
+    border-top: 1px solid #424242;
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
+}
+
+#exportCsv {
+    background: #19c37d;
+    color: #171717;
+}
+
+#exportCsv:hover {
+    background: #1a7f5a;
+}
+
+#closeModalBtn {
+    background: transparent;
+    color: #c5c5d2;
+    border: 1px solid #424242;
+}
+
+#closeModalBtn:hover {
+    background: #303030;
+    border-color: #8e8ea0;
 }
 
 .invoice-detail-section {
@@ -482,10 +508,10 @@ body {
 .invoice-detail-section h3 {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #1e3c72;
+    color: #19c37d;
     margin-bottom: 1rem;
     padding-bottom: 0.5rem;
-    border-bottom: 2px solid #e9ecef;
+    border-bottom: 1px solid #424242;
 }
 
 .detail-grid {
@@ -496,13 +522,14 @@ body {
 
 .detail-item {
     padding: 0.75rem;
-    background: #f8f9fa;
-    border-radius: 5px;
+    background: #212121;
+    border-radius: 6px;
+    border: 1px solid #353535;
 }
 
 .detail-label {
     font-size: 0.75rem;
-    color: #666;
+    color: #8e8ea0;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 0.25rem;
@@ -510,7 +537,7 @@ body {
 
 .detail-value {
     font-size: 1rem;
-    color: #333;
+    color: #ececf1;
     font-weight: 500;
 }
 
