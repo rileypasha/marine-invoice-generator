@@ -2,7 +2,7 @@ services:
   - type: web
     name: marine-invoice-generator
     runtime: node
-    buildCommand: npm ci && npm run build && npm run prisma:generate
+    buildCommand: npm install && npm run build && npm run prisma:generate
     startCommand: npm run start:prod
     envVars:
       - key: NODE_ENV
