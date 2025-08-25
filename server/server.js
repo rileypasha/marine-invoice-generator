@@ -98,11 +98,19 @@ app.use('/api/master', masterRouter);
 
 // Master dashboard UI routes (protected)
 app.get('/master', requireMaster, (req, res) => {
-  res.sendFile(path.join(__dirname, '../src/master/dashboard.html'));
+  // In production, serve from dist; in development, from src
+  const dashboardPath = process.env.NODE_ENV === 'production' 
+    ? path.join(__dirname, '../dist/master/dashboard.html')
+    : path.join(__dirname, '../src/master/dashboard.html');
+  res.sendFile(dashboardPath);
 });
 
-// Serve master assets
-app.use('/master', express.static(path.join(__dirname, '../src/master')));
+// Serve master assets - in production from dist, in development from src
+if (process.env.NODE_ENV === 'production') {
+  app.use('/master', express.static(path.join(__dirname, '../dist/master')));
+} else {
+  app.use('/master', express.static(path.join(__dirname, '../src/master')));
+}
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
