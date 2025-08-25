@@ -39,13 +39,21 @@ export class PromptModal {
   setupEventListeners() {
     // Cancel button
     this.cancelBtn.addEventListener('click', () => {
-      this.close(null);
+      // For confirm dialogs, return false; for prompts return null
+      const isConfirm = this.input.style.display === 'none' && this.cancelBtn.style.display !== 'none';
+      this.close(isConfirm ? false : null);
     });
 
     // Confirm button
     this.confirmBtn.addEventListener('click', () => {
-      const value = this.input.value.trim();
-      this.close(value || null);
+      // For confirm dialogs, return true; for prompts return the input value
+      const isConfirm = this.input.style.display === 'none' && this.cancelBtn.style.display !== 'none';
+      if (isConfirm) {
+        this.close(true);
+      } else {
+        const value = this.input.value.trim();
+        this.close(value || null);
+      }
     });
 
     // Enter key
@@ -227,6 +235,42 @@ export class PromptModal {
       this.modal.style.display = 'flex';
       
       // Focus OK button
+      setTimeout(() => {
+        this.confirmBtn.focus();
+      }, 100);
+    });
+  }
+
+  showConfirm(title = 'Confirm', message = '') {
+    return new Promise((resolve) => {
+      this.resolve = resolve;
+
+      // Update modal content for confirm mode
+      this.modal.querySelector('.prompt-modal-title').textContent = title;
+      this.input.style.display = 'none'; // Hide input for confirm
+      this.cancelBtn.style.display = 'inline-block'; // Show cancel button
+      this.confirmBtn.textContent = 'Continue';
+      this.cancelBtn.textContent = 'Cancel';
+
+      // Show message in place of input
+      if (!this.messageDiv) {
+        this.messageDiv = document.createElement('div');
+        this.messageDiv.className = 'prompt-modal-message';
+        this.messageDiv.style.cssText = `
+          padding: 12px 0;
+          color: var(--text-color, #fff);
+          font-size: 14px;
+          line-height: 1.4;
+        `;
+        this.modal.querySelector('.prompt-modal-body').appendChild(this.messageDiv);
+      }
+      this.messageDiv.textContent = message;
+      this.messageDiv.style.display = 'block';
+
+      // Show modal
+      this.modal.style.display = 'flex';
+      
+      // Focus confirm button
       setTimeout(() => {
         this.confirmBtn.focus();
       }, 100);
