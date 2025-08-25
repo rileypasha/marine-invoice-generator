@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const pino = require('pino');
+const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 require('dotenv').config();
 
