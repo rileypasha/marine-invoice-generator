@@ -1,11 +1,26 @@
--- Drop existing tables if they exist
+-- Force drop the migrations table first to clear failed migrations
 DROP TABLE IF EXISTS "_prisma_migrations" CASCADE;
+
+-- Drop all existing tables
 DROP TABLE IF EXISTS "InvoiceRevision" CASCADE;
 DROP TABLE IF EXISTS "InvoiceSubmission" CASCADE;
 DROP TABLE IF EXISTS "Invoice" CASCADE;
 DROP TABLE IF EXISTS "User" CASCADE;
 
--- CreateTable
+-- Create User table first (referenced by Invoice)
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "name" TEXT,
+    "role" TEXT NOT NULL DEFAULT 'standard',
+    "apiKey" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- Create Invoice table
 CREATE TABLE "Invoice" (
     "id" TEXT NOT NULL,
     "invoiceNumber" TEXT,
@@ -37,7 +52,7 @@ CREATE TABLE "Invoice" (
     CONSTRAINT "Invoice_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
+-- Create InvoiceSubmission table
 CREATE TABLE "InvoiceSubmission" (
     "id" TEXT NOT NULL,
     "invoiceId" TEXT NOT NULL,
@@ -49,7 +64,7 @@ CREATE TABLE "InvoiceSubmission" (
     CONSTRAINT "InvoiceSubmission_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
+-- Create InvoiceRevision table
 CREATE TABLE "InvoiceRevision" (
     "id" TEXT NOT NULL,
     "invoiceId" TEXT NOT NULL,
@@ -62,39 +77,14 @@ CREATE TABLE "InvoiceRevision" (
     CONSTRAINT "InvoiceRevision_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "User" (
-    "id" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "name" TEXT,
-    "role" TEXT NOT NULL DEFAULT 'standard',
-    "apiKey" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
-);
-
--- CreateIndex
+-- Create indexes
 CREATE INDEX "Invoice_status_savedAt_idx" ON "Invoice"("status", "savedAt");
-
--- CreateIndex
 CREATE INDEX "Invoice_userEmail_idx" ON "Invoice"("userEmail");
-
--- CreateIndex
 CREATE INDEX "Invoice_customerName_idx" ON "Invoice"("customerName");
-
--- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
-
--- CreateIndex
 CREATE UNIQUE INDEX "User_apiKey_key" ON "User"("apiKey");
 
--- AddForeignKey
+-- Add foreign keys
 ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "InvoiceSubmission" ADD CONSTRAINT "InvoiceSubmission_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "InvoiceRevision" ADD CONSTRAINT "InvoiceRevision_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
