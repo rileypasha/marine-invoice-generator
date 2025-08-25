@@ -3,7 +3,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-  entry: './src/js/app.js',
+  entry: path.resolve(__dirname, 'src/js/app.js'),
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'bundle.js'
@@ -32,14 +32,13 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: './src/index.html',
+      template: path.resolve(__dirname, 'src/index.html'),
       filename: 'index.html',
-      favicon: './src/assets/favicon.png'
+      favicon: path.resolve(__dirname, 'src/assets/favicon.png')
     }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'src/assets/favicon.png', to: 'assets/favicon.png' },
-        { from: 'src/assets/logo.png', to: 'assets/logo.png' }
+        { from: path.resolve(__dirname, 'src/assets/favicon.png'), to: 'assets/favicon.png' }
       ]
     })
   ],
