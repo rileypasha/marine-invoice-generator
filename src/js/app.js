@@ -27,6 +27,9 @@ window.addLineItem = function(lineItem) {
 
 class InvoiceApp {
   constructor() {
+    // Check if user is master FIRST
+    this.checkMasterUser();
+    
     // Initialize core systems
     this.userManager = new UserManager();
     this.themeManager = new ThemeManager(this.userManager);
@@ -62,6 +65,25 @@ class InvoiceApp {
     window.app = this;
     
     console.log('✅ Full app initialized with authentication and storage');
+  }
+  
+  async checkMasterUser() {
+    try {
+      // Check if user is already authenticated as master
+      const response = await fetch('/api/auth/check-master', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.isMaster) {
+          console.log('👑 Master user detected - redirecting to dashboard');
+          window.location.href = '/master';
+        }
+      }
+    } catch (error) {
+      console.log('Could not check master status:', error);
+    }
   }
   
   initComponents() {

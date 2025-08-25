@@ -242,6 +242,15 @@ export class AuthModal {
       
       if (result && result.success) {
         console.log('✅ Authentication successful');
+        
+        // Check if redirect is needed (master user)
+        if (result.redirect) {
+          console.log('👑 Master user - redirecting to dashboard');
+          this.showSuccess('Redirecting to Master Dashboard...');
+          // Redirect is already handled by UserManager
+          return;
+        }
+        
         // Show success message briefly before hiding
         this.showSuccess(`Welcome, ${result.user.name}!`);
         

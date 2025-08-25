@@ -26,12 +26,20 @@ router.post('/login', async (req, res) => {
     });
 
     if (!user) {
+      // Determine role based on master emails config
+      const masterEmails = (process.env.MASTER_EMAILS || '')
+        .split(',')
+        .map(e => e.trim())
+        .filter(e => e);
+      
+      const isMaster = masterEmails.includes(email);
+      
       // Create new user
       user = await prisma.user.create({
         data: {
           email,
           name: name || email.split('@')[0],
-          role: email === 'rpasha@marinegroupbw.com' ? 'master' : 'standard'
+          role: isMaster ? 'master' : 'standard'
         }
       });
       

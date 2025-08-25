@@ -125,9 +125,31 @@ export class UserManager {
     console.log('🔑 UserManager.signIn() called for email:', email);
     
     try {
-      // Simulate API call delay
-      console.log('⏳ Simulating API delay...');
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // First try server authentication
+      const serverAuth = await this.serverSignIn(email, password);
+      
+      if (serverAuth.success) {
+        console.log('✅ Server authentication successful');
+        
+        // Check if user is master
+        if (serverAuth.isMaster) {
+          console.log('👑 Master user detected - redirecting to dashboard');
+          // Redirect to master dashboard
+          window.location.href = '/master';
+          return { success: true, user: serverAuth.user, redirect: true };
+        }
+        
+        // Regular user - continue with normal flow
+        this.currentUser = serverAuth.user;
+        this.saveSession(rememberMe);
+        this.notify();
+        
+        console.log('✅ Sign-in successful, user:', this.currentUser.name);
+        return { success: true, user: this.currentUser };
+      }
+      
+      // Fallback to local authentication if server fails
+      console.log('⚠️ Server auth failed, trying local auth');
       
       const existingUsers = this.getAllUsers();
       console.log('👥 Found', existingUsers.length, 'existing users');
@@ -164,6 +186,46 @@ export class UserManager {
     } catch (error) {
       console.log('❌ Sign-in error:', error.message);
       return { success: false, error: error.message };
+    }
+  }
+  
+  // Server authentication
+  async serverSignIn(email, password) {
+    try {
+      // Call server auth endpoint
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: email,
+          name: password // Using password field for name temporarily
+        })
+      });
+      
+      if (!response.ok) {
+        console.log('Server auth failed with status:', response.status);
+        return { success: false };
+      }
+      
+      const data = await response.json();
+      
+      // Check if user is master
+      const checkMasterResponse = await fetch('/api/auth/check-master', {
+        credentials: 'include'
+      });
+      const masterCheck = await checkMasterResponse.json();
+      
+      return {
+        success: true,
+        user: data.user,
+        isMaster: masterCheck.isMaster
+      };
+    } catch (error) {
+      console.error('Server auth error:', error);
+      return { success: false };
     }
   }
   
