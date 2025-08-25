@@ -309,8 +309,8 @@ export class Sidebar {
       
       if (hasContent) {
         const confirmed = await window.app.promptModal.showConfirm(
-          'Unsaved Changes',
-          'You have unsaved changes. Do you want to continue? Your current work will be lost.'
+          'Warning',
+          'You have unsaved changes. Continue without saving?'
         );
         
         if (!confirmed) {
@@ -363,8 +363,8 @@ export class Sidebar {
       
       if (hasContent) {
         const confirmed = await window.app.promptModal.showConfirm(
-          'Unsaved Changes',
-          'You have unsaved changes. Do you want to create a new invoice? Your current work will be lost.'
+          'Warning',
+          'You have unsaved changes. Continue without saving?'
         );
         
         if (!confirmed) {
