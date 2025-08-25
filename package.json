@@ -23,7 +23,7 @@
     "release": "npm run dist:clean && npm run build && npm run dist:all",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "prisma:reset": "prisma migrate resolve --applied 20250825085919_add_master_dashboard_fields && prisma migrate deploy",
+    "prisma:reset": "prisma migrate deploy --skip-seed",
     "dev:server": "node server/server.js",
     "start:prod": "node server/server.js"
   },

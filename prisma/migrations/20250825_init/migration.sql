@@ -1,3 +1,10 @@
+-- Drop existing tables if they exist
+DROP TABLE IF EXISTS "_prisma_migrations" CASCADE;
+DROP TABLE IF EXISTS "InvoiceRevision" CASCADE;
+DROP TABLE IF EXISTS "InvoiceSubmission" CASCADE;
+DROP TABLE IF EXISTS "Invoice" CASCADE;
+DROP TABLE IF EXISTS "User" CASCADE;
+
 -- CreateTable
 CREATE TABLE "Invoice" (
     "id" TEXT NOT NULL,
@@ -23,7 +30,7 @@ CREATE TABLE "Invoice" (
     "market" TEXT,
     "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "savedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "submittedAt" TIMESTAMP(3),
 
@@ -63,7 +70,7 @@ CREATE TABLE "User" (
     "role" TEXT NOT NULL DEFAULT 'standard',
     "apiKey" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );

@@ -43,7 +43,7 @@ model Invoice {
   
   // Timestamps
   createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  updatedAt     DateTime @default(now()) @updatedAt
   savedAt       DateTime @default(now())
   submittedAt   DateTime?
   
@@ -87,7 +87,7 @@ model User {
   role      String   @default("standard") // standard, master
   apiKey    String?  @unique
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
   
   invoices  Invoice[]
 }
