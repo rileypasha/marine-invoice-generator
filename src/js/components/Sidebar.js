@@ -301,7 +301,24 @@ export class Sidebar {
     });
   }
   
-  loadInvoice(id) {
+  async loadInvoice(id) {
+    // Check for unsaved changes first
+    if (window.app && window.app.invoiceStorage) {
+      const currentState = window.app.state.getState();
+      const hasContent = window.app.invoiceStorage.hasContent(currentState);
+      
+      if (hasContent) {
+        const confirmed = await window.app.promptModal.showConfirm(
+          'Unsaved Changes',
+          'You have unsaved changes. Do you want to continue? Your current work will be lost.'
+        );
+        
+        if (!confirmed) {
+          return; // User cancelled
+        }
+      }
+    }
+    
     const invoice = this.invoiceStorage.loadInvoice(id);
     if (invoice && window.app) {
       // Load invoice data into the app state
@@ -336,8 +353,25 @@ export class Sidebar {
     }
   }
   
-  createNewInvoice() {
+  async createNewInvoice() {
     console.log('🔘 Sidebar createNewInvoice called');
+    
+    // Check for unsaved changes first
+    if (window.app && window.app.invoiceStorage) {
+      const currentState = window.app.state.getState();
+      const hasContent = window.app.invoiceStorage.hasContent(currentState);
+      
+      if (hasContent) {
+        const confirmed = await window.app.promptModal.showConfirm(
+          'Unsaved Changes',
+          'You have unsaved changes. Do you want to create a new invoice? Your current work will be lost.'
+        );
+        
+        if (!confirmed) {
+          return; // User cancelled
+        }
+      }
+    }
     
     // NUCLEAR OPTION: Direct DOM manipulation
     console.log('💥 NUCLEAR OPTION: Direct DOM clearing');
