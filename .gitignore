@@ -32,11 +32,9 @@ test-*.html
 test-*.png
 /tmp/
 
-# Images (you may want to keep some)
-*.png
-pic.png
-pic2.png
-me.png
+# Test screenshots
+test-*.png
+/tmp/*.png
 # Release builds
 release/
 *.exe
