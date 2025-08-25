@@ -38,7 +38,8 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: path.resolve(__dirname, 'src/assets/favicon.png'), to: 'assets/favicon.png' }
+        { from: path.resolve(__dirname, 'src/assets/favicon.png'), to: 'assets/favicon.png' },
+        { from: path.resolve(__dirname, 'src/master'), to: 'master' }
       ]
     })
   ],

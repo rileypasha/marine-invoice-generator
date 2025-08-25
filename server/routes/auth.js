@@ -131,6 +131,7 @@ router.get('/me', (req, res) => {
  */
 router.get('/check-master', (req, res) => {
   if (!req.session || !req.session.user) {
+    logger.info({ event: 'CHECK_MASTER_NO_SESSION' });
     return res.json({ isMaster: false });
   }
 
@@ -140,6 +141,13 @@ router.get('/check-master', (req, res) => {
     .filter(email => email);
 
   const isMaster = masterEmails.includes(req.session.user.email);
+  
+  logger.info({ 
+    event: 'CHECK_MASTER',
+    email: req.session.user.email,
+    isMaster,
+    masterEmails: masterEmails.length > 0 ? 'configured' : 'not configured'
+  });
 
   res.json({ 
     isMaster,

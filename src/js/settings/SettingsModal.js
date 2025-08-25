@@ -53,19 +53,6 @@ export class SettingsModal {
               </div>
             </div>
             
-            <div class="settings-section">
-              <h3>Preferences</h3>
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Auto-save drafts</label>
-                  <span class="setting-description">Automatically save your work every 30 seconds</span>
-                </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="auto-save-toggle" checked>
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
             
             <div class="settings-section" id="account-section">
               <h3>Account</h3>
