@@ -1,5 +1,3 @@
-import logoUrl from '../../assets/logo.png';
-
 export class AuthModal {
   constructor(userManager) {
     this.userManager = userManager;
@@ -18,7 +16,7 @@ export class AuthModal {
           <button class="auth-modal-close">&times;</button>
           
           <div class="auth-header">
-            <img src="${logoUrl}" alt="Marine Group" class="auth-logo">
+            <img src="https://i.imgur.com/A9K1ByZ.png" alt="Marine Group" class="auth-logo">
             <h2 class="auth-title">Welcome to MG Global Invoices</h2>
             <p class="auth-subtitle">Sign in to save your invoices and access your history</p>
           </div>
