@@ -57,6 +57,13 @@ router.post('/login', async (req, res) => {
       name: user.name,
       role: user.role
     };
+    
+    logger.info({
+      event: 'SESSION_CREATED',
+      sessionId: req.sessionID,
+      userEmail: user.email,
+      sessionUser: req.session.user
+    });
 
     logger.info({
       event: 'USER_LOGIN',
@@ -130,6 +137,14 @@ router.get('/me', (req, res) => {
  * Check if current user is a master user
  */
 router.get('/check-master', (req, res) => {
+  logger.info({ 
+    event: 'CHECK_MASTER_REQUEST',
+    sessionId: req.sessionID,
+    hasSession: !!req.session,
+    sessionUser: req.session?.user,
+    headers: req.headers
+  });
+  
   if (!req.session || !req.session.user) {
     logger.info({ event: 'CHECK_MASTER_NO_SESSION' });
     return res.json({ isMaster: false });

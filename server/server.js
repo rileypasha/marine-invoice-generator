@@ -22,6 +22,9 @@ const logger = pino({
 const prisma = new PrismaClient();
 const app = express();
 
+// Trust proxy - MUST be before session middleware
+app.set('trust proxy', 1);
+
 // Session middleware - must come before other middleware
 app.use(session({
   store: new SQLiteStore({
@@ -34,6 +37,7 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
