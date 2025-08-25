@@ -60,21 +60,6 @@ export class Sidebar {
             </div>
           </div>
         </div>
-        
-        <div class="sidebar-section">
-          <div class="section-header">
-            <h3>Drafts</h3>
-          </div>
-          <div class="invoice-list" id="drafts-list">
-            <div class="empty-state">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-              </svg>
-              <p>No drafts</p>
-              <span>Your auto-saved work will appear here</span>
-            </div>
-          </div>
-        </div>
       </div>
       
       <div class="sidebar-footer">
@@ -236,7 +221,6 @@ export class Sidebar {
   
   refreshInvoiceList() {
     this.updateSavedList();
-    this.updateDraftsList();
   }
   
   updateSavedList() {
@@ -262,24 +246,6 @@ export class Sidebar {
     }
   }
   
-  updateDraftsList() {
-    const container = this.sidebar.querySelector('#drafts-list');
-    const drafts = this.invoiceStorage.getUserDrafts().slice(0, 5);
-    
-    if (drafts.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-          </svg>
-          <p>No drafts</p>
-          <span>Your auto-saved work will appear here</span>
-        </div>
-      `;
-    } else {
-      container.innerHTML = drafts.map(item => this.createInvoiceItem(item)).join('');
-    }
-  }
   
   createInvoiceItem(item) {
     const isCompleted = item.status === 'completed';
