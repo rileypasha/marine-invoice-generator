@@ -349,10 +349,18 @@ class MasterDashboard {
             this.exportCsv();
         });
         
-        // Logout
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            this.logout();
-        });
+        // Logout - with debugging
+        const logoutBtn = document.getElementById('logoutBtn');
+        console.log('Logout button element:', logoutBtn);
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                console.log('Logout button clicked');
+                await this.logout();
+            });
+        } else {
+            console.error('Logout button not found!');
+        }
         
         // Enter key on search
         document.getElementById('searchInput').addEventListener('keypress', (e) => {
@@ -417,14 +425,17 @@ class MasterDashboard {
     }
     
     async logout() {
+        console.log('Logout function called');
         try {
-            await fetch('/api/auth/logout', {
+            const response = await fetch('/api/auth/logout', {
                 method: 'POST',
                 credentials: 'include'
             });
+            console.log('Logout response:', response.status);
             window.location.href = '/';
         } catch (error) {
             console.error('Logout failed:', error);
+            alert('Failed to logout: ' + error.message);
         }
     }
     
