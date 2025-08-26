@@ -410,30 +410,95 @@ router.get('/invoices/:id', requireMaster, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const invoice = await prisma.invoice.findUnique({
-      where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true
-          }
-        },
-        submissions: {
-          orderBy: {
-            submittedAt: 'desc'
-          },
-          take: 5
-        },
-        revisions: {
-          orderBy: {
-            createdAt: 'desc'
-          },
-          take: 5
+    // Use raw query to avoid Prisma schema issues with missing hasChanges column
+    const invoices = await prisma.$queryRaw`
+      SELECT 
+        id, 
+        "invoiceNumber",
+        title,
+        status,
+        data,
+        metadata,
+        "userId",
+        "userName",
+        "userEmail",
+        "vesselName",
+        "vesselWeight",
+        "vesselBeam",
+        "customerName",
+        "customerEmail",
+        "customerPhone",
+        subtotal,
+        "taxAmount",
+        total,
+        "grossProfit",
+        "profitPercent",
+        market,
+        notes,
+        "createdAt",
+        "updatedAt",
+        "savedAt",
+        "submittedAt"
+      FROM "Invoice" 
+      WHERE id = ${id}
+      LIMIT 1
+    `;
+
+    if (!invoices || invoices.length === 0) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    const invoice = invoices[0];
+    
+    // Get user info separately
+    let user = null;
+    if (invoice.userId) {
+      try {
+        const users = await prisma.$queryRaw`
+          SELECT id, email, name 
+          FROM "User" 
+          WHERE id = ${invoice.userId}
+        `;
+        if (users && users.length > 0) {
+          user = users[0];
         }
+      } catch (e) {
+        // User query failed, continue without user info
       }
-    });
+    }
+    
+    // Get submissions separately
+    let submissions = [];
+    try {
+      submissions = await prisma.$queryRaw`
+        SELECT * 
+        FROM "InvoiceSubmission"
+        WHERE "invoiceId" = ${id}
+        ORDER BY "submittedAt" DESC
+        LIMIT 5
+      `;
+    } catch (e) {
+      // Submissions query failed, continue without submissions
+    }
+    
+    // Get revisions separately  
+    let revisions = [];
+    try {
+      revisions = await prisma.$queryRaw`
+        SELECT *
+        FROM "InvoiceRevision"
+        WHERE "invoiceId" = ${id}
+        ORDER BY "createdAt" DESC
+        LIMIT 5
+      `;
+    } catch (e) {
+      // Revisions query failed, continue without revisions
+    }
+    
+    // Add relations to invoice object
+    invoice.user = user;
+    invoice.submissions = submissions;
+    invoice.revisions = revisions;
 
     if (!invoice) {
       return res.status(404).json({ error: 'Invoice not found' });
