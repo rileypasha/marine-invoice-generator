@@ -9,123 +9,176 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- Header -->
-        <header class="dashboard-header">
-            <div class="header-content">
-                <div class="header-left">
-                    <div class="logo-container">
-                        <img src="https://i.imgur.com/A9K1ByZ.png" alt="Marine Group" class="logo">
-                        <div class="logo-divider"></div>
-                        <div class="header-title">
-                            <h1>Master Dashboard</h1>
-                            <span class="header-subtitle">Invoice Management System</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="header-right">
-                    <div class="theme-toggle" id="themeToggle">
-                        <div class="theme-toggle-slider"></div>
-                        <div class="theme-toggle-icons">
-                            <span class="theme-icon moon-icon">🌙</span>
-                            <span class="theme-icon sun-icon">☀️</span>
-                        </div>
-                    </div>
-                    <div class="user-section">
-                        <div class="user-info">
-                            <span class="user-email" id="userEmail"></span>
-                            <span class="user-badge">✓ MASTER ACCESS</span>
-                        </div>
-                        <button id="logoutBtn" class="btn-logout">Logout</button>
-                    </div>
-                </div>
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-logo">MG</div>
+            <div class="nav-item active" data-page="invoices">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Invoices</span>
             </div>
-        </header>
+            <div class="nav-item" data-page="stats">
+                <span class="nav-icon">📈</span>
+                <span class="nav-label">Stats</span>
+            </div>
+            <div class="nav-item" data-page="users">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">Users</span>
+            </div>
+            <div class="nav-item" data-page="settings">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Settings</span>
+            </div>
+        </nav>
 
-        <!-- Stats Bar -->
-        <div class="stats-bar">
-            <div class="stat-card">
-                <div class="stat-value" id="totalSaved">0</div>
-                <div class="stat-label">Total Saved</div>
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="value-cards">
+                    <div class="value-card">
+                        <div class="value-label">Total Saved</div>
+                        <div class="value-amount green" id="totalSaved">0</div>
+                        <div class="value-change change-positive">+12% this week</div>
+                    </div>
+                    <div class="value-card">
+                        <div class="value-label">Today's Count</div>
+                        <div class="value-amount" id="todayCount">0</div>
+                        <div class="value-change change-positive">Active</div>
+                    </div>
+                    <div class="value-card">
+                        <div class="value-label">Week Total</div>
+                        <div class="value-amount green" id="weekTotal">$0</div>
+                        <div class="value-change change-positive">▲ Trending up</div>
+                    </div>
+                </div>
+                
+                <div class="symbols-bar">
+                    <div class="symbol-card">
+                        <span class="symbol-name">Houston</span>
+                        <span class="symbol-value">Active</span>
+                    </div>
+                    <div class="symbol-card">
+                        <span class="symbol-name">Miami</span>
+                        <span class="symbol-value">Active</span>
+                    </div>
+                    <div class="symbol-card">
+                        <span class="symbol-name">San Diego</span>
+                        <span class="symbol-value">Active</span>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="todayCount">0</div>
-                <div class="stat-label">Today</div>
+            
+            <!-- Dashboard Header -->
+            <div class="dashboard-header">
+                <div class="user-info">
+                    <div class="user-avatar">MG</div>
+                    <div class="user-details">
+                        <span class="user-email" id="userEmail"></span>
+                        <span class="user-role">Master Access</span>
+                    </div>
+                </div>
+                <button id="logoutBtn" class="btn-logout">Logout</button>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="weekTotal">$0</div>
-                <div class="stat-label">Week Total</div>
+            
+            <!-- Main Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Invoices Section -->
+                <div class="invoices-section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <span>Recent Invoices</span>
+                            <span class="section-subtitle">Live updates</span>
+                        </div>
+                        <button class="view-all-btn">View All →</button>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="filters-bar">
+                        <input type="text" id="searchInput" class="search-input" placeholder="Search by customer, vessel, invoice #...">
+                        <button class="filter-btn active">All</button>
+                        <button class="filter-btn">Today</button>
+                        <button class="filter-btn">Week</button>
+                        <button class="filter-btn">Month</button>
+                    </div>
+                    
+                    <!-- Invoice List -->
+                    <div class="invoice-list" id="invoicesTableBody">
+                        <!-- Dynamic content will be loaded here -->
+                    </div>
+
+                    
+                    <!-- Loading indicator -->
+                    <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+                        <div class="spinner"></div>
+                        <span>Loading invoices...</span>
+                    </div>
+
+                    <!-- No results message -->
+                    <div id="noResults" class="no-results" style="display: none;">
+                        <p>No invoices found matching your criteria.</p>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination" id="pagination">
+                        <button id="prevPage" class="btn-page" disabled>Previous</button>
+                        <span class="page-info">
+                            Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                        </span>
+                        <button id="nextPage" class="btn-page">Next</button>
+                    </div>
+                </div>
+                
+                <!-- Right Side Panel -->
+                <div class="quick-stats-section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <span>Quick Stats</span>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-stats-grid">
+                        <div class="quick-stat-card">
+                            <div class="quick-stat-label">Active Today</div>
+                            <div class="quick-stat-value">24</div>
+                            <div class="quick-stat-change">+15%</div>
+                        </div>
+                        <div class="quick-stat-card">
+                            <div class="quick-stat-label">Avg. Value</div>
+                            <div class="quick-stat-value">$8,450</div>
+                            <div class="quick-stat-change">+8%</div>
+                        </div>
+                        <div class="quick-stat-card">
+                            <div class="quick-stat-label">Top Market</div>
+                            <div class="quick-stat-value">Houston</div>
+                            <div class="quick-stat-change">32 invoices</div>
+                        </div>
+                        <div class="quick-stat-card">
+                            <div class="quick-stat-label">Profit Rate</div>
+                            <div class="quick-stat-value">18.5%</div>
+                            <div class="quick-stat-change">Stable</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-mini-card">
+                            <div class="stat-mini-label">Houston</div>
+                            <div class="stat-mini-value">$24,500</div>
+                            <div class="stat-mini-change change-positive">+12%</div>
+                        </div>
+                        <div class="stat-mini-card">
+                            <div class="stat-mini-label">Miami</div>
+                            <div class="stat-mini-value">$18,200</div>
+                            <div class="stat-mini-change change-positive">+8%</div>
+                        </div>
+                        <div class="stat-mini-card">
+                            <div class="stat-mini-label">San Diego</div>
+                            <div class="stat-mini-value">$15,800</div>
+                            <div class="stat-mini-change change-negative">-3%</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <!-- Main Content -->
-        <main class="dashboard-main">
-            <!-- Filters Section -->
-            <div class="filters-section">
-                <div class="filter-group">
-                    <input type="text" id="searchInput" class="search-input" placeholder="Search by customer, vessel, invoice #...">
-                </div>
-                <div class="filter-group">
-                    <label>Date Range:</label>
-                    <input type="date" id="dateFrom" class="date-input">
-                    <span>to</span>
-                    <input type="date" id="dateTo" class="date-input">
-                </div>
-                <div class="filter-group">
-                    <label>Market:</label>
-                    <select id="marketFilter" class="select-input">
-                        <option value="">All Markets</option>
-                        <option value="Houston">Houston</option>
-                        <option value="Miami">Miami</option>
-                        <option value="Fort Lauderdale">Fort Lauderdale</option>
-                        <option value="San Diego">San Diego</option>
-                        <option value="Seattle">Seattle</option>
-                    </select>
-                </div>
-                <button id="applyFilters" class="btn-primary">Apply Filters</button>
-                <button id="clearFilters" class="btn-secondary">Clear</button>
-            </div>
-
-            <!-- Invoices Table -->
-            <div class="table-section">
-                <table class="invoices-table" id="invoicesTable">
-                    <thead>
-                        <tr>
-                            <th data-sort="savedAt">Saved At <span class="sort-icon">�</span></th>
-                            <th data-sort="userName">Submitter</th>
-                            <th data-sort="vesselName">Vessel</th>
-                            <th data-sort="customerName">Customer</th>
-                            <th data-sort="invoiceNumber">Invoice #</th>
-                            <th data-sort="total">Total</th>
-                            <th data-sort="profitPercent">Profit %</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="invoicesTableBody">
-                        <!-- Rows will be populated by JavaScript -->
-                    </tbody>
-                </table>
-
-                <!-- Loading indicator -->
-                <div id="loadingIndicator" class="loading-indicator" style="display: none;">
-                    <div class="spinner"></div>
-                    <span>Loading invoices...</span>
-                </div>
-
-                <!-- No results message -->
-                <div id="noResults" class="no-results" style="display: none;">
-                    <p>No invoices found matching your criteria.</p>
-                </div>
-
-                <!-- Pagination -->
-                <div class="pagination" id="pagination">
-                    <button id="prevPage" class="btn-page" disabled>Previous</button>
-                    <span class="page-info">
-                        Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
-                    </span>
-                    <button id="nextPage" class="btn-page">Next</button>
-                </div>
-            </div>
-        </main>
     </div>
 
     <!-- Invoice Detail Modal -->
