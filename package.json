@@ -65,6 +65,7 @@
     "copy-webpack-plugin": "^13.0.1",
     "cors": "^2.8.5",
     "css-loader": "^6.8.1",
+    "diff-match-patch": "^1.0.5",
     "dotenv": "^17.2.1",
     "express": "^4.21.2",
     "express-session": "^1.18.2",

@@ -138,16 +138,27 @@ class MasterDashboard {
         
         this.invoices.forEach(invoice => {
             const row = document.createElement('tr');
+            
+            // Determine change status
+            let changeIndicator = '';
+            if (invoice.unseenChanges) {
+                changeIndicator = '<span class="change-flag unseen" title="New changes">🚩</span>';
+            } else if (invoice.hasChanges) {
+                changeIndicator = '<span class="change-flag seen" title="Changes reviewed">○</span>';
+            }
+            
             row.innerHTML = `
-                <td>${this.formatDate(invoice.savedAt)}</td>
+                <td>${this.formatDate(invoice.savedAt || invoice.submittedAt)}</td>
                 <td>${invoice.userName || 'N/A'}<br><small>${invoice.userEmail || ''}</small></td>
                 <td>${invoice.vesselName || 'N/A'}</td>
                 <td>${invoice.customerName || 'N/A'}</td>
                 <td>${invoice.invoiceNumber || 'N/A'}</td>
                 <td>${this.formatCurrency(invoice.total)}</td>
                 <td>${this.formatPercent(invoice.profitPercent)}</td>
+                <td class="changes-cell">${changeIndicator}</td>
                 <td>
                     <button class="btn-view" data-id="${invoice.id}">View</button>
+                    ${invoice.hasChanges ? `<button class="btn-changes" data-id="${invoice.id}">Changes</button>` : ''}
                 </td>
             `;
             tbody.appendChild(row);
@@ -157,6 +168,13 @@ class MasterDashboard {
         tbody.querySelectorAll('.btn-view').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 this.viewInvoice(e.target.dataset.id);
+            });
+        });
+        
+        // Add click handlers for changes buttons
+        tbody.querySelectorAll('.btn-changes').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                window.location.href = `/master/changes?id=${e.target.dataset.id}`;
             });
         });
     }

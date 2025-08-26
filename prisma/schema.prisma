@@ -41,6 +41,9 @@ model Invoice {
   market        String?  // Market/City field
   notes         String?
   
+  // Change tracking
+  hasChanges    Boolean  @default(false)
+  
   // Timestamps
   createdAt     DateTime @default(now())
   updatedAt     DateTime @default(now()) @updatedAt
@@ -51,6 +54,7 @@ model Invoice {
   user          User?     @relation(fields: [userId], references: [id])
   submissions   InvoiceSubmission[]
   revisions     InvoiceRevision[]
+  changeViews   MasterChangeView[]
   
   @@index([status, savedAt])
   @@index([userEmail])
@@ -58,26 +62,47 @@ model Invoice {
 }
 
 model InvoiceSubmission {
-  id          String   @id @default(uuid())
-  invoiceId   String
-  submittedBy String
-  submittedAt DateTime @default(now())
-  status      String   @default("pending")
-  notes       String?
+  id            String   @id @default(uuid())
+  invoiceId     String
+  submittedBy   String
+  submittedAt   DateTime @default(now())
+  status        String   @default("pending")
+  notes         String?
+  payloadJson   Json     // Normalized invoice snapshot at submission
   
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+  invoice       Invoice  @relation(fields: [invoiceId], references: [id])
+  
+  @@unique([invoiceId]) // Only one submission baseline per invoice
 }
 
 model InvoiceRevision {
-  id          String   @id @default(uuid())
-  invoiceId   String
-  version     Int
-  data        String   // JSON string of invoice data at this revision
-  changedBy   String
-  changedAt   DateTime @default(now())
-  changeNotes String?
+  id             String   @id @default(uuid())
+  invoiceId      String
+  revisionNumber Int
+  actorEmail     String
+  changeSummary  String?
+  payloadJson    Json     // Full normalized state at this revision
+  createdAt      DateTime @default(now())
   
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id])
+  changeViews    MasterChangeView[]
+  
+  @@index([invoiceId, createdAt(sort: Desc)])
+}
+
+model MasterChangeView {
+  id              String   @id @default(uuid())
+  invoiceId       String
+  latestRevisionId String
+  masterEmail     String
+  seenAt          DateTime
+  createdAt       DateTime @default(now())
+  
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id])
+  revision        InvoiceRevision @relation(fields: [latestRevisionId], references: [id])
+  
+  @@unique([invoiceId, latestRevisionId, masterEmail])
+  @@index([invoiceId])
 }
 
 model User {

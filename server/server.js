@@ -82,10 +82,15 @@ app.get('/health', (req, res) => {
 const apiRouter = require('./routes/api');
 const masterRouter = require('./routes/master');
 const authRouter = require('./routes/auth');
+const masterChangesRouter = require('./routes/master-changes');
 const { loadUser, requireMaster } = require('./middleware/auth');
+const { trackRevision } = require('./middleware/revision-tracker');
 
 // Load user from session for all requests
 app.use(loadUser);
+
+// Track revisions for invoice updates
+app.use(trackRevision);
 
 // Auth routes (login/logout)
 app.use('/api/auth', authRouter);
@@ -96,6 +101,9 @@ app.use('/api/v1', apiRouter);
 // Master dashboard API routes
 app.use('/api/master', masterRouter);
 
+// Master change tracking routes
+app.use('/api/master', masterChangesRouter);
+
 // Master dashboard UI routes (protected)
 app.get('/master', requireMaster, (req, res) => {
   // In production, serve from dist; in development, from src
@@ -103,6 +111,14 @@ app.get('/master', requireMaster, (req, res) => {
     ? path.join(__dirname, '../dist/master/dashboard.html')
     : path.join(__dirname, '../src/master/dashboard.html');
   res.sendFile(dashboardPath);
+});
+
+// Master changes view route
+app.get('/master/changes', requireMaster, (req, res) => {
+  const changesPath = process.env.NODE_ENV === 'production' 
+    ? path.join(__dirname, '../dist/master/changes.html')
+    : path.join(__dirname, '../src/master/changes.html');
+  res.sendFile(changesPath);
 });
 
 // Serve master assets - in production from dist, in development from src
