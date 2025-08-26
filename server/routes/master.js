@@ -14,9 +14,13 @@ const logger = pino({
  * Get paginated list of saved invoices
  */
 router.get('/invoices', requireMaster, async (req, res) => {
+  console.log('\n🔍 MASTER DASHBOARD ACCESS');
+  console.log('  User:', req.user?.email);
+  console.log('  Query params:', req.query);
+  
   try {
     const {
-      status = 'saved',
+      status,  // Removed default value - show ALL by default
       search = '',
       page = 1,
       limit = 20,
@@ -24,25 +28,29 @@ router.get('/invoices', requireMaster, async (req, res) => {
       dateTo,
       market,
       sortBy = 'savedAt',
-      sortOrder = 'desc'
+      sortOrder = 'desc',
+      debug = false  // Add debug mode
     } = req.query;
 
-    // Build where clause - Include ALL saved/submitted invoices
-    const where = {};
+    // Build where clause
+    let where = {};
     
-    // Status filter - Fixed to properly handle default status
-    const statusConditions = [];
-    if (status === 'all') {
-      // Show all invoices regardless of status
-      // No status condition needed
-    } else if (status) {
-      // Specific status requested
-      statusConditions.push({ status: status });
+    // DEBUG MODE: Show absolutely everything
+    if (debug === 'true' || debug === true) {
+      console.log('🐛 DEBUG MODE: Showing ALL invoices without any filters');
+      // No where clause at all - show everything
     } else {
-      // Default: show both saved and submitted invoices
-      statusConditions.push({ status: 'saved' });
-      statusConditions.push({ status: 'submitted' });
-    }
+      // Status filter - SIMPLIFIED
+      const statusConditions = [];
+      if (status === 'all' || !status) {
+        // DEFAULT: Show ALL invoices regardless of status
+        console.log('  📋 Showing ALL statuses (no filter)');
+        // No status condition - show everything
+      } else {
+        // Specific status requested
+        statusConditions.push({ status: status });
+        console.log(`  📋 Filtering by status: ${status}`);
+      }
 
     // Add search condition
     if (search) {
@@ -92,6 +100,9 @@ router.get('/invoices', requireMaster, async (req, res) => {
     if (market) {
       where.market = market;
     }
+    } // Close the else block from debug mode
+
+    console.log('  📊 Final where clause:', JSON.stringify(where, null, 2));
 
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -99,6 +110,7 @@ router.get('/invoices', requireMaster, async (req, res) => {
 
     // Get total count
     const total = await prisma.invoice.count({ where });
+    console.log(`  📈 Total invoices matching query: ${total}`);
 
     // Get invoices
     const invoices = await prisma.invoice.findMany({
@@ -362,6 +374,97 @@ router.get('/debug', requireMaster, async (req, res) => {
   } catch (error) {
     logger.error({ event: 'DEBUG_ERROR', error: error.message });
     res.status(500).json({ error: 'Debug failed' });
+  }
+});
+
+/**
+ * GET /api/master/debug/recent-saves
+ * Show recent save attempts with full details
+ */
+router.get('/debug/recent-saves', requireMaster, async (req, res) => {
+  try {
+    const recent = await prisma.invoice.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: {
+        user: true
+      }
+    });
+    
+    res.json({
+      count: recent.length,
+      saves: recent.map(inv => ({
+        id: inv.id,
+        title: inv.title,
+        userId: inv.userId,
+        userEmail: inv.userEmail,
+        user: inv.user ? { id: inv.user.id, email: inv.user.email } : null,
+        status: inv.status,
+        createdAt: inv.createdAt,
+        savedAt: inv.savedAt,
+        hasUserId: !!inv.userId,
+        hasUser: !!inv.user
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/master/debug/orphan-invoices
+ * Find invoices without proper user association
+ */
+router.get('/debug/orphan-invoices', requireMaster, async (req, res) => {
+  try {
+    const orphans = await prisma.invoice.findMany({
+      where: {
+        OR: [
+          { userId: null },
+          { userId: '' },
+          { userEmail: null },
+          { userEmail: '' }
+        ]
+      }
+    });
+    
+    res.json({
+      count: orphans.length,
+      orphans: orphans.map(inv => ({
+        id: inv.id,
+        title: inv.title,
+        userId: inv.userId,
+        userEmail: inv.userEmail,
+        status: inv.status,
+        createdAt: inv.createdAt
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/master/all-invoices
+ * Bypass ALL filtering - direct database dump
+ */
+router.get('/all-invoices', requireMaster, async (req, res) => {
+  try {
+    console.log('🔓 FETCHING ALL INVOICES - NO FILTERS');
+    
+    const allInvoices = await prisma.invoice.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    console.log(`  Found ${allInvoices.length} total invoices in database`);
+    
+    res.json({
+      total: allInvoices.length,
+      invoices: allInvoices
+    });
+  } catch (error) {
+    console.error('Failed to fetch all invoices:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

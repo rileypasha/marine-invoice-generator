@@ -298,6 +298,20 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🛠️ Debug tools added to window.debugApp');
     console.log('💡 Try: debugApp.listTabs() or debugApp.testTabSwitch("customer")');
     
+    // Check for failed saves on startup and retry
+    if (app.invoiceStorage && app.invoiceStorage.retryFailedSaves) {
+      setTimeout(async () => {
+        const failedSaves = JSON.parse(localStorage.getItem('failedSaves') || '[]');
+        if (failedSaves.length > 0) {
+          console.log(`📦 Found ${failedSaves.length} failed saves. Attempting retry...`);
+          const result = await app.invoiceStorage.retryFailedSaves();
+          if (result && result.stillFailed > 0) {
+            app.showNotification(`${result.stillFailed} invoices are pending save. Will retry later.`, 'warning');
+          }
+        }
+      }, 2000);
+    }
+    
   } catch (error) {
     console.error('❌ Error initializing app:', error);
     console.error(error.stack);

@@ -76,32 +76,104 @@ export class InvoiceStorage {
     return invoice.id;
   }
   
-  // Save invoice to server
+  // Save invoice to server with comprehensive logging
   async saveToServer(invoice) {
+    const requestId = `save_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`📤 [${requestId}] Starting server save...`);
+    
     try {
+      const requestBody = {
+        title: invoice.title,
+        data: invoice.data,
+        metadata: invoice.metadata
+      };
+      
+      console.log(`📋 [${requestId}] Request body:`, JSON.stringify(requestBody, null, 2));
+      console.log(`👤 [${requestId}] Current user:`, this.userManager.getCurrentUser());
+      
       const response = await fetch('/api/v1/invoice/save', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Request-ID': requestId
         },
         credentials: 'include', // Include session cookies
-        body: JSON.stringify({
-          title: invoice.title,
-          data: invoice.data,
-          metadata: invoice.metadata
-        })
+        body: JSON.stringify(requestBody)
       });
       
+      console.log(`📨 [${requestId}] Response status:`, response.status);
+      console.log(`📨 [${requestId}] Response headers:`, [...response.headers.entries()]);
+      
+      const responseText = await response.text();
+      console.log(`📨 [${requestId}] Response body:`, responseText);
+      
       if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+        const errorDetails = {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseText,
+          requestId
+        };
+        console.error(`❌ [${requestId}] Server error:`, errorDetails);
+        
+        // Add to failed saves queue
+        this.queueFailedSave(invoice, errorDetails);
+        
+        throw new Error(`Server error: ${response.status} - ${responseText}`);
       }
       
-      const result = await response.json();
+      const result = JSON.parse(responseText);
+      console.log(`✅ [${requestId}] Save successful! Invoice ID:`, result.invoice?.id);
+      
       return result.invoice;
     } catch (error) {
-      console.error('Server save failed:', error);
+      console.error(`🔥 [${requestId}] Server save failed:`, error);
+      console.error(`🔥 [${requestId}] Error stack:`, error.stack);
+      
+      // Add to failed saves queue
+      this.queueFailedSave(invoice, { error: error.message, requestId });
+      
       throw error;
     }
+  }
+  
+  // Queue failed saves for retry
+  queueFailedSave(invoice, errorDetails) {
+    const failedSaves = JSON.parse(localStorage.getItem('failedSaves') || '[]');
+    failedSaves.push({
+      invoice,
+      errorDetails,
+      timestamp: new Date().toISOString(),
+      retryCount: 0
+    });
+    localStorage.setItem('failedSaves', JSON.stringify(failedSaves));
+    console.log('📦 Queued failed save for retry. Total queued:', failedSaves.length);
+  }
+  
+  // Retry failed saves
+  async retryFailedSaves() {
+    const failedSaves = JSON.parse(localStorage.getItem('failedSaves') || '[]');
+    if (failedSaves.length === 0) return;
+    
+    console.log(`🔄 Retrying ${failedSaves.length} failed saves...`);
+    const stillFailed = [];
+    
+    for (const failedSave of failedSaves) {
+      try {
+        failedSave.retryCount++;
+        const result = await this.saveToServer(failedSave.invoice);
+        console.log(`✅ Retry successful for invoice:`, failedSave.invoice.title);
+      } catch (error) {
+        if (failedSave.retryCount < 3) {
+          stillFailed.push(failedSave);
+        } else {
+          console.error(`❌ Giving up on invoice after 3 retries:`, failedSave.invoice.title);
+        }
+      }
+    }
+    
+    localStorage.setItem('failedSaves', JSON.stringify(stillFailed));
+    return { retried: failedSaves.length, stillFailed: stillFailed.length };
   }
   
   // Save draft (auto-save or manual) - Also saves to server
