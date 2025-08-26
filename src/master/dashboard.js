@@ -12,7 +12,7 @@ class MasterDashboard {
             search: '',
             dateFrom: '',
             dateTo: '',
-            status: 'saved'
+            status: ''  // Empty string means show saved and submitted (default view)
         };
         
         this.init();
@@ -96,25 +96,54 @@ class MasterDashboard {
         noResults.style.display = 'none';
         
         try {
-            const params = new URLSearchParams({
+            // Build clean parameters, omitting empty values
+            const cleanParams = {
                 page: this.currentPage,
                 limit: this.limit,
                 sortBy: this.sortBy,
-                sortOrder: this.sortOrder,
-                ...this.filters
-            });
+                sortOrder: this.sortOrder
+            };
             
+            // Only add filters if they have values
+            if (this.filters.search && this.filters.search.trim()) {
+                cleanParams.search = this.filters.search.trim();
+            }
+            if (this.filters.dateFrom && this.filters.dateFrom.trim()) {
+                cleanParams.dateFrom = this.filters.dateFrom.trim();
+            }
+            if (this.filters.dateTo && this.filters.dateTo.trim()) {
+                cleanParams.dateTo = this.filters.dateTo.trim();
+            }
+            // Status filter: empty means show saved+submitted (default)
+            if (this.filters.status && this.filters.status.trim()) {
+                cleanParams.status = this.filters.status.trim();
+            }
+            
+            console.log('🔄 Loading invoices with params:', cleanParams);
+            
+            const params = new URLSearchParams(cleanParams);
             const response = await fetch(`/api/master/invoices?${params}`, {
                 credentials: 'include'
             });
             
-            if (!response.ok) {
-                throw new Error('Failed to fetch invoices');
-            }
-            
             const data = await response.json();
-            this.invoices = data.invoices;
-            this.totalPages = data.pagination.totalPages;
+            
+            if (!response.ok) {
+                // Check if we got a recovery response
+                if (data.recovery && data.invoices) {
+                    console.warn('⚠️ Recovery mode: displaying partial data');
+                    this.showWarning(data.error || 'Displaying partial data due to system issue');
+                    
+                    this.invoices = data.invoices || [];
+                    this.totalPages = data.pagination?.totalPages || 1;
+                } else {
+                    throw new Error(data.error || data.message || 'Failed to fetch invoices');
+                }
+            } else {
+                this.invoices = data.invoices || [];
+                this.totalPages = data.pagination?.totalPages || 1;
+                this.clearWarning();
+            }
             
             loading.style.display = 'none';
             
@@ -125,11 +154,84 @@ class MasterDashboard {
             }
             
             this.updatePagination();
+            
         } catch (error) {
-            console.error('Failed to load invoices:', error);
+            console.error('❌ Failed to load invoices:', error);
             loading.style.display = 'none';
-            noResults.style.display = 'block';
+            
+            // Try fallback with minimal parameters
+            console.log('🚨 Attempting fallback load...');
+            this.loadFallbackInvoices();
         }
+    }
+    
+    async loadFallbackInvoices() {
+        try {
+            // Try with only pagination, no sorting or filters
+            const response = await fetch(`/api/master/invoices?page=1&limit=20`, {
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                this.invoices = data.invoices || [];
+                this.totalPages = data.pagination?.totalPages || 1;
+                
+                if (this.invoices.length > 0) {
+                    this.renderInvoices();
+                    this.updatePagination();
+                    this.showWarning('Some filters may not be working. Showing recent invoices.');
+                } else {
+                    document.getElementById('noResults').style.display = 'block';
+                }
+            } else {
+                document.getElementById('noResults').style.display = 'block';
+                this.showError('Unable to load invoices. Please refresh the page.');
+            }
+        } catch (fallbackError) {
+            console.error('❌ Fallback also failed:', fallbackError);
+            document.getElementById('noResults').style.display = 'block';
+            this.showError('Unable to connect to server. Please check your connection.');
+        }
+    }
+    
+    showWarning(message) {
+        const container = document.querySelector('.dashboard-container') || document.body;
+        let warningEl = document.getElementById('systemWarning');
+        
+        if (!warningEl) {
+            warningEl = document.createElement('div');
+            warningEl.id = 'systemWarning';
+            warningEl.className = 'system-warning';
+            warningEl.style.cssText = 'background: #ff9800; color: white; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 14px;';
+            container.insertBefore(warningEl, container.firstChild);
+        }
+        
+        warningEl.innerHTML = `⚠️ ${message}`;
+        warningEl.style.display = 'block';
+    }
+    
+    showError(message) {
+        const container = document.querySelector('.dashboard-container') || document.body;
+        let errorEl = document.getElementById('systemError');
+        
+        if (!errorEl) {
+            errorEl = document.createElement('div');
+            errorEl.id = 'systemError';
+            errorEl.className = 'system-error';
+            errorEl.style.cssText = 'background: #f44336; color: white; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 14px;';
+            container.insertBefore(errorEl, container.firstChild);
+        }
+        
+        errorEl.innerHTML = `❌ ${message}`;
+        errorEl.style.display = 'block';
+    }
+    
+    clearWarning() {
+        const warningEl = document.getElementById('systemWarning');
+        if (warningEl) warningEl.style.display = 'none';
+        const errorEl = document.getElementById('systemError');
+        if (errorEl) errorEl.style.display = 'none';
     }
     
     renderInvoices() {
@@ -335,79 +437,124 @@ class MasterDashboard {
     
     setupEventListeners() {
         // Theme toggle
-        document.getElementById('themeToggle').addEventListener('click', () => {
-            this.toggleTheme();
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                this.toggleTheme();
+            });
+        }
+        
+        // Filter controls with debounce
+        let filterTimeout;
+        document.getElementById('applyFilters')?.addEventListener('click', () => {
+            clearTimeout(filterTimeout);
+            filterTimeout = setTimeout(() => {
+                this.applyFilters();
+            }, 300);
         });
         
-        // Filter controls
-        document.getElementById('applyFilters').addEventListener('click', () => {
-            this.applyFilters();
-        });
-        
-        document.getElementById('clearFilters').addEventListener('click', () => {
+        document.getElementById('clearFilters')?.addEventListener('click', () => {
             this.clearFilters();
         });
         
-        // Pagination
-        document.getElementById('prevPage').addEventListener('click', () => {
+        // Search with debounce to prevent rapid API calls
+        let searchTimeout;
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    this.filters.search = e.target.value;
+                    this.currentPage = 1;
+                    this.loadInvoices();
+                }, 500);
+            });
+            
+            // Enter key on search
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    clearTimeout(searchTimeout);
+                    this.applyFilters();
+                }
+            });
+        }
+        
+        // Pagination with error handling
+        document.getElementById('prevPage')?.addEventListener('click', () => {
             if (this.currentPage > 1) {
                 this.currentPage--;
-                this.loadInvoices();
+                this.loadInvoices().catch(err => {
+                    console.error('Failed to load previous page:', err);
+                    this.currentPage++; // Revert page change
+                });
             }
         });
         
-        document.getElementById('nextPage').addEventListener('click', () => {
+        document.getElementById('nextPage')?.addEventListener('click', () => {
             if (this.currentPage < this.totalPages) {
                 this.currentPage++;
-                this.loadInvoices();
+                this.loadInvoices().catch(err => {
+                    console.error('Failed to load next page:', err);
+                    this.currentPage--; // Revert page change
+                });
             }
         });
         
-        // Table sorting
+        // Table sorting with error handling
         document.querySelectorAll('.invoices-table th[data-sort]').forEach(th => {
             th.addEventListener('click', () => {
                 const sortBy = th.dataset.sort;
+                const prevSortBy = this.sortBy;
+                const prevSortOrder = this.sortOrder;
+                
                 if (this.sortBy === sortBy) {
                     this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
                 } else {
                     this.sortBy = sortBy;
                     this.sortOrder = 'desc';
                 }
-                this.loadInvoices();
+                
+                this.loadInvoices().catch(err => {
+                    console.error('Failed to sort:', err);
+                    // Revert sort changes
+                    this.sortBy = prevSortBy;
+                    this.sortOrder = prevSortOrder;
+                });
             });
         });
         
         // Modal controls
-        document.getElementById('closeModal').addEventListener('click', () => {
+        document.getElementById('closeModal')?.addEventListener('click', () => {
             this.closeModal();
         });
         
-        document.getElementById('closeModalBtn').addEventListener('click', () => {
+        document.getElementById('closeModalBtn')?.addEventListener('click', () => {
             this.closeModal();
         });
         
-        document.getElementById('exportCsv').addEventListener('click', () => {
+        document.getElementById('exportCsv')?.addEventListener('click', () => {
             this.exportCsv();
         });
         
-        // Logout - with debugging
+        // Logout with error handling
         const logoutBtn = document.getElementById('logoutBtn');
-        console.log('Logout button element:', logoutBtn);
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
-                console.log('Logout button clicked');
-                await this.logout();
+                console.log('Logout initiated');
+                try {
+                    await this.logout();
+                } catch (error) {
+                    console.error('Logout failed:', error);
+                    alert('Failed to logout. Please try again.');
+                }
             });
-        } else {
-            console.error('Logout button not found!');
         }
         
-        // Enter key on search
-        document.getElementById('searchInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.applyFilters();
-            }
+        // Auto-retry failed loads
+        window.addEventListener('online', () => {
+            console.log('Connection restored, reloading data...');
+            this.loadInvoices();
         });
     }
     
@@ -429,7 +576,7 @@ class MasterDashboard {
             search: '',
             dateFrom: '',
             dateTo: '',
-            status: 'saved'
+            status: ''  // Empty string means show saved and submitted (default view)
         };
         
         this.currentPage = 1;

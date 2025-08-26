@@ -25,14 +25,38 @@ const requireApiKey = (req, res, next) => {
  * Middleware to ensure user is authenticated
  */
 function requireAuth(req, res, next) {
+  // Debug logging
+  logger.info({
+    event: 'AUTH_CHECK',
+    path: req.path,
+    sessionId: req.sessionID,
+    hasSession: !!req.session,
+    hasUser: !!req.session?.user,
+    sessionUser: req.session?.user
+  });
+  
   if (!req.session || !req.session.user) {
+    logger.warn({
+      event: 'AUTH_REQUIRED',
+      path: req.path,
+      sessionId: req.sessionID,
+      headers: req.headers
+    });
     return res.status(401).json({ 
-      error: 'Authentication required' 
+      error: 'Authentication required',
+      message: 'Please log in to continue'
     });
   }
   
   // Populate req.user from session
   req.user = req.session.user;
+  
+  logger.info({
+    event: 'AUTH_SUCCESS',
+    userEmail: req.user.email,
+    userId: req.user.id
+  });
+  
   next();
 }
 
@@ -40,10 +64,26 @@ function requireAuth(req, res, next) {
  * Middleware to ensure user is master (rpasha@marinegroupbw.com)
  */
 function requireMaster(req, res, next) {
+  // Debug logging
+  logger.info({
+    event: 'MASTER_AUTH_CHECK',
+    path: req.path,
+    sessionId: req.sessionID,
+    hasSession: !!req.session,
+    hasUser: !!req.session?.user,
+    userEmail: req.session?.user?.email
+  });
+  
   // First ensure user is authenticated
   if (!req.session || !req.session.user) {
+    logger.warn({
+      event: 'MASTER_AUTH_REQUIRED',
+      path: req.path,
+      sessionId: req.sessionID
+    });
     return res.status(401).json({ 
-      error: 'Authentication required' 
+      error: 'Authentication required',
+      message: 'Please log in to continue' 
     });
   }
   

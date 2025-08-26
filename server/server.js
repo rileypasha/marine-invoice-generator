@@ -26,21 +26,46 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Session middleware - must come before other middleware
-app.use(session({
+const sessionConfig = {
   store: new SQLiteStore({
     db: 'sessions.db',
     dir: './data'
   }),
   secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+  name: 'connect.sid',
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true, // Changed to true to ensure sessions are created
+  rolling: true, // Reset expiry on activity
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Set to false for now - HTTPS not required
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    sameSite: 'lax', // Changed from 'none' to 'lax' for better compatibility
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    path: '/' // Ensure cookie is available on all paths
   }
-}));
+};
+
+// Only require secure cookies if explicitly in production with HTTPS
+if (process.env.NODE_ENV === 'production' && process.env.REQUIRE_HTTPS === 'true') {
+  sessionConfig.cookie.secure = true;
+  sessionConfig.cookie.sameSite = 'none';
+}
+
+app.use(session(sessionConfig));
+
+// Log session creation for debugging
+app.use((req, res, next) => {
+  if (req.session && !req.session.logged) {
+    req.session.logged = true;
+    logger.info({
+      event: 'SESSION_MIDDLEWARE',
+      sessionId: req.sessionID,
+      hasUser: !!req.session.user,
+      path: req.path
+    });
+  }
+  next();
+});
 
 // Middleware
 app.use(helmet({
@@ -63,12 +88,15 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request logging
+// Request logging with session info
 app.use((req, res, next) => {
   logger.info({
     method: req.method,
     url: req.url,
-    ip: req.ip
+    ip: req.ip,
+    sessionId: req.sessionID,
+    hasSession: !!req.session,
+    hasUser: !!req.session?.user
   });
   next();
 });

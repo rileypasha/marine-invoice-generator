@@ -9,10 +9,8 @@ async function forceReset() {
   
   try {
     // Read the migration SQL
-    const migrationSQL = fs.readFileSync(
-      path.join(__dirname, 'migrations/20250825_init/migration.sql'),
-      'utf8'
-    );
+    const migrationPath = path.join(__dirname, 'migrations/20250826193205_complete_schema/migration.sql');
+    const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
     
     // Split by semicolons and execute each statement
     const statements = migrationSQL

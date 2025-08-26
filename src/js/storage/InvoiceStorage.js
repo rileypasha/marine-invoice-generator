@@ -150,10 +150,17 @@ export class InvoiceStorage {
     console.log('📦 Queued failed save for retry. Total queued:', failedSaves.length);
   }
   
-  // Retry failed saves
+  // Retry failed saves (only if authenticated)
   async retryFailedSaves() {
     const failedSaves = JSON.parse(localStorage.getItem('failedSaves') || '[]');
     if (failedSaves.length === 0) return;
+    
+    // Check if user is authenticated before retrying
+    const currentUser = this.userManager.getCurrentUser();
+    if (!currentUser) {
+      console.log('⏸️ Postponing retry - user not authenticated');
+      return { retried: 0, stillFailed: failedSaves.length };
+    }
     
     console.log(`🔄 Retrying ${failedSaves.length} failed saves...`);
     const stillFailed = [];
@@ -164,6 +171,13 @@ export class InvoiceStorage {
         const result = await this.saveToServer(failedSave.invoice);
         console.log(`✅ Retry successful for invoice:`, failedSave.invoice.title);
       } catch (error) {
+        // If it's an authentication error, stop retrying
+        if (error.message && error.message.includes('401')) {
+          console.log('🔐 Authentication lost - stopping retries');
+          stillFailed.push(failedSave);
+          break;
+        }
+        
         if (failedSave.retryCount < 3) {
           stillFailed.push(failedSave);
         } else {
@@ -173,7 +187,7 @@ export class InvoiceStorage {
     }
     
     localStorage.setItem('failedSaves', JSON.stringify(stillFailed));
-    return { retried: failedSaves.length, stillFailed: stillFailed.length };
+    return { retried: failedSaves.length - stillFailed.length, stillFailed: stillFailed.length };
   }
   
   // Save draft (auto-save or manual) - Also saves to server
@@ -539,6 +553,18 @@ export class InvoiceStorage {
       invoiceData.customer?.customerName ||
       (invoiceData.scope?.lineItems && invoiceData.scope.lineItems.length > 0)
     );
+  }
+  
+  // Clear failed saves queue (useful for resetting)
+  clearFailedSaves() {
+    localStorage.removeItem('failedSaves');
+    console.log('🧹 Cleared failed saves queue');
+  }
+  
+  // Get count of failed saves
+  getFailedSavesCount() {
+    const failedSaves = JSON.parse(localStorage.getItem('failedSaves') || '[]');
+    return failedSaves.length;
   }
   
   // Cleanup

@@ -58,28 +58,43 @@ router.post('/login', async (req, res) => {
       role: user.role
     };
     
-    logger.info({
-      event: 'SESSION_CREATED',
-      sessionId: req.sessionID,
-      userEmail: user.email,
-      sessionUser: req.session.user
-    });
-
-    logger.info({
-      event: 'USER_LOGIN',
-      email: user.email,
-      role: user.role,
-      timestamp: new Date().toISOString()
-    });
-
-    res.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role
+    // Force session save before responding
+    req.session.save((err) => {
+      if (err) {
+        logger.error({
+          event: 'SESSION_SAVE_ERROR',
+          error: err.message,
+          sessionId: req.sessionID
+        });
+        return res.status(500).json({ error: 'Session creation failed' });
       }
+      
+      logger.info({
+        event: 'SESSION_CREATED',
+        sessionId: req.sessionID,
+        userEmail: user.email,
+        sessionUser: req.session.user,
+        cookie: req.session.cookie
+      });
+
+      logger.info({
+        event: 'USER_LOGIN',
+        email: user.email,
+        role: user.role,
+        sessionId: req.sessionID,
+        timestamp: new Date().toISOString()
+      });
+
+      res.json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role
+        },
+        sessionId: req.sessionID // Include for debugging
+      });
     });
   } catch (error) {
     logger.error({
