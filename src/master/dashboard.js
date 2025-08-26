@@ -12,7 +12,6 @@ class MasterDashboard {
             search: '',
             dateFrom: '',
             dateTo: '',
-            market: '',
             status: 'saved'
         };
         
@@ -398,7 +397,6 @@ class MasterDashboard {
         this.filters.search = document.getElementById('searchInput').value;
         this.filters.dateFrom = document.getElementById('dateFrom').value;
         this.filters.dateTo = document.getElementById('dateTo').value;
-        this.filters.market = document.getElementById('marketFilter').value;
         
         this.currentPage = 1;
         this.loadInvoices();
@@ -408,13 +406,11 @@ class MasterDashboard {
         document.getElementById('searchInput').value = '';
         document.getElementById('dateFrom').value = '';
         document.getElementById('dateTo').value = '';
-        document.getElementById('marketFilter').value = '';
         
         this.filters = {
             search: '',
             dateFrom: '',
             dateTo: '',
-            market: '',
             status: 'saved'
         };
         
