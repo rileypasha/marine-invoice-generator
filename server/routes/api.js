@@ -101,14 +101,35 @@ router.post('/invoice/save', requireAuth, async (req, res) => {
     
     console.log(`💾 [${requestId}] Extracted fields for save:`, extractedFields);
     
-    const invoice = await prisma.invoice.create({
-      data: {
-        title: title || 'Untitled Invoice',
-        data: JSON.stringify(data),
-        metadata: metadata ? JSON.stringify(metadata) : null,
-        ...extractedFields
+    // Build invoice data
+    const invoiceData = {
+      title: title || 'Untitled Invoice',
+      data: JSON.stringify(data),
+      metadata: metadata ? JSON.stringify(metadata) : null,
+      ...extractedFields
+    };
+    
+    // Try to create with hasChanges field first (new schema)
+    let invoice;
+    try {
+      invoice = await prisma.invoice.create({
+        data: {
+          ...invoiceData,
+          hasChanges: false // New invoices don't have changes yet
+        }
+      });
+    } catch (error) {
+      // If hasChanges column doesn't exist, try without it (old schema)
+      if (error.message && error.message.includes('hasChanges') && error.message.includes('does not exist')) {
+        console.log(`⚠️ [${requestId}] Database missing hasChanges column, using fallback`);
+        invoice = await prisma.invoice.create({
+          data: invoiceData
+        });
+      } else {
+        // Re-throw if it's a different error
+        throw error;
       }
-    });
+    }
     
     // Log successful save for debugging
     const duration = Date.now() - startTime;
@@ -215,10 +236,29 @@ router.put('/invoice/:id', requireAuth, async (req, res) => {
       updateData[key] === undefined && delete updateData[key]
     );
     
-    const invoice = await prisma.invoice.update({
-      where: { id: req.params.id },
-      data: updateData
-    });
+    // Try to update with hasChanges field first (new schema)
+    let invoice;
+    try {
+      invoice = await prisma.invoice.update({
+        where: { id: req.params.id },
+        data: {
+          ...updateData,
+          hasChanges: true // Mark as having changes
+        }
+      });
+    } catch (error) {
+      // If hasChanges column doesn't exist, update without it (old schema)
+      if (error.message && error.message.includes('hasChanges') && error.message.includes('does not exist')) {
+        console.log('⚠️ Update: Database missing hasChanges column, using fallback');
+        invoice = await prisma.invoice.update({
+          where: { id: req.params.id },
+          data: updateData
+        });
+      } else {
+        // Re-throw if it's a different error
+        throw error;
+      }
+    }
     
     res.json({ success: true, invoice });
   } catch (error) {
@@ -327,17 +367,33 @@ router.post('/debug/test-save', requireAuth, async (req, res) => {
     console.log('  User:', req.user);
     console.log('  Session:', !!req.session);
     
-    const testInvoice = await prisma.invoice.create({
-      data: {
-        title: `Debug Test ${testId}`,
-        data: JSON.stringify({ debug: true, testId }),
-        status: 'saved',
-        userId: req.user?.id || null,
-        userEmail: req.user?.email || 'debug@test.com',
-        vesselName: 'DEBUG_TEST',
-        savedAt: new Date()
+    // Build test invoice data
+    const testData = {
+      title: `Debug Test ${testId}`,
+      data: JSON.stringify({ debug: true, testId }),
+      status: 'saved',
+      userId: req.user?.id || null,
+      userEmail: req.user?.email || 'debug@test.com',
+      vesselName: 'DEBUG_TEST',
+      savedAt: new Date()
+    };
+    
+    // Try with hasChanges first, fallback without if column missing
+    let testInvoice;
+    try {
+      testInvoice = await prisma.invoice.create({
+        data: { ...testData, hasChanges: false }
+      });
+    } catch (error) {
+      if (error.message && error.message.includes('hasChanges')) {
+        console.log('⚠️ DEBUG: hasChanges column missing, using fallback');
+        testInvoice = await prisma.invoice.create({
+          data: testData
+        });
+      } else {
+        throw error;
       }
-    });
+    }
     
     console.log('🧪 DEBUG: Test save successful:', testInvoice.id);
     

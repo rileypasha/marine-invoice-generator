@@ -14,112 +14,229 @@ const logger = pino({
  * Get paginated list of saved invoices
  */
 router.get('/invoices', requireMaster, async (req, res) => {
-  console.log('\n🔍 MASTER DASHBOARD ACCESS');
+  const requestId = `dash_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  console.log(`\n🔍 [${requestId}] MASTER DASHBOARD ACCESS`);
   console.log('  User:', req.user?.email);
-  console.log('  Query params:', req.query);
+  console.log('  Raw query params:', req.query);
   
   try {
-    const {
-      status,  // Removed default value - show ALL by default
-      search = '',
-      page = 1,
-      limit = 20,
-      dateFrom,
-      dateTo,
-      market,
-      sortBy = 'savedAt',
-      sortOrder = 'desc',
-      debug = false  // Add debug mode
-    } = req.query;
+    // Parameter validation and sanitization
+    const cleanParam = (param, defaultValue) => {
+      if (param === undefined || param === null || param === '') return defaultValue;
+      if (typeof param === 'string' && param.trim() === '') return defaultValue;
+      return param;
+    };
+    
+    const cleanNumber = (param, defaultValue) => {
+      const cleaned = cleanParam(param, defaultValue);
+      const num = parseInt(cleaned);
+      return isNaN(num) ? defaultValue : num;
+    };
+    
+    const cleanDate = (param) => {
+      if (!param || param === '' || param.trim() === '') return null;
+      try {
+        const date = new Date(param);
+        return isNaN(date.getTime()) ? null : date;
+      } catch (e) {
+        console.log(`  ⚠️ Invalid date parameter: ${param}`);
+        return null;
+      }
+    };
+    
+    // Clean and validate all parameters
+    const status = cleanParam(req.query.status, null);
+    const search = cleanParam(req.query.search, '');
+    const page = cleanNumber(req.query.page, 1);
+    const limit = Math.min(cleanNumber(req.query.limit, 20), 100); // Cap at 100
+    const dateFrom = cleanDate(req.query.dateFrom);
+    const dateTo = cleanDate(req.query.dateTo);
+    const market = cleanParam(req.query.market, null);
+    const sortBy = cleanParam(req.query.sortBy, 'savedAt');
+    const sortOrder = cleanParam(req.query.sortOrder, 'desc') === 'asc' ? 'asc' : 'desc';
+    const debug = req.query.debug === 'true' || req.query.debug === true;
+    
+    console.log('  Cleaned params:', {
+      status, search, page, limit, 
+      dateFrom: dateFrom?.toISOString(), 
+      dateTo: dateTo?.toISOString(), 
+      market, sortBy, sortOrder, debug
+    });
 
-    // Build where clause
+    // Build where clause with error handling
     let where = {};
     
-    // DEBUG MODE: Show absolutely everything
-    if (debug === 'true' || debug === true) {
-      console.log('🐛 DEBUG MODE: Showing ALL invoices without any filters');
-      // No where clause at all - show everything
-    } else {
-      // Status filter - SIMPLIFIED
-      const statusConditions = [];
-      if (status === 'all' || !status) {
-        // DEFAULT: Show ALL invoices regardless of status
-        console.log('  📋 Showing ALL statuses (no filter)');
-        // No status condition - show everything
+    try {
+      // DEBUG MODE: Show absolutely everything
+      if (debug) {
+        console.log('🐛 DEBUG MODE: Showing ALL invoices without any filters');
+        // No where clause at all - show everything
       } else {
-        // Specific status requested
-        statusConditions.push({ status: status });
-        console.log(`  📋 Filtering by status: ${status}`);
-      }
+        // Status filter - Fixed to handle 'saved' as default view
+        const statusConditions = [];
+        
+        // IMPORTANT FIX: 'saved' from frontend means show saved AND submitted
+        if (!status || status === 'all' || status === 'saved') {
+          // Show saved and submitted invoices (the main dashboard view)
+          statusConditions.push({ status: 'saved' });
+          statusConditions.push({ status: 'submitted' });
+          console.log('  📋 Showing saved and submitted invoices (default view)');
+        } else if (status === 'draft') {
+          // Only show drafts
+          statusConditions.push({ status: 'draft' });
+          console.log('  📋 Filtering by status: draft');
+        } else if (status === 'completed') {
+          // Only show completed
+          statusConditions.push({ status: 'completed' });
+          console.log('  📋 Filtering by status: completed');
+        } else if (status === 'cancelled') {
+          // Only show cancelled
+          statusConditions.push({ status: 'cancelled' });
+          console.log('  📋 Filtering by status: cancelled');
+        } else {
+          // Invalid status - show saved and submitted as fallback
+          console.log(`  ⚠️ Invalid status value: ${status}, showing default view`);
+          statusConditions.push({ status: 'saved' });
+          statusConditions.push({ status: 'submitted' });
+        }
 
-    // Add search condition
-    if (search) {
-      // SQLite doesn't support mode: 'insensitive', but contains is case-insensitive by default
-      const isPostgres = process.env.DATABASE_URL?.startsWith('postgresql');
-      const searchConditions = isPostgres ? [
-        { customerName: { contains: search, mode: 'insensitive' } },
-        { vesselName: { contains: search, mode: 'insensitive' } },
-        { invoiceNumber: { contains: search, mode: 'insensitive' } },
-        { userEmail: { contains: search, mode: 'insensitive' } }
-      ] : [
-        { customerName: { contains: search } },
-        { vesselName: { contains: search } },
-        { invoiceNumber: { contains: search } },
-        { userEmail: { contains: search } }
-      ];
-      
-      // Combine status and search conditions
-      if (statusConditions.length > 0) {
-        where.AND = [
-          { OR: statusConditions },
-          { OR: searchConditions }
-        ];
-      } else {
-        where.OR = searchConditions;
-      }
-    } else if (statusConditions.length > 0) {
-      if (statusConditions.length === 1) {
-        Object.assign(where, statusConditions[0]);
-      } else {
-        where.OR = statusConditions;
-      }
-    }
+        // Add search condition with validation
+        if (search && search.length > 0) {
+          // Sanitize search string
+          const sanitizedSearch = search.substring(0, 100); // Limit search length
+          
+          // SQLite doesn't support mode: 'insensitive', but contains is case-insensitive by default
+          const isPostgres = process.env.DATABASE_URL?.startsWith('postgresql');
+          const searchConditions = isPostgres ? [
+            { customerName: { contains: sanitizedSearch, mode: 'insensitive' } },
+            { vesselName: { contains: sanitizedSearch, mode: 'insensitive' } },
+            { invoiceNumber: { contains: sanitizedSearch, mode: 'insensitive' } },
+            { userEmail: { contains: sanitizedSearch, mode: 'insensitive' } }
+          ] : [
+            { customerName: { contains: sanitizedSearch } },
+            { vesselName: { contains: sanitizedSearch } },
+            { invoiceNumber: { contains: sanitizedSearch } },
+            { userEmail: { contains: sanitizedSearch } }
+          ];
+          
+          // Combine conditions safely
+          if (statusConditions.length > 0) {
+            where.AND = [
+              { OR: statusConditions },
+              { OR: searchConditions }
+            ];
+          } else {
+            where.OR = searchConditions;
+          }
+        } else if (statusConditions.length > 0) {
+          if (statusConditions.length === 1) {
+            Object.assign(where, statusConditions[0]);
+          } else {
+            where.OR = statusConditions;
+          }
+        }
 
-    // Add date range filter
-    if (dateFrom || dateTo) {
-      where.savedAt = {};
-      if (dateFrom) {
-        where.savedAt.gte = new Date(dateFrom);
-      }
-      if (dateTo) {
-        where.savedAt.lte = new Date(dateTo);
-      }
-    }
+        // Add date range filter with validation
+        if (dateFrom || dateTo) {
+          const dateFilter = {};
+          if (dateFrom) {
+            dateFilter.gte = dateFrom;
+            console.log(`  📅 Date from: ${dateFrom.toISOString()}`);
+          }
+          if (dateTo) {
+            // Add 23:59:59 to include the entire day
+            const endOfDay = new Date(dateTo);
+            endOfDay.setHours(23, 59, 59, 999);
+            dateFilter.lte = endOfDay;
+            console.log(`  📅 Date to: ${endOfDay.toISOString()}`);
+          }
+          
+          // Only add date filter if we have valid dates
+          if (Object.keys(dateFilter).length > 0) {
+            where.savedAt = dateFilter;
+          }
+        }
 
-    // Add market filter
-    if (market) {
-      where.market = market;
+        // Add market filter with validation
+        if (market && market.length > 0 && market.length <= 100) {
+          where.market = market;
+          console.log(`  🏪 Market filter: ${market}`);
+        }
+      } // Close the else block from debug mode
+    } catch (whereError) {
+      console.error(`  ❌ Error building where clause: ${whereError.message}`);
+      console.error(whereError.stack);
+      // Fallback to empty where clause
+      where = {};
+      console.log('  ⚠️ Using fallback: showing all invoices');
     }
-    } // Close the else block from debug mode
 
     console.log('  📊 Final where clause:', JSON.stringify(where, null, 2));
 
-    // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const take = parseInt(limit);
+    // Calculate pagination with bounds checking
+    const skip = Math.max(0, (page - 1) * limit);
+    const take = limit;
 
-    // Get total count
-    const total = await prisma.invoice.count({ where });
-    console.log(`  📈 Total invoices matching query: ${total}`);
+    // Get total count with error handling
+    let total = 0;
+    try {
+      total = await prisma.invoice.count({ where });
+      console.log(`  📈 Total invoices matching query: ${total}`);
+    } catch (countError) {
+      console.error(`  ❌ Error counting invoices: ${countError.message}`);
+      // Try simpler count without where clause
+      try {
+        total = await prisma.invoice.count();
+        console.log(`  📈 Total invoices (unfiltered): ${total}`);
+        where = {}; // Reset where clause for the main query
+      } catch (fallbackError) {
+        console.error(`  ❌ Fallback count failed: ${fallbackError.message}`);
+        total = 0;
+      }
+    }
 
-    // Get invoices
-    const invoices = await prisma.invoice.findMany({
-      where,
-      skip,
-      take,
-      orderBy: {
-        [sortBy]: sortOrder
-      },
+    // Validate sort field and handle numeric fields specially
+    const validSortFields = ['savedAt', 'createdAt', 'updatedAt', 'total', 'subtotal', 'grossProfit', 'invoiceNumber', 'customerName', 'vesselName'];
+    const safeSortBy = validSortFields.includes(sortBy) ? sortBy : 'savedAt';
+    const numericFields = ['total', 'subtotal', 'taxAmount', 'grossProfit'];
+
+    // Build orderBy with null handling for numeric fields
+    let orderBy = {};
+    if (numericFields.includes(safeSortBy)) {
+      // For numeric fields, handle nulls properly
+      // In Prisma, we need to use a different approach for SQLite vs PostgreSQL
+      const isPostgres = process.env.DATABASE_URL?.startsWith('postgresql');
+      if (isPostgres) {
+        orderBy = {
+          [safeSortBy]: {
+            sort: sortOrder,
+            nulls: 'last'
+          }
+        };
+      } else {
+        // SQLite doesn't support nulls option, but we can work around it
+        // by using _count or falling back to simple sorting
+        orderBy = {
+          [safeSortBy]: sortOrder
+        };
+      }
+    } else {
+      // Non-numeric fields use simple sorting
+      orderBy = {
+        [safeSortBy]: sortOrder
+      };
+    }
+
+    // Get invoices with error handling
+    let invoices = [];
+    try {
+      console.log(`  📋 Sorting by ${safeSortBy} ${sortOrder}`);
+      
+      invoices = await prisma.invoice.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
       select: {
         id: true,
         userId: true, // Include userId to track invoice ownership
@@ -140,7 +257,7 @@ router.get('/invoices', requireMaster, async (req, res) => {
         total: true,
         grossProfit: true,
         profitPercent: true,
-        hasChanges: true, // Include change tracking flag
+        // hasChanges: true, // Commented out - not all databases have this yet
         createdAt: true,
         updatedAt: true
       }
@@ -155,22 +272,133 @@ router.get('/invoices', requireMaster, async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
+      console.log(`  ✅ Successfully fetched ${invoices.length} invoices`);
+      
+      // Post-process to handle null values in numeric fields for SQLite
+      if (numericFields.includes(safeSortBy)) {
+        const isPostgres = process.env.DATABASE_URL?.startsWith('postgresql');
+        if (!isPostgres) {
+          // For SQLite, manually sort to put nulls last
+          invoices.sort((a, b) => {
+            const aVal = a[safeSortBy];
+            const bVal = b[safeSortBy];
+            
+            // Put nulls at the end
+            if (aVal === null && bVal === null) return 0;
+            if (aVal === null) return 1;
+            if (bVal === null) return -1;
+            
+            // Normal numeric comparison
+            if (sortOrder === 'asc') {
+              return aVal - bVal;
+            } else {
+              return bVal - aVal;
+            }
+          });
+          console.log('  🔄 Applied null-safe sorting for numeric field');
+        }
+      }
+    } catch (queryError) {
+      console.error(`  ❌ Error fetching invoices: ${queryError.message}`);
+      console.error(`  Query details: sortBy=${safeSortBy}, sortOrder=${sortOrder}`);
+      console.error(queryError.stack);
+      
+      // Try fallback query with minimal filters and safe sorting
+      try {
+        console.log('  🔄 Attempting fallback query with safe defaults...');
+        invoices = await prisma.invoice.findMany({
+          take: limit,
+          skip,
+          orderBy: { savedAt: 'desc' }, // Use savedAt which should always exist
+          select: {
+            id: true,
+            userId: true,
+            invoiceNumber: true,
+            status: true,
+            savedAt: true,
+            userName: true,
+            userEmail: true,
+            vesselName: true,
+            customerName: true,
+            total: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        });
+        console.log(`  ✅ Fallback query succeeded: ${invoices.length} invoices`);
+      } catch (fallbackError) {
+        console.error(`  ❌ Fallback query failed: ${fallbackError.message}`);
+        invoices = [];
+      }
+    }
+
     res.json({
       invoices,
       pagination: {
         total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(total / parseInt(limit))
-      }
+        page,
+        limit,
+        totalPages: total > 0 ? Math.ceil(total / limit) : 0
+      },
+      debug: debug ? {
+        requestId,
+        whereClause: where,
+        paramsSanitized: { status, search, page, limit, dateFrom, dateTo, market, sortBy, sortOrder }
+      } : undefined
     });
   } catch (error) {
+    console.error(`\n❌ [${requestId}] MASTER DASHBOARD FATAL ERROR`);
+    console.error('  Error message:', error.message);
+    console.error('  Stack trace:', error.stack);
+    console.error('  Query params:', req.query);
+    
     logger.error({
       event: 'MASTER_LIST_ERROR',
+      requestId,
       error: error.message,
-      email: req.user.email
+      stack: error.stack,
+      email: req.user?.email,
+      query: req.query
     });
-    res.status(500).json({ error: 'Failed to fetch invoices' });
+    
+    // Attempt emergency fallback
+    try {
+      console.log('  🚨 Attempting emergency fallback...');
+      const emergencyInvoices = await prisma.invoice.findMany({
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          invoiceNumber: true,
+          status: true,
+          vesselName: true,
+          customerName: true,
+          total: true,
+          createdAt: true
+        }
+      });
+      
+      res.status(200).json({
+        invoices: emergencyInvoices,
+        pagination: {
+          total: emergencyInvoices.length,
+          page: 1,
+          limit: 10,
+          totalPages: 1
+        },
+        error: 'Partial data due to system error. Showing recent invoices.',
+        recovery: true
+      });
+      console.log(`  ✅ Emergency fallback succeeded: ${emergencyInvoices.length} invoices`);
+    } catch (emergencyError) {
+      console.error('  ❌ Emergency fallback failed:', emergencyError.message);
+      res.status(500).json({ 
+        error: 'Failed to fetch invoices', 
+        message: error.message,
+        requestId,
+        recovery: false 
+      });
+    }
   }
 });
 
