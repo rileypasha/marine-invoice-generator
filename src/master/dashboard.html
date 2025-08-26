@@ -13,15 +13,30 @@
         <header class="dashboard-header">
             <div class="header-content">
                 <div class="header-left">
-                    <img src="https://i.imgur.com/A9K1ByZ.png" alt="Marine Group" class="logo">
-                    <h1>Master Dashboard</h1>
+                    <div class="logo-container">
+                        <img src="https://i.imgur.com/A9K1ByZ.png" alt="Marine Group" class="logo">
+                        <div class="logo-divider"></div>
+                        <div class="header-title">
+                            <h1>Master Dashboard</h1>
+                            <span class="header-subtitle">Invoice Management System</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="header-right">
-                    <div class="user-info">
-                        <span class="user-email" id="userEmail"></span>
-                        <span class="user-badge">MASTER</span>
+                    <div class="theme-toggle" id="themeToggle">
+                        <div class="theme-toggle-slider"></div>
+                        <div class="theme-toggle-icons">
+                            <span class="theme-icon moon-icon">🌙</span>
+                            <span class="theme-icon sun-icon">☀️</span>
+                        </div>
                     </div>
-                    <button id="logoutBtn" class="btn-logout">Logout</button>
+                    <div class="user-section">
+                        <div class="user-info">
+                            <span class="user-email" id="userEmail"></span>
+                            <span class="user-badge">✓ MASTER ACCESS</span>
+                        </div>
+                        <button id="logoutBtn" class="btn-logout">Logout</button>
+                    </div>
                 </div>
             </div>
         </header>

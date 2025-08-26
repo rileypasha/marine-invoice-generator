@@ -27,12 +27,31 @@ class MasterDashboard {
             return;
         }
         
+        // Initialize theme
+        this.initTheme();
+        
         // Load initial data
         await this.loadStats();
         await this.loadInvoices();
         
         // Setup event listeners
         this.setupEventListeners();
+    }
+    
+    initTheme() {
+        // Check localStorage for saved theme preference
+        const savedTheme = localStorage.getItem('dashboardTheme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.body.setAttribute('data-theme', savedTheme);
+    }
+    
+    toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        document.documentElement.setAttribute('data-theme', newTheme);
+        document.body.setAttribute('data-theme', newTheme);
+        localStorage.setItem('dashboardTheme', newTheme);
     }
     
     async checkAuth() {
@@ -298,6 +317,11 @@ class MasterDashboard {
     }
     
     setupEventListeners() {
+        // Theme toggle
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            this.toggleTheme();
+        });
+        
         // Filter controls
         document.getElementById('applyFilters').addEventListener('click', () => {
             this.applyFilters();
