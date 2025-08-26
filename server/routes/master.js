@@ -30,11 +30,15 @@ router.get('/invoices', requireMaster, async (req, res) => {
     // Build where clause - Include ALL saved/submitted invoices
     const where = {};
     
-    // Status filter
+    // Status filter - Fixed to properly handle default status
     const statusConditions = [];
-    if (status && status !== 'all') {
+    if (status === 'all') {
+      // Show all invoices regardless of status
+      // No status condition needed
+    } else if (status) {
+      // Specific status requested
       statusConditions.push({ status: status });
-    } else if (!status) {
+    } else {
       // Default: show both saved and submitted invoices
       statusConditions.push({ status: 'saved' });
       statusConditions.push({ status: 'submitted' });
@@ -113,9 +117,14 @@ router.get('/invoices', requireMaster, async (req, res) => {
         userName: true,
         userEmail: true,
         vesselName: true,
+        vesselWeight: true, // Added missing field
+        vesselBeam: true, // Added missing field
         customerName: true,
         customerEmail: true,
+        customerPhone: true, // Added missing field
         market: true,
+        subtotal: true, // Added missing field
+        taxAmount: true, // Added missing field
         total: true,
         grossProfit: true,
         profitPercent: true,
@@ -317,6 +326,42 @@ router.get('/invoices/:id/export.csv', requireMaster, async (req, res) => {
       invoiceId: req.params.id
     });
     res.status(500).json({ error: 'Failed to export invoice' });
+  }
+});
+
+/**
+ * GET /api/master/debug
+ * Debug endpoint to see all invoices without filters
+ */
+router.get('/debug', requireMaster, async (req, res) => {
+  try {
+    // Get ALL invoices without any filters for debugging
+    const allInvoices = await prisma.invoice.findMany({
+      orderBy: { savedAt: 'desc' },
+      take: 100
+    });
+    
+    // Get count by status
+    const statusCounts = await prisma.invoice.groupBy({
+      by: ['status'],
+      _count: true
+    });
+    
+    res.json({
+      total: allInvoices.length,
+      statusCounts,
+      invoices: allInvoices.map(inv => ({
+        id: inv.id,
+        userId: inv.userId,
+        status: inv.status,
+        vesselName: inv.vesselName,
+        customerName: inv.customerName,
+        savedAt: inv.savedAt
+      }))
+    });
+  } catch (error) {
+    logger.error({ event: 'DEBUG_ERROR', error: error.message });
+    res.status(500).json({ error: 'Debug failed' });
   }
 });
 

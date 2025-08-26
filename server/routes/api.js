@@ -16,18 +16,18 @@ router.post('/invoice/save', requireAuth, async (req, res) => {
       extractedFields = {
         // User info from session - CRITICAL: properly set userId
         userId: req.user.id || req.session?.user?.id,
-        userName: req.user.name || data.estimatorName,
-        userEmail: req.user.email || data.estimatorEmail,
+        userName: req.user.name || data.estimatorName || data.estimator?.name,
+        userEmail: req.user.email || data.estimatorEmail || data.estimator?.email,
         
-        // Vessel info
-        vesselName: data.vesselName || null,
-        vesselWeight: data.vesselWeight ? parseFloat(data.vesselWeight) : null,
-        vesselBeam: data.vesselBeam ? parseFloat(data.vesselBeam) : null,
+        // Vessel info - handle both nested and flat structures
+        vesselName: data.vesselName || data.vessel?.name || null,
+        vesselWeight: (data.vesselWeight || data.vessel?.weight) ? parseFloat(data.vesselWeight || data.vessel?.weight) : null,
+        vesselBeam: (data.vesselBeam || data.vessel?.beam) ? parseFloat(data.vesselBeam || data.vessel?.beam) : null,
         
-        // Customer info
-        customerName: data.customerName || null,
-        customerEmail: data.customerEmail || null,
-        customerPhone: data.customerPhone || null,
+        // Customer info - handle both nested and flat structures
+        customerName: data.customerName || data.customer?.customerName || null,
+        customerEmail: data.customerEmail || data.customer?.customerEmail || null,
+        customerPhone: data.customerPhone || data.customer?.customerPhone || null,
         
         // Financial info
         subtotal: data.subtotal ? parseFloat(data.subtotal) : 0,
@@ -51,6 +51,17 @@ router.post('/invoice/save', requireAuth, async (req, res) => {
         metadata: metadata ? JSON.stringify(metadata) : null,
         ...extractedFields
       }
+    });
+    
+    // Log successful save for debugging
+    console.log('✅ Invoice saved successfully:', {
+      id: invoice.id,
+      userId: invoice.userId,
+      userName: invoice.userName,
+      userEmail: invoice.userEmail,
+      vesselName: invoice.vesselName,
+      status: invoice.status,
+      savedAt: invoice.savedAt
     });
     
     res.json({ success: true, invoice });
@@ -90,18 +101,18 @@ router.put('/invoice/:id', requireAuth, async (req, res) => {
     if (data) {
       extractedFields = {
         // User info from session - preserve userId on updates
-        userName: req.user.name || data.estimatorName,
-        userEmail: req.user.email || data.estimatorEmail,
+        userName: req.user.name || data.estimatorName || data.estimator?.name,
+        userEmail: req.user.email || data.estimatorEmail || data.estimator?.email,
         
-        // Vessel info
-        vesselName: data.vesselName || null,
-        vesselWeight: data.vesselWeight ? parseFloat(data.vesselWeight) : null,
-        vesselBeam: data.vesselBeam ? parseFloat(data.vesselBeam) : null,
+        // Vessel info - handle both nested and flat structures
+        vesselName: data.vesselName || data.vessel?.name || null,
+        vesselWeight: (data.vesselWeight || data.vessel?.weight) ? parseFloat(data.vesselWeight || data.vessel?.weight) : null,
+        vesselBeam: (data.vesselBeam || data.vessel?.beam) ? parseFloat(data.vesselBeam || data.vessel?.beam) : null,
         
-        // Customer info
-        customerName: data.customerName || null,
-        customerEmail: data.customerEmail || null,
-        customerPhone: data.customerPhone || null,
+        // Customer info - handle both nested and flat structures
+        customerName: data.customerName || data.customer?.customerName || null,
+        customerEmail: data.customerEmail || data.customer?.customerEmail || null,
+        customerPhone: data.customerPhone || data.customer?.customerPhone || null,
         
         // Financial info
         subtotal: data.subtotal ? parseFloat(data.subtotal) : 0,
