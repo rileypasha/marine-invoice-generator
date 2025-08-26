@@ -1,8 +1,11 @@
+import { PromptModal } from '../components/PromptModal.js';
+
 export class SettingsModal {
   constructor(userManager, themeManager) {
     this.userManager = userManager;
     this.themeManager = themeManager;
     this.isVisible = false;
+    this.promptModal = new PromptModal();
     this.createModal();
     this.attachListeners();
   }
@@ -190,8 +193,15 @@ export class SettingsModal {
     this.showNotification('Settings saved successfully', 'success');
   }
   
-  handleSignOut() {
-    if (confirm('Are you sure you want to sign out?')) {
+  async handleSignOut() {
+    const confirmed = await this.promptModal.showConfirm(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      'Yes, Sign Out',
+      'Cancel'
+    );
+    
+    if (confirmed) {
       this.userManager.logout();
       this.hide();
       this.showNotification('Signed out successfully', 'info');

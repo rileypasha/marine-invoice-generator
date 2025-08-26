@@ -241,7 +241,7 @@ export class PromptModal {
     });
   }
 
-  showConfirm(title = 'Confirm', message = '') {
+  showConfirm(title = 'Confirm', message = '', confirmText = 'Continue', cancelText = 'Cancel') {
     return new Promise((resolve) => {
       this.resolve = resolve;
 
@@ -249,8 +249,8 @@ export class PromptModal {
       this.modal.querySelector('.prompt-modal-title').textContent = title;
       this.input.style.display = 'none'; // Hide input for confirm
       this.cancelBtn.style.display = 'inline-block'; // Show cancel button
-      this.confirmBtn.textContent = 'Continue';
-      this.cancelBtn.textContent = 'Cancel';
+      this.confirmBtn.textContent = confirmText;
+      this.cancelBtn.textContent = cancelText;
 
       // Show message in place of input
       if (!this.messageDiv) {
