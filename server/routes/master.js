@@ -428,7 +428,7 @@ router.get('/invoices/:id', requireMaster, async (req, res) => {
         },
         revisions: {
           orderBy: {
-            changedAt: 'desc'
+            createdAt: 'desc'
           },
           take: 5
         }
