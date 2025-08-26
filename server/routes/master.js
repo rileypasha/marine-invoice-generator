@@ -27,19 +27,43 @@ router.get('/invoices', requireMaster, async (req, res) => {
       sortOrder = 'desc'
     } = req.query;
 
-    // Build where clause
-    const where = {
-      status: status
-    };
+    // Build where clause - Include ALL saved/submitted invoices
+    const where = {};
+    
+    // Status filter
+    const statusConditions = [];
+    if (status && status !== 'all') {
+      statusConditions.push({ status: status });
+    } else if (!status) {
+      // Default: show both saved and submitted invoices
+      statusConditions.push({ status: 'saved' });
+      statusConditions.push({ status: 'submitted' });
+    }
 
     // Add search condition
     if (search) {
-      where.OR = [
+      const searchConditions = [
         { customerName: { contains: search, mode: 'insensitive' } },
         { vesselName: { contains: search, mode: 'insensitive' } },
         { invoiceNumber: { contains: search, mode: 'insensitive' } },
         { userEmail: { contains: search, mode: 'insensitive' } }
       ];
+      
+      // Combine status and search conditions
+      if (statusConditions.length > 0) {
+        where.AND = [
+          { OR: statusConditions },
+          { OR: searchConditions }
+        ];
+      } else {
+        where.OR = searchConditions;
+      }
+    } else if (statusConditions.length > 0) {
+      if (statusConditions.length === 1) {
+        Object.assign(where, statusConditions[0]);
+      } else {
+        where.OR = statusConditions;
+      }
     }
 
     // Add date range filter
@@ -75,6 +99,7 @@ router.get('/invoices', requireMaster, async (req, res) => {
       },
       select: {
         id: true,
+        userId: true, // Include userId to track invoice ownership
         invoiceNumber: true,
         status: true,
         savedAt: true,
@@ -86,7 +111,10 @@ router.get('/invoices', requireMaster, async (req, res) => {
         market: true,
         total: true,
         grossProfit: true,
-        profitPercent: true
+        profitPercent: true,
+        hasChanges: true, // Include change tracking flag
+        createdAt: true,
+        updatedAt: true
       }
     });
 
@@ -298,15 +326,23 @@ router.get('/stats', requireMaster, async (req, res) => {
     weekAgo.setDate(weekAgo.getDate() - 7);
 
     const [totalSaved, todayCount, weekInvoices] = await Promise.all([
-      // Total saved invoices
+      // Total saved/submitted invoices
       prisma.invoice.count({
-        where: { status: 'saved' }
+        where: {
+          OR: [
+            { status: 'saved' },
+            { status: 'submitted' }
+          ]
+        }
       }),
       
       // Today's invoice count
       prisma.invoice.count({
         where: {
-          status: 'saved',
+          OR: [
+            { status: 'saved' },
+            { status: 'submitted' }
+          ],
           savedAt: { gte: today }
         }
       }),
@@ -314,7 +350,10 @@ router.get('/stats', requireMaster, async (req, res) => {
       // Week's invoices for total calculation
       prisma.invoice.findMany({
         where: {
-          status: 'saved',
+          OR: [
+            { status: 'saved' },
+            { status: 'submitted' }
+          ],
           savedAt: { gte: weekAgo }
         },
         select: {

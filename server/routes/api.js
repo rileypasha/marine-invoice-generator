@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
-const { requireApiKey } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
 
 const prisma = new PrismaClient();
 
-// Invoice endpoints
-router.post('/invoice/save', requireApiKey, async (req, res) => {
+// Invoice endpoints - Use session auth instead of API key
+router.post('/invoice/save', requireAuth, async (req, res) => {
   try {
     const { title, data, metadata } = req.body;
     
@@ -14,10 +14,10 @@ router.post('/invoice/save', requireApiKey, async (req, res) => {
     let extractedFields = {};
     if (data) {
       extractedFields = {
-        // User info from session
-        userId: req.user?.id,
-        userName: req.user?.name || data.estimatorName,
-        userEmail: req.user?.email || data.estimatorEmail,
+        // User info from session - CRITICAL: properly set userId
+        userId: req.user.id || req.session?.user?.id,
+        userName: req.user.name || data.estimatorName,
+        userEmail: req.user.email || data.estimatorEmail,
         
         // Vessel info
         vesselName: data.vesselName || null,
@@ -81,7 +81,7 @@ router.get('/invoice/:id', async (req, res) => {
   }
 });
 
-router.put('/invoice/:id', requireApiKey, async (req, res) => {
+router.put('/invoice/:id', requireAuth, async (req, res) => {
   try {
     const { title, data, metadata, status } = req.body;
     
@@ -89,9 +89,9 @@ router.put('/invoice/:id', requireApiKey, async (req, res) => {
     let extractedFields = {};
     if (data) {
       extractedFields = {
-        // User info from session
-        userName: req.user?.name || data.estimatorName,
-        userEmail: req.user?.email || data.estimatorEmail,
+        // User info from session - preserve userId on updates
+        userName: req.user.name || data.estimatorName,
+        userEmail: req.user.email || data.estimatorEmail,
         
         // Vessel info
         vesselName: data.vesselName || null,
@@ -142,7 +142,7 @@ router.put('/invoice/:id', requireApiKey, async (req, res) => {
   }
 });
 
-router.delete('/invoice/:id', requireApiKey, async (req, res) => {
+router.delete('/invoice/:id', requireAuth, async (req, res) => {
   try {
     await prisma.invoice.delete({
       where: { id: req.params.id }

@@ -6,6 +6,7 @@ export class InvoiceStorage {
     this.autoSaveInterval = null;
     this.listeners = [];
     this.isPerformingAutoSave = false; // Prevent concurrent auto-saves
+    this.serverInvoiceMap = new Map(); // Map local IDs to server IDs
     
     this.setupAutoSave();
   }
@@ -27,8 +28,8 @@ export class InvoiceStorage {
     return 'inv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
   
-  // Save invoice (completed)
-  saveInvoice(invoiceData, title = null) {
+  // Save invoice (completed) - Now saves to both localStorage and server
+  async saveInvoice(invoiceData, title = null) {
     const currentUser = this.userManager.getCurrentUser();
     if (!currentUser) {
       throw new Error('Must be signed in to save invoices');
@@ -45,16 +46,66 @@ export class InvoiceStorage {
       metadata: this.extractMetadata(invoiceData)
     };
     
+    // Save to localStorage first
     const invoices = this.getAllInvoices();
     invoices.push(invoice);
     localStorage.setItem(this.storageKey, JSON.stringify(invoices));
+    
+    // Save to server
+    try {
+      const serverInvoice = await this.saveToServer(invoice);
+      if (serverInvoice && serverInvoice.id) {
+        // Map local ID to server ID
+        this.serverInvoiceMap.set(invoice.id, serverInvoice.id);
+        invoice.serverId = serverInvoice.id;
+        
+        // Update localStorage with server ID
+        const updatedInvoices = this.getAllInvoices();
+        const index = updatedInvoices.findIndex(inv => inv.id === invoice.id);
+        if (index !== -1) {
+          updatedInvoices[index].serverId = serverInvoice.id;
+          localStorage.setItem(this.storageKey, JSON.stringify(updatedInvoices));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to save invoice to server:', error);
+      // Invoice is still saved locally
+    }
     
     this.notify();
     return invoice.id;
   }
   
-  // Save draft (auto-save or manual)
-  saveDraft(invoiceData, title = null, draftId = null) {
+  // Save invoice to server
+  async saveToServer(invoice) {
+    try {
+      const response = await fetch('/api/v1/invoice/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Include session cookies
+        body: JSON.stringify({
+          title: invoice.title,
+          data: invoice.data,
+          metadata: invoice.metadata
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      return result.invoice;
+    } catch (error) {
+      console.error('Server save failed:', error);
+      throw error;
+    }
+  }
+  
+  // Save draft (auto-save or manual) - Also saves to server
+  async saveDraft(invoiceData, title = null, draftId = null) {
     const currentUser = this.userManager.getCurrentUser();
     if (!currentUser) {
       return null; // Silently fail for drafts if not signed in
@@ -63,10 +114,13 @@ export class InvoiceStorage {
     const drafts = this.getAllDrafts();
     
     let draft;
+    let serverId = null;
+    
     if (draftId) {
       // Update existing draft
       const index = drafts.findIndex(d => d.id === draftId);
       if (index !== -1) {
+        serverId = drafts[index].serverId; // Preserve server ID
         draft = {
           ...drafts[index],
           title: title || drafts[index].title,
@@ -91,9 +145,61 @@ export class InvoiceStorage {
       drafts.push(draft);
     }
     
+    // Save to localStorage first
     localStorage.setItem(this.draftsKey, JSON.stringify(drafts));
+    
+    // Save to server (non-blocking)
+    this.saveDraftToServer(draft, serverId).then(serverInvoice => {
+      if (serverInvoice && serverInvoice.id) {
+        // Update with server ID
+        const updatedDrafts = this.getAllDrafts();
+        const index = updatedDrafts.findIndex(d => d.id === draft.id);
+        if (index !== -1) {
+          updatedDrafts[index].serverId = serverInvoice.id;
+          localStorage.setItem(this.draftsKey, JSON.stringify(updatedDrafts));
+        }
+      }
+    }).catch(error => {
+      console.error('Failed to save draft to server:', error);
+    });
+    
     this.notify();
-    return draft.id;
+    return draft ? draft.id : null;
+  }
+  
+  // Save draft to server
+  async saveDraftToServer(draft, serverId = null) {
+    try {
+      const url = serverId 
+        ? `/api/v1/invoice/${serverId}`
+        : '/api/v1/invoice/save';
+      
+      const method = serverId ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: draft.title,
+          data: draft.data,
+          metadata: draft.metadata,
+          status: 'saved' // Server uses 'saved' status
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      return result.invoice;
+    } catch (error) {
+      console.error('Draft server save failed:', error);
+      throw error;
+    }
   }
   
   // Load invoice/draft
@@ -104,32 +210,70 @@ export class InvoiceStorage {
     return invoices.find(inv => inv.id === id) || drafts.find(draft => draft.id === id);
   }
   
-  // Delete invoice/draft
-  deleteInvoice(id) {
+  // Delete invoice/draft - Also deletes from server
+  async deleteInvoice(id) {
     const currentUser = this.userManager.getCurrentUser();
     if (!currentUser) return false;
+    
+    let serverId = null;
+    let deleted = false;
     
     // Check invoices
     let invoices = this.getAllInvoices();
     const invoiceIndex = invoices.findIndex(inv => inv.id === id && inv.userId === currentUser.id);
     if (invoiceIndex !== -1) {
+      serverId = invoices[invoiceIndex].serverId;
       invoices.splice(invoiceIndex, 1);
       localStorage.setItem(this.storageKey, JSON.stringify(invoices));
-      this.notify();
-      return true;
+      deleted = true;
     }
     
     // Check drafts
-    let drafts = this.getAllDrafts();
-    const draftIndex = drafts.findIndex(draft => draft.id === id && draft.userId === currentUser.id);
-    if (draftIndex !== -1) {
-      drafts.splice(draftIndex, 1);
-      localStorage.setItem(this.draftsKey, JSON.stringify(drafts));
-      this.notify();
-      return true;
+    if (!deleted) {
+      let drafts = this.getAllDrafts();
+      const draftIndex = drafts.findIndex(draft => draft.id === id && draft.userId === currentUser.id);
+      if (draftIndex !== -1) {
+        serverId = drafts[draftIndex].serverId;
+        drafts.splice(draftIndex, 1);
+        localStorage.setItem(this.draftsKey, JSON.stringify(drafts));
+        deleted = true;
+      }
     }
     
-    return false;
+    // Delete from server if we have a server ID
+    if (deleted && serverId) {
+      try {
+        await this.deleteFromServer(serverId);
+      } catch (error) {
+        console.error('Failed to delete from server:', error);
+        // Continue - item is already deleted locally
+      }
+    }
+    
+    if (deleted) {
+      this.notify();
+    }
+    
+    return deleted;
+  }
+  
+  // Delete invoice from server
+  async deleteFromServer(serverId) {
+    try {
+      const response = await fetch(`/api/v1/invoice/${serverId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Server delete failed:', error);
+      throw error;
+    }
   }
   
   // Duplicate invoice/draft
@@ -246,7 +390,7 @@ export class InvoiceStorage {
           const draftsToRemove = sortedDrafts.slice(1); // Remove the rest
           
           draftsToRemove.forEach(draft => {
-            this.deleteDraft(draft.id);
+            this.deleteInvoice(draft.id);
           });
         } else if (autoSaveDrafts.length === 1) {
           targetAutoSave = autoSaveDrafts[0];
