@@ -119,12 +119,63 @@ router.post('/invoice/save', requireAuth, async (req, res) => {
         }
       });
     } catch (error) {
-      // If hasChanges column doesn't exist, try without it (old schema)
+      // If hasChanges column doesn't exist, use raw SQL (old schema)
       if (error.message && error.message.includes('hasChanges') && error.message.includes('does not exist')) {
-        console.log(`⚠️ [${requestId}] Database missing hasChanges column, using fallback`);
-        invoice = await prisma.invoice.create({
-          data: invoiceData
-        });
+        console.log(`⚠️ [${requestId}] Database missing hasChanges column, using raw SQL fallback`);
+        
+        // Generate a unique ID
+        const id = `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Use raw SQL to insert without hasChanges column
+        // Note: Using COALESCE for optional fields to handle nulls properly
+        const now = new Date();
+        const result = await prisma.$executeRaw`
+          INSERT INTO "Invoice" (
+            id, title, data, metadata, status,
+            "userId", "userName", "userEmail",
+            "vesselName", "vesselWeight", "vesselBeam",
+            "customerName", "customerEmail", "customerPhone",
+            subtotal, "taxAmount", total, "grossProfit", "profitPercent",
+            market, "invoiceNumber", "savedAt", "createdAt", "updatedAt"
+          ) VALUES (
+            ${id}, 
+            ${invoiceData.title}, 
+            ${invoiceData.data}, 
+            ${invoiceData.metadata || null}, 
+            ${invoiceData.status},
+            ${invoiceData.userId || null}, 
+            ${invoiceData.userName || null}, 
+            ${invoiceData.userEmail || null},
+            ${invoiceData.vesselName || null}, 
+            ${invoiceData.vesselWeight || null}, 
+            ${invoiceData.vesselBeam || null},
+            ${invoiceData.customerName || null}, 
+            ${invoiceData.customerEmail || null}, 
+            ${invoiceData.customerPhone || null},
+            ${invoiceData.subtotal || 0}, 
+            ${invoiceData.taxAmount || 0}, 
+            ${invoiceData.total || 0}, 
+            ${invoiceData.grossProfit || 0}, 
+            ${invoiceData.profitPercent || 0},
+            ${invoiceData.market || null}, 
+            ${invoiceData.invoiceNumber || null}, 
+            ${invoiceData.savedAt || now}, 
+            ${now}, 
+            ${now}
+          )
+        `;
+        
+        // Fetch the created invoice
+        const invoices = await prisma.$queryRaw`
+          SELECT * FROM "Invoice" WHERE id = ${id}
+        `;
+        
+        if (invoices && invoices.length > 0) {
+          invoice = invoices[0];
+          console.log(`✅ [${requestId}] Invoice created using raw SQL fallback`);
+        } else {
+          throw new Error('Failed to create invoice with raw SQL');
+        }
       } else {
         // Re-throw if it's a different error
         throw error;
@@ -247,13 +298,80 @@ router.put('/invoice/:id', requireAuth, async (req, res) => {
         }
       });
     } catch (error) {
-      // If hasChanges column doesn't exist, update without it (old schema)
+      // If hasChanges column doesn't exist, use raw SQL (old schema)
       if (error.message && error.message.includes('hasChanges') && error.message.includes('does not exist')) {
-        console.log('⚠️ Update: Database missing hasChanges column, using fallback');
-        invoice = await prisma.invoice.update({
-          where: { id: req.params.id },
-          data: updateData
+        console.log('⚠️ Update: Database missing hasChanges column, using raw SQL fallback');
+        
+        // Build dynamic UPDATE using Prisma's raw query with proper parameterization
+        const updates = [];
+        const now = new Date();
+        
+        // Build the SET clause dynamically
+        let updateQuery = 'UPDATE "Invoice" SET ';
+        const setClauses = [];
+        
+        // Always update these fields
+        setClauses.push('"updatedAt" = $1');
+        const params = [now];
+        let paramIndex = 2;
+        
+        // Add other fields if they exist
+        if (updateData.title !== undefined) {
+          setClauses.push(`title = $${paramIndex}`);
+          params.push(updateData.title);
+          paramIndex++;
+        }
+        if (updateData.data !== undefined) {
+          setClauses.push(`data = $${paramIndex}`);
+          params.push(updateData.data);
+          paramIndex++;
+        }
+        if (updateData.metadata !== undefined) {
+          setClauses.push(`metadata = $${paramIndex}`);
+          params.push(updateData.metadata);
+          paramIndex++;
+        }
+        if (updateData.status !== undefined) {
+          setClauses.push(`status = $${paramIndex}`);
+          params.push(updateData.status);
+          paramIndex++;
+        }
+        
+        // Add extracted fields
+        const fields = [
+          'userName', 'userEmail', 'vesselName', 'vesselWeight', 'vesselBeam',
+          'customerName', 'customerEmail', 'customerPhone', 
+          'subtotal', 'taxAmount', 'total', 'grossProfit', 'profitPercent',
+          'market', 'invoiceNumber', 'savedAt'
+        ];
+        
+        fields.forEach(field => {
+          if (updateData[field] !== undefined) {
+            setClauses.push(`"${field}" = $${paramIndex}`);
+            params.push(updateData[field]);
+            paramIndex++;
+          }
         });
+        
+        // Complete the query
+        updateQuery += setClauses.join(', ');
+        updateQuery += ` WHERE id = $${paramIndex}`;
+        params.push(req.params.id);
+        
+        // Execute the update using parameterized query
+        await prisma.$executeRawUnsafe(updateQuery, ...params);
+        
+        // Fetch the updated invoice
+        const invoices = await prisma.$queryRaw`
+          SELECT * FROM "Invoice" WHERE id = ${req.params.id}
+        `;
+        
+        if (invoices && invoices.length > 0) {
+          invoice = invoices[0];
+          console.log('✅ Invoice updated using raw SQL fallback');
+        } else {
+          throw new Error('Failed to fetch updated invoice');
+        }
       } else {
         // Re-throw if it's a different error
         throw error;
