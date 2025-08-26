@@ -246,6 +246,11 @@ export class Sidebar {
     }
   }
   
+  // Alias for updateSavedList
+  updateSavedItems() {
+    this.updateSavedList();
+  }
+  
   
   createInvoiceItem(item) {
     const isCompleted = item.status === 'completed';

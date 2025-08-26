@@ -307,12 +307,106 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Add methods to InvoiceApp class
+InvoiceApp.prototype.saveInvoice = async function() {
+  try {
+    const currentUser = this.userManager.getCurrentUser();
+    if (!currentUser) {
+      this.authModal.show();
+      return;
+    }
+    
+    // Get current invoice data
+    const invoiceData = this.state.getState();
+    
+    // Validate minimum required data
+    if (!invoiceData.vessel?.name && !invoiceData.customer?.customerName) {
+      this.showNotification('Please add vessel or customer information before saving', 'warning');
+      return;
+    }
+    
+    // Generate title from vessel and customer
+    const title = `${invoiceData.vessel?.name || 'Unnamed'} - ${invoiceData.customer?.customerName || 'Unknown'}`;
+    
+    // Save to localStorage first for immediate UI update
+    const localId = await this.invoiceStorage.saveInvoice(invoiceData, title);
+    
+    // Update sidebar to show saved invoice
+    if (this.sidebar) {
+      this.sidebar.updateSavedItems();
+    }
+    
+    // Show success notification
+    this.showNotification('Invoice saved successfully', 'success');
+    
+    // Enable export buttons
+    document.querySelectorAll('.export-group button').forEach(btn => {
+      btn.disabled = false;
+    });
+    
+    console.log('✅ Invoice saved with ID:', localId);
+    
+  } catch (error) {
+    console.error('Failed to save invoice:', error);
+    this.showNotification('Failed to save invoice. Please try again.', 'error');
+  }
+};
+
+InvoiceApp.prototype.saveCurrentInvoice = InvoiceApp.prototype.saveInvoice;
+
+InvoiceApp.prototype.showNotification = function(message, type = 'info') {
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.className = `notification notification-${type}`;
+  notification.textContent = message;
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : type === 'warning' ? '#ff9800' : '#2196F3'};
+    color: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 10000;
+    animation: slideIn 0.3s ease;
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Auto-remove after 3 seconds
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => {
+      document.body.removeChild(notification);
+    }, 300);
+  }, 3000);
+};
+
+InvoiceApp.prototype.createNewInvoice = function() {
+  // Reset state
+  this.state.reset();
+  
+  // Clear all form fields
+  document.querySelectorAll('input[type="text"], input[type="number"], input[type="email"], textarea').forEach(input => {
+    input.value = '';
+  });
+  
+  // Clear line items
+  const lineItemsList = document.getElementById('line-items-list');
+  if (lineItemsList) {
+    lineItemsList.innerHTML = '';
+  }
+  
+  // Show notification
+  this.showNotification('New invoice created', 'info');
+};
+
 InvoiceApp.prototype.initKeyboardShortcuts = function() {
   document.addEventListener('keydown', (e) => {
     // Cmd/Ctrl + S = Save invoice
     if ((e.metaKey || e.ctrlKey) && e.key === 's') {
       e.preventDefault();
-      this.saveCurrentInvoice();
+      this.saveInvoice();
     }
     
     // Cmd/Ctrl + N = New invoice

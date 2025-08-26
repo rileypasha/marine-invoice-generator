@@ -42,11 +42,18 @@ router.get('/invoices', requireMaster, async (req, res) => {
 
     // Add search condition
     if (search) {
-      const searchConditions = [
+      // SQLite doesn't support mode: 'insensitive', but contains is case-insensitive by default
+      const isPostgres = process.env.DATABASE_URL?.startsWith('postgresql');
+      const searchConditions = isPostgres ? [
         { customerName: { contains: search, mode: 'insensitive' } },
         { vesselName: { contains: search, mode: 'insensitive' } },
         { invoiceNumber: { contains: search, mode: 'insensitive' } },
         { userEmail: { contains: search, mode: 'insensitive' } }
+      ] : [
+        { customerName: { contains: search } },
+        { vesselName: { contains: search } },
+        { invoiceNumber: { contains: search } },
+        { userEmail: { contains: search } }
       ];
       
       // Combine status and search conditions
