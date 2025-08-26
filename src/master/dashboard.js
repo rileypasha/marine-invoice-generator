@@ -303,9 +303,14 @@ class MasterDashboard {
         const modal = document.getElementById('detailModal');
         const modalBody = document.getElementById('modalBody');
         
-        // Parse invoice data
+        // Parse invoice data - check if we have the actual data structure
         const invoiceData = invoice.parsedData || {};
-        const lineItems = invoiceData.lineItems || [];
+        
+        // Extract the actual vessel and customer info from the parsed data
+        const vessel = invoiceData.vessel || {};
+        const customer = invoiceData.customer || {};
+        const scope = invoiceData.scope || {};
+        const lineItems = scope.lineItems || [];
         
         modalBody.innerHTML = `
             <div class="invoice-detail">
@@ -336,15 +341,23 @@ class MasterDashboard {
                     <div class="detail-grid">
                         <div class="detail-item">
                             <span class="detail-label">Vessel Name</span>
-                            <span class="detail-value">${invoice.vesselName || 'N/A'}</span>
+                            <span class="detail-value">${vessel.name || invoice.vesselName || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Weight</span>
-                            <span class="detail-value">${invoice.vesselWeight ? invoice.vesselWeight + ' tons' : 'N/A'}</span>
+                            <span class="detail-value">${vessel.weight || (invoice.vesselWeight ? invoice.vesselWeight + ' tons' : 'N/A')}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Beam</span>
-                            <span class="detail-value">${invoice.vesselBeam ? invoice.vesselBeam + ' ft' : 'N/A'}</span>
+                            <span class="detail-value">${vessel.beam || (invoice.vesselBeam ? invoice.vesselBeam + ' ft' : 'N/A')}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">LOA</span>
+                            <span class="detail-value">${vessel.loa || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Draft</span>
+                            <span class="detail-value">${vessel.draft || 'N/A'}</span>
                         </div>
                     </div>
                 </div>
@@ -354,15 +367,19 @@ class MasterDashboard {
                     <div class="detail-grid">
                         <div class="detail-item">
                             <span class="detail-label">Customer Name</span>
-                            <span class="detail-value">${invoice.customerName || 'N/A'}</span>
+                            <span class="detail-value">${customer.customerName || invoice.customerName || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Email</span>
-                            <span class="detail-value">${invoice.customerEmail || 'N/A'}</span>
+                            <span class="detail-value">${customer.customerEmail || invoice.customerEmail || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Phone</span>
-                            <span class="detail-value">${invoice.customerPhone || 'N/A'}</span>
+                            <span class="detail-value">${customer.customerPhone || invoice.customerPhone || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Address</span>
+                            <span class="detail-value">${customer.customerAddress || 'N/A'}</span>
                         </div>
                     </div>
                 </div>
@@ -372,19 +389,19 @@ class MasterDashboard {
                     <div class="detail-grid">
                         <div class="detail-item">
                             <span class="detail-label">Subtotal</span>
-                            <span class="detail-value">${this.formatCurrency(invoice.subtotal)}</span>
+                            <span class="detail-value">${this.formatCurrency(scope.subtotal || invoice.subtotal || 0)}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Tax</span>
-                            <span class="detail-value">${this.formatCurrency(invoice.taxAmount)}</span>
+                            <span class="detail-value">${this.formatCurrency(scope.taxAmount || invoice.taxAmount || 0)}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Total</span>
-                            <span class="detail-value"><strong>${this.formatCurrency(invoice.total)}</strong></span>
+                            <span class="detail-value"><strong>${this.formatCurrency(scope.total || invoice.total || 0)}</strong></span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Gross Profit</span>
-                            <span class="detail-value">${this.formatCurrency(invoice.grossProfit)} (${this.formatPercent(invoice.profitPercent)})</span>
+                            <span class="detail-value">${this.formatCurrency(scope.grossProfit || invoice.grossProfit || 0)} (${this.formatPercent(scope.profitPercent || invoice.profitPercent || 0)})</span>
                         </div>
                     </div>
                 </div>
