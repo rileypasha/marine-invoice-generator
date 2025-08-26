@@ -128,58 +128,74 @@ body {
 /* Theme Toggle */
 .theme-toggle {
     position: relative;
-    width: 56px;
-    height: 28px;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
+    width: 64px;
+    height: 32px;
+    background: linear-gradient(135deg, #374151, #1f2937);
+    border: 2px solid var(--accent-primary);
+    border-radius: 16px;
     cursor: pointer;
     transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.theme-toggle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 .theme-toggle-slider {
     position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 20px;
-    height: 20px;
+    top: 2px;
+    left: 2px;
+    width: 26px;
+    height: 26px;
     background: var(--accent-primary);
     border-radius: 50%;
     transition: transform 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="light"] .theme-toggle-slider {
-    transform: translateX(28px);
+    transform: translateX(32px);
+}
+
+[data-theme="light"] .theme-toggle {
+    background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+    border-color: var(--accent-primary);
 }
 
 .theme-toggle-icons {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 6px;
+    padding: 0 8px;
     height: 100%;
+    pointer-events: none;
+    position: relative;
+    z-index: 1;
 }
 
 .theme-icon {
-    font-size: 0.75rem;
+    font-size: 1rem;
     transition: opacity 0.3s ease;
 }
 
 .moon-icon {
-    color: var(--text-tertiary);
+    color: white;
+    text-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
 }
 
 .sun-icon {
-    color: var(--text-tertiary);
+    color: #fbbf24;
+    text-shadow: 0 0 4px rgba(251, 191, 36, 0.5);
 }
 
 [data-theme="light"] .moon-icon {
-    opacity: 0.3;
+    opacity: 0.2;
 }
 
 [data-theme="dark"] .sun-icon {
-    opacity: 0.3;
+    opacity: 0.2;
 }
 
 /* User Section */
