@@ -134,29 +134,28 @@ class MasterDashboard {
     }
     
     renderInvoices() {
-        const container = document.getElementById('invoicesTableBody');
-        container.innerHTML = '';
+        const tbody = document.getElementById('invoicesTableBody');
+        tbody.innerHTML = '';
         
         this.invoices.forEach(invoice => {
-            const profitClass = invoice.profitPercent > 0 ? 'profit-positive' : 'profit-negative';
-            const statusClass = invoice.status === 'saved' ? 'status-active' : 'status-pending';
-            
-            const row = document.createElement('div');
-            row.className = 'invoice-row';
+            const row = document.createElement('tr');
             row.innerHTML = `
-                <div class="invoice-company">${invoice.customerName || 'N/A'}</div>
-                <div class="invoice-vessel">${invoice.vesselName || 'N/A'}</div>
-                <div class="invoice-number">#${invoice.invoiceNumber || 'N/A'}</div>
-                <div class="invoice-date">${this.formatShortDate(invoice.savedAt)}</div>
-                <div class="invoice-amount">${this.formatCurrency(invoice.total)}</div>
-                <div class="invoice-profit ${profitClass}">${this.formatPercent(invoice.profitPercent)}</div>
-                <div class="invoice-action" data-id="${invoice.id}">View</div>
+                <td>${this.formatDate(invoice.savedAt)}</td>
+                <td>${invoice.userName || 'N/A'}<br><small>${invoice.userEmail || ''}</small></td>
+                <td>${invoice.vesselName || 'N/A'}</td>
+                <td>${invoice.customerName || 'N/A'}</td>
+                <td>${invoice.invoiceNumber || 'N/A'}</td>
+                <td>${this.formatCurrency(invoice.total)}</td>
+                <td>${this.formatPercent(invoice.profitPercent)}</td>
+                <td>
+                    <button class="btn-view" data-id="${invoice.id}">View</button>
+                </td>
             `;
-            container.appendChild(row);
+            tbody.appendChild(row);
         });
         
         // Add click handlers for view buttons
-        container.querySelectorAll('.invoice-action').forEach(btn => {
+        tbody.querySelectorAll('.btn-view').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 this.viewInvoice(e.target.dataset.id);
             });
@@ -318,22 +317,18 @@ class MasterDashboard {
     }
     
     setupEventListeners() {
-        // Sidebar navigation
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-            });
+        // Theme toggle
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            this.toggleTheme();
         });
         
-        // Filter buttons
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                // Apply time-based filter
-                this.applyTimeFilter(btn.textContent.toLowerCase());
-            });
+        // Filter controls
+        document.getElementById('applyFilters').addEventListener('click', () => {
+            this.applyFilters();
+        });
+        
+        document.getElementById('clearFilters').addEventListener('click', () => {
+            this.clearFilters();
         });
         
         // Pagination
@@ -351,11 +346,18 @@ class MasterDashboard {
             }
         });
         
-        // View all button
-        document.querySelector('.view-all-btn')?.addEventListener('click', () => {
-            // Show all invoices
-            this.filters.search = '';
-            this.loadInvoices();
+        // Table sorting
+        document.querySelectorAll('.invoices-table th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const sortBy = th.dataset.sort;
+                if (this.sortBy === sortBy) {
+                    this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortBy = sortBy;
+                    this.sortOrder = 'desc';
+                }
+                this.loadInvoices();
+            });
         });
         
         // Modal controls
@@ -384,36 +386,38 @@ class MasterDashboard {
             console.error('Logout button not found!');
         }
         
-        // Search input
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            this.filters.search = e.target.value;
-            this.currentPage = 1;
-            this.loadInvoices();
+        // Enter key on search
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.applyFilters();
+            }
         });
     }
     
-    applyTimeFilter(period) {
-        const now = new Date();
-        let dateFrom = '';
+    applyFilters() {
+        this.filters.search = document.getElementById('searchInput').value;
+        this.filters.dateFrom = document.getElementById('dateFrom').value;
+        this.filters.dateTo = document.getElementById('dateTo').value;
+        this.filters.market = document.getElementById('marketFilter').value;
         
-        switch(period) {
-            case 'today':
-                dateFrom = new Date(now.setHours(0,0,0,0)).toISOString();
-                break;
-            case 'week':
-                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                dateFrom = weekAgo.toISOString();
-                break;
-            case 'month':
-                const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                dateFrom = monthAgo.toISOString();
-                break;
-            default:
-                dateFrom = '';
-        }
+        this.currentPage = 1;
+        this.loadInvoices();
+    }
+    
+    clearFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('dateFrom').value = '';
+        document.getElementById('dateTo').value = '';
+        document.getElementById('marketFilter').value = '';
         
-        this.filters.dateFrom = dateFrom;
-        this.filters.dateTo = '';
+        this.filters = {
+            search: '',
+            dateFrom: '',
+            dateTo: '',
+            market: '',
+            status: 'saved'
+        };
+        
         this.currentPage = 1;
         this.loadInvoices();
     }
@@ -474,19 +478,6 @@ class MasterDashboard {
     
     formatPercent(percent) {
         return (percent || 0).toFixed(2) + '%';
-    }
-    
-    formatShortDate(dateString) {
-        const date = new Date(dateString);
-        const today = new Date();
-        const diffTime = Math.abs(today - date);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        if (diffDays === 0) return 'Today';
-        if (diffDays === 1) return 'Yesterday';
-        if (diffDays < 7) return `${diffDays} days ago`;
-        
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
 }
 
