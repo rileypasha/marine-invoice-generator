@@ -1021,19 +1021,23 @@ router.get('/all-invoices', requireMaster, async (req, res) => {
  */
 router.get('/stats', requireMaster, async (req, res) => {
   try {
+    // Get today's start in Pacific timezone
+    const now = new Date();
+    // Get current Pacific time
+    const pacificOffset = -8; // PST is UTC-8 (use -7 for PDT)
+    const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
+    const pacificTime = new Date(utcTime + (3600000 * pacificOffset));
+    
+    // Set to start of day in Pacific
+    pacificTime.setHours(0, 0, 0, 0);
+    
+    // Convert back to UTC for comparison (add 8 hours)
+    const todayStartUTC = new Date(pacificTime.getTime() - (3600000 * pacificOffset));
+    
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    // Use raw SQL for today count to handle timezone properly
-    const todayCountResult = await prisma.$queryRaw`
-      SELECT COUNT(*) as count
-      FROM "Invoice"
-      WHERE ("status" = 'saved' OR "status" = 'submitted')
-        AND DATE("savedAt" AT TIME ZONE 'America/Los_Angeles') = CURRENT_DATE
-    `;
-    const todayCount = Number(todayCountResult[0]?.count || 0);
-
-    const [totalSaved, weekInvoices] = await Promise.all([
+    const [totalSaved, todayCount, weekInvoices] = await Promise.all([
       // Total saved/submitted invoices
       prisma.invoice.count({
         where: {
@@ -1041,6 +1045,17 @@ router.get('/stats', requireMaster, async (req, res) => {
             { status: 'saved' },
             { status: 'submitted' }
           ]
+        }
+      }),
+      
+      // Today's invoice count in Pacific timezone
+      prisma.invoice.count({
+        where: {
+          OR: [
+            { status: 'saved' },
+            { status: 'submitted' }
+          ],
+          savedAt: { gte: todayStartUTC }
         }
       }),
       
