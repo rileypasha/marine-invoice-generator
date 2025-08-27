@@ -371,7 +371,8 @@ class MasterDashboard {
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Email</span>
-                            <span class="detail-value">${customer.customerEmail || invoice.customerEmail || 'N/A'}</span>
+                            <span class="detail-value email-value" title="${customer.customerEmail || invoice.customerEmail || 'N/A'}">${customer.customerEmail || invoice.customerEmail || 'N/A'}</span>
+                            ${(customer.customerEmail || invoice.customerEmail) && (customer.customerEmail || invoice.customerEmail) !== 'N/A' ? `<button class="copy-btn" data-value="${customer.customerEmail || invoice.customerEmail}" title="Copy email">📋</button>` : ''}
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Phone</span>
@@ -379,7 +380,7 @@ class MasterDashboard {
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Address</span>
-                            <span class="detail-value">${customer.customerAddress || 'N/A'}</span>
+                            <span class="detail-value address-value" title="${customer.customerAddress || 'N/A'}">${customer.customerAddress || 'N/A'}</span>
                         </div>
                     </div>
                 </div>
@@ -420,7 +421,7 @@ class MasterDashboard {
                             <tbody>
                                 ${lineItems.map(item => `
                                     <tr>
-                                        <td>${item.description || 'N/A'}</td>
+                                        <td style="word-wrap: break-word; max-width: 300px;" title="${(item.description || 'N/A').replace(/"/g, '&quot;')}">${item.description || 'N/A'}</td>
                                         <td>${item.type || 'N/A'}</td>
                                         <td>${this.formatCurrency(item.cost || 0)}</td>
                                     </tr>
@@ -439,7 +440,8 @@ class MasterDashboard {
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Email</span>
-                            <span class="detail-value">${invoice.userEmail || 'N/A'}</span>
+                            <span class="detail-value email-value" title="${invoice.userEmail || 'N/A'}">${invoice.userEmail || 'N/A'}</span>
+                            ${invoice.userEmail && invoice.userEmail !== 'N/A' ? `<button class="copy-btn" data-value="${invoice.userEmail}" title="Copy email">📋</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -450,6 +452,57 @@ class MasterDashboard {
         modal.dataset.invoiceId = invoice.id;
         
         modal.style.display = 'flex';
+        
+        // Add event listeners for copy buttons
+        this.setupCopyButtons();
+    }
+    
+    setupCopyButtons() {
+        const copyButtons = document.querySelectorAll('.copy-btn');
+        copyButtons.forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const value = btn.dataset.value;
+                if (!value) return;
+                
+                try {
+                    await navigator.clipboard.writeText(value);
+                    
+                    // Visual feedback
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '✓';
+                    btn.classList.add('copied');
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.classList.remove('copied');
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy:', err);
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = value;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        btn.innerHTML = '✓';
+                        btn.classList.add('copied');
+                        setTimeout(() => {
+                            btn.innerHTML = '📋';
+                            btn.classList.remove('copied');
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Fallback copy failed:', err);
+                    }
+                    document.body.removeChild(textArea);
+                }
+            });
+        });
     }
     
     setupEventListeners() {

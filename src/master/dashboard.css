@@ -693,6 +693,31 @@ body {
 
 .modal-body {
     padding: 1.5rem;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 1rem; /* Space for scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-primary) var(--bg-secondary);
+}
+
+/* Custom scrollbar for modal body */
+.modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 3px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+    border-radius: 3px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-hover);
 }
 
 .modal-footer {
@@ -737,10 +762,35 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* Table styling within modal */
+.modal-body .invoices-table {
+    table-layout: auto;
+    word-break: break-word;
+}
+
+.modal-body .invoices-table td {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 0; /* Allows proper column width distribution */
+}
+
+.modal-body .invoices-table td:first-child {
+    width: 50%; /* Description column gets more space */
+}
+
+.modal-body .invoices-table td:nth-child(2) {
+    width: 25%; /* Type column */
+}
+
+.modal-body .invoices-table td:last-child {
+    width: 25%; /* Cost column */
+    white-space: nowrap; /* Keep currency values on one line */
+}
+
 .detail-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem; /* Tighter gap for more content space */
 }
 
 .detail-item {
@@ -748,6 +798,9 @@ body {
     background: var(--bg-secondary);
     border-radius: 8px;
     border: 1px solid var(--border-color);
+    min-width: 0; /* Allow flexbox/grid shrinking */
+    overflow: hidden;
+    position: relative;
 }
 
 .detail-label {
@@ -763,6 +816,98 @@ body {
     font-size: 0.875rem;
     color: var(--text-primary);
     font-weight: 500;
+    /* Text overflow fixes */
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    max-width: 100%;
+    display: block;
+    line-height: 1.4;
+}
+
+/* Specific handling for different content types */
+.detail-value.email-value,
+.detail-value.url-value {
+    word-break: break-all; /* Allow breaking at any character for emails/URLs */
+    font-size: 0.8125rem; /* Slightly smaller for long emails */
+}
+
+.detail-value.address-value {
+    white-space: pre-wrap; /* Preserve formatting but wrap */
+    max-height: 4.5rem; /* ~3 lines */
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-primary) var(--bg-secondary);
+}
+
+.detail-value.address-value::-webkit-scrollbar {
+    width: 4px;
+}
+
+.detail-value.address-value::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 2px;
+}
+
+.detail-value.address-value::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+    border-radius: 2px;
+}
+
+/* Truncation option for non-critical fields */
+.detail-value.truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: help; /* Indicate hover for full text */
+}
+
+.detail-value.truncate:hover {
+    white-space: normal;
+    overflow: visible;
+    position: absolute;
+    z-index: 10;
+    background: var(--bg-card);
+    padding: 0.5rem;
+    border-radius: 4px;
+    box-shadow: var(--shadow-lg);
+    max-width: 300px;
+}
+
+/* Copy button for long values */
+.detail-item-wrapper {
+    position: relative;
+}
+
+.copy-btn {
+    position: absolute;
+    top: 0.875rem;
+    right: 0.875rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.detail-item:hover .copy-btn {
+    opacity: 1;
+}
+
+.copy-btn:hover {
+    background: var(--accent-primary);
+    color: white;
+    transform: scale(1.05);
+}
+
+.copy-btn.copied {
+    background: var(--accent-primary);
+    color: white;
 }
 
 /* Responsive */
@@ -802,5 +947,28 @@ body {
     
     .invoices-table {
         min-width: 800px;
+    }
+    
+    /* Stack detail grid on mobile */
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Adjust modal for mobile */
+    .modal-content {
+        margin: 1rem;
+        max-width: calc(100% - 2rem);
+    }
+    
+    .modal-body {
+        padding: 1rem;
+        max-height: calc(100vh - 150px);
+    }
+}
+
+/* Tablet responsive */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .detail-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
