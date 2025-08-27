@@ -123,6 +123,10 @@ app.use(trackRevision);
 // Auth routes (login/logout)
 app.use('/api/auth', authRouter);
 
+// TEMPORARY: Security fix route (REMOVE AFTER FIXING PRODUCTION DATA)
+const securityFixRouter = require('./routes/security-fix');
+app.use('/api/security', securityFixRouter);
+
 // Standard API routes
 app.use('/api/v1', apiRouter);
 

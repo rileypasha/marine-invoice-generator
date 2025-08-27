@@ -20,6 +20,34 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email is required' });
     }
 
+    // Security validation: ensure name doesn't contain password-like patterns
+    const sanitizedName = (() => {
+      // For existing users logging in, we don't need a name
+      // Name should only be provided during initial signup
+      if (!name) return null;
+      
+      // Security check: reject names that look like passwords
+      const nameStr = String(name).trim();
+      
+      // Check for password patterns
+      const hasNumbers = /\d/.test(nameStr);
+      const hasSpecialChars = /[!@#$%^&*()_+=\[\]{};':"\\|,.<>\/?]/.test(nameStr);
+      const looksLikePassword = hasNumbers && (nameStr.length > 20 || hasSpecialChars);
+      
+      // If it looks like a password, reject it
+      if (looksLikePassword || nameStr.toLowerCase().includes('password')) {
+        logger.warn({
+          event: 'SUSPICIOUS_NAME_REJECTED',
+          email,
+          suspiciousName: nameStr.substring(0, 10) + '...',
+          reason: 'Name appears to be a password'
+        });
+        return null; // Reject suspicious names
+      }
+      
+      return nameStr;
+    })();
+
     // Find or create user
     let user = await prisma.user.findUnique({
       where: { email }
@@ -34,11 +62,14 @@ router.post('/login', async (req, res) => {
       
       const isMaster = masterEmails.includes(email);
       
-      // Create new user
+      // Create new user with sanitized name
+      // Use the sanitized name if provided, otherwise use email prefix
+      const finalName = sanitizedName || email.split('@')[0];
+      
       user = await prisma.user.create({
         data: {
           email,
-          name: name || email.split('@')[0],
+          name: finalName,
           role: isMaster ? 'master' : 'standard'
         }
       });

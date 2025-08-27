@@ -193,6 +193,8 @@ export class UserManager {
   async serverSignIn(email, password) {
     try {
       // Call server auth endpoint
+      // NOTE: Login endpoint should NOT accept or need a name field
+      // Names are only set during signup, not login
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -200,8 +202,8 @@ export class UserManager {
         },
         credentials: 'include',
         body: JSON.stringify({
-          email: email,
-          name: password // Using password field for name temporarily
+          email: email
+          // DO NOT send name during login - only email is needed
         })
       });
       
