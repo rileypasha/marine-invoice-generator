@@ -802,7 +802,7 @@ body {
 
 /* Table styling within modal */
 .modal-body .invoices-table {
-    table-layout: auto;
+    table-layout: fixed;
     word-break: break-word;
 }
 
@@ -812,16 +812,25 @@ body {
     max-width: 0; /* Allows proper column width distribution */
 }
 
+.modal-body .invoices-table th:first-child,
 .modal-body .invoices-table td:first-child {
-    width: 50%; /* Description column gets more space */
+    width: 40%; /* Item/Description column gets more space */
 }
 
+.modal-body .invoices-table th:nth-child(2),
 .modal-body .invoices-table td:nth-child(2) {
-    width: 25%; /* Type column */
+    width: 20%; /* Type column */
 }
 
-.modal-body .invoices-table td:last-child {
-    width: 25%; /* Cost column */
+.modal-body .invoices-table th:nth-child(3),
+.modal-body .invoices-table td:nth-child(3) {
+    width: 20%; /* Cost column */
+    white-space: nowrap; /* Keep currency values on one line */
+}
+
+.modal-body .invoices-table th:nth-child(4),
+.modal-body .invoices-table td:nth-child(4) {
+    width: 20%; /* Total column */
     white-space: nowrap; /* Keep currency values on one line */
 }
 
