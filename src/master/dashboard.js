@@ -337,11 +337,11 @@ class MasterDashboard {
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Weight</span>
-                            <span class="detail-value">${vessel.weight || (invoice.vesselWeight ? invoice.vesselWeight + ' tons' : 'N/A')}</span>
+                            <span class="detail-value">${vessel.weight ? this.formatNumber(vessel.weight) + ' tons' : (invoice.vesselWeight ? this.formatNumber(invoice.vesselWeight) + ' tons' : 'N/A')}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Beam</span>
-                            <span class="detail-value">${vessel.beam || (invoice.vesselBeam ? invoice.vesselBeam + ' ft' : 'N/A')}</span>
+                            <span class="detail-value">${vessel.beam ? this.formatNumber(vessel.beam) + ' ft' : (invoice.vesselBeam ? this.formatNumber(invoice.vesselBeam) + ' ft' : 'N/A')}</span>
                         </div>
                     </div>
                 </div>
@@ -689,6 +689,11 @@ class MasterDashboard {
     
     formatPercent(percent) {
         return (percent || 0).toFixed(2) + '%';
+    }
+    
+    formatNumber(num) {
+        if (!num || num === 'N/A') return 'N/A';
+        return new Intl.NumberFormat('en-US').format(num);
     }
 }
 
