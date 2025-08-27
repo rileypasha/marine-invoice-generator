@@ -131,6 +131,10 @@ app.use('/api/security', securityFixRouter);
 const invoiceFixRouter = require('./routes/invoice-fix');
 app.use('/api/invoice-fix', invoiceFixRouter);
 
+// TEMPORARY: Manual fix route (REMOVE AFTER FIXING PRODUCTION DATA)
+const manualFixRouter = require('./routes/manual-fix');
+app.use('/api/manual-fix', manualFixRouter);
+
 // Standard API routes
 app.use('/api/v1', apiRouter);
 
