@@ -315,7 +315,7 @@ class MasterDashboard {
         modalBody.innerHTML = `
             <div class="invoice-detail">
                 <div class="detail-section">
-                    <h3>Invoice Information</h3>
+                    <h3>Invoice</h3>
                     <div class="detail-grid">
                         <div class="detail-item">
                             <span class="detail-label">Status</span>
@@ -329,7 +329,7 @@ class MasterDashboard {
                 </div>
                 
                 <div class="detail-section">
-                    <h3>Vessel Information</h3>
+                    <h3>Vessel</h3>
                     <div class="detail-grid">
                         <div class="detail-item">
                             <span class="detail-label">Vessel Name</span>
@@ -347,7 +347,7 @@ class MasterDashboard {
                 </div>
                 
                 <div class="detail-section">
-                    <h3>Customer Information</h3>
+                    <h3>Customer</h3>
                     <div class="detail-grid">
                         <div class="detail-item">
                             <span class="detail-label">Customer Name</span>
@@ -366,7 +366,7 @@ class MasterDashboard {
                 </div>
                 
                 <div class="detail-section">
-                    <h3>Financial Summary</h3>
+                    <h3>Financials</h3>
                     <div class="detail-grid four-items">
                         <div class="detail-item">
                             <span class="detail-label">Subtotal</span>
@@ -412,7 +412,7 @@ class MasterDashboard {
                 ` : ''}
                 
                 <div class="detail-section">
-                    <h3>Submitter Information</h3>
+                    <h3>Submitter</h3>
                     <div class="detail-grid two-items">
                         <div class="detail-item">
                             <span class="detail-label">Submitted By</span>
