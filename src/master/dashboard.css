@@ -827,7 +827,7 @@ body {
 
 .detail-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Further increased min-width to prevent label wrapping */
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* Increased to 320px to accommodate longer values */
     gap: 1rem; /* Slightly larger gap for better spacing */
 }
 
@@ -869,8 +869,31 @@ body {
 /* Specific handling for different content types */
 .detail-value.email-value,
 .detail-value.url-value {
-    word-break: break-all; /* Allow breaking at any character for emails/URLs */
-    font-size: 0.8125rem; /* Slightly smaller for long emails */
+    white-space: nowrap; /* Keep emails on single line */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.875rem; /* Keep normal size */
+}
+
+/* Show full email on hover */
+.detail-value.email-value:hover,
+.detail-value.url-value:hover {
+    overflow: visible;
+    white-space: normal;
+    word-break: break-all;
+    position: relative;
+    z-index: 10;
+    background: var(--bg-card);
+    padding: 0.25rem;
+    border-radius: 4px;
+    box-shadow: var(--shadow-lg);
+}
+
+/* Keep dates and phone numbers on single line */
+.detail-value.date-value,
+.detail-value.phone-value {
+    white-space: nowrap;
+    font-size: 0.875rem;
 }
 
 .detail-value.address-value {
@@ -1007,23 +1030,23 @@ body {
 }
 
 /* Tablet responsive */
-@media (min-width: 769px) and (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1199px) {
     .detail-grid {
-        grid-template-columns: repeat(3, 1fr); /* Show 3 columns on tablets */
+        grid-template-columns: repeat(2, 1fr); /* Show 2 columns on tablets */
     }
 }
 
 /* Large screens - optimal layout */
-@media (min-width: 1200px) {
+@media (min-width: 1200px) and (max-width: 1599px) {
     .detail-grid {
-        grid-template-columns: repeat(3, 1fr); /* Show 3 columns to give more space per item */
+        grid-template-columns: repeat(3, 1fr); /* Show 3 columns on desktop */
     }
 }
 
 /* Extra large screens */
 @media (min-width: 1600px) {
     .detail-grid {
-        grid-template-columns: repeat(4, 1fr); /* Show 4 columns only on very large screens */
+        grid-template-columns: repeat(3, 1fr); /* Keep 3 columns even on XL screens for more space */
     }
 }
 

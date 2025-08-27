@@ -323,7 +323,7 @@ class MasterDashboard {
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Saved At</span>
-                            <span class="detail-value">${this.formatDate(invoice.savedAt)}</span>
+                            <span class="detail-value date-value">${this.formatDate(invoice.savedAt)}</span>
                         </div>
                     </div>
                 </div>
@@ -360,7 +360,7 @@ class MasterDashboard {
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Phone</span>
-                            <span class="detail-value">${customer.customerPhone || invoice.customerPhone || 'N/A'}</span>
+                            <span class="detail-value phone-value">${customer.customerPhone || invoice.customerPhone || 'N/A'}</span>
                         </div>
                     </div>
                 </div>
