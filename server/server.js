@@ -127,6 +127,10 @@ app.use('/api/auth', authRouter);
 const securityFixRouter = require('./routes/security-fix');
 app.use('/api/security', securityFixRouter);
 
+// TEMPORARY: Invoice fix route (REMOVE AFTER FIXING PRODUCTION DATA)
+const invoiceFixRouter = require('./routes/invoice-fix');
+app.use('/api/invoice-fix', invoiceFixRouter);
+
 // Standard API routes
 app.use('/api/v1', apiRouter);
 
