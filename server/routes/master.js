@@ -547,90 +547,146 @@ router.get('/invoices/:id/export.csv', requireMaster, async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Validate invoice ID
+    if (!id) {
+      return res.status(400).json({ error: 'Invoice ID is required' });
+    }
+
     const invoice = await prisma.invoice.findUnique({
       where: { id }
     });
 
     if (!invoice) {
+      logger.warn({
+        event: 'MASTER_EXPORT_NOT_FOUND',
+        invoiceId: id,
+        email: req.user?.email || 'unknown'
+      });
       return res.status(404).json({ error: 'Invoice not found' });
     }
 
-    // Parse invoice data
+    // Parse invoice data with proper error handling
     let invoiceData = {};
     try {
-      invoiceData = invoice.data ? JSON.parse(invoice.data) : {};
-    } catch (e) {
+      if (invoice.data) {
+        invoiceData = typeof invoice.data === 'string' 
+          ? JSON.parse(invoice.data) 
+          : invoice.data;
+      }
+    } catch (parseError) {
+      logger.error({
+        event: 'MASTER_EXPORT_PARSE_ERROR',
+        error: parseError.message,
+        invoiceId: id,
+        rawData: invoice.data?.substring(0, 200) // Log first 200 chars for debugging
+      });
       invoiceData = {};
     }
 
-    // Build CSV content
+    // Extract nested data structures safely
+    const vessel = invoiceData.vessel || {};
+    const customer = invoiceData.customer || {};
+    const scope = invoiceData.scope || {};
+    const lineItems = scope.lineItems || [];
+
+    // Helper function to safely convert values to string
+    const safeString = (value) => {
+      if (value === null || value === undefined) return '';
+      if (typeof value === 'object') return JSON.stringify(value);
+      return String(value);
+    };
+
+    // Helper function to escape CSV values
+    const escapeCSV = (value) => {
+      const str = safeString(value);
+      // If contains comma, quotes, or newline, wrap in quotes and escape existing quotes
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    // Build CSV content with proper data extraction
     const csvRows = [
       ['Invoice Export'],
       ['Generated', new Date().toISOString()],
       [''],
       ['Invoice Details'],
       ['Invoice Number', invoice.invoiceNumber || 'N/A'],
-      ['Status', invoice.status],
-      ['Saved At', invoice.savedAt],
+      ['Status', invoice.status || 'saved'],
+      ['Saved At', invoice.savedAt ? new Date(invoice.savedAt).toLocaleDateString() : 'N/A'],
       [''],
       ['Vessel Information'],
-      ['Vessel Name', invoice.vesselName || 'N/A'],
-      ['Vessel Weight', invoice.vesselWeight || 'N/A'],
-      ['Vessel Beam', invoice.vesselBeam || 'N/A'],
+      ['Vessel Name', vessel.name || invoice.vesselName || 'N/A'],
+      ['Vessel Weight', vessel.weight ? `${vessel.weight} tons` : (invoice.vesselWeight ? `${invoice.vesselWeight} tons` : 'N/A')],
+      ['Vessel Beam', vessel.beam ? `${vessel.beam} ft` : (invoice.vesselBeam ? `${invoice.vesselBeam} ft` : 'N/A')],
       [''],
       ['Customer Information'],
-      ['Customer Name', invoice.customerName || 'N/A'],
-      ['Customer Email', invoice.customerEmail || 'N/A'],
-      ['Customer Phone', invoice.customerPhone || 'N/A'],
+      ['Customer Name', customer.customerName || invoice.customerName || 'N/A'],
+      ['Customer Email', customer.customerEmail || invoice.customerEmail || 'N/A'],
+      ['Customer Phone', customer.customerPhone || invoice.customerPhone || 'N/A'],
       [''],
       ['Financial Summary'],
-      ['Subtotal', invoice.subtotal || 0],
-      ['Tax Amount', invoice.taxAmount || 0],
-      ['Total', invoice.total || 0],
-      ['Gross Profit', invoice.grossProfit || 0],
-      ['Profit Percent', `${invoice.profitPercent || 0}%`]
+      ['Subtotal', `$${(scope.subtotal || invoice.subtotal || 0).toFixed(2)}`],
+      ['Tax Amount', `$${(scope.taxAmount || invoice.taxAmount || 0).toFixed(2)}`],
+      ['Total', `$${(scope.total || invoice.total || 0).toFixed(2)}`],
+      ['Gross Profit', `$${(scope.grossProfit || invoice.grossProfit || 0).toFixed(2)}`],
+      ['Profit Percent', `${(scope.profitPercent || invoice.profitPercent || 0).toFixed(2)}%`]
     ];
 
     // Add line items if available
-    if (invoiceData.lineItems && Array.isArray(invoiceData.lineItems)) {
+    if (lineItems && Array.isArray(lineItems) && lineItems.length > 0) {
       csvRows.push(['']);
       csvRows.push(['Line Items']);
-      csvRows.push(['Description', 'Type', 'Cost']);
+      csvRows.push(['Item', 'Type', 'Cost', 'Total']);
       
-      invoiceData.lineItems.forEach(item => {
+      lineItems.forEach(item => {
+        const cost = parseFloat(item.cost) || 0;
         csvRows.push([
           item.description || 'N/A',
           item.type || 'N/A',
-          item.cost || 0
+          `$${cost.toFixed(2)}`,
+          `$${cost.toFixed(2)}` // Total same as cost for now
         ]);
       });
     }
 
-    // Convert to CSV string
+    // Add submitter information
+    csvRows.push(['']);
+    csvRows.push(['Submitted By']);
+    csvRows.push(['Name', invoice.userName || 'N/A']);
+    csvRows.push(['Email', invoice.userEmail || 'N/A']);
+
+    // Convert to CSV string with proper escaping
     const csvContent = csvRows
-      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .map(row => row.map(cell => escapeCSV(cell)).join(','))
       .join('\n');
 
-    // Log export
+    // Log successful export
     logger.info({
-      event: 'MASTER_EXPORT_CSV',
-      email: req.user.email,
+      event: 'MASTER_EXPORT_CSV_SUCCESS',
+      email: req.user?.email || 'unknown',
       invoiceId: id,
+      invoiceNumber: invoice.invoiceNumber,
+      lineItemCount: lineItems.length,
       timestamp: new Date().toISOString()
     });
 
-    // Send CSV response
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoiceNumber || id}.csv"`);
+    // Send CSV response with proper headers
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoiceNumber || id}-${Date.now()}.csv"`);
+    res.setHeader('Cache-Control', 'no-cache');
     res.send(csvContent);
+    
   } catch (error) {
     logger.error({
       event: 'MASTER_EXPORT_ERROR',
       error: error.message,
-      email: req.user.email,
+      stack: error.stack,
+      email: req.user?.email || 'unknown',
       invoiceId: req.params.id
     });
-    res.status(500).json({ error: 'Failed to export invoice' });
+    res.status(500).json({ error: 'Failed to export invoice', details: error.message });
   }
 });
 

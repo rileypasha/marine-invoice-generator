@@ -651,14 +651,102 @@ class MasterDashboard {
         const modal = document.getElementById('detailModal');
         const invoiceId = modal.dataset.invoiceId;
         
-        if (!invoiceId) return;
+        if (!invoiceId) {
+            this.showNotification('No invoice selected', 'error');
+            return;
+        }
+        
+        const exportBtn = document.getElementById('exportCsv');
+        const originalText = exportBtn.textContent;
         
         try {
-            window.location.href = `/api/master/invoices/${invoiceId}/export.csv`;
+            // Show loading state
+            exportBtn.textContent = 'Exporting...';
+            exportBtn.disabled = true;
+            
+            // Use fetch to properly handle errors
+            const response = await fetch(`/api/master/invoices/${invoiceId}/export.csv`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'text/csv'
+                }
+            });
+            
+            if (!response.ok) {
+                let errorMessage = 'Failed to export invoice';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    // If response is not JSON, use status text
+                    errorMessage = `Export failed: ${response.statusText}`;
+                }
+                throw new Error(errorMessage);
+            }
+            
+            // Get the filename from Content-Disposition header
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = `invoice-${invoiceId}.csv`;
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+            
+            // Download the CSV
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+            // Show success notification
+            this.showNotification('Invoice exported successfully', 'success');
+            
         } catch (error) {
             console.error('Export failed:', error);
-            alert('Failed to export invoice');
+            this.showNotification(error.message || 'Failed to export invoice', 'error');
+        } finally {
+            // Restore button state
+            exportBtn.textContent = originalText;
+            exportBtn.disabled = false;
         }
+    }
+    
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            animation: slideIn 0.3s ease-out;
+            background: ${type === 'error' ? '#ef4444' : '#10b981'};
+            color: white;
+            font-size: 14px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 5000);
     }
     
     async logout() {
