@@ -106,16 +106,17 @@
     </div>
 
     <!-- Invoice Detail Modal -->
-    <div id="detailModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
+    <div id="detailModal" class="invoice-detail-modal" style="display: none;">
+        <div class="invoice-detail-overlay"></div>
+        <div class="invoice-detail-panel">
+            <div class="invoice-detail-header">
                 <h2>Invoice Details</h2>
-                <button class="modal-close" id="closeModal">&times;</button>
+                <button class="invoice-detail-close" id="closeModal" aria-label="Close modal">&times;</button>
             </div>
-            <div class="modal-body" id="modalBody">
+            <div class="invoice-detail-content" id="modalBody" role="region" aria-label="Invoice details">
                 <!-- Detail content will be loaded here -->
             </div>
-            <div class="modal-footer">
+            <div class="invoice-detail-footer">
                 <button id="exportCsv" class="btn-primary">Export CSV</button>
                 <button id="closeModalBtn" class="btn-secondary">Close</button>
             </div>

@@ -293,6 +293,9 @@ class MasterDashboard {
         const modal = document.getElementById('detailModal');
         const modalBody = document.getElementById('modalBody');
         
+        // Lock body scroll when modal opens
+        document.body.classList.add('modal-open');
+        
         // Parse invoice data - check if we have the actual data structure
         const invoiceData = invoice.parsedData || {};
         
@@ -423,7 +426,14 @@ class MasterDashboard {
         // Store current invoice ID for export
         modal.dataset.invoiceId = invoice.id;
         
-        modal.style.display = 'flex';
+        // Show modal with proper display
+        modal.style.display = 'block';
+        
+        // Force reflow to ensure CSS transitions work
+        modal.offsetHeight;
+        
+        // Add animation class if needed
+        modal.classList.add('active');
         
         // Add event listeners for copy buttons
         this.setupCopyButtons();
@@ -566,6 +576,25 @@ class MasterDashboard {
             this.closeModal();
         });
         
+        // Close modal on overlay click
+        const overlay = document.querySelector('.invoice-detail-overlay');
+        overlay?.addEventListener('click', () => {
+            this.closeModal();
+        });
+        
+        // Prevent closing when clicking on the panel itself
+        const panel = document.querySelector('.invoice-detail-panel');
+        panel?.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('detailModal').style.display === 'block') {
+                this.closeModal();
+            }
+        });
+        
         document.getElementById('exportCsv')?.addEventListener('click', () => {
             this.exportCsv();
         });
@@ -626,7 +655,18 @@ class MasterDashboard {
     }
     
     closeModal() {
-        document.getElementById('detailModal').style.display = 'none';
+        const modal = document.getElementById('detailModal');
+        
+        // Remove active class for animation
+        modal.classList.remove('active');
+        
+        // Wait for animation then hide
+        setTimeout(() => {
+            modal.style.display = 'none';
+            
+            // Unlock body scroll when modal closes
+            document.body.classList.remove('modal-open');
+        }, 300);
     }
     
     async exportCsv() {

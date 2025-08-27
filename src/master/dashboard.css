@@ -217,8 +217,8 @@ body {
 }
 
 .stat-card:hover {
-    transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
+    border-color: var(--accent-primary);
 }
 
 .stat-value {
@@ -326,8 +326,8 @@ body {
 }
 
 .btn-primary:hover {
-    transform: translateY(-1px);
     box-shadow: 0 6px 12px var(--accent-glow);
+    background: linear-gradient(135deg, var(--accent-hover), var(--accent-primary));
 }
 
 .btn-secondary {
@@ -424,7 +424,7 @@ body {
 .btn-view:hover {
     background: var(--accent-primary);
     color: white;
-    transform: translateY(-1px);
+    box-shadow: 0 2px 4px var(--accent-glow);
 }
 
 /* Loading & Empty States */
@@ -548,42 +548,56 @@ body {
     color: var(--text-primary);
 }
 
-/* Modal - Premium */
-.modal {
+/* Invoice Detail Modal - Fixed Layout without Jank */
+.invoice-detail-modal {
     display: none;
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    z-index: 1000;
-    padding: 2rem;
-    overflow-y: auto;
+    inset: 0;
+    z-index: 9999;
+    isolation: isolate; /* Create new stacking context */
 }
 
-.modal-content {
+.invoice-detail-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+}
+
+body.modal-open {
+    overflow: hidden;
+    padding-right: 15px; /* Compensate for scrollbar */
+}
+
+.invoice-detail-panel {
+    position: fixed;
+    top: 5vh;
+    left: 50%;
+    margin-left: -45%; /* Half of width */
+    width: 90%;
+    max-width: 1400px;
+    height: 90vh;
     background: var(--bg-card);
-    max-width: 1400px; /* Increased for wider layout */
-    width: 95%; /* Use more available width */
-    max-height: 90vh; /* Ensure modal doesn't exceed viewport height */
-    margin: 5vh auto; /* Center vertically with margin */
     border-radius: 16px;
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-xl);
-    animation: modalSlideIn 0.3s ease-out;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+    contain: layout style;
+}
+
+@media (min-width: 1400px) {
+    .invoice-detail-panel {
+        margin-left: -700px; /* Half of max-width */
+    }
 }
 
 @keyframes modalSlideIn {
     from {
-        transform: translateY(-20px);
         opacity: 0;
     }
     to {
-        transform: translateY(0);
         opacity: 1;
     }
 }
@@ -610,22 +624,26 @@ body {
     }
 }
 
-.modal-header {
+.invoice-detail-header {
     padding: 1.5rem;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-shrink: 0; /* Prevent header from shrinking */
+    background: var(--bg-card);
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
-.modal-header h2 {
+.invoice-detail-header h2 {
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--text-primary);
+    margin: 0;
 }
 
-.modal-close {
+.invoice-detail-close {
     background: none;
     border: none;
     font-size: 1.5rem;
@@ -640,48 +658,51 @@ body {
     transition: all 0.2s ease;
 }
 
-.modal-close:hover {
+.invoice-detail-close:hover {
     background: var(--bg-tertiary);
     color: var(--text-primary);
 }
 
-.modal-body {
-    padding: 1.5rem 2rem; /* More horizontal padding */
-    flex: 1; /* Take remaining space */
+.invoice-detail-content {
     overflow-y: auto;
     overflow-x: hidden;
-    padding-right: 1.5rem; /* Space for scrollbar */
+    padding: 2rem;
     scrollbar-width: thin;
     scrollbar-color: var(--accent-primary) var(--bg-secondary);
+    will-change: scroll-position;
+    contain: paint;
 }
 
-/* Custom scrollbar for modal body */
-.modal-body::-webkit-scrollbar {
-    width: 6px;
+/* Custom scrollbar for modal content */
+.invoice-detail-content::-webkit-scrollbar {
+    width: 8px;
 }
 
-.modal-body::-webkit-scrollbar-track {
+.invoice-detail-content::-webkit-scrollbar-track {
     background: var(--bg-secondary);
-    border-radius: 3px;
+    border-radius: 4px;
 }
 
-.modal-body::-webkit-scrollbar-thumb {
+.invoice-detail-content::-webkit-scrollbar-thumb {
     background: var(--accent-primary);
-    border-radius: 3px;
+    border-radius: 4px;
 }
 
-.modal-body::-webkit-scrollbar-thumb:hover {
+.invoice-detail-content::-webkit-scrollbar-thumb:hover {
     background: var(--accent-hover);
 }
 
-.modal-footer {
+.invoice-detail-footer {
     padding: 1.5rem;
     border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
-    flex-shrink: 0; /* Prevent footer from shrinking */
-    border-radius: 0 0 16px 16px; /* Match modal border radius */
+    background: var(--bg-card);
+    border-radius: 0 0 16px 16px;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
 }
 
 #exportCsv {
@@ -691,8 +712,8 @@ body {
 }
 
 #exportCsv:hover {
-    transform: translateY(-1px);
     box-shadow: 0 6px 12px var(--accent-glow);
+    background: linear-gradient(135deg, var(--accent-hover), var(--accent-primary));
 }
 
 #closeModalBtn {
@@ -709,6 +730,7 @@ body {
     display: grid;
     grid-template-columns: 1fr;
     gap: 2rem;
+    contain: layout;
 }
 
 /* Display sections in 2 columns on larger screens */
@@ -729,6 +751,8 @@ body {
     padding: 1.25rem;
     border-radius: 12px;
     border: 1px solid var(--border-color);
+    contain: layout style;
+    will-change: contents;
 }
 
 .detail-section h3 {
@@ -755,54 +779,110 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
-/* Table styling within modal */
-.modal-body .invoices-table {
+/* Table styling within invoice detail modal - STABILIZED fixed layout */
+.invoice-detail-content .invoices-table {
     table-layout: fixed;
-    word-break: break-word;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    contain: layout;
+    min-height: 200px; /* Prevent collapse */
 }
 
-.modal-body .invoices-table td {
+.invoice-detail-content .invoices-table thead {
+    position: sticky;
+    top: -2rem; /* Account for padding */
+    background: var(--bg-secondary);
+    z-index: 5;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.invoice-detail-content .invoices-table th {
+    padding: 0.75rem;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.invoice-detail-content .invoices-table tbody {
+    contain: layout;
+}
+
+.invoice-detail-content .invoices-table td {
     word-wrap: break-word;
     overflow-wrap: break-word;
-    max-width: 0; /* Allows proper column width distribution */
+    padding: 0.75rem;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border-color);
 }
 
-.modal-body .invoices-table th:first-child,
-.modal-body .invoices-table td:first-child {
-    width: 40%; /* Item/Description column gets more space */
+/* Column widths - prevent shifting */
+.invoice-detail-content .invoices-table th:first-child,
+.invoice-detail-content .invoices-table td:first-child {
+    width: 40%;
+    min-width: 200px;
 }
 
-.modal-body .invoices-table th:nth-child(2),
-.modal-body .invoices-table td:nth-child(2) {
-    width: 20%; /* Type column */
+.invoice-detail-content .invoices-table th:nth-child(2),
+.invoice-detail-content .invoices-table td:nth-child(2) {
+    width: 20%;
+    min-width: 100px;
 }
 
-.modal-body .invoices-table th:nth-child(3),
-.modal-body .invoices-table td:nth-child(3) {
-    width: 20%; /* Cost column */
-    white-space: nowrap; /* Keep currency values on one line */
+.invoice-detail-content .invoices-table th:nth-child(3),
+.invoice-detail-content .invoices-table td:nth-child(3) {
+    width: 20%;
+    min-width: 100px;
+    text-align: right;
 }
 
-.modal-body .invoices-table th:nth-child(4),
-.modal-body .invoices-table td:nth-child(4) {
-    width: 20%; /* Total column */
-    white-space: nowrap; /* Keep currency values on one line */
+.invoice-detail-content .invoices-table th:nth-child(4),
+.invoice-detail-content .invoices-table td:nth-child(4) {
+    width: 20%;
+    min-width: 100px;
+    text-align: right;
+    font-weight: 600;
 }
 
+/* Prevent table from breaking layout */
+.detail-section.full-width {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+}
+
+.detail-section.full-width::-webkit-scrollbar {
+    height: 6px;
+}
+
+.detail-section.full-width::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 3px;
+}
+
+.detail-section.full-width::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+    border-radius: 3px;
+}
+
+/* Stabilized metrics grid using CSS Grid */
 .detail-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* Increased to 320px to accommodate longer values */
-    gap: 1rem; /* Slightly larger gap for better spacing */
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+    align-items: stretch;
+    contain: layout;
 }
 
 .detail-item {
-    padding: 1rem 1.25rem; /* More horizontal padding */
+    padding: 1rem 1.25rem;
     background: var(--bg-secondary);
     border-radius: 8px;
     border: 1px solid var(--border-color);
-    min-width: 0; /* Allow flexbox/grid shrinking */
+    min-width: 0;
     overflow: hidden;
-    position: relative;
+    contain: layout style;
+    height: min-content;
 }
 
 .detail-label {
@@ -929,7 +1009,7 @@ body {
 .copy-btn:hover {
     background: var(--accent-primary);
     color: white;
-    transform: scale(1.05);
+    box-shadow: 0 2px 4px var(--accent-glow);
 }
 
 .copy-btn.copied {
@@ -981,15 +1061,15 @@ body {
         grid-template-columns: 1fr;
     }
     
-    /* Adjust modal for mobile */
-    .modal-content {
+    /* Adjust invoice detail modal for mobile */
+    .invoice-detail-panel {
+        width: calc(100% - 2rem);
+        height: calc(100vh - 2rem);
         margin: 1rem;
-        max-width: calc(100% - 2rem);
     }
     
-    .modal-body {
+    .invoice-detail-content {
         padding: 1rem;
-        max-height: calc(100vh - 150px);
     }
 }
 
@@ -1032,9 +1112,28 @@ body {
     }
 }
 
-/* Special grid for sections with exactly 4 items (like Financial Summary) */
+/* Special grid for sections with exactly 4 items (like Financial Summary) - STABILIZED */
 .detail-grid.four-items {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Smaller min-width for 4 items */
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    contain: layout;
+    min-height: 100px; /* Prevent collapse */
+}
+
+/* Financial items specific styling to prevent jumping */
+.detail-grid.four-items .detail-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 80px;
+    position: relative;
+}
+
+.detail-grid.four-items .detail-value {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-top: auto;
 }
 
 @media (min-width: 1200px) {
