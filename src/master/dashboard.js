@@ -14,7 +14,8 @@ class MasterDashboard {
             dateTo: '',
             status: ''  // Empty string means show saved and submitted (default view)
         };
-        this.dateRangePicker = null;
+        this.dateFromPicker = null;
+        this.dateToPicker = null;
         
         this.init();
     }
@@ -30,8 +31,8 @@ class MasterDashboard {
         // Initialize theme
         this.initTheme();
         
-        // Setup date range picker
-        this.setupDateRangePicker();
+        // Setup date pickers
+        this.setupDatePickers();
         
         // Load initial data
         await this.loadStats();
@@ -41,75 +42,44 @@ class MasterDashboard {
         this.setupEventListeners();
     }
     
-    setupDateRangePicker() {
-        // Initialize date range picker
-        if (typeof DateRangePicker === 'undefined') {
-            console.warn('DateRangePicker not loaded');
+    setupDatePickers() {
+        // Check if SimpleDatePicker is available
+        if (typeof SimpleDatePicker === 'undefined') {
+            console.warn('SimpleDatePicker not loaded, falling back to native inputs');
+            // Just use native inputs with change listeners
+            document.getElementById('dateFrom')?.addEventListener('change', () => {
+                this.filters.dateFrom = document.getElementById('dateFrom').value;
+            });
+            document.getElementById('dateTo')?.addEventListener('change', () => {
+                this.filters.dateTo = document.getElementById('dateTo').value;
+            });
             return;
         }
         
-        this.dateRangePicker = new DateRangePicker({
-            onConfirm: (dates) => {
-                this.filters.dateFrom = this.formatDateForAPI(dates.startDate);
-                this.filters.dateTo = this.formatDateForAPI(dates.endDate);
-                
-                // Update hidden inputs
-                document.getElementById('dateFrom').value = this.filters.dateFrom;
-                document.getElementById('dateTo').value = this.filters.dateTo;
-                
-                // Update display
-                this.updateDateRangeDisplay(dates.startDate, dates.endDate);
-                
-                // Apply filters
-                this.currentPage = 1;
-                this.loadInvoices();
-            },
-            onCancel: () => {
-                // Nothing to do on cancel
-            },
-            maxDate: new Date() // Can't select future dates
-        });
+        // Initialize date pickers
+        const dateFromInput = document.getElementById('dateFrom');
+        const dateToInput = document.getElementById('dateTo');
         
-        // Setup button click handler
-        const dateRangeBtn = document.getElementById('dateRangeBtn');
-        dateRangeBtn?.addEventListener('click', () => {
-            const startDate = this.filters.dateFrom ? new Date(this.filters.dateFrom) : null;
-            const endDate = this.filters.dateTo ? new Date(this.filters.dateTo) : null;
-            
-            if (startDate && endDate) {
-                this.dateRangePicker.setDates(startDate, endDate);
-            }
-            
-            this.dateRangePicker.open(dateRangeBtn);
-        });
-    }
-    
-    formatDateForAPI(date) {
-        if (!date) return '';
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-    
-    updateDateRangeDisplay(startDate, endDate) {
-        const display = document.getElementById('dateRangeDisplay');
-        if (!display) return;
+        if (dateFromInput) {
+            this.dateFromPicker = new SimpleDatePicker(dateFromInput, {
+                onChange: (date, formatted) => {
+                    this.filters.dateFrom = formatted;
+                    // Update min date for end picker
+                    if (this.dateToPicker && date) {
+                        this.dateToPicker.options.minDate = date;
+                    }
+                },
+                maxDate: new Date()
+            });
+        }
         
-        if (!startDate && !endDate) {
-            display.textContent = 'Select dates...';
-            document.getElementById('dateRangeBtn')?.classList.remove('active');
-        } else {
-            const formatDate = (date) => {
-                return date.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                });
-            };
-            
-            display.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
-            document.getElementById('dateRangeBtn')?.classList.add('active');
+        if (dateToInput) {
+            this.dateToPicker = new SimpleDatePicker(dateToInput, {
+                onChange: (date, formatted) => {
+                    this.filters.dateTo = formatted;
+                },
+                maxDate: new Date()
+            });
         }
     }
     
@@ -699,7 +669,8 @@ class MasterDashboard {
     
     applyFilters() {
         this.filters.search = document.getElementById('searchInput').value;
-        // Date filters are already set by the date picker callback
+        this.filters.dateFrom = document.getElementById('dateFrom').value;
+        this.filters.dateTo = document.getElementById('dateTo').value;
         
         this.currentPage = 1;
         this.loadInvoices();
@@ -708,15 +679,20 @@ class MasterDashboard {
     clearFilters() {
         document.getElementById('searchInput').value = '';
         
-        // Clear date picker
+        // Clear date pickers
         this.filters.dateFrom = '';
         this.filters.dateTo = '';
-        document.getElementById('dateFrom').value = '';
-        document.getElementById('dateTo').value = '';
-        this.updateDateRangeDisplay(null, null);
         
-        if (this.dateRangePicker) {
-            this.dateRangePicker.setDates(null, null);
+        if (this.dateFromPicker) {
+            this.dateFromPicker.setValue('');
+        } else {
+            document.getElementById('dateFrom').value = '';
+        }
+        
+        if (this.dateToPicker) {
+            this.dateToPicker.setValue('');
+        } else {
+            document.getElementById('dateTo').value = '';
         }
         
         this.filters = {
