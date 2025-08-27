@@ -408,7 +408,7 @@ class MasterDashboard {
                 </div>
                 
                 ${lineItems.length > 0 ? `
-                    <div class="detail-section">
+                    <div class="detail-section full-width">
                         <h3>Line Items</h3>
                         <table class="invoices-table">
                             <thead>
