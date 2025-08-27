@@ -367,7 +367,7 @@ class MasterDashboard {
                 
                 <div class="detail-section">
                     <h3>Financial Summary</h3>
-                    <div class="detail-grid">
+                    <div class="detail-grid four-items">
                         <div class="detail-item">
                             <span class="detail-label">Subtotal</span>
                             <span class="detail-value">${this.formatCurrency(scope.subtotal || invoice.subtotal || 0)}</span>
