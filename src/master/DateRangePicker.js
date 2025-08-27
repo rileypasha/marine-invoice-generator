@@ -533,6 +533,24 @@ class DateRangePicker {
         
         this.isOpen = true;
         
+        // Ensure footer is visible by scrolling content to top
+        const content = this.modal.querySelector('.date-range-content');
+        if (content) {
+            content.scrollTop = 0;
+        }
+        
+        // Verify buttons are accessible
+        const confirmBtn = this.elements.confirmBtn;
+        const cancelBtn = this.elements.cancelBtn;
+        if (confirmBtn && cancelBtn) {
+            console.log('Date picker buttons verified: Confirm and Cancel available');
+        } else {
+            console.error('Date picker buttons missing!', {
+                confirmBtn: !!confirmBtn,
+                cancelBtn: !!cancelBtn
+            });
+        }
+        
         // Focus first date or today
         setTimeout(() => {
             const todayCell = this.modal.querySelector('.date-cell.today:not([disabled])');

@@ -30,11 +30,10 @@ body.date-picker-open {
     position: fixed;
     top: 50%;
     left: 50%;
-    margin-left: -320px;
-    margin-top: -300px;
+    transform: translate(-50%, -50%);
     width: 640px;
     max-width: 90vw;
-    max-height: 90vh;
+    max-height: 85vh; /* Reduced to ensure footer is visible */
     background: var(--bg-card, #1e2128);
     border-radius: 16px;
     border: 1px solid var(--border-color, #2a2e37);
@@ -48,11 +47,11 @@ body.date-picker-open {
 @keyframes datePickerSlideIn {
     from {
         opacity: 0;
-        margin-top: -280px;
+        transform: translate(-50%, -48%);
     }
     to {
         opacity: 1;
-        margin-top: -300px;
+        transform: translate(-50%, -50%);
     }
 }
 
@@ -98,6 +97,8 @@ body.date-picker-open {
     flex: 1;
     padding: 1.5rem;
     overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0; /* Important for flexbox overflow */
     scrollbar-width: thin;
     scrollbar-color: var(--accent-primary, #10b981) var(--bg-secondary, #111318);
 }
@@ -146,14 +147,14 @@ body.date-picker-open {
 
 /* Calendar Container */
 .date-range-calendars {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .calendar-container {
     background: var(--bg-tertiary, #1a1d23);
     border-radius: 12px;
     border: 1px solid var(--border-color, #2a2e37);
-    padding: 1rem;
+    padding: 0.75rem;
 }
 
 /* Calendar Navigation */
@@ -334,7 +335,8 @@ body.date-picker-open {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    padding: 1rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
     background: var(--bg-tertiary, #1a1d23);
     border-radius: 12px;
     border: 1px solid var(--border-color, #2a2e37);
@@ -373,6 +375,8 @@ body.date-picker-open {
     justify-content: flex-end;
     gap: 1rem;
     background: var(--bg-card, #1e2128);
+    flex-shrink: 0; /* Prevent footer from shrinking */
+    border-radius: 0 0 16px 16px;
 }
 
 .btn-cancel,
@@ -413,13 +417,24 @@ body.date-picker-open {
     cursor: not-allowed;
 }
 
+.btn-confirm:focus,
+.btn-cancel:focus {
+    outline: 2px solid var(--accent-primary, #10b981);
+    outline-offset: 2px;
+}
+
+/* Ensure footer is always visible */
+.date-range-picker-modal.active .date-range-panel {
+    display: flex;
+    max-height: min(85vh, 600px); /* Limit height to ensure footer visibility */
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .date-range-panel {
         width: calc(100vw - 2rem);
-        margin-left: calc(-50vw + 1rem);
-        margin-top: -250px;
-        max-height: calc(100vh - 2rem);
+        max-height: calc(100vh - 4rem);
+        transform: translate(-50%, -50%);
     }
     
     .date-range-inputs {
