@@ -70,7 +70,9 @@ class MasterDashboard {
             
             document.getElementById('totalSaved').textContent = stats.totalSaved || 0;
             document.getElementById('todayCount').textContent = stats.todayCount || 0;
-            document.getElementById('weekTotal').textContent = this.formatCurrency(stats.weekTotal || 0);
+            // Round week total to nearest dollar
+            const roundedTotal = Math.round(stats.weekTotal || 0);
+            document.getElementById('weekTotal').textContent = this.formatCurrencyRounded(roundedTotal);
         } catch (error) {
             console.error('Failed to load stats:', error);
         }
@@ -764,6 +766,15 @@ class MasterDashboard {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD'
+        }).format(amount || 0);
+    }
+    
+    formatCurrencyRounded(amount) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
         }).format(amount || 0);
     }
     
