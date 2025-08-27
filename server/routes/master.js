@@ -544,6 +544,8 @@ router.get('/invoices/:id', requireMaster, async (req, res) => {
  * Export invoice as CSV
  */
 router.get('/invoices/:id/export.csv', requireMaster, async (req, res) => {
+  let invoice = null;
+  
   try {
     const { id } = req.params;
 
@@ -552,9 +554,79 @@ router.get('/invoices/:id/export.csv', requireMaster, async (req, res) => {
       return res.status(400).json({ error: 'Invoice ID is required' });
     }
 
-    const invoice = await prisma.invoice.findUnique({
-      where: { id }
-    });
+    // Try Prisma query first with explicit field selection
+    try {
+      invoice = await prisma.invoice.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          invoiceNumber: true,
+          title: true,
+          status: true,
+          data: true,
+          metadata: true,
+          userName: true,
+          userEmail: true,
+          vesselName: true,
+          vesselWeight: true,
+          vesselBeam: true,
+          customerName: true,
+          customerEmail: true,
+          customerPhone: true,
+          subtotal: true,
+          taxAmount: true,
+          total: true,
+          grossProfit: true,
+          profitPercent: true,
+          savedAt: true,
+          submittedAt: true,
+          createdAt: true,
+          updatedAt: true
+          // Explicitly exclude hasChanges since it doesn't exist in production DB
+        }
+      });
+    } catch (prismaError) {
+      // Fallback to raw SQL if Prisma fails
+      logger.warn({
+        event: 'MASTER_EXPORT_PRISMA_ERROR',
+        error: prismaError.message,
+        invoiceId: id,
+        fallback: 'Using raw SQL query'
+      });
+      
+      try {
+        const rawInvoices = await prisma.$queryRaw`
+          SELECT 
+            id, invoiceNumber, title, status, data, metadata,
+            userName, userEmail, vesselName, vesselWeight, vesselBeam,
+            customerName, customerEmail, customerPhone,
+            subtotal, taxAmount, total, grossProfit, profitPercent,
+            savedAt, submittedAt, createdAt, updatedAt
+          FROM "Invoice"
+          WHERE id = ${id}
+          LIMIT 1
+        `;
+        
+        invoice = rawInvoices[0] || null;
+      } catch (rawError) {
+        // Last resort - minimal query
+        logger.warn({
+          event: 'MASTER_EXPORT_RAW_SQL_ERROR',
+          error: rawError.message,
+          invoiceId: id,
+          fallback: 'Using minimal query'
+        });
+        
+        const minimalInvoices = await prisma.$queryRaw`
+          SELECT id, data, status, total
+          FROM "Invoice"
+          WHERE id = ${id}
+          LIMIT 1
+        `;
+        
+        invoice = minimalInvoices[0] || null;
+      }
+    }
 
     if (!invoice) {
       logger.warn({
@@ -688,6 +760,127 @@ router.get('/invoices/:id/export.csv', requireMaster, async (req, res) => {
     });
     res.status(500).json({ error: 'Failed to export invoice', details: error.message });
   }
+});
+
+/**
+ * GET /api/master/test-export/:id
+ * Test CSV export without actually generating CSV
+ */
+router.get('/test-export/:id', requireMaster, async (req, res) => {
+  const { id } = req.params;
+  const results = {
+    id,
+    timestamp: new Date().toISOString(),
+    tests: {}
+  };
+
+  // Test 1: Basic Prisma query with select
+  try {
+    const invoice = await prisma.invoice.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        total: true
+      }
+    });
+    results.tests.basicSelect = { 
+      success: true, 
+      found: !!invoice,
+      data: invoice ? { id: invoice.id, status: invoice.status } : null
+    };
+  } catch (error) {
+    results.tests.basicSelect = { 
+      success: false, 
+      error: error.message 
+    };
+  }
+
+  // Test 2: Full field selection (excluding hasChanges)
+  try {
+    const invoice = await prisma.invoice.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        title: true,
+        status: true,
+        data: true,
+        userName: true,
+        userEmail: true,
+        vesselName: true,
+        customerName: true,
+        customerEmail: true,
+        total: true,
+        savedAt: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    results.tests.fullSelect = { 
+      success: true, 
+      found: !!invoice,
+      hasData: !!(invoice && invoice.data)
+    };
+  } catch (error) {
+    results.tests.fullSelect = { 
+      success: false, 
+      error: error.message 
+    };
+  }
+
+  // Test 3: Raw SQL query
+  try {
+    const rawInvoices = await prisma.$queryRaw`
+      SELECT id, status, total 
+      FROM "Invoice" 
+      WHERE id = ${id}
+      LIMIT 1
+    `;
+    results.tests.rawSQL = { 
+      success: true, 
+      found: rawInvoices.length > 0,
+      data: rawInvoices[0] || null
+    };
+  } catch (error) {
+    results.tests.rawSQL = { 
+      success: false, 
+      error: error.message 
+    };
+  }
+
+  // Test 4: Data parsing
+  try {
+    const invoice = await prisma.$queryRaw`
+      SELECT data 
+      FROM "Invoice" 
+      WHERE id = ${id}
+      LIMIT 1
+    `;
+    if (invoice[0] && invoice[0].data) {
+      const parsed = typeof invoice[0].data === 'string' 
+        ? JSON.parse(invoice[0].data)
+        : invoice[0].data;
+      results.tests.dataParsing = {
+        success: true,
+        hasScope: !!parsed.scope,
+        hasLineItems: !!(parsed.scope && parsed.scope.lineItems),
+        lineItemCount: parsed.scope?.lineItems?.length || 0
+      };
+    } else {
+      results.tests.dataParsing = { 
+        success: false, 
+        error: 'No invoice found' 
+      };
+    }
+  } catch (error) {
+    results.tests.dataParsing = { 
+      success: false, 
+      error: error.message 
+    };
+  }
+
+  res.json(results);
 });
 
 /**
