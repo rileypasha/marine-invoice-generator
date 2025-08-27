@@ -1021,13 +1021,19 @@ router.get('/all-invoices', requireMaster, async (req, res) => {
  */
 router.get('/stats', requireMaster, async (req, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    const [totalSaved, todayCount, weekInvoices] = await Promise.all([
+    // Use raw SQL for today count to handle timezone properly
+    const todayCountResult = await prisma.$queryRaw`
+      SELECT COUNT(*) as count
+      FROM "Invoice"
+      WHERE ("status" = 'saved' OR "status" = 'submitted')
+        AND DATE("savedAt" AT TIME ZONE 'America/Los_Angeles') = CURRENT_DATE
+    `;
+    const todayCount = Number(todayCountResult[0]?.count || 0);
+
+    const [totalSaved, weekInvoices] = await Promise.all([
       // Total saved/submitted invoices
       prisma.invoice.count({
         where: {
@@ -1035,17 +1041,6 @@ router.get('/stats', requireMaster, async (req, res) => {
             { status: 'saved' },
             { status: 'submitted' }
           ]
-        }
-      }),
-      
-      // Today's invoice count
-      prisma.invoice.count({
-        where: {
-          OR: [
-            { status: 'saved' },
-            { status: 'submitted' }
-          ],
-          savedAt: { gte: today }
         }
       }),
       
