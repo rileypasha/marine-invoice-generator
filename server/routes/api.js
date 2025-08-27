@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { requireAuth } = require('../middleware/auth');
+const { calculateInvoiceTotals } = require('../utils/invoice-calculator');
 
 const prisma = new PrismaClient();
 
@@ -84,10 +85,8 @@ router.post('/invoice/save', requireAuth, async (req, res) => {
         customerEmail: data.customerEmail || data.customer?.customerEmail || null,
         customerPhone: data.customerPhone || data.customer?.customerPhone || null,
         
-        // Financial info
-        subtotal: data.subtotal ? parseFloat(data.subtotal) : 0,
-        taxAmount: data.taxAmount ? parseFloat(data.taxAmount) : 0,
-        total: data.total ? parseFloat(data.total) : 0,
+        // Financial info - Calculate from line items if not provided
+        ...calculateInvoiceTotals(data),
         grossProfit: data.grossProfit ? parseFloat(data.grossProfit) : 0,
         profitPercent: data.profitPercent ? parseFloat(data.profitPercent) : 0,
         
@@ -260,10 +259,8 @@ router.put('/invoice/:id', requireAuth, async (req, res) => {
         customerEmail: data.customerEmail || data.customer?.customerEmail || null,
         customerPhone: data.customerPhone || data.customer?.customerPhone || null,
         
-        // Financial info
-        subtotal: data.subtotal ? parseFloat(data.subtotal) : 0,
-        taxAmount: data.taxAmount ? parseFloat(data.taxAmount) : 0,
-        total: data.total ? parseFloat(data.total) : 0,
+        // Financial info - Calculate from line items if not provided
+        ...calculateInvoiceTotals(data),
         grossProfit: data.grossProfit ? parseFloat(data.grossProfit) : 0,
         profitPercent: data.profitPercent ? parseFloat(data.profitPercent) : 0,
         
