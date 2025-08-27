@@ -393,9 +393,10 @@ class MasterDashboard {
                         <table class="invoices-table">
                             <thead>
                                 <tr>
-                                    <th>Description</th>
+                                    <th>Item</th>
                                     <th>Type</th>
                                     <th>Cost</th>
+                                    <th>Total</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -403,6 +404,7 @@ class MasterDashboard {
                                     <tr>
                                         <td style="word-wrap: break-word; max-width: 300px;" title="${(item.description || 'N/A').replace(/"/g, '&quot;')}">${item.description || 'N/A'}</td>
                                         <td>${item.type || 'N/A'}</td>
+                                        <td>${this.formatCurrency(item.cost || 0)}</td>
                                         <td>${this.formatCurrency(item.cost || 0)}</td>
                                     </tr>
                                 `).join('')}
