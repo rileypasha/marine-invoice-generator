@@ -1024,3 +1024,21 @@ body {
         grid-template-columns: repeat(5, 1fr); /* Show 5 columns on XL screens */
     }
 }
+
+/* Special grid for sections with only 2 items (like Submitter Information) */
+.detail-grid.two-items {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Much wider minimum for 2-item grids */
+    max-width: 800px; /* Limit total width so items don't stretch too much */
+}
+
+@media (min-width: 769px) {
+    .detail-grid.two-items {
+        grid-template-columns: repeat(2, 1fr); /* Always 2 columns on larger screens */
+    }
+}
+
+@media (max-width: 768px) {
+    .detail-grid.two-items {
+        grid-template-columns: 1fr; /* Stack on mobile */
+    }
+}

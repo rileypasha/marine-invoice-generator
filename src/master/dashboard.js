@@ -433,7 +433,7 @@ class MasterDashboard {
                 
                 <div class="detail-section">
                     <h3>Submitter Information</h3>
-                    <div class="detail-grid">
+                    <div class="detail-grid two-items">
                         <div class="detail-item">
                             <span class="detail-label">Submitted By</span>
                             <span class="detail-value">${invoice.userName || 'N/A'}</span>
