@@ -42,7 +42,7 @@ model Invoice {
   notes         String?
   
   // Change tracking
-  hasChanges    Boolean  @default(false)
+  // hasChanges    Boolean  @default(false) // Not in production DB yet
   
   // Timestamps
   createdAt     DateTime @default(now())
