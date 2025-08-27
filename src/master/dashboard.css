@@ -640,11 +640,14 @@ body {
     background: var(--bg-card);
     max-width: 1400px; /* Increased for wider layout */
     width: 95%; /* Use more available width */
-    margin: 0 auto;
+    max-height: 90vh; /* Ensure modal doesn't exceed viewport height */
+    margin: 5vh auto; /* Center vertically with margin */
     border-radius: 16px;
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-xl);
     animation: modalSlideIn 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
 }
 
 @keyframes modalSlideIn {
@@ -664,6 +667,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0; /* Prevent header from shrinking */
 }
 
 .modal-header h2 {
@@ -694,7 +698,7 @@ body {
 
 .modal-body {
     padding: 1.5rem 2rem; /* More horizontal padding */
-    max-height: calc(100vh - 180px); /* Slightly more height available */
+    flex: 1; /* Take remaining space */
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 1.5rem; /* Space for scrollbar */
@@ -727,6 +731,8 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
+    flex-shrink: 0; /* Prevent footer from shrinking */
+    border-radius: 0 0 16px 16px; /* Match modal border radius */
 }
 
 #exportCsv {
