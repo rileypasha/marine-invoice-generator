@@ -38,19 +38,9 @@ class MasterDashboard {
     }
     
     initTheme() {
-        // Check localStorage for saved theme preference
-        const savedTheme = localStorage.getItem('dashboardTheme') || 'dark';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        document.body.setAttribute('data-theme', savedTheme);
-    }
-    
-    toggleTheme() {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        
-        document.documentElement.setAttribute('data-theme', newTheme);
-        document.body.setAttribute('data-theme', newTheme);
-        localStorage.setItem('dashboardTheme', newTheme);
+        // Always use dark theme
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.body.setAttribute('data-theme', 'dark');
     }
     
     async checkAuth() {
@@ -254,9 +244,7 @@ class MasterDashboard {
                 <td>${invoice.userName || 'N/A'}<br><small>${invoice.userEmail || ''}</small></td>
                 <td>${invoice.vesselName || 'N/A'}</td>
                 <td>${invoice.customerName || 'N/A'}</td>
-                <td>${invoice.invoiceNumber || 'N/A'}</td>
                 <td>${this.formatCurrency(invoice.total)}</td>
-                <td>${this.formatPercent(invoice.profitPercent)}</td>
                 <td class="changes-cell">${changeIndicator}</td>
                 <td>
                     <button class="btn-view" data-id="${invoice.id}">View</button>
@@ -488,14 +476,6 @@ class MasterDashboard {
     }
     
     setupEventListeners() {
-        // Theme toggle
-        const themeToggle = document.getElementById('themeToggle');
-        if (themeToggle) {
-            themeToggle.addEventListener('click', () => {
-                this.toggleTheme();
-            });
-        }
-        
         // Filter controls with debounce
         let filterTimeout;
         document.getElementById('applyFilters')?.addEventListener('click', () => {
