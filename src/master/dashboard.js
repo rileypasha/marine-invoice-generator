@@ -318,20 +318,12 @@ class MasterDashboard {
                     <h3>Invoice Information</h3>
                     <div class="detail-grid">
                         <div class="detail-item">
-                            <span class="detail-label">Invoice Number</span>
-                            <span class="detail-value">${invoice.invoiceNumber || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
                             <span class="detail-label">Status</span>
                             <span class="detail-value">${invoice.status}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Saved At</span>
                             <span class="detail-value">${this.formatDate(invoice.savedAt)}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Market</span>
-                            <span class="detail-value">${invoice.market || 'N/A'}</span>
                         </div>
                     </div>
                 </div>
@@ -351,14 +343,6 @@ class MasterDashboard {
                             <span class="detail-label">Beam</span>
                             <span class="detail-value">${vessel.beam || (invoice.vesselBeam ? invoice.vesselBeam + ' ft' : 'N/A')}</span>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">LOA</span>
-                            <span class="detail-value">${vessel.loa || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Draft</span>
-                            <span class="detail-value">${vessel.draft || 'N/A'}</span>
-                        </div>
                     </div>
                 </div>
                 
@@ -377,10 +361,6 @@ class MasterDashboard {
                         <div class="detail-item">
                             <span class="detail-label">Phone</span>
                             <span class="detail-value">${customer.customerPhone || invoice.customerPhone || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Address</span>
-                            <span class="detail-value address-value" title="${customer.customerAddress || 'N/A'}">${customer.customerAddress || 'N/A'}</span>
                         </div>
                     </div>
                 </div>
