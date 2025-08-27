@@ -322,7 +322,7 @@ class MasterDashboard {
                             <span class="detail-value">${invoice.status}</span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">Saved At</span>
+                            <span class="detail-label">Save</span>
                             <span class="detail-value date-value">${this.formatDate(invoice.savedAt)}</span>
                         </div>
                     </div>
@@ -332,7 +332,7 @@ class MasterDashboard {
                     <h3>Vessel</h3>
                     <div class="detail-grid">
                         <div class="detail-item">
-                            <span class="detail-label">Vessel Name</span>
+                            <span class="detail-label">Name</span>
                             <span class="detail-value">${vessel.name || invoice.vesselName || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
@@ -350,7 +350,7 @@ class MasterDashboard {
                     <h3>Customer</h3>
                     <div class="detail-grid">
                         <div class="detail-item">
-                            <span class="detail-label">Customer Name</span>
+                            <span class="detail-label">Name</span>
                             <span class="detail-value">${customer.customerName || invoice.customerName || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
@@ -381,7 +381,7 @@ class MasterDashboard {
                             <span class="detail-value"><strong>${this.formatCurrency(scope.total || invoice.total || 0)}</strong></span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">Gross Profit</span>
+                            <span class="detail-label">Profit</span>
                             <span class="detail-value">${this.formatCurrency(scope.grossProfit || invoice.grossProfit || 0)} (${this.formatPercent(scope.profitPercent || invoice.profitPercent || 0)})</span>
                         </div>
                     </div>
@@ -677,7 +677,11 @@ class MasterDashboard {
     // Utility functions
     formatDate(dateString) {
         const date = new Date(dateString);
-        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        return date.toLocaleDateString('en-US', {
+            month: 'numeric',
+            day: 'numeric',
+            year: 'numeric'
+        });
     }
     
     formatCurrency(amount) {
