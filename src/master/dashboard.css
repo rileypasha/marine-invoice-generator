@@ -302,6 +302,50 @@ body {
     width: 150px;
 }
 
+/* Date Range Button */
+.date-range-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 280px;
+}
+
+.date-range-btn:hover {
+    border-color: var(--accent-primary);
+    background: var(--bg-tertiary);
+}
+
+.date-range-btn:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.date-range-btn.active {
+    border-color: var(--accent-primary);
+    background: var(--accent-glow);
+}
+
+.date-range-btn svg {
+    width: 16px;
+    height: 16px;
+    opacity: 0.6;
+    flex-shrink: 0;
+}
+
+#dateRangeDisplay {
+    flex: 1;
+    text-align: left;
+}
+
 .select-input {
     min-width: 200px;
 }

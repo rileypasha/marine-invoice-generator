@@ -6,6 +6,7 @@
     <title>Master Dashboard - Marine Invoice System</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="/master/dashboard.css">
+    <link rel="stylesheet" href="/master/date-range-picker.css">
 </head>
 <body>
     <div class="dashboard-container">
@@ -55,9 +56,15 @@
                 </div>
                 <div class="filter-group">
                     <label>Date Range:</label>
-                    <input type="date" id="dateFrom" class="date-input">
-                    <span>to</span>
-                    <input type="date" id="dateTo" class="date-input">
+                    <button id="dateRangeBtn" class="date-range-btn" aria-label="Select date range">
+                        <span id="dateRangeDisplay">Select dates...</span>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M13 2h-1V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM3 4h10v2H3V4zm0 10V8h10v6H3z"/>
+                        </svg>
+                    </button>
+                    <!-- Hidden inputs for form compatibility -->
+                    <input type="hidden" id="dateFrom" name="dateFrom">
+                    <input type="hidden" id="dateTo" name="dateTo">
                 </div>
                 <button id="applyFilters" class="btn-primary">Apply Filters</button>
                 <button id="clearFilters" class="btn-secondary">Clear</button>
@@ -123,6 +130,7 @@
         </div>
     </div>
 
+    <script src="/master/DateRangePicker.js"></script>
     <script src="/master/dashboard.js"></script>
 </body>
 </html>
