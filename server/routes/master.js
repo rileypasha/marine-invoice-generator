@@ -745,8 +745,13 @@ router.get('/invoices/:id/export.csv', requireMaster, async (req, res) => {
     });
 
     // Send CSV response with proper headers
+    // Create a clean filename without special characters that might cause issues
+    const safeInvoiceNumber = (invoice.invoiceNumber || id).replace(/[^a-zA-Z0-9-_]/g, '_');
+    const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const csvFilename = `invoice_${safeInvoiceNumber}_${timestamp}.csv`;
+    
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoiceNumber || id}-${Date.now()}.csv"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${csvFilename}"`);
     res.setHeader('Cache-Control', 'no-cache');
     res.send(csvContent);
     

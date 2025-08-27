@@ -689,9 +689,15 @@ class MasterDashboard {
             const contentDisposition = response.headers.get('Content-Disposition');
             let filename = `invoice-${invoiceId}.csv`;
             if (contentDisposition) {
-                const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+                // Fixed regex to properly extract filename without trailing quote
+                // Handles both filename="file.csv" and filename=file.csv formats
+                const filenameMatch = contentDisposition.match(/filename=["']?([^"']+)["']?/i);
                 if (filenameMatch) {
-                    filename = filenameMatch[1];
+                    filename = filenameMatch[1].trim();
+                    // Remove any trailing underscore that might have been added
+                    if (filename.endsWith('_')) {
+                        filename = filename.slice(0, -1);
+                    }
                 }
             }
             
