@@ -318,26 +318,141 @@ class MasterDashboard {
     }
     
     async viewInvoice(id) {
+        // Validate invoice ID
+        if (!id) {
+            console.error('Invalid invoice ID:', id);
+            this.showError('Invalid invoice ID');
+            return;
+        }
+        
+        // Store last viewed ID for retry
+        this.lastViewedInvoiceId = id;
+        
+        // Show loading state immediately
+        this.showLoadingModal();
+        
         try {
+            console.log('🔍 Fetching invoice details for ID:', id);
+            
             const response = await fetch(`/api/master/invoices/${id}`, {
-                credentials: 'include'
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
             });
             
+            console.log('📡 Response status:', response.status);
+            
             if (!response.ok) {
-                throw new Error('Failed to fetch invoice details');
+                const errorText = await response.text();
+                console.error('❌ Error response:', errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText || 'Failed to fetch invoice details'}`);
             }
             
             const invoice = await response.json();
+            console.log('✅ Invoice data received:', invoice);
+            
+            // Validate response has required fields
+            if (!invoice || !invoice.id) {
+                console.error('❌ Invalid invoice data:', invoice);
+                throw new Error('Invalid invoice data received');
+            }
+            
             this.showDetailModal(invoice);
         } catch (error) {
             console.error('Failed to load invoice details:', error);
-            alert('Failed to load invoice details');
+            this.showError(`Failed to load invoice: ${error.message}`);
         }
+    }
+    
+    showLoadingModal() {
+        const modal = document.getElementById('detailModal');
+        const modalBody = document.getElementById('modalBody');
+        
+        if (!modal || !modalBody) {
+            console.error('Modal elements not found');
+            return;
+        }
+        
+        // Lock body scroll
+        document.body.classList.add('modal-open');
+        
+        modalBody.innerHTML = `
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading invoice details...</p>
+            </div>
+        `;
+        
+        // Ensure modal is visible
+        modal.style.display = 'block';
+        modal.style.visibility = 'visible';
+        modal.style.zIndex = '10000';
+    }
+    
+    showError(message) {
+        const modal = document.getElementById('detailModal');
+        const modalBody = document.getElementById('modalBody');
+        
+        if (!modal || !modalBody) {
+            console.error('Modal elements not found');
+            alert(message);
+            return;
+        }
+        
+        // Lock body scroll
+        document.body.classList.add('modal-open');
+        
+        modalBody.innerHTML = `
+            <div class="error-state">
+                <h3>⚠️ Error</h3>
+                <p>${this.escapeHtml(message)}</p>
+                <div class="error-buttons">
+                    <button class="btn-secondary" onclick="window.masterDashboard.closeModal()">Close</button>
+                    <button class="btn-primary" onclick="window.masterDashboard.retryLastView()">Retry</button>
+                </div>
+            </div>
+        `;
+        
+        // Ensure modal is visible
+        modal.style.display = 'block';
+        modal.style.visibility = 'visible';
+        modal.style.zIndex = '10000';
+    }
+    
+    retryLastView() {
+        if (this.lastViewedInvoiceId) {
+            this.viewInvoice(this.lastViewedInvoiceId);
+        }
+    }
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     
     showDetailModal(invoice) {
         const modal = document.getElementById('detailModal');
         const modalBody = document.getElementById('modalBody');
+        
+        // Defensive checks
+        if (!modal || !modalBody) {
+            console.error('Modal elements not found');
+            alert('UI Error: Could not display invoice details');
+            return;
+        }
+        
+        // Debug logging
+        console.log('📋 Showing detail modal for invoice:', invoice.id);
+        console.log('📊 Invoice data structure:', {
+            hasId: !!invoice.id,
+            hasStatus: !!invoice.status,
+            hasParsedData: !!invoice.parsedData,
+            hasVesselName: !!invoice.vesselName,
+            hasCustomerName: !!invoice.customerName
+        });
         
         // Lock body scroll when modal opens
         document.body.classList.add('modal-open');
@@ -497,14 +612,25 @@ class MasterDashboard {
             this.setupTabSwitching(invoice.id);
         }
         
-        // Show modal with proper display
+        // Ensure modal is properly visible
         modal.style.display = 'block';
+        modal.style.visibility = 'visible';
+        modal.style.zIndex = '10000';
         
         // Force reflow to ensure CSS transitions work
         modal.offsetHeight;
         
         // Add animation class if needed
         modal.classList.add('active');
+        
+        // Log successful render
+        console.log('✅ Modal rendered successfully');
+        console.log('📐 Modal display state:', {
+            display: modal.style.display,
+            visibility: modal.style.visibility,
+            zIndex: modal.style.zIndex,
+            bodyHasContent: modalBody.innerHTML.length > 0
+        });
         
         // Add event listeners for copy buttons
         this.setupCopyButtons();

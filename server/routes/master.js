@@ -407,8 +407,38 @@ router.get('/invoices', requireMaster, async (req, res) => {
  * Get detailed invoice by ID
  */
 router.get('/invoices/:id', requireMaster, async (req, res) => {
+  const requestId = `detail_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
   try {
     const { id } = req.params;
+    
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!id || !uuidRegex.test(id)) {
+      logger.warn({
+        event: 'INVALID_INVOICE_ID',
+        id,
+        requestId,
+        email: req.user?.email
+      });
+      return res.status(400).json({ error: 'Invalid invoice ID format' });
+    }
+    
+    // Log access attempt
+    logger.info({
+      event: 'MASTER_DETAIL_ACCESS',
+      email: req.user?.email,
+      invoiceId: id,
+      requestId,
+      headers: {
+        accept: req.headers.accept,
+        'x-requested-with': req.headers['x-requested-with']
+      }
+    });
+    
+    console.log(`\n🔍 [${requestId}] MASTER DETAIL VIEW REQUEST`);
+    console.log('  User:', req.user?.email);
+    console.log('  Invoice ID:', id);
 
     // Use raw query to avoid Prisma schema issues with missing hasChanges column
     const invoices = await prisma.$queryRaw`
@@ -445,6 +475,12 @@ router.get('/invoices/:id', requireMaster, async (req, res) => {
     `;
 
     if (!invoices || invoices.length === 0) {
+      logger.warn({
+        event: 'INVOICE_NOT_FOUND',
+        invoiceId: id,
+        requestId,
+        email: req.user?.email
+      });
       return res.status(404).json({ error: 'Invoice not found' });
     }
 
@@ -524,18 +560,40 @@ router.get('/invoices/:id', requireMaster, async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-    res.json({
+    // Ensure response structure with all required fields
+    const responseData = {
       ...invoice,
-      parsedData: invoiceData
-    });
+      parsedData: invoiceData || {},
+      // Ensure critical fields exist for frontend
+      id: invoice.id,
+      status: invoice.status || 'unknown',
+      vesselName: invoice.vesselName || 'N/A',
+      customerName: invoice.customerName || 'N/A',
+      total: invoice.total || 0,
+      savedAt: invoice.savedAt,
+      submittedAt: invoice.submittedAt
+    };
+    
+    console.log(`  ✅ Sending invoice data for ID: ${id}`);
+    console.log(`  Response structure: ${JSON.stringify(Object.keys(responseData))}`);
+    
+    res.json(responseData);
   } catch (error) {
     logger.error({
       event: 'MASTER_DETAIL_ERROR',
       error: error.message,
-      email: req.user.email,
-      invoiceId: req.params.id
+      stack: error.stack,
+      email: req.user?.email,
+      invoiceId: req.params.id,
+      requestId
     });
-    res.status(500).json({ error: 'Failed to fetch invoice' });
+    
+    console.error(`  ❌ Error fetching invoice ${req.params.id}:`, error.message);
+    
+    res.status(500).json({ 
+      error: 'Failed to fetch invoice',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

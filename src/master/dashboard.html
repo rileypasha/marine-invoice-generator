@@ -7,6 +7,7 @@
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="/master/dashboard.css">
     <link rel="stylesheet" href="/master/simple-date-picker.css">
+    <link rel="stylesheet" href="/master/dashboard-modal.css">
 </head>
 <body>
     <div class="dashboard-container">
@@ -111,14 +112,14 @@
     </div>
 
     <!-- Invoice Detail Modal -->
-    <div id="detailModal" class="invoice-detail-modal" style="display: none;">
-        <div class="invoice-detail-overlay"></div>
-        <div class="invoice-detail-panel">
+    <div id="detailModal" class="invoice-detail-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;">
+        <div class="invoice-detail-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);"></div>
+        <div class="invoice-detail-panel" style="position: relative; margin: 50px auto; max-width: 900px; background: var(--bg-secondary, #fff); max-height: 90vh; overflow-y: auto;">
             <div class="invoice-detail-header">
                 <h2>Invoice Details</h2>
                 <button class="invoice-detail-close" id="closeModal" aria-label="Close modal">&times;</button>
             </div>
-            <div class="invoice-detail-content" id="modalBody" role="region" aria-label="Invoice details">
+            <div class="invoice-detail-content" id="modalBody" role="region" aria-label="Invoice details" data-testid="invoice-detail">
                 <!-- Detail content will be loaded here -->
             </div>
             <div class="invoice-detail-footer">
