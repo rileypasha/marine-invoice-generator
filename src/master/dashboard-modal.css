@@ -9,6 +9,19 @@
     display: none;
 }
 
+/* Override any conflicting styles from dashboard.css */
+#detailModal.invoice-detail-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+#detailModal[style*="display: block"] {
+    display: flex !important;
+}
+
 .invoice-detail-modal.active {
     display: block !important;
 }
@@ -60,16 +73,33 @@
     100% { transform: rotate(360deg); }
 }
 
-/* Ensure modal content is visible */
+/* Ensure modal content is visible and centered */
 .invoice-detail-panel {
     background: var(--bg-secondary, #1a1a1a) !important;
     border-radius: 8px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    position: relative !important;
+    margin: auto !important;
+    max-width: 900px !important;
+    width: 90% !important;
+    max-height: 90vh !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
 .invoice-detail-content {
     min-height: 100px;
     position: relative;
+    overflow-y: auto;
+    flex: 1;
+    padding: 20px;
+}
+
+/* Ensure content is visible */
+.invoice-detail-content .invoice-detail {
+    display: block !important;
+    visibility: visible !important;
 }
 
 /* Fix for dark theme */

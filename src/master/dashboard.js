@@ -515,12 +515,14 @@ class MasterDashboard {
         
         // Debug logging
         console.log('📋 Showing detail modal for invoice:', invoice.id);
+        console.log('📊 Full invoice data:', invoice);
         console.log('📊 Invoice data structure:', {
             hasId: !!invoice.id,
             hasStatus: !!invoice.status,
             hasParsedData: !!invoice.parsedData,
             hasVesselName: !!invoice.vesselName,
-            hasCustomerName: !!invoice.customerName
+            hasCustomerName: !!invoice.customerName,
+            parsedDataKeys: invoice.parsedData ? Object.keys(invoice.parsedData) : []
         });
         
         // Lock body scroll when modal opens
@@ -537,6 +539,21 @@ class MasterDashboard {
         
         // Check if invoice has changes
         const hasChanges = invoice.hasChanges || false;
+        
+        // Add debug info if data is missing
+        if (!invoice || Object.keys(invoice).length === 0) {
+            modalBody.innerHTML = `
+                <div class="error-state">
+                    <h3>⚠️ No Data</h3>
+                    <p>Invoice data is empty. Please refresh and try again.</p>
+                    <pre>${JSON.stringify(invoice, null, 2)}</pre>
+                </div>
+            `;
+            modal.style.display = 'block';
+            modal.style.visibility = 'visible';
+            modal.style.zIndex = '10000';
+            return;
+        }
         
         modalBody.innerHTML = `
             ${hasChanges ? `
@@ -685,6 +702,13 @@ class MasterDashboard {
         modal.style.display = 'block';
         modal.style.visibility = 'visible';
         modal.style.zIndex = '10000';
+        
+        // Remove any conflicting styles
+        modal.style.position = '';
+        modal.style.top = '';
+        modal.style.left = '';
+        modal.style.width = '';
+        modal.style.height = '';
         
         // Force reflow to ensure CSS transitions work
         modal.offsetHeight;
