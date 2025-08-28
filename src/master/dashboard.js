@@ -351,7 +351,18 @@ class MasterDashboard {
         const scope = invoiceData.scope || {};
         const lineItems = scope.lineItems || [];
         
+        // Check if invoice has changes
+        const hasChanges = invoice.hasChanges || false;
+        
         modalBody.innerHTML = `
+            ${hasChanges ? `
+                <div class="detail-tabs">
+                    <button class="tab-button active" data-tab="details">Invoice Details</button>
+                    <button class="tab-button" data-tab="changes">Changes ${invoice.unseenChanges ? '<span class="unseen-badge">NEW</span>' : ''}</button>
+                </div>
+            ` : ''}
+            
+            <div class="tab-content ${hasChanges ? 'active' : ''}" id="detailsTab">
             <div class="invoice-detail">
                 <div class="detail-section">
                     <h3>Invoice</h3>
@@ -467,10 +478,24 @@ class MasterDashboard {
                     </div>
                 </div>
             </div>
+            </div>
+            
+            ${hasChanges ? `
+                <div class="tab-content" id="changesTab" style="display: none;">
+                    <div class="changes-container">
+                        <div class="loading-spinner">Loading changes...</div>
+                    </div>
+                </div>
+            ` : ''}
         `;
         
         // Store current invoice ID for export
         modal.dataset.invoiceId = invoice.id;
+        
+        // Setup tab switching if there are changes
+        if (hasChanges) {
+            this.setupTabSwitching(invoice.id);
+        }
         
         // Show modal with proper display
         modal.style.display = 'block';
@@ -483,6 +508,182 @@ class MasterDashboard {
         
         // Add event listeners for copy buttons
         this.setupCopyButtons();
+        
+        // Mark changes as seen if they were unseen
+        if (invoice.unseenChanges) {
+            this.markChangesSeen(invoice.id);
+        }
+    }
+    
+    setupTabSwitching(invoiceId) {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', async () => {
+                const targetTab = button.dataset.tab;
+                
+                // Update active states
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                tabContents.forEach(content => {
+                    content.style.display = 'none';
+                    content.classList.remove('active');
+                });
+                
+                const targetContent = document.getElementById(targetTab + 'Tab');
+                if (targetContent) {
+                    targetContent.style.display = 'block';
+                    targetContent.classList.add('active');
+                    
+                    // Load changes if switching to changes tab
+                    if (targetTab === 'changes') {
+                        await this.loadChanges(invoiceId);
+                    }
+                }
+            });
+        });
+    }
+    
+    async loadChanges(invoiceId) {
+        const changesContainer = document.querySelector('#changesTab .changes-container');
+        
+        try {
+            const response = await fetch(`/api/master/invoices/${invoiceId}/diff`, {
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to load changes');
+            }
+            
+            const data = await response.json();
+            
+            changesContainer.innerHTML = this.renderChanges(data);
+            
+        } catch (error) {
+            console.error('Failed to load changes:', error);
+            changesContainer.innerHTML = '<div class="error-message">Failed to load changes</div>';
+        }
+    }
+    
+    renderChanges(diffData) {
+        if (!diffData.diff) {
+            return '<div class="no-changes">No changes detected</div>';
+        }
+        
+        const { summary, sections } = diffData.diff;
+        
+        let html = `
+            <div class="changes-summary">
+                <span class="change-stat additions">+${summary.additions} additions</span>
+                <span class="change-stat modifications">~${summary.modifications} modifications</span>
+                <span class="change-stat removals">-${summary.removals} removals</span>
+            </div>
+        `;
+        
+        // Render each section with changes
+        for (const [sectionName, changes] of Object.entries(sections)) {
+            if (changes.length === 0) continue;
+            
+            const sectionTitle = sectionName.replace(/([A-Z])/g, ' $1').trim();
+            
+            html += `
+                <div class="change-section">
+                    <h4>${sectionTitle}</h4>
+                    <div class="change-list">
+            `;
+            
+            changes.forEach(change => {
+                html += this.renderChange(change);
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+        
+        return html;
+    }
+    
+    renderChange(change) {
+        const fieldName = change.path.split('.').pop();
+        
+        switch (change.type) {
+            case 'added':
+                return `
+                    <div class="change-item added">
+                        <span class="change-field">${fieldName}</span>
+                        <span class="change-value new">${this.formatValue(change.new)}</span>
+                    </div>
+                `;
+                
+            case 'removed':
+                return `
+                    <div class="change-item removed">
+                        <span class="change-field">${fieldName}</span>
+                        <span class="change-value old">${this.formatValue(change.old)}</span>
+                    </div>
+                `;
+                
+            case 'changed':
+            case 'modified':
+                if (change.textDiff) {
+                    return `
+                        <div class="change-item modified">
+                            <span class="change-field">${fieldName}</span>
+                            <div class="text-diff">
+                                ${this.renderTextDiff(change.textDiff)}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="change-item modified">
+                            <span class="change-field">${fieldName}</span>
+                            <span class="change-value old">${this.formatValue(change.old)}</span>
+                            <span class="change-arrow">→</span>
+                            <span class="change-value new">${this.formatValue(change.new)}</span>
+                        </div>
+                    `;
+                }
+                
+            default:
+                return '';
+        }
+    }
+    
+    renderTextDiff(textDiff) {
+        return textDiff.map(part => {
+            if (part.operation === 'delete') {
+                return `<span class="diff-delete">${part.text}</span>`;
+            } else if (part.operation === 'insert') {
+                return `<span class="diff-insert">${part.text}</span>`;
+            } else {
+                return part.text;
+            }
+        }).join('');
+    }
+    
+    formatValue(value) {
+        if (value === null || value === undefined) return 'N/A';
+        if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+        if (typeof value === 'number') return value.toLocaleString();
+        if (typeof value === 'object') return JSON.stringify(value, null, 2);
+        return String(value);
+    }
+    
+    async markChangesSeen(invoiceId) {
+        try {
+            await fetch(`/api/master/invoices/${invoiceId}/mark-changes-seen`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+        } catch (error) {
+            console.error('Failed to mark changes as seen:', error);
+        }
     }
     
     setupCopyButtons() {
