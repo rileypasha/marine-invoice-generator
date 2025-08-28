@@ -51,7 +51,8 @@ export function initializeFormatters() {
 function formatWithSuffix(input, suffix) {
   // Store the raw value as a data attribute
   input.addEventListener('input', function() {
-    const rawValue = this.value.replace(suffix, '').trim();
+    const val = String(this.value || '');
+    const rawValue = val.replace(suffix, '').trim();
     this.dataset.rawValue = rawValue;
     
     // Trigger input event for other listeners
@@ -61,23 +62,28 @@ function formatWithSuffix(input, suffix) {
 
   input.addEventListener('focus', function() {
     // Remove suffix when editing
-    const value = this.value.replace(suffix, '').trim();
+    const val = String(this.value || '');
+    const value = val.replace(suffix, '').trim();
     this.value = value;
   });
 
   input.addEventListener('blur', function() {
-    const value = this.value.replace(suffix, '').trim();
+    const val = String(this.value || '');
+    const value = val.replace(suffix, '').trim();
     this.dataset.rawValue = value;
-    if (value && !this.value.endsWith(suffix)) {
+    if (value && !val.endsWith(suffix)) {
       this.value = value + suffix;
     }
   });
 
   // Initial format if there's a value
-  if (input.value && !input.value.endsWith(suffix)) {
-    const rawValue = input.value.replace(suffix, '').trim();
-    input.dataset.rawValue = rawValue;
-    input.value = rawValue + suffix;
+  if (input.value) {
+    const val = String(input.value);
+    if (!val.endsWith(suffix)) {
+      const rawValue = val.replace(suffix, '').trim();
+      input.dataset.rawValue = rawValue;
+      input.value = rawValue + suffix;
+    }
   }
 }
 
@@ -87,13 +93,15 @@ function formatCurrency(input) {
   input.addEventListener('focus', function() {
     isEditing = true;
     // Remove formatting when editing
-    const value = this.value.replace(/[\$,]/g, '').trim();
+    const val = String(this.value || '');
+    const value = val.replace(/[\$,]/g, '').trim();
     this.value = value;
   });
 
   input.addEventListener('blur', function() {
     isEditing = false;
-    const value = this.value.replace(/[\$,]/g, '').trim();
+    const val = String(this.value || '');
+    const value = val.replace(/[\$,]/g, '').trim();
     if (value) {
       const number = parseFloat(value);
       if (!isNaN(number)) {
@@ -106,7 +114,8 @@ function formatCurrency(input) {
   });
 
   // Initial format if there's a value
-  const initialValue = input.value.replace(/[\$,]/g, '').trim();
+  const val = String(input.value || '');
+  const initialValue = val.replace(/[\$,]/g, '').trim();
   if (initialValue) {
     const number = parseFloat(initialValue);
     if (!isNaN(number)) {
