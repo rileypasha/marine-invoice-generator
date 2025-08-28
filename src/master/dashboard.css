@@ -1148,14 +1148,13 @@ body.modal-open {
 }
 
 .detail-grid.four-items .detail-value {
-    font-size: 1.125rem;
+    font-size: 0.9rem; /* Consistent smaller size for all financial values */
     font-weight: 600;
     margin-top: auto;
 }
 
 /* Ensure profit value has enough space */
 .detail-grid.four-items .detail-value.profit-value {
-    font-size: 0.9rem; /* Smaller to fit better */
     white-space: nowrap;
     overflow: visible; /* Don't hide overflow */
 }
