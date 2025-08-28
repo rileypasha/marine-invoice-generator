@@ -3,6 +3,7 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { requireMaster } = require('../middleware/auth');
 const pino = require('pino');
+const InvoiceIdValidator = require('../utils/invoiceIdValidator');
 
 const prisma = new PrismaClient();
 const logger = pino({
@@ -412,16 +413,23 @@ router.get('/invoices/:id', requireMaster, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!id || !uuidRegex.test(id)) {
+    // Validate invoice ID format (support both new and legacy formats)
+    if (!InvoiceIdValidator.isValid(id, true)) {
+      const format = InvoiceIdValidator.getFormat(id);
       logger.warn({
         event: 'INVALID_INVOICE_ID',
         id,
         requestId,
-        email: req.user?.email
+        email: req.user?.email,
+        detectedFormat: format,
+        expectedFormat: 'inv_<timestamp>_<random>'
       });
-      return res.status(400).json({ error: 'Invalid invoice ID format' });
+      
+      return res.status(400).json({ 
+        error: InvoiceIdValidator.getErrorMessage(id),
+        expectedFormat: 'inv_<timestamp>_<random>',
+        received: id ? id.substring(0, 50) : 'none' // Truncate for security
+      });
     }
     
     // Log access attempt

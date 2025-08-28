@@ -318,10 +318,27 @@ class MasterDashboard {
     }
     
     async viewInvoice(id) {
-        // Validate invoice ID
+        // Validate invoice ID format client-side
+        const invoiceIdRegex = /^inv_\d{13}_[a-z0-9]{9}$/;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        
         if (!id) {
-            console.error('Invalid invoice ID:', id);
-            this.showError('Invalid invoice ID');
+            console.error('Invalid invoice ID: ID is missing');
+            this.showError(
+                'No invoice ID provided. Please refresh the page and try again. ' +
+                'If the problem persists, contact support.'
+            );
+            return;
+        }
+        
+        // Check if ID format is valid (support both formats)
+        if (!invoiceIdRegex.test(id) && !uuidRegex.test(id)) {
+            console.error('Invalid invoice ID format:', id);
+            this.showError(
+                'The invoice ID appears to be invalid. ' +
+                'Please refresh the page and try again. ' +
+                'If the problem persists, contact support.'
+            );
             return;
         }
         
@@ -347,7 +364,31 @@ class MasterDashboard {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('❌ Error response:', errorText);
-                throw new Error(`HTTP ${response.status}: ${errorText || 'Failed to fetch invoice details'}`);
+                
+                // Parse error for user-friendly message
+                let userMessage = 'Unable to load invoice details. ';
+                
+                if (response.status === 400) {
+                    // Try to parse JSON error
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        if (errorData.error) {
+                            userMessage = errorData.error;
+                        }
+                    } catch {
+                        userMessage += 'The invoice ID format is invalid.';
+                    }
+                } else if (response.status === 404) {
+                    userMessage += 'This invoice could not be found.';
+                } else if (response.status === 403) {
+                    userMessage += 'You do not have permission to view this invoice.';
+                } else if (response.status >= 500) {
+                    userMessage += 'Server error. Please try again later.';
+                } else {
+                    userMessage += 'Please try again or contact support.';
+                }
+                
+                throw new Error(userMessage);
             }
             
             const invoice = await response.json();
@@ -356,13 +397,25 @@ class MasterDashboard {
             // Validate response has required fields
             if (!invoice || !invoice.id) {
                 console.error('❌ Invalid invoice data:', invoice);
-                throw new Error('Invalid invoice data received');
+                throw new Error(
+                    'Invoice data is incomplete. Please refresh and try again. ' +
+                    'If this continues, contact support.'
+                );
             }
             
             this.showDetailModal(invoice);
         } catch (error) {
             console.error('Failed to load invoice details:', error);
-            this.showError(`Failed to load invoice: ${error.message}`);
+            
+            // Check if it's a network error
+            if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                this.showError(
+                    'Network connection error. Please check your internet connection and try again.'
+                );
+            } else {
+                // Use the error message directly as it's already user-friendly
+                this.showError(error.message);
+            }
         }
     }
     
@@ -409,11 +462,27 @@ class MasterDashboard {
                 <h3>⚠️ Error</h3>
                 <p>${this.escapeHtml(message)}</p>
                 <div class="error-buttons">
-                    <button class="btn-secondary" onclick="window.masterDashboard.closeModal()">Close</button>
-                    <button class="btn-primary" onclick="window.masterDashboard.retryLastView()">Retry</button>
+                    <button class="btn-secondary" id="errorCloseBtn">Close</button>
+                    <button class="btn-primary" id="errorRetryBtn">Retry</button>
                 </div>
             </div>
         `;
+        
+        // Bind event listeners properly (no inline handlers)
+        const closeBtn = document.getElementById('errorCloseBtn');
+        const retryBtn = document.getElementById('errorRetryBtn');
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this.closeModal();
+            });
+        }
+        
+        if (retryBtn) {
+            retryBtn.addEventListener('click', () => {
+                this.retryLastView();
+            });
+        }
         
         // Ensure modal is visible
         modal.style.display = 'block';
