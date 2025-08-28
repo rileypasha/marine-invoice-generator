@@ -135,6 +135,10 @@ app.use('/api/invoice-fix', invoiceFixRouter);
 const manualFixRouter = require('./routes/manual-fix');
 app.use('/api/manual-fix', manualFixRouter);
 
+// TEMPORARY: Migration route for changes tracker (REMOVE AFTER RUNNING)
+const migrationRouter = require('./routes/run-migration');
+app.use('/api/migration', migrationRouter);
+
 // Standard API routes
 app.use('/api/v1', apiRouter);
 
