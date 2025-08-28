@@ -698,61 +698,26 @@ class MasterDashboard {
             this.setupTabSwitching(invoice.id);
         }
         
-        // Force modal to be properly positioned and visible
-        modal.style.cssText = `
-            display: flex !important;
-            visibility: visible !important;
-            z-index: 10000 !important;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            align-items: center !important;
-            justify-content: center !important;
-            background-color: rgba(0, 0, 0, 0.5) !important;
-        `;
+        // CRITICAL FIX: Use bulletproof modal display method
+        this.forceModalDisplay(modal);
         
-        // Ensure the panel is properly positioned
-        const panel = modal.querySelector('.invoice-detail-panel');
-        if (panel) {
-            panel.style.cssText = `
-                position: relative !important;
-                max-width: 900px !important;
-                width: 90% !important;
-                max-height: 90vh !important;
-                margin: auto !important;
-                background-color: var(--bg-secondary, #2a2a2a) !important;
-                border-radius: 8px !important;
-                overflow: auto !important;
-                display: flex !important;
-                flex-direction: column !important;
-            `;
-        }
-        
-        // Ensure content is visible
-        const content = modal.querySelector('.invoice-detail-content');
-        if (content) {
-            content.style.cssText = `
-                flex: 1 !important;
-                overflow-y: auto !important;
-                padding: 20px !important;
-            `;
-        }
-        
-        // Force reflow to ensure CSS transitions work
-        modal.offsetHeight;
-        
-        // Add animation class if needed
-        modal.classList.add('active');
-        
-        // Log successful render
+        // Log successful render with detailed debugging
         console.log('✅ Modal rendered successfully');
+        const rect = modal.getBoundingClientRect();
         console.log('📐 Modal display state:', {
-            display: modal.style.display,
-            visibility: modal.style.visibility,
-            zIndex: modal.style.zIndex,
-            bodyHasContent: modalBody.innerHTML.length > 0
+            display: window.getComputedStyle(modal).display,
+            visibility: window.getComputedStyle(modal).visibility,
+            position: window.getComputedStyle(modal).position,
+            zIndex: window.getComputedStyle(modal).zIndex,
+            rect: {
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+                visible: rect.width > 0 && rect.height > 0
+            },
+            bodyHasContent: modalBody.innerHTML.length > 0,
+            panelFound: !!modal.querySelector('.invoice-detail-panel')
         });
         
         // Add event listeners for copy buttons
@@ -1164,7 +1129,301 @@ class MasterDashboard {
         document.getElementById('nextPage').disabled = this.currentPage >= this.totalPages;
     }
     
+    forceModalDisplay(modal) {
+        // Create unique style ID
+        const styleId = 'master-modal-force-display';
+        
+        // Remove any existing override styles
+        const existingStyle = document.getElementById(styleId);
+        if (existingStyle) {
+            existingStyle.remove();
+        }
+        
+        // Create override styles that WILL work no matter what
+        const styleSheet = document.createElement('style');
+        styleSheet.id = styleId;
+        styleSheet.textContent = `
+            /* CRITICAL: Force modal to be visible and centered */
+            body.modal-open {
+                overflow: hidden !important;
+            }
+            
+            #detailModal {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                position: fixed !important;
+                inset: 0 !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;  
+                bottom: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                z-index: 2147483647 !important; /* Maximum z-index */
+                background: rgba(0, 0, 0, 0.85) !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                transform: none !important;
+                translate: none !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
+            }
+            
+            #detailModal * {
+                visibility: visible !important;
+            }
+            
+            #detailModal .invoice-detail-overlay {
+                display: none !important;
+            }
+            
+            #detailModal .invoice-detail-panel {
+                position: relative !important;
+                background: #1a1a1a !important;
+                color: #ffffff !important;
+                border-radius: 12px !important;
+                width: min(90%, 1000px) !important;
+                max-height: 90vh !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                box-shadow: 0 25px 50px rgba(0, 0, 0, 0.9) !important;
+                transform: none !important;
+                translate: none !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
+            }
+            
+            #detailModal .invoice-detail-header {
+                padding: 20px 25px !important;
+                border-bottom: 2px solid #333 !important;
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                background: #0f0f0f !important;
+                border-radius: 12px 12px 0 0 !important;
+                flex-shrink: 0 !important;
+            }
+            
+            #detailModal .invoice-detail-header h2 {
+                margin: 0 !important;
+                color: #ffffff !important;
+                font-size: 22px !important;
+                font-weight: 600 !important;
+            }
+            
+            #detailModal .invoice-detail-close {
+                background: transparent !important;
+                border: none !important;
+                color: #999 !important;
+                font-size: 28px !important;
+                cursor: pointer !important;
+                padding: 0 !important;
+                width: 32px !important;
+                height: 32px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                transition: all 0.2s !important;
+                line-height: 1 !important;
+            }
+            
+            #detailModal .invoice-detail-close:hover {
+                color: #ff4444 !important;
+                transform: scale(1.1) !important;
+            }
+            
+            #detailModal .invoice-detail-content {
+                flex: 1 !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                padding: 25px !important;
+                background: #1a1a1a !important;
+                color: #ffffff !important;
+                max-height: calc(90vh - 140px) !important;
+            }
+            
+            #detailModal .invoice-detail-footer {
+                padding: 20px 25px !important;
+                border-top: 2px solid #333 !important;
+                display: flex !important;
+                gap: 12px !important;
+                justify-content: flex-end !important;
+                background: #0f0f0f !important;
+                border-radius: 0 0 12px 12px !important;
+                flex-shrink: 0 !important;
+            }
+            
+            /* Content styles */
+            #detailModal .detail-section {
+                margin-bottom: 28px !important;
+                padding-bottom: 20px !important;
+                border-bottom: 1px solid #2a2a2a !important;
+            }
+            
+            #detailModal .detail-section:last-child {
+                border-bottom: none !important;
+            }
+            
+            #detailModal .detail-section h3 {
+                color: #4a9eff !important;
+                margin: 0 0 16px 0 !important;
+                font-size: 18px !important;
+                font-weight: 600 !important;
+            }
+            
+            #detailModal .detail-grid {
+                display: grid !important;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+                gap: 16px !important;
+            }
+            
+            #detailModal .detail-item {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 4px !important;
+            }
+            
+            #detailModal .detail-label {
+                color: #888 !important;
+                font-size: 13px !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.5px !important;
+            }
+            
+            #detailModal .detail-value {
+                color: #fff !important;
+                font-size: 15px !important;
+                font-weight: 500 !important;
+            }
+            
+            /* Table styles */
+            #detailModal .invoices-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-top: 12px !important;
+            }
+            
+            #detailModal .invoices-table th {
+                background: #0f0f0f !important;
+                color: #4a9eff !important;
+                padding: 12px !important;
+                text-align: left !important;
+                font-weight: 600 !important;
+                border-bottom: 2px solid #333 !important;
+            }
+            
+            #detailModal .invoices-table td {
+                padding: 12px !important;
+                color: #fff !important;
+                border-bottom: 1px solid #2a2a2a !important;
+            }
+            
+            /* Button styles */
+            #detailModal .btn-primary,
+            #detailModal .btn-secondary {
+                padding: 10px 20px !important;
+                border-radius: 6px !important;
+                border: none !important;
+                cursor: pointer !important;
+                font-size: 14px !important;
+                font-weight: 500 !important;
+                transition: all 0.2s !important;
+            }
+            
+            #detailModal .btn-primary {
+                background: #4a9eff !important;
+                color: white !important;
+            }
+            
+            #detailModal .btn-primary:hover {
+                background: #357abd !important;
+                transform: translateY(-1px) !important;
+            }
+            
+            #detailModal .btn-secondary {
+                background: #444 !important;
+                color: white !important;
+            }
+            
+            #detailModal .btn-secondary:hover {
+                background: #555 !important;
+            }
+            
+            /* Error state styles */
+            #detailModal .error-state {
+                text-align: center !important;
+                padding: 40px !important;
+                color: #fff !important;
+            }
+            
+            #detailModal .error-state h3 {
+                color: #ff6b6b !important;
+                margin-bottom: 16px !important;
+            }
+            
+            #detailModal .error-state p {
+                color: #aaa !important;
+                margin-bottom: 24px !important;
+            }
+        `;
+        
+        // Add styles to document head (at the end for highest priority)
+        document.head.appendChild(styleSheet);
+        
+        // Apply direct inline styles as additional backup
+        modal.setAttribute('style', `
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 2147483647 !important;
+        `);
+        
+        // Force browser to recalculate layout
+        void modal.offsetHeight;
+        
+        // Log success
+        console.log('🚀 Modal display forced with override styles');
+        console.log('📦 Modal rect:', modal.getBoundingClientRect());
+        console.log('🎨 Computed styles:', {
+            display: window.getComputedStyle(modal).display,
+            position: window.getComputedStyle(modal).position,
+            visibility: window.getComputedStyle(modal).visibility
+        });
+    }
+    
     closeModal() {
+        const modal = document.getElementById('detailModal');
+        
+        if (modal) {
+            // Hide modal
+            modal.style.display = 'none';
+            modal.removeAttribute('style');
+            modal.classList.remove('active');
+            
+            // Remove override styles
+            const overrideStyle = document.getElementById('master-modal-force-display');
+            if (overrideStyle) {
+                overrideStyle.remove();
+            }
+            
+            // Clear modal content
+            const modalBody = document.getElementById('modalBody');
+            if (modalBody) {
+                modalBody.innerHTML = '';
+            }
+            
+            // Unlock body scroll
+            document.body.classList.remove('modal-open');
+        }
+    }
+    
+    closeModalOriginal() {
         const modal = document.getElementById('detailModal');
         
         if (modal) {
@@ -1350,9 +1609,86 @@ class MasterDashboard {
         if (!num || num === 'N/A') return 'N/A';
         return new Intl.NumberFormat('en-US').format(num);
     }
+    
+    // Test method to verify modal display
+    testModal() {
+        console.log('🧪 Testing modal with dummy invoice data...');
+        const testInvoice = {
+            id: 'test-' + Date.now(),
+            status: 'Completed',
+            savedAt: new Date().toISOString(),
+            vesselName: 'Test Vessel Marina',
+            vesselWeight: 500,
+            vesselBeam: 45,
+            customerName: 'John Doe Marine Services',
+            customerEmail: 'john@marineservices.com',
+            customerPhone: '(555) 123-4567',
+            subtotal: 15000,
+            taxAmount: 1200,
+            total: 16200,
+            grossProfit: 4500,
+            profitPercent: 27.78,
+            userName: 'Admin User',
+            userEmail: 'admin@marineinvoice.com',
+            parsedData: {
+                vessel: {
+                    name: 'Test Vessel Marina',
+                    weight: 500,
+                    beam: 45
+                },
+                customer: {
+                    customerName: 'John Doe Marine Services',
+                    customerEmail: 'john@marineservices.com',
+                    customerPhone: '(555) 123-4567'
+                },
+                scope: {
+                    subtotal: 15000,
+                    taxAmount: 1200,
+                    total: 16200,
+                    grossProfit: 4500,
+                    profitPercent: 27.78,
+                    lineItems: [
+                        {
+                            description: 'Hull Cleaning and Preparation',
+                            type: 'Labor',
+                            cost: 5000
+                        },
+                        {
+                            description: 'Anti-Fouling Paint (10 gallons)',
+                            type: 'Materials',
+                            cost: 3000
+                        },
+                        {
+                            description: 'Underwater Inspection Services',
+                            type: 'Subcontractor',
+                            cost: 2000
+                        },
+                        {
+                            description: 'Crane Service for Haul-Out',
+                            type: 'Equipment',
+                            cost: 5000
+                        }
+                    ]
+                }
+            }
+        };
+        
+        this.showDetailModal(testInvoice);
+        console.log('✅ Test modal triggered');
+        console.log('📋 Check if modal is:');
+        console.log('   1. Visible on screen');
+        console.log('   2. Centered properly');
+        console.log('   3. Showing invoice data');
+        console.log('   4. Has working close button');
+    }
 }
 
 // Initialize dashboard when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    new MasterDashboard();
+    const dashboard = new MasterDashboard();
+    // Make globally accessible for debugging
+    window.masterDashboard = dashboard;
+    
+    // Add console helper for testing
+    console.log('🔧 Debug: To test modal display, run: window.masterDashboard.testModal()');
 });
