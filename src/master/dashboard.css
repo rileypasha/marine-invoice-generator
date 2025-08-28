@@ -1144,6 +1144,7 @@ body.modal-open {
     justify-content: space-between;
     min-height: 80px;
     position: relative;
+    padding: 0.875rem 1rem; /* Slightly less padding for more space */
 }
 
 .detail-grid.four-items .detail-value {
@@ -1154,10 +1155,9 @@ body.modal-open {
 
 /* Ensure profit value has enough space */
 .detail-grid.four-items .detail-value.profit-value {
-    font-size: 1rem; /* Slightly smaller to fit better */
+    font-size: 0.9rem; /* Smaller to fit better */
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible; /* Don't hide overflow */
 }
 
 @media (min-width: 1200px) {
