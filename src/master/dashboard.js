@@ -421,7 +421,7 @@ class MasterDashboard {
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Profit</span>
-                            <span class="detail-value">${this.formatCurrency(scope.grossProfit || invoice.grossProfit || 0)} (${this.formatPercent(scope.profitPercent || invoice.profitPercent || 0)})</span>
+                            <span class="detail-value profit-value">${this.formatCurrency(scope.grossProfit || invoice.grossProfit || 0)} (${this.formatPercent(scope.profitPercent || invoice.profitPercent || 0)})</span>
                         </div>
                     </div>
                 </div>

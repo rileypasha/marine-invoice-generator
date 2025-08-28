@@ -948,9 +948,10 @@ body.modal-open {
     box-shadow: var(--shadow-lg);
 }
 
-/* Keep dates and phone numbers on single line */
+/* Keep dates, phone numbers, and profit on single line */
 .detail-value.date-value,
-.detail-value.phone-value {
+.detail-value.phone-value,
+.detail-value.profit-value {
     white-space: nowrap;
     font-size: 0.875rem;
 }
@@ -1149,6 +1150,14 @@ body.modal-open {
     font-size: 1.125rem;
     font-weight: 600;
     margin-top: auto;
+}
+
+/* Ensure profit value has enough space */
+.detail-grid.four-items .detail-value.profit-value {
+    font-size: 1rem; /* Slightly smaller to fit better */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 @media (min-width: 1200px) {
