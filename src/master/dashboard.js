@@ -698,17 +698,47 @@ class MasterDashboard {
             this.setupTabSwitching(invoice.id);
         }
         
-        // Ensure modal is properly visible
-        modal.style.display = 'block';
-        modal.style.visibility = 'visible';
-        modal.style.zIndex = '10000';
+        // Force modal to be properly positioned and visible
+        modal.style.cssText = `
+            display: flex !important;
+            visibility: visible !important;
+            z-index: 10000 !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background-color: rgba(0, 0, 0, 0.5) !important;
+        `;
         
-        // Remove any conflicting styles
-        modal.style.position = '';
-        modal.style.top = '';
-        modal.style.left = '';
-        modal.style.width = '';
-        modal.style.height = '';
+        // Ensure the panel is properly positioned
+        const panel = modal.querySelector('.invoice-detail-panel');
+        if (panel) {
+            panel.style.cssText = `
+                position: relative !important;
+                max-width: 900px !important;
+                width: 90% !important;
+                max-height: 90vh !important;
+                margin: auto !important;
+                background-color: var(--bg-secondary, #2a2a2a) !important;
+                border-radius: 8px !important;
+                overflow: auto !important;
+                display: flex !important;
+                flex-direction: column !important;
+            `;
+        }
+        
+        // Ensure content is visible
+        const content = modal.querySelector('.invoice-detail-content');
+        if (content) {
+            content.style.cssText = `
+                flex: 1 !important;
+                overflow-y: auto !important;
+                padding: 20px !important;
+            `;
+        }
         
         // Force reflow to ensure CSS transitions work
         modal.offsetHeight;
@@ -1137,16 +1167,30 @@ class MasterDashboard {
     closeModal() {
         const modal = document.getElementById('detailModal');
         
-        // Remove active class for animation
-        modal.classList.remove('active');
-        
-        // Wait for animation then hide
-        setTimeout(() => {
-            modal.style.display = 'none';
+        if (modal) {
+            // Remove active class for animation
+            modal.classList.remove('active');
             
-            // Unlock body scroll when modal closes
-            document.body.classList.remove('modal-open');
-        }, 300);
+            // Wait for animation then hide and reset styles
+            setTimeout(() => {
+                modal.style.cssText = 'display: none;';
+                
+                // Reset panel styles
+                const panel = modal.querySelector('.invoice-detail-panel');
+                if (panel) {
+                    panel.style.cssText = '';
+                }
+                
+                // Clear modal content
+                const modalBody = document.getElementById('modalBody');
+                if (modalBody) {
+                    modalBody.innerHTML = '';
+                }
+                
+                // Unlock body scroll when modal closes
+                document.body.classList.remove('modal-open');
+            }, 300);
+        }
     }
     
     async exportCsv() {
