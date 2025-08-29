@@ -152,8 +152,7 @@ router.post('/save', requireAuth, async (req, res, next) => {
       
       // Status fields
       status: 'saved',
-      savedAt: new Date(),
-      hasChanges: false
+      savedAt: new Date()
     };
     
     // Step 5: Create invoice with proper user relation
