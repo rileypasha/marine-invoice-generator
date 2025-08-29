@@ -592,14 +592,15 @@ body.modal-open {
     max-width: 1200px;
     max-height: 90vh;
     height: 90vh;
-    background: var(--bg-card);
+    background: #1a1a1a; /* Direct color instead of var */
     border-radius: 16px;
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-xl);
+    border: 1px solid #333;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.9);
     display: grid;
     grid-template-rows: auto 1fr auto;
     overflow: hidden;
     margin: 0 auto; /* Center horizontally */
+    z-index: 10000; /* Ensure it's on top */
 }
 
 @keyframes modalSlideIn {
@@ -635,11 +636,11 @@ body.modal-open {
 
 .invoice-detail-header {
     padding: 1.5rem;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid #333;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: var(--bg-card);
+    background: #0f0f0f;
     position: sticky;
     top: 0;
     z-index: 10;
@@ -648,7 +649,7 @@ body.modal-open {
 .invoice-detail-header h2 {
     font-size: 1.25rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: #ffffff;
     margin: 0;
 }
 
@@ -656,7 +657,7 @@ body.modal-open {
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: var(--text-tertiary);
+    color: #999;
     cursor: pointer;
     width: 32px;
     height: 32px;
@@ -665,21 +666,23 @@ body.modal-open {
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
+    padding: 0;
+    line-height: 1;
 }
 
 .invoice-detail-close:hover {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
+    background: #333;
+    color: #fff;
 }
 
 .invoice-detail-content {
     overflow-y: auto;
     overflow-x: hidden;
     padding: 2rem;
+    background: #1a1a1a;
+    color: #ffffff;
     scrollbar-width: thin;
-    scrollbar-color: var(--accent-primary) var(--bg-secondary);
-    will-change: scroll-position;
-    contain: paint;
+    scrollbar-color: #4a9eff #2a2a2a;
 }
 
 /* Custom scrollbar for modal content */
@@ -703,11 +706,11 @@ body.modal-open {
 
 .invoice-detail-footer {
     padding: 1.5rem;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid #333;
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
-    background: var(--bg-card);
+    background: #0f0f0f;
     border-radius: 0 0 16px 16px;
     position: sticky;
     bottom: 0;

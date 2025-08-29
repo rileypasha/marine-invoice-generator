@@ -1291,9 +1291,13 @@ class MasterDashboard {
     }
     
     closeModal() {
+        console.log('🔐 Closing modal...');
         const modal = document.getElementById('detailModal');
         if (modal) {
+            // Force close the modal
             modal.style.display = 'none';
+            modal.style.visibility = 'hidden';
+            modal.removeAttribute('style'); // Clear all inline styles
             document.body.classList.remove('modal-open');
             
             // Remove any override styles
@@ -1301,6 +1305,8 @@ class MasterDashboard {
             if (overrideStyle) {
                 overrideStyle.remove();
             }
+            
+            console.log('✅ Modal closed');
         }
     }
     
@@ -1385,4 +1391,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Add console helper for testing
     console.log('🔧 Debug: To test modal display, run: window.masterDashboard.testModal()');
+    console.log('🔧 Debug: To force close modal, run: window.masterDashboard.closeModal()');
+    
+    // Global ESC key handler as fallback
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('detailModal');
+            if (modal && (modal.style.display === 'block' || modal.style.display === 'flex')) {
+                console.log('🚨 Emergency ESC key close');
+                dashboard.closeModal();
+            }
+        }
+    });
 });
