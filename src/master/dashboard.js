@@ -342,8 +342,16 @@ class MasterDashboard {
     }
     
     async viewInvoice(id) {
-        // TEMPORARY: Use simple modal for testing
+        console.log('🔍 VIEW INVOICE CLICKED - ID:', id);
+        
+        if (!id) {
+            console.error('No ID provided to viewInvoice');
+            return;
+        }
+        
+        // Use simple modal approach
         try {
+            console.log('📡 Fetching invoice:', id);
             const response = await fetch(`/api/master/invoices/${id}`, {
                 method: 'GET',
                 credentials: 'include',
@@ -353,20 +361,43 @@ class MasterDashboard {
                 }
             });
             
+            console.log('📡 Response status:', response.status);
+            
             if (response.ok) {
                 const invoice = await response.json();
+                console.log('✅ Invoice fetched:', invoice);
                 
-                // Use the simple modal display
-                if (window.simpleShowModal) {
-                    window.simpleShowModal(invoice);
-                    return; // Exit early
+                // Force show the modal with simple approach
+                const modal = document.getElementById('detailModal');
+                const modalBody = document.getElementById('modalBody');
+                
+                if (modal && modalBody) {
+                    // Build simple content
+                    modalBody.innerHTML = `
+                        <div style="color: white; padding: 20px; background: #333; min-height: 400px;">
+                            <h2 style="color: white;">Invoice Details</h2>
+                            <p style="color: white;">ID: ${invoice.id}</p>
+                            <p style="color: white;">Vessel: ${invoice.vesselName || 'N/A'}</p>
+                            <p style="color: white;">Customer: ${invoice.customerName || 'N/A'}</p>
+                            <p style="color: white;">Total: $${invoice.total || 0}</p>
+                        </div>
+                    `;
+                    
+                    // Force show modal
+                    modal.style.cssText = 'display: flex !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99999; align-items: center; justify-content: center; background: rgba(0,0,0,0.8);';
+                    
+                    console.log('✅ Modal should be visible now');
+                } else {
+                    console.error('Modal elements not found');
                 }
+                
+                return; // Exit - don't run complex code below
             }
         } catch (error) {
-            console.error('Error fetching invoice:', error);
+            console.error('Error in viewInvoice:', error);
         }
         
-        // Original code below if simple modal fails
+        return; // Don't run original complex code
         // Validate invoice ID format client-side
         const invoiceIdRegex = /^inv_\d{13}_[a-z0-9]{9}$/;
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1516,17 +1547,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Make globally accessible for debugging
     window.masterDashboard = dashboard;
     
-    // Ensure modal is hidden on page load
-    const modal = document.getElementById('detailModal');
-    if (modal) {
-        modal.style.display = 'none';
-        modal.classList.remove('active', 'show');
-        // Clear any content that might be there
-        const modalBody = document.getElementById('modalBody');
-        if (modalBody) {
-            modalBody.innerHTML = '';
+    // CRITICAL: Ensure modal is hidden on page load
+    setTimeout(() => {
+        const modal = document.getElementById('detailModal');
+        if (modal) {
+            console.log('🚨 Hiding modal on page load');
+            modal.style.cssText = 'display: none !important;';
+            modal.classList.remove('active', 'show');
+            
+            // Clear any content
+            const modalBody = document.getElementById('modalBody');
+            if (modalBody) {
+                modalBody.innerHTML = '';
+            }
         }
-    }
+    }, 0);
     
     // Add console helper for testing
     console.log('🔧 Debug: To test modal display, run: window.masterDashboard.testModal()');
