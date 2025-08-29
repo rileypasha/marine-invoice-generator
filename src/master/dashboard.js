@@ -497,6 +497,16 @@ class MasterDashboard {
     }
     
     showDetailModal(invoice) {
+        // Remove any nuclear hide styles first
+        const hideStyle = document.getElementById('absolute-modal-hide');
+        if (hideStyle) {
+            hideStyle.remove();
+        }
+        const forceHideStyle = document.getElementById('modal-force-hide');
+        if (forceHideStyle) {
+            forceHideStyle.remove();
+        }
+        
         const modal = document.getElementById('detailModal');
         const modalBody = document.getElementById('modalBody');
         
@@ -1449,9 +1459,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Make globally accessible for debugging
     window.masterDashboard = dashboard;
     
+    // ABSOLUTE NUCLEAR OPTION - Hide modal on page load no matter what
+    setTimeout(() => {
+        const modal = document.getElementById('detailModal');
+        if (modal) {
+            console.log('🚨 NUCLEAR: Force hiding modal on page load');
+            modal.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; position: fixed !important; left: -9999px !important; top: -9999px !important;';
+            modal.className = '';
+            
+            // Also inject a style to keep it hidden
+            const style = document.createElement('style');
+            style.id = 'absolute-modal-hide';
+            style.textContent = '#detailModal { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }';
+            document.head.appendChild(style);
+        }
+    }, 100);
+    
     // Add console helper for testing
     console.log('🔧 Debug: To test modal display, run: window.masterDashboard.testModal()');
     console.log('🔧 Debug: To force close modal, run: window.masterDashboard.closeModal()');
+    console.log('🔧 Debug: To nuclear close, run: document.getElementById("detailModal").style.display = "none"');
     
     // Global ESC key handler as fallback
     document.addEventListener('keydown', (e) => {
@@ -1480,4 +1507,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }, true); // Use capture phase to catch before any stopPropagation
+    
+    // Add global nuclear close function
+    window.nukeModal = function() {
+        console.log('☢️ NUCLEAR MODAL CLOSE INITIATED');
+        const modal = document.getElementById('detailModal');
+        if (modal) {
+            modal.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; position: fixed !important; left: -9999px !important; top: -9999px !important;';
+            modal.className = '';
+            
+            // Inject permanent hide style
+            let style = document.getElementById('permanent-modal-hide');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'permanent-modal-hide';
+                document.head.appendChild(style);
+            }
+            style.textContent = '#detailModal { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; position: fixed !important; left: -9999px !important; }';
+            
+            console.log('☢️ Modal nuked successfully');
+        }
+    };
+    
+    console.log('💣 Emergency: If modal won\'t close, type: nukeModal()');
 });
