@@ -372,21 +372,145 @@ class MasterDashboard {
                 const modalBody = document.getElementById('modalBody');
                 
                 if (modal && modalBody) {
-                    // Build simple content
+                    // Build proper modal content with original styling
+                    const data = invoice.parsedData || invoice.data || {};
+                    const vessel = data.vessel || {};
+                    const customer = data.customer || {};
+                    const scope = data.scope || {};
+                    const lineItems = scope.lineItems || [];
+                    
                     modalBody.innerHTML = `
-                        <div style="color: white; padding: 20px; background: #333; min-height: 400px;">
-                            <h2 style="color: white;">Invoice Details</h2>
-                            <p style="color: white;">ID: ${invoice.id}</p>
-                            <p style="color: white;">Vessel: ${invoice.vesselName || 'N/A'}</p>
-                            <p style="color: white;">Customer: ${invoice.customerName || 'N/A'}</p>
-                            <p style="color: white;">Total: $${invoice.total || 0}</p>
+                        <div class="invoice-detail">
+                            <div class="detail-section">
+                                <h3>Invoice Information</h3>
+                                <div class="detail-grid">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Invoice ID</span>
+                                        <span class="detail-value">${invoice.id || 'N/A'}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Status</span>
+                                        <span class="detail-value">${invoice.status || 'N/A'}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Date</span>
+                                        <span class="detail-value">${new Date(invoice.savedAt || Date.now()).toLocaleDateString()}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Submitted By</span>
+                                        <span class="detail-value">${invoice.userName || 'N/A'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <h3>Vessel Details</h3>
+                                <div class="detail-grid">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Name</span>
+                                        <span class="detail-value">${vessel.name || invoice.vesselName || 'N/A'}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Weight</span>
+                                        <span class="detail-value">${vessel.weight || invoice.vesselWeight || 'N/A'} tons</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Beam</span>
+                                        <span class="detail-value">${vessel.beam || invoice.vesselBeam || 'N/A'} ft</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <h3>Customer Information</h3>
+                                <div class="detail-grid">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Name</span>
+                                        <span class="detail-value">${customer.customerName || invoice.customerName || 'N/A'}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Email</span>
+                                        <span class="detail-value">${customer.customerEmail || invoice.customerEmail || 'N/A'}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Phone</span>
+                                        <span class="detail-value">${customer.customerPhone || invoice.customerPhone || 'N/A'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-section full-width">
+                                <h3>Financial Summary</h3>
+                                <div class="detail-grid">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Subtotal</span>
+                                        <span class="detail-value">$${(invoice.subtotal || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Tax</span>
+                                        <span class="detail-value">$${(invoice.taxAmount || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Total</span>
+                                        <span class="detail-value" style="font-weight: bold; color: #4a9eff;">$${(invoice.total || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Gross Profit</span>
+                                        <span class="detail-value">$${(invoice.grossProfit || 0).toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            ${lineItems.length > 0 ? `
+                            <div class="detail-section full-width">
+                                <h3>Line Items</h3>
+                                <table class="invoices-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Description</th>
+                                            <th>Type</th>
+                                            <th>Cost</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${lineItems.map(item => `
+                                            <tr>
+                                                <td>${item.description || 'N/A'}</td>
+                                                <td>${item.jobType || item.itemType || 'N/A'}</td>
+                                                <td>$${(item.cost || item.manualCost || 0).toLocaleString()}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                            ` : ''}
                         </div>
                     `;
                     
-                    // Force show modal
-                    modal.style.cssText = 'display: flex !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99999; align-items: center; justify-content: center; background: rgba(0,0,0,0.8);';
+                    // Force show modal with proper styling
+                    modal.className = 'invoice-detail-modal active show';
+                    modal.style.display = 'flex';
+                    modal.style.alignItems = 'center';
+                    modal.style.justifyContent = 'center';
                     
-                    console.log('✅ Modal should be visible now');
+                    // Ensure close buttons work
+                    setTimeout(() => {
+                        const closeBtn = document.getElementById('closeModal');
+                        const closeBtn2 = document.getElementById('closeModalBtn');
+                        const overlay = document.querySelector('.invoice-detail-overlay');
+                        
+                        const closeHandler = () => {
+                            modal.style.display = 'none';
+                            modal.classList.remove('active', 'show');
+                            modalBody.innerHTML = '';
+                        };
+                        
+                        if (closeBtn) closeBtn.onclick = closeHandler;
+                        if (closeBtn2) closeBtn2.onclick = closeHandler;
+                        if (overlay) overlay.onclick = closeHandler;
+                    }, 100);
+                    
+                    console.log('✅ Modal should be visible now with proper styling');
                 } else {
                     console.error('Modal elements not found');
                 }
