@@ -125,8 +125,9 @@ router.post('/save', requireAuth, async (req, res, next) => {
     // Step 4: Prepare invoice data
     const invoiceData = {
       title: input.title || 'Untitled Invoice',
-      data: input.data || {},
-      metadata: input.metadata || {},
+      // CRITICAL: Prisma schema expects strings, not objects
+      data: JSON.stringify(input.data || {}),
+      metadata: JSON.stringify(input.metadata || {}),
       
       // User fields
       userName: req.user.name || req.user.email,
@@ -244,9 +245,16 @@ router.post('/save', requireAuth, async (req, res, next) => {
       duration: Date.now() - startTime
     });
     
+    // Parse JSON strings back to objects for response
+    const responseInvoice = {
+      ...invoice,
+      data: typeof invoice.data === 'string' ? JSON.parse(invoice.data) : invoice.data,
+      metadata: typeof invoice.metadata === 'string' ? JSON.parse(invoice.metadata) : invoice.metadata
+    };
+    
     res.status(200).json({
       success: true,
-      invoice,
+      invoice: responseInvoice,
       requestId
     });
     
@@ -299,9 +307,16 @@ router.get('/:id', requireAuth, async (req, res, next) => {
       );
     }
     
+    // Parse JSON strings back to objects for response
+    const responseInvoice = {
+      ...invoice,
+      data: typeof invoice.data === 'string' ? JSON.parse(invoice.data) : invoice.data,
+      metadata: typeof invoice.metadata === 'string' ? JSON.parse(invoice.metadata) : invoice.metadata
+    };
+    
     res.json({
       success: true,
-      invoice
+      invoice: responseInvoice
     });
     
   } catch (error) {
