@@ -342,6 +342,31 @@ class MasterDashboard {
     }
     
     async viewInvoice(id) {
+        // TEMPORARY: Use simple modal for testing
+        try {
+            const response = await fetch(`/api/master/invoices/${id}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const invoice = await response.json();
+                
+                // Use the simple modal display
+                if (window.simpleShowModal) {
+                    window.simpleShowModal(invoice);
+                    return; // Exit early
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching invoice:', error);
+        }
+        
+        // Original code below if simple modal fails
         // Validate invoice ID format client-side
         const invoiceIdRegex = /^inv_\d{13}_[a-z0-9]{9}$/;
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -524,26 +549,15 @@ class MasterDashboard {
     }
     
     showDetailModal(invoice) {
-        // Set flag that modal is intentionally being opened
-        this.modalIsIntentionallyOpen = true;
-        
-        // Remove ALL hide styles that might be blocking the modal
-        const hideStyles = ['absolute-modal-hide', 'modal-force-hide', 'permanent-modal-hide'];
-        hideStyles.forEach(id => {
-            const style = document.getElementById(id);
-            if (style) {
-                style.remove();
-                console.log(`🧹 Removed ${id} style`);
-            }
-        });
+        console.log('🎯 SHOWING DETAIL MODAL - SIMPLE APPROACH');
         
         const modal = document.getElementById('detailModal');
         const modalBody = document.getElementById('modalBody');
         
-        // Reset modal to clean state
-        if (modal) {
-            modal.className = 'invoice-detail-modal'; // Reset to base class
-            modal.removeAttribute('style'); // Clear any inline styles
+        // Ensure we have both elements
+        if (!modal || !modalBody) {
+            console.error('❌ Critical elements missing:', { modal: !!modal, modalBody: !!modalBody });
+            return;
         }
         
         // Defensive checks
