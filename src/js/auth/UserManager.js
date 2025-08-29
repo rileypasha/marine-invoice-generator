@@ -99,10 +99,22 @@ export class UserManager {
                 const serverAuth = await this.serverSignIn(userData.email, 'password123');
                 if (serverAuth.success) {
                   console.log('✅ Server session recreated for stored user');
+                } else {
+                  // Even test user failed - clear everything
+                  console.warn('⚠️ Could not recreate server session for test user - clearing local session');
+                  this.clearLocalSession();
+                  this.currentUser = null;
+                  this.notify();
+                  return;
                 }
               } else {
-                console.warn('⚠️ Cannot recreate server session - user needs to login again');
-                // Don't clear local session, but warn that saves won't work
+                console.warn('⚠️ Cannot recreate server session - clearing local session and requiring login');
+                // CRITICAL: Clear local session to force re-authentication
+                // Otherwise the user appears logged in but all API calls fail
+                this.clearLocalSession();
+                this.currentUser = null;
+                this.notify();
+                return;
               }
             } else {
               console.log('✅ Valid server session exists');
@@ -280,6 +292,12 @@ export class UserManager {
     }
   }
   
+  // Helper to clear local session data
+  clearLocalSession() {
+    localStorage.removeItem(this.sessionKey);
+    localStorage.removeItem(this.storageKey);
+  }
+  
   // Sign out user
   async logout() {
     // Call server to destroy session
@@ -297,8 +315,7 @@ export class UserManager {
     this.currentUser = null;
     
     // IMPORTANT: Clear BOTH session and user data to prevent auto-login
-    localStorage.removeItem(this.sessionKey);
-    localStorage.removeItem(this.storageKey);
+    this.clearLocalSession();
     
     // Also set a flag to prevent auto-login after explicit logout
     localStorage.setItem('marine_invoice_explicit_logout', 'true');
