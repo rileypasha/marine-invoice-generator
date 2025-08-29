@@ -7,8 +7,26 @@ export class InvoiceStorage {
     this.listeners = [];
     this.isPerformingAutoSave = false; // Prevent concurrent auto-saves
     this.serverInvoiceMap = new Map(); // Map local IDs to server IDs
+    this.authFailed = false; // Track auth failures to prevent retry storms
+    this.onAuthRequired = null; // Callback for auth required events
     
     this.setupAutoSave();
+    
+    // Listen for user auth changes
+    if (userManager) {
+      userManager.subscribe((user) => {
+        if (user) {
+          // User logged in, reset auth failure flag and retry failed saves
+          this.authFailed = false;
+          console.log('🔓 User authenticated - enabling server saves');
+          this.retryFailedSaves();
+        } else {
+          // User logged out
+          this.authFailed = true;
+          console.log('🔒 User logged out - disabling server saves');
+        }
+      });
+    }
   }
   
   // Subscribe to storage changes
@@ -81,6 +99,18 @@ export class InvoiceStorage {
     const requestId = `save_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     console.log(`📤 [${requestId}] Starting server save...`);
     
+    // Check if we should skip server save due to previous auth failure
+    if (this.authFailed) {
+      console.log(`⏸️ [${requestId}] Skipping server save - auth previously failed`);
+      this.queueFailedSave(invoice, { 
+        status: 401, 
+        body: 'Authentication required - queued for later', 
+        requestId,
+        skipped: true 
+      });
+      throw new Error('Authentication required - save queued locally');
+    }
+    
     try {
       const requestBody = {
         title: invoice.title,
@@ -116,11 +146,25 @@ export class InvoiceStorage {
         };
         console.error(`❌ [${requestId}] Server error:`, errorDetails);
         
+        // If it's a 401, mark auth as failed to prevent future attempts
+        if (response.status === 401) {
+          this.authFailed = true;
+          console.log(`🔒 [${requestId}] Authentication failed - blocking future save attempts until re-auth`);
+          
+          // Show user notification
+          if (this.onAuthRequired) {
+            this.onAuthRequired();
+          }
+        }
+        
         // Add to failed saves queue
         this.queueFailedSave(invoice, errorDetails);
         
         throw new Error(`Server error: ${response.status} - ${responseText}`);
       }
+      
+      // Auth succeeded, clear the flag
+      this.authFailed = false;
       
       const result = JSON.parse(responseText);
       console.log(`✅ [${requestId}] Save successful! Invoice ID:`, result.invoice?.id);
@@ -255,6 +299,12 @@ export class InvoiceStorage {
   
   // Save draft to server
   async saveDraftToServer(draft, serverId = null) {
+    // Skip if auth has failed previously
+    if (this.authFailed) {
+      console.log('⏸️ Skipping draft server save - auth previously failed');
+      return null;
+    }
+    
     try {
       const url = serverId 
         ? `/api/v1/invoice/${serverId}`
@@ -277,8 +327,19 @@ export class InvoiceStorage {
       });
       
       if (!response.ok) {
+        // Mark auth as failed if we get a 401
+        if (response.status === 401) {
+          this.authFailed = true;
+          console.log('🔒 Draft save got 401 - disabling future server saves');
+          if (this.onAuthRequired) {
+            this.onAuthRequired();
+          }
+        }
         throw new Error(`Server error: ${response.status}`);
       }
+      
+      // Auth succeeded, clear the flag
+      this.authFailed = false;
       
       const result = await response.json();
       return result.invoice;
@@ -565,6 +626,24 @@ export class InvoiceStorage {
   getFailedSavesCount() {
     const failedSaves = JSON.parse(localStorage.getItem('failedSaves') || '[]');
     return failedSaves.length;
+  }
+  
+  // Set callback for auth required events
+  setAuthRequiredCallback(callback) {
+    this.onAuthRequired = callback;
+  }
+  
+  // Clear auth failure state (call when user re-authenticates)
+  clearAuthFailure() {
+    this.authFailed = false;
+    console.log('🔓 Auth failure cleared - enabling server saves');
+    // Try to process any queued saves
+    this.retryFailedSaves();
+  }
+  
+  // Check if server saves are blocked
+  isServerSaveBlocked() {
+    return this.authFailed;
   }
   
   // Cleanup
