@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { PrismaClient, Prisma } = require('@prisma/client');
-const { InvoiceSaveInputSchema } = require('../schemas/invoiceSchema');
+const { validateAndTransformInvoice } = require('../utils/validateInvoice');
 const { invoiceCalculator } = require('../services/invoiceCalculator');
 const { AppError, ErrorCode } = require('../middleware/errorHandler');
 const { requireAuth } = require('../middleware/auth');
@@ -35,21 +35,22 @@ router.post('/save', requireAuth, async (req, res, next) => {
     });
     
     // Step 1: Validate and sanitize input
-    const validationResult = InvoiceSaveInputSchema.safeParse(req.body);
+    const validationResult = validateAndTransformInvoice(req.body);
     
     if (!validationResult.success) {
       logger.warn({
         event: 'INVOICE_VALIDATION_FAILED',
         requestId,
-        errors: validationResult.error.flatten()
+        errors: validationResult.errors
       });
       
+      const firstError = validationResult.errors[0];
       throw new AppError(
         ErrorCode.VALIDATION_FAILED,
-        'Invalid invoice data',
+        `Invalid invoice data: ${firstError.message}`,
         400,
         {
-          fields: validationResult.error.flatten().fieldErrors,
+          errors: validationResult.errors,
           requestId
         }
       );
