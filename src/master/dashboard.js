@@ -92,7 +92,13 @@ class MasterDashboard {
     async checkAuth() {
         try {
             const response = await fetch('/api/auth/check-master', {
-                credentials: 'include'
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                mode: 'same-origin'
             });
             const data = await response.json();
             
@@ -110,7 +116,13 @@ class MasterDashboard {
     async loadStats() {
         try {
             const response = await fetch('/api/master/stats', {
-                credentials: 'include'
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                mode: 'same-origin'
             });
             const stats = await response.json();
             
@@ -161,7 +173,13 @@ class MasterDashboard {
             
             const params = new URLSearchParams(cleanParams);
             const response = await fetch(`/api/master/invoices?${params}`, {
-                credentials: 'include'
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                mode: 'same-origin'
             });
             
             const data = await response.json();
@@ -207,7 +225,13 @@ class MasterDashboard {
         try {
             // Try with only pagination, no sorting or filters
             const response = await fetch(`/api/master/invoices?page=1&limit=20`, {
-                credentials: 'include'
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                mode: 'same-origin'
             });
             
             if (response.ok) {
@@ -352,11 +376,14 @@ class MasterDashboard {
             console.log('🔍 Fetching invoice details for ID:', id);
             
             const response = await fetch(`/api/master/invoices/${id}`, {
+                method: 'GET',
                 credentials: 'include',
                 headers: {
                     'Accept': 'application/json',
+                    'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
-                }
+                },
+                mode: 'same-origin'
             });
             
             console.log('📡 Response status:', response.status);
@@ -860,7 +887,13 @@ class MasterDashboard {
         
         try {
             const response = await fetch(`/api/master/invoices/${invoiceId}/diff`, {
-                credentials: 'include'
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                mode: 'same-origin'
             });
             
             if (!response.ok) {
@@ -1047,7 +1080,12 @@ class MasterDashboard {
         try {
             await fetch(`/api/master/invoices/${invoiceId}/mark-changes-seen`, {
                 method: 'POST',
-                credentials: 'include'
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                mode: 'same-origin'
             });
         } catch (error) {
             console.error('Failed to mark changes as seen:', error);
