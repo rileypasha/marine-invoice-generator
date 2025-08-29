@@ -736,6 +736,11 @@ class MasterDashboard {
         `;
         
         console.log('📝 Setting modal HTML (length:', modalHTML.length, 'chars)');
+        console.log('🔍 modalBody element:', modalBody);
+        console.log('🔍 modalBody id:', modalBody.id);
+        console.log('🔍 modalBody className:', modalBody.className);
+        
+        // Set the HTML content
         modalBody.innerHTML = modalHTML;
         console.log('✅ Modal HTML set successfully');
         
@@ -744,8 +749,16 @@ class MasterDashboard {
         console.log('🔍 Verifying inserted content:', {
             hasInvoiceDetail: !!insertedContent,
             modalBodyChildCount: modalBody.children.length,
-            modalBodyHTML: modalBody.innerHTML.substring(0, 200) + '...'
+            modalBodyHTML: modalBody.innerHTML.substring(0, 200) + '...',
+            modalBodyVisible: window.getComputedStyle(modalBody).display !== 'none',
+            modalBodyHeight: modalBody.offsetHeight
         });
+        
+        // Double-check the modal body is not hidden
+        if (modalBody.style.display === 'none') {
+            console.warn('⚠️ Modal body was hidden, making it visible');
+            modalBody.style.display = 'block';
+        }
         
         // Store current invoice ID for export
         modal.dataset.invoiceId = invoice.id;
@@ -1263,21 +1276,18 @@ class MasterDashboard {
     forceModalDisplay(modal) {
         // Simple, direct approach to show the modal
         modal.style.display = 'flex';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.right = '0';
-        modal.style.bottom = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.zIndex = '9999';
-        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
-        modal.style.visibility = 'visible';
-        modal.style.opacity = '1';
+        console.log('✅ Modal displayed with flex');
         
-        console.log('✅ Modal displayed with standard positioning');
+        // Log what's inside the modal
+        const modalBody = modal.querySelector('#modalBody');
+        const detailPanel = modal.querySelector('.invoice-detail-panel');
+        console.log('🔍 Modal display check:', {
+            modalDisplay: modal.style.display,
+            modalBodyExists: !!modalBody,
+            modalBodyContent: modalBody ? modalBody.innerHTML.length : 0,
+            detailPanelExists: !!detailPanel,
+            modalChildren: modal.children.length
+        });
     }
     
     closeModal() {
