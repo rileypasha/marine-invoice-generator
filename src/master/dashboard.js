@@ -814,11 +814,11 @@ class MasterDashboard {
             this.setupTabSwitching(invoice.id);
         }
         
-        // CRITICAL FIX: Use bulletproof modal display method
+        // CRITICAL: Display modal after content is set
+        console.log('📋 Content set, now displaying modal...');
         this.forceModalDisplay(modal);
         
-        // Log successful render with detailed debugging
-        console.log('✅ Modal rendered successfully');
+        // Log debugging info
         const rect = modal.getBoundingClientRect();
         const computedStyle = window.getComputedStyle(modal);
         const modalBodyRect = modalBody.getBoundingClientRect();
@@ -1334,58 +1334,18 @@ class MasterDashboard {
         // BULLETPROOF MODAL DISPLAY
         console.log('🚀 FORCING MODAL DISPLAY...');
         
-        // Step 1: Remove ALL blocking styles
-        document.querySelectorAll('style').forEach(style => {
-            if (style.textContent.includes('#detailModal') && style.textContent.includes('none')) {
-                style.remove();
-                console.log('🗑️ Removed blocking style element');
-            }
+        // Step 1: Remove only previous force-show styles (not all styles)
+        document.querySelectorAll('style[id*="modal-force-show"]').forEach(style => {
+            style.remove();
         });
         
-        // Step 2: Create override style with highest specificity
-        const overrideId = 'modal-force-show-' + Date.now();
-        const overrideStyle = document.createElement('style');
-        overrideStyle.id = overrideId;
-        overrideStyle.textContent = `
-            #detailModal {
-                display: flex !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-                right: 0 !important;
-                bottom: 0 !important;
-                width: 100% !important;
-                height: 100% !important;
-                z-index: 999999 !important;
-                align-items: center !important;
-                justify-content: center !important;
-                background: rgba(0, 0, 0, 0.7) !important;
-            }
-            #detailModal .invoice-detail-panel {
-                display: grid !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-            }
-            #detailModal .invoice-detail-content {
-                display: block !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-                overflow-y: auto !important;
-            }
-            #detailModal .invoice-detail {
-                display: grid !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-            }
-        `;
-        document.head.appendChild(overrideStyle);
-        
-        // Step 3: Add classes
+        // Step 2: Set classes and inline styles
         modal.className = 'invoice-detail-modal active show';
+        modal.style.display = 'flex';
+        modal.style.visibility = 'visible';
+        modal.style.opacity = '1';
         
-        // Step 4: Verify it worked
+        // Step 3: Verify it worked
         setTimeout(() => {
             const computed = window.getComputedStyle(modal);
             console.log('✅ MODAL DISPLAY RESULT:', {
