@@ -687,10 +687,15 @@ body.modal-open {
     overflow-y: auto;
     overflow-x: hidden;
     padding: 2rem;
-    background: #1a1a1a;
-    color: #ffffff;
+    background: #1a1a1a !important;
+    color: #ffffff !important;
     scrollbar-width: thin;
     scrollbar-color: #4a9eff #2a2a2a;
+}
+
+/* Ensure all text in modal is visible */
+.invoice-detail-content * {
+    color: inherit;
 }
 
 /* Custom scrollbar for modal content */

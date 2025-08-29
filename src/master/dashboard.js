@@ -1364,7 +1364,18 @@ class MasterDashboard {
                 background: rgba(0, 0, 0, 0.7) !important;
             }
             #detailModal .invoice-detail-panel {
+                display: grid !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+            #detailModal .invoice-detail-content {
                 display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                overflow-y: auto !important;
+            }
+            #detailModal .invoice-detail {
+                display: grid !important;
                 visibility: visible !important;
                 opacity: 1 !important;
             }
@@ -1393,13 +1404,29 @@ class MasterDashboard {
         // Log what's inside the modal
         const modalBody = modal.querySelector('#modalBody');
         const detailPanel = modal.querySelector('.invoice-detail-panel');
+        const invoiceDetail = modal.querySelector('.invoice-detail');
         console.log('🔍 Modal display check:', {
             modalDisplay: modal.style.display,
             modalBodyExists: !!modalBody,
             modalBodyContent: modalBody ? modalBody.innerHTML.length : 0,
+            modalBodyHasChildren: modalBody ? modalBody.children.length : 0,
             detailPanelExists: !!detailPanel,
+            invoiceDetailExists: !!invoiceDetail,
             modalChildren: modal.children.length
         });
+        
+        // Check if content is visible
+        if (modalBody && modalBody.innerHTML.length > 0) {
+            const bodyComputed = window.getComputedStyle(modalBody);
+            console.log('📊 Modal body styles:', {
+                display: bodyComputed.display,
+                visibility: bodyComputed.visibility,
+                color: bodyComputed.color,
+                background: bodyComputed.background,
+                height: modalBody.offsetHeight,
+                hasContent: modalBody.textContent.trim().length > 0
+            });
+        }
     }
     
     closeModal() {
