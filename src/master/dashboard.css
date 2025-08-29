@@ -787,15 +787,16 @@ body.modal-open {
     will-change: contents;
 }
 
-.detail-section h3 {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border-color);
+.detail-section h3,
+.detail-section .section-title {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #8b92a1;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0;
+    border-bottom: none;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.1em;
 }
 
 .invoice-detail-section {
@@ -918,20 +919,20 @@ body.modal-open {
 }
 
 .detail-label {
-    font-size: 0.75rem;
-    color: var(--text-tertiary);
+    font-size: 0.65rem;
+    color: #6b7280;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.25rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
     font-weight: 500;
-    white-space: nowrap; /* Prevent label text from wrapping */
+    white-space: nowrap;
     display: block;
 }
 
 .detail-value {
-    font-size: 0.875rem;
-    color: var(--text-primary);
-    font-weight: 500;
+    font-size: 0.95rem;
+    color: #ffffff;
+    font-weight: 400;
     /* Text overflow fixes */
     word-wrap: break-word;
     word-break: break-word;

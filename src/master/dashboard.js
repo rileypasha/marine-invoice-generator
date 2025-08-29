@@ -382,88 +382,88 @@ class MasterDashboard {
                     modalBody.innerHTML = `
                         <div class="invoice-detail">
                             <div class="detail-section">
-                                <h3>Invoice Information</h3>
+                                <h3 class="section-title">INVOICE INFORMATION</h3>
                                 <div class="detail-grid">
                                     <div class="detail-item">
-                                        <span class="detail-label">Invoice ID</span>
-                                        <span class="detail-value">${invoice.id || 'N/A'}</span>
+                                        <div class="detail-label">INVOICE ID</div>
+                                        <div class="detail-value">${invoice.id || 'N/A'}</div>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="detail-label">Status</span>
-                                        <span class="detail-value">${invoice.status || 'N/A'}</span>
+                                        <div class="detail-label">STATUS</div>
+                                        <div class="detail-value">${invoice.status || 'N/A'}</div>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="detail-label">Date</span>
-                                        <span class="detail-value">${new Date(invoice.savedAt || Date.now()).toLocaleDateString()}</span>
+                                        <div class="detail-label">DATE</div>
+                                        <div class="detail-value">${new Date(invoice.savedAt || Date.now()).toLocaleDateString()}</div>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="detail-label">Submitted By</span>
-                                        <span class="detail-value">${invoice.userName || 'N/A'}</span>
+                                        <div class="detail-label">SUBMITTED BY</div>
+                                        <div class="detail-value">${invoice.userName || 'N/A'}</div>
                                     </div>
                                 </div>
                             </div>
                             
                             <div class="detail-section">
-                                <h3>Vessel Details</h3>
+                                <h3 class="section-title">VESSEL DETAILS</h3>
                                 <div class="detail-grid">
                                     <div class="detail-item">
-                                        <span class="detail-label">Name</span>
-                                        <span class="detail-value">${vessel.name || invoice.vesselName || 'N/A'}</span>
+                                        <div class="detail-label">NAME</div>
+                                        <div class="detail-value">${vessel.name || invoice.vesselName || 'N/A'}</div>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="detail-label">Weight</span>
-                                        <span class="detail-value">${vessel.weight || invoice.vesselWeight || 'N/A'} tons</span>
+                                        <div class="detail-label">WEIGHT</div>
+                                        <div class="detail-value">${vessel.weight || invoice.vesselWeight || 'N/A'} tons</div>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="detail-label">Beam</span>
-                                        <span class="detail-value">${vessel.beam || invoice.vesselBeam || 'N/A'} ft</span>
+                                        <div class="detail-label">BEAM</div>
+                                        <div class="detail-value">${vessel.beam || invoice.vesselBeam || 'N/A'} ft</div>
                                     </div>
                                 </div>
                             </div>
                             
                             <div class="detail-section">
-                                <h3>Customer Information</h3>
+                                <h3 class="section-title">CUSTOMER INFORMATION</h3>
                                 <div class="detail-grid">
                                     <div class="detail-item">
-                                        <span class="detail-label">Name</span>
-                                        <span class="detail-value">${customer.customerName || invoice.customerName || 'N/A'}</span>
+                                        <div class="detail-label">NAME</div>
+                                        <div class="detail-value">${customer.customerName || invoice.customerName || 'N/A'}</div>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="detail-label">Email</span>
-                                        <span class="detail-value">${customer.customerEmail || invoice.customerEmail || 'N/A'}</span>
+                                        <div class="detail-label">EMAIL</div>
+                                        <div class="detail-value">${customer.customerEmail || invoice.customerEmail || 'N/A'}</div>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="detail-label">Phone</span>
-                                        <span class="detail-value">${customer.customerPhone || invoice.customerPhone || 'N/A'}</span>
+                                        <div class="detail-label">PHONE</div>
+                                        <div class="detail-value">${customer.customerPhone || invoice.customerPhone || 'N/A'}</div>
                                     </div>
                                 </div>
                             </div>
                             
                             <div class="detail-section full-width">
-                                <h3>Financial Summary</h3>
+                                <h3 class="section-title">FINANCIAL SUMMARY</h3>
                                 <div class="detail-grid">
                                     <div class="detail-item">
-                                        <span class="detail-label">Subtotal</span>
-                                        <span class="detail-value">$${(invoice.subtotal || 0).toLocaleString()}</span>
+                                        <div class="detail-label">SUBTOTAL</div>
+                                        <div class="detail-value">$${(invoice.subtotal || 0).toLocaleString()}</div>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="detail-label">Tax</span>
-                                        <span class="detail-value">$${(invoice.taxAmount || 0).toLocaleString()}</span>
+                                        <div class="detail-label">TAX</div>
+                                        <div class="detail-value">$${(invoice.taxAmount || 0).toLocaleString()}</div>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="detail-label">Total</span>
-                                        <span class="detail-value" style="font-weight: bold; color: #4a9eff;">$${(invoice.total || 0).toLocaleString()}</span>
+                                        <div class="detail-label">TOTAL</div>
+                                        <div class="detail-value" style="font-weight: bold; color: #4a9eff;">$${(invoice.total || 0).toLocaleString()}</div>
                                     </div>
                                     <div class="detail-item">
-                                        <span class="detail-label">Gross Profit</span>
-                                        <span class="detail-value">$${(invoice.grossProfit || 0).toLocaleString()}</span>
+                                        <div class="detail-label">GROSS PROFIT</div>
+                                        <div class="detail-value">$${(invoice.grossProfit || 0).toLocaleString()}</div>
                                     </div>
                                 </div>
                             </div>
                             
                             ${lineItems.length > 0 ? `
                             <div class="detail-section full-width">
-                                <h3>Line Items</h3>
+                                <h3 class="section-title">LINE ITEMS</h3>
                                 <table class="invoices-table">
                                     <thead>
                                         <tr>
