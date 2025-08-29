@@ -51,7 +51,8 @@ export function initializeFormatters() {
 function formatWithSuffix(input, suffix) {
   // Store the raw value as a data attribute
   input.addEventListener('input', function() {
-    const val = String(this.value || '');
+    // Ensure value is always a string
+    const val = this.value != null ? String(this.value) : '';
     const rawValue = val.replace(suffix, '').trim();
     this.dataset.rawValue = rawValue;
     
@@ -62,13 +63,13 @@ function formatWithSuffix(input, suffix) {
 
   input.addEventListener('focus', function() {
     // Remove suffix when editing
-    const val = String(this.value || '');
+    const val = this.value != null ? String(this.value) : '';
     const value = val.replace(suffix, '').trim();
     this.value = value;
   });
 
   input.addEventListener('blur', function() {
-    const val = String(this.value || '');
+    const val = this.value != null ? String(this.value) : '';
     const value = val.replace(suffix, '').trim();
     this.dataset.rawValue = value;
     if (value && !val.endsWith(suffix)) {
@@ -77,7 +78,7 @@ function formatWithSuffix(input, suffix) {
   });
 
   // Initial format if there's a value
-  if (input.value) {
+  if (input.value != null && input.value !== '') {
     const val = String(input.value);
     if (!val.endsWith(suffix)) {
       const rawValue = val.replace(suffix, '').trim();
@@ -93,14 +94,14 @@ function formatCurrency(input) {
   input.addEventListener('focus', function() {
     isEditing = true;
     // Remove formatting when editing
-    const val = String(this.value || '');
+    const val = this.value != null ? String(this.value) : '';
     const value = val.replace(/[\$,]/g, '').trim();
     this.value = value;
   });
 
   input.addEventListener('blur', function() {
     isEditing = false;
-    const val = String(this.value || '');
+    const val = this.value != null ? String(this.value) : '';
     const value = val.replace(/[\$,]/g, '').trim();
     if (value) {
       const number = parseFloat(value);
@@ -114,7 +115,7 @@ function formatCurrency(input) {
   });
 
   // Initial format if there's a value
-  const val = String(input.value || '');
+  const val = input.value != null ? String(input.value) : '';
   const initialValue = val.replace(/[\$,]/g, '').trim();
   if (initialValue) {
     const number = parseFloat(initialValue);
@@ -130,7 +131,8 @@ function formatCurrency(input) {
 function formatPhoneNumber(input) {
   input.addEventListener('input', function(e) {
     // Remove all non-numeric characters
-    let value = e.target.value.replace(/\D/g, '');
+    const targetValue = e.target.value != null ? String(e.target.value) : '';
+    let value = targetValue.replace(/\D/g, '');
     
     // Limit to 10 digits
     if (value.length > 10) {
@@ -149,7 +151,8 @@ function formatPhoneNumber(input) {
 
   input.addEventListener('blur', function() {
     // Clean up incomplete phone numbers
-    const digits = this.value.replace(/\D/g, '');
+    const val = this.value != null ? String(this.value) : '';
+    const digits = val.replace(/\D/g, '');
     if (digits.length === 10) {
       this.value = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
     } else if (digits.length === 0) {
