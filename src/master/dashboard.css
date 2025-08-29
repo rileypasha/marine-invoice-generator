@@ -576,6 +576,14 @@ body {
     backdrop-filter: blur(8px);
 }
 
+/* Force modal to show when active */
+.invoice-detail-modal.active,
+.invoice-detail-modal.show {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
 .invoice-detail-overlay {
     position: absolute;
     inset: 0;

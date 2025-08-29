@@ -540,10 +540,10 @@ class MasterDashboard {
         const modal = document.getElementById('detailModal');
         const modalBody = document.getElementById('modalBody');
         
-        // Clear any inline styles that might be hiding it
+        // Reset modal to clean state
         if (modal) {
-            modal.removeAttribute('style');
-            modal.style.display = 'none'; // Start with none, will set to flex later
+            modal.className = 'invoice-detail-modal'; // Reset to base class
+            modal.removeAttribute('style'); // Clear any inline styles
         }
         
         // Defensive checks
@@ -1341,14 +1341,34 @@ class MasterDashboard {
         const hideStyles = ['absolute-modal-hide', 'modal-force-hide', 'permanent-modal-hide'];
         hideStyles.forEach(id => {
             const style = document.getElementById(id);
-            if (style) style.remove();
+            if (style) {
+                style.remove();
+                console.log(`🗑️ Removed blocking style: ${id}`);
+            }
         });
         
-        // Clear all inline styles and set fresh display
-        modal.removeAttribute('style');
-        modal.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important;';
-        modal.classList.add('active');
-        console.log('✅ Modal displayed with flex');
+        // Method 1: Add active class (CSS will handle display)
+        modal.classList.add('active', 'show');
+        
+        // Method 2: Also force inline styles as backup
+        modal.style.display = 'flex';
+        modal.style.visibility = 'visible';
+        modal.style.opacity = '1';
+        modal.style.position = 'fixed';
+        modal.style.zIndex = '9999';
+        modal.style.left = '0';
+        modal.style.top = '0';
+        modal.style.right = '0';
+        modal.style.bottom = '0';
+        
+        console.log('✅ Modal displayed with flex and active class');
+        console.log('📍 Modal position:', modal.getBoundingClientRect());
+        console.log('🎨 Modal computed style:', {
+            display: window.getComputedStyle(modal).display,
+            visibility: window.getComputedStyle(modal).visibility,
+            position: window.getComputedStyle(modal).position,
+            zIndex: window.getComputedStyle(modal).zIndex
+        });
         
         // Log what's inside the modal
         const modalBody = modal.querySelector('#modalBody');
@@ -1578,4 +1598,24 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     console.log('💣 Emergency: If modal won\'t close, type: nukeModal()');
+    
+    // Add simple show modal function for testing
+    window.showModal = function() {
+        const modal = document.getElementById('detailModal');
+        if (modal) {
+            // Remove any hiding styles
+            ['absolute-modal-hide', 'modal-force-hide', 'permanent-modal-hide'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.remove();
+            });
+            
+            // Force show
+            modal.className = 'invoice-detail-modal active show';
+            modal.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important; z-index: 99999 !important;';
+            console.log('🚀 Modal forced to show');
+            console.log('Display:', window.getComputedStyle(modal).display);
+            console.log('Visibility:', window.getComputedStyle(modal).visibility);
+        }
+    };
+    console.log('🔧 Debug: To force show modal, type: showModal()');
 });
