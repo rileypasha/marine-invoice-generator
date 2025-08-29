@@ -496,12 +496,6 @@ class MasterDashboard {
         }
     }
     
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-    
     showDetailModal(invoice) {
         const modal = document.getElementById('detailModal');
         const modalBody = document.getElementById('modalBody');
@@ -965,6 +959,65 @@ class MasterDashboard {
         if (typeof value === 'number') return value.toLocaleString();
         if (typeof value === 'object') return JSON.stringify(value, null, 2);
         return String(value);
+    }
+    
+    formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Invalid Date';
+            
+            // Format: MMM DD, YYYY at HH:MM AM/PM
+            const options = {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            };
+            
+            return date.toLocaleString('en-US', options);
+        } catch (error) {
+            console.error('Date formatting error:', error);
+            return dateString;
+        }
+    }
+    
+    formatCurrency(amount) {
+        if (amount === null || amount === undefined || isNaN(amount)) return '$0.00';
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(amount);
+    }
+    
+    formatCurrencyRounded(amount) {
+        if (amount === null || amount === undefined || isNaN(amount)) return '$0';
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(Math.round(amount));
+    }
+    
+    formatNumber(num) {
+        if (num === null || num === undefined || isNaN(num)) return '0';
+        return new Intl.NumberFormat('en-US').format(num);
+    }
+    
+    formatPercent(value) {
+        if (value === null || value === undefined || isNaN(value)) return '0%';
+        return `${Math.round(value)}%`;
+    }
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
     }
     
     async markChangesSeen(invoiceId) {
