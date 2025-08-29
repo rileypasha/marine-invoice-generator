@@ -1274,6 +1274,18 @@ class MasterDashboard {
     }
     
     forceModalDisplay(modal) {
+        // Check if modal is being closed
+        if (this.modalClosing) {
+            console.log('⛔ Modal is closing, skipping display');
+            return;
+        }
+        
+        // Remove any force-hide styles first
+        const hideStyle = document.getElementById('modal-force-hide');
+        if (hideStyle) {
+            hideStyle.remove();
+        }
+        
         // Simple, direct approach to show the modal
         modal.style.display = 'flex';
         console.log('✅ Modal displayed with flex');
@@ -1294,10 +1306,25 @@ class MasterDashboard {
         console.log('🔐 Closing modal...');
         const modal = document.getElementById('detailModal');
         if (modal) {
-            // Force close the modal
-            modal.style.display = 'none';
-            modal.style.visibility = 'hidden';
-            modal.removeAttribute('style'); // Clear all inline styles
+            // Set a flag to prevent any re-display
+            this.modalClosing = true;
+            
+            // Method 1: Direct style manipulation
+            modal.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important;';
+            
+            // Method 2: Remove all classes
+            modal.className = '';
+            
+            // Method 3: Add a style element to ensure it stays hidden
+            let hideStyle = document.getElementById('modal-force-hide');
+            if (!hideStyle) {
+                hideStyle = document.createElement('style');
+                hideStyle.id = 'modal-force-hide';
+                document.head.appendChild(hideStyle);
+            }
+            hideStyle.textContent = '#detailModal { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }';
+            
+            // Clear body class
             document.body.classList.remove('modal-open');
             
             // Remove any override styles
@@ -1305,6 +1332,39 @@ class MasterDashboard {
             if (overrideStyle) {
                 overrideStyle.remove();
             }
+            
+            // Double-check it's hidden after a delay
+            setTimeout(() => {
+                if (modal && (modal.offsetParent !== null || window.getComputedStyle(modal).display !== 'none')) {
+                    console.warn('⚠️ Modal still visible, applying nuclear option');
+                    modal.remove();
+                    // Re-add the modal structure for future use
+                    const newModal = document.createElement('div');
+                    newModal.id = 'detailModal';
+                    newModal.className = 'invoice-detail-modal';
+                    newModal.style.display = 'none';
+                    newModal.innerHTML = `
+                        <div class="invoice-detail-overlay"></div>
+                        <div class="invoice-detail-panel">
+                            <div class="invoice-detail-header">
+                                <h2>Invoice Details</h2>
+                                <button class="invoice-detail-close" id="closeModal" aria-label="Close modal">&times;</button>
+                            </div>
+                            <div class="invoice-detail-content" id="modalBody" role="region" aria-label="Invoice details" data-testid="invoice-detail">
+                            </div>
+                            <div class="invoice-detail-footer">
+                                <button id="exportCsv" class="btn-primary">Export CSV</button>
+                                <button id="closeModalBtn" class="btn-secondary">Close</button>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(newModal);
+                    // Re-attach event listeners
+                    this.setupEventListeners();
+                }
+                // Clear the closing flag
+                this.modalClosing = false;
+            }, 100);
             
             console.log('✅ Modal closed');
         }
@@ -1403,4 +1463,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+    
+    // Global click handler for close buttons as nuclear option
+    document.addEventListener('click', (e) => {
+        // Check if clicked element is a close button or X
+        if (e.target.id === 'closeModal' || 
+            e.target.id === 'closeModalBtn' || 
+            e.target.classList.contains('invoice-detail-close') ||
+            e.target.classList.contains('invoice-detail-overlay')) {
+            console.log('🚨 Nuclear close triggered for:', e.target);
+            const modal = document.getElementById('detailModal');
+            if (modal) {
+                // Force hide no matter what
+                modal.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important;';
+                dashboard.modalClosing = false; // Reset flag
+            }
+        }
+    }, true); // Use capture phase to catch before any stopPropagation
 });
