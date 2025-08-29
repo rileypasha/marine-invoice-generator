@@ -596,14 +596,14 @@ body.modal-open {
 
 .invoice-detail-panel {
     position: relative;
-    width: 90%;
-    max-width: 1200px;
+    width: 95%;
+    max-width: 1400px;
     max-height: 90vh;
     height: 90vh;
-    background: #1a1a1a !important;
+    background: #1a1d23 !important;
     border-radius: 16px;
-    border: 1px solid #333;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.9);
+    border: 1px solid rgba(74, 222, 128, 0.15);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
     display: grid;
     grid-template-rows: auto 1fr auto;
     overflow: hidden;
@@ -646,12 +646,12 @@ body.modal-open {
 }
 
 .invoice-detail-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid #333;
+    padding: 2rem 2.5rem;
+    border-bottom: 1px solid rgba(74, 222, 128, 0.15);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #0f0f0f;
+    background: rgba(0, 0, 0, 0.4);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -689,11 +689,11 @@ body.modal-open {
 .invoice-detail-content {
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 2rem;
-    background: #1a1a1a !important;
+    padding: 2.5rem;
+    background: transparent !important;
     color: #ffffff !important;
     scrollbar-width: thin;
-    scrollbar-color: #4a9eff #2a2a2a;
+    scrollbar-color: #4ade80 rgba(255, 255, 255, 0.05);
     min-height: 400px;
     /* Ensure content area takes space */
     flex: 1;
@@ -705,32 +705,35 @@ body.modal-open {
     color: inherit !important;
 }
 
-/* Custom scrollbar for modal content */
+/* Custom green scrollbar for modal content */
 .invoice-detail-content::-webkit-scrollbar {
-    width: 8px;
+    width: 12px;
 }
 
 .invoice-detail-content::-webkit-scrollbar-track {
-    background: var(--bg-secondary);
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
 }
 
 .invoice-detail-content::-webkit-scrollbar-thumb {
-    background: var(--accent-primary);
-    border-radius: 4px;
+    background: #4ade80;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: content-box;
 }
 
 .invoice-detail-content::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-hover);
+    background: #22c55e;
+    background-clip: content-box;
 }
 
 .invoice-detail-footer {
-    padding: 1.5rem;
-    border-top: 1px solid #333;
+    padding: 1.5rem 2.5rem;
+    border-top: 1px solid rgba(74, 222, 128, 0.15);
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
-    background: #0f0f0f;
+    background: rgba(0, 0, 0, 0.4);
     border-radius: 0 0 16px 16px;
     position: sticky;
     bottom: 0;
@@ -779,24 +782,24 @@ body.modal-open {
 }
 
 .detail-section {
-    background: var(--bg-tertiary);
-    padding: 1.25rem;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 1.75rem;
     border-radius: 12px;
-    border: 1px solid var(--border-color);
+    border: 1px solid rgba(74, 222, 128, 0.1);
     contain: layout style;
     will-change: contents;
 }
 
 .detail-section h3,
 .detail-section .section-title {
-    font-size: 0.7rem;
-    font-weight: 500;
-    color: #8b92a1;
-    margin-bottom: 1.25rem;
-    padding-bottom: 0;
-    border-bottom: none;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(74, 222, 128, 0.15);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.15em;
 }
 
 .invoice-detail-section {
@@ -919,20 +922,20 @@ body.modal-open {
 }
 
 .detail-label {
-    font-size: 0.65rem;
-    color: #6b7280;
+    font-size: 0.7rem;
+    color: #8b92a1;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     margin-bottom: 0.5rem;
-    font-weight: 500;
+    font-weight: 600;
     white-space: nowrap;
     display: block;
 }
 
 .detail-value {
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     color: #ffffff;
-    font-weight: 400;
+    font-weight: 500;
     /* Text overflow fixes */
     word-wrap: break-word;
     word-break: break-word;
