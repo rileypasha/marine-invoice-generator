@@ -6,11 +6,18 @@ export class UserManager {
     this.sessionKey = 'marine_invoice_session';
     
     this.initTestUser();
-    this.loadUserFromStorage();
     
-    // Auto-sign in test user if not already authenticated (for development)
+    // Load user from storage and ensure server session
+    this.initializeAuth();
+  }
+  
+  async initializeAuth() {
+    // First try to load from storage
+    await this.loadUserFromStorage();
+    
+    // If still not authenticated, auto-sign in test user (for development)
     if (!this.isAuthenticated()) {
-      this.autoSignInTestUser();
+      await this.autoSignInTestUser();
     }
   }
   
@@ -52,7 +59,7 @@ export class UserManager {
   }
   
   // Load user from localStorage if exists
-  loadUserFromStorage() {
+  async loadUserFromStorage() {
     try {
       const stored = localStorage.getItem(this.storageKey);
       const session = localStorage.getItem(this.sessionKey);
@@ -65,6 +72,35 @@ export class UserManager {
         const now = new Date().getTime();
         if (now - sessionData.timestamp < 24 * 60 * 60 * 1000) {
           this.currentUser = userData;
+          
+          // CRITICAL: Re-establish server session if needed
+          // Check if we have a valid server session
+          try {
+            const response = await fetch('/api/auth/me', {
+              credentials: 'include'
+            });
+            
+            if (!response.ok) {
+              // No server session, try to create one
+              console.log('📌 No server session found, attempting to recreate...');
+              
+              // If this is the test user, use known credentials
+              if (userData.email === 'test@marinegroup.com') {
+                const serverAuth = await this.serverSignIn(userData.email, 'password123');
+                if (serverAuth.success) {
+                  console.log('✅ Server session recreated for stored user');
+                }
+              } else {
+                console.warn('⚠️ Cannot recreate server session - user needs to login again');
+                // Don't clear local session, but warn that saves won't work
+              }
+            } else {
+              console.log('✅ Valid server session exists');
+            }
+          } catch (err) {
+            console.warn('Could not verify server session:', err);
+          }
+          
           this.notify();
         } else {
           this.logout();
@@ -306,7 +342,7 @@ export class UserManager {
   }
   
   // Auto-sign in test user for development
-  autoSignInTestUser() {
+  async autoSignInTestUser() {
     try {
       const testEmail = 'test@marinegroup.com';
       
@@ -315,10 +351,23 @@ export class UserManager {
       
       if (testUser) {
         console.log('🧪 Auto-signing in test user:', testEmail);
-        this.currentUser = testUser;
-        this.saveSession(true); // Remember the test user
-        this.notify();
-        console.log('✅ Test user signed in automatically');
+        
+        // CRITICAL: Must authenticate with server to create session
+        const serverAuth = await this.serverSignIn(testEmail, 'password123');
+        
+        if (serverAuth.success) {
+          console.log('✅ Server session created for test user');
+          this.currentUser = serverAuth.user || testUser;
+          this.saveSession(true); // Remember the test user
+          this.notify();
+          console.log('✅ Test user signed in automatically with server session');
+        } else {
+          // Fallback to local-only (will cause 401s but user can still use the app locally)
+          console.warn('⚠️ Could not create server session for test user - saves will fail');
+          this.currentUser = testUser;
+          this.saveSession(true);
+          this.notify();
+        }
       }
     } catch (error) {
       console.error('❌ Failed to auto-sign in test user:', error);
