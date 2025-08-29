@@ -508,15 +508,19 @@ class MasterDashboard {
         
         // Defensive checks
         if (!modal || !modalBody) {
-            console.error('Modal elements not found');
-            alert('UI Error: Could not display invoice details');
+            console.error('❌ Modal elements not found - checking DOM');
+            console.log('Modal element exists:', !!document.getElementById('detailModal'));
+            console.log('Modal body exists:', !!document.getElementById('modalBody'));
+            console.log('All modal elements in DOM:', document.querySelectorAll('[id*="modal"]'));
+            alert('UI Error: Could not display invoice details - modal elements missing');
             return;
         }
         
-        // Debug logging
-        console.log('📋 Showing detail modal for invoice:', invoice.id);
-        console.log('📊 Full invoice data:', invoice);
-        console.log('📊 Invoice data structure:', {
+        // Enhanced debug logging
+        console.log('🔍 === INVOICE DETAIL MODAL DEBUG ===');
+        console.log('📋 Invoice ID:', invoice.id);
+        console.log('📊 Full invoice object:', JSON.stringify(invoice, null, 2));
+        console.log('🔧 Data structure analysis:', {
             hasId: !!invoice.id,
             hasStatus: !!invoice.status,
             hasData: !!invoice.data,
@@ -525,8 +529,16 @@ class MasterDashboard {
             hasCustomerName: !!invoice.customerName,
             dataType: typeof invoice.data,
             parsedDataType: typeof invoice.parsedData,
+            dataIsEmpty: invoice.data && typeof invoice.data === 'object' ? Object.keys(invoice.data).length === 0 : true,
+            parsedDataIsEmpty: invoice.parsedData && typeof invoice.parsedData === 'object' ? Object.keys(invoice.parsedData).length === 0 : true,
             dataKeys: invoice.data && typeof invoice.data === 'object' ? Object.keys(invoice.data) : [],
             parsedDataKeys: invoice.parsedData && typeof invoice.parsedData === 'object' ? Object.keys(invoice.parsedData) : []
+        });
+        console.log('🎨 Modal initial state:', {
+            display: modal.style.display,
+            visibility: modal.style.visibility,
+            zIndex: modal.style.zIndex,
+            className: modal.className
         });
         
         // Lock body scroll when modal opens
@@ -534,19 +546,30 @@ class MasterDashboard {
         
         // Parse invoice data - check multiple possible data locations
         // Backend might send data in different formats depending on the query
+        console.log('📦 Raw data fields:', {
+            data: invoice.data,
+            parsedData: invoice.parsedData,
+            dataType: typeof invoice.data,
+            parsedDataType: typeof invoice.parsedData
+        });
+        
         const invoiceData = invoice.parsedData || invoice.data || {};
         
         // Ensure invoiceData is an object (might be a string that needs parsing)
         let parsedInvoiceData = {};
         if (typeof invoiceData === 'string') {
+            console.log('📝 Data is string, attempting to parse:', invoiceData.substring(0, 100));
             try {
                 parsedInvoiceData = JSON.parse(invoiceData);
+                console.log('✅ Successfully parsed data:', parsedInvoiceData);
             } catch (e) {
-                console.error('Failed to parse invoice data:', e);
+                console.error('❌ Failed to parse invoice data:', e);
+                console.error('Raw string that failed:', invoiceData);
                 parsedInvoiceData = {};
             }
         } else {
             parsedInvoiceData = invoiceData;
+            console.log('📊 Data is already an object:', parsedInvoiceData);
         }
         
         // Extract the actual vessel and customer info from the parsed data
@@ -555,11 +578,18 @@ class MasterDashboard {
         const scope = parsedInvoiceData.scope || {};
         const lineItems = scope.lineItems || [];
         
+        console.log('🚢 Extracted vessel data:', vessel);
+        console.log('👤 Extracted customer data:', customer);
+        console.log('📄 Extracted scope data:', scope);
+        console.log('📝 Line items count:', lineItems.length);
+        
         // Check if invoice has changes
         const hasChanges = invoice.hasChanges || false;
+        console.log('🔄 Has changes:', hasChanges);
         
         // Add debug info if data is missing
         if (!invoice || Object.keys(invoice).length === 0) {
+            console.error('⚠️ Invoice object is empty or missing');
             modalBody.innerHTML = `
                 <div class="error-state">
                     <h3>⚠️ No Data</h3>
@@ -570,10 +600,13 @@ class MasterDashboard {
             modal.style.display = 'block';
             modal.style.visibility = 'visible';
             modal.style.zIndex = '10000';
+            modal.classList.add('active');
             return;
         }
         
-        modalBody.innerHTML = `
+        console.log('🎯 Building modal HTML with extracted data...');
+        
+        const modalHTML = `
             ${hasChanges ? `
                 <div class="detail-tabs">
                     <button class="tab-button active" data-tab="details">Invoice Details</button>
@@ -708,6 +741,18 @@ class MasterDashboard {
             ` : ''}
         `;
         
+        console.log('📝 Setting modal HTML (length:', modalHTML.length, 'chars)');
+        modalBody.innerHTML = modalHTML;
+        console.log('✅ Modal HTML set successfully');
+        
+        // Verify the HTML was actually inserted
+        const insertedContent = modalBody.querySelector('.invoice-detail');
+        console.log('🔍 Verifying inserted content:', {
+            hasInvoiceDetail: !!insertedContent,
+            modalBodyChildCount: modalBody.children.length,
+            modalBodyHTML: modalBody.innerHTML.substring(0, 200) + '...'
+        });
+        
         // Store current invoice ID for export
         modal.dataset.invoiceId = invoice.id;
         
@@ -722,21 +767,36 @@ class MasterDashboard {
         // Log successful render with detailed debugging
         console.log('✅ Modal rendered successfully');
         const rect = modal.getBoundingClientRect();
-        console.log('📐 Modal display state:', {
-            display: window.getComputedStyle(modal).display,
-            visibility: window.getComputedStyle(modal).visibility,
-            position: window.getComputedStyle(modal).position,
-            zIndex: window.getComputedStyle(modal).zIndex,
-            rect: {
-                top: rect.top,
-                left: rect.left,
-                width: rect.width,
-                height: rect.height,
-                visible: rect.width > 0 && rect.height > 0
+        const computedStyle = window.getComputedStyle(modal);
+        const modalBodyRect = modalBody.getBoundingClientRect();
+        console.log('📐 Modal final display state:', {
+            modal: {
+                display: computedStyle.display,
+                visibility: computedStyle.visibility,
+                position: computedStyle.position,
+                zIndex: computedStyle.zIndex,
+                opacity: computedStyle.opacity,
+                rect: {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height,
+                    visible: rect.width > 0 && rect.height > 0
+                }
             },
-            bodyHasContent: modalBody.innerHTML.length > 0,
-            panelFound: !!modal.querySelector('.invoice-detail-panel')
+            modalBody: {
+                hasContent: modalBody.innerHTML.length > 0,
+                childCount: modalBody.children.length,
+                rect: {
+                    width: modalBodyRect.width,
+                    height: modalBodyRect.height,
+                    visible: modalBodyRect.width > 0 && modalBodyRect.height > 0
+                }
+            },
+            panelFound: !!modal.querySelector('.invoice-detail-panel'),
+            invoiceDetailFound: !!modal.querySelector('.invoice-detail')
         });
+        console.log('=== END INVOICE DETAIL MODAL DEBUG ===');
         
         // Add event listeners for copy buttons
         this.setupCopyButtons();
