@@ -1331,44 +1331,64 @@ class MasterDashboard {
     }
     
     forceModalDisplay(modal) {
-        // Check if modal is being closed
-        if (this.modalClosing) {
-            console.log('⛔ Modal is closing, skipping display');
-            return;
-        }
+        // BULLETPROOF MODAL DISPLAY
+        console.log('🚀 FORCING MODAL DISPLAY...');
         
-        // Remove ANY styles that might be hiding the modal
-        const hideStyles = ['absolute-modal-hide', 'modal-force-hide', 'permanent-modal-hide'];
-        hideStyles.forEach(id => {
-            const style = document.getElementById(id);
-            if (style) {
+        // Step 1: Remove ALL blocking styles
+        document.querySelectorAll('style').forEach(style => {
+            if (style.textContent.includes('#detailModal') && style.textContent.includes('none')) {
                 style.remove();
-                console.log(`🗑️ Removed blocking style: ${id}`);
+                console.log('🗑️ Removed blocking style element');
             }
         });
         
-        // Method 1: Add active class (CSS will handle display)
-        modal.classList.add('active', 'show');
+        // Step 2: Create override style with highest specificity
+        const overrideId = 'modal-force-show-' + Date.now();
+        const overrideStyle = document.createElement('style');
+        overrideStyle.id = overrideId;
+        overrideStyle.textContent = `
+            #detailModal {
+                display: flex !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                z-index: 999999 !important;
+                align-items: center !important;
+                justify-content: center !important;
+                background: rgba(0, 0, 0, 0.7) !important;
+            }
+            #detailModal .invoice-detail-panel {
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+        `;
+        document.head.appendChild(overrideStyle);
         
-        // Method 2: Also force inline styles as backup
-        modal.style.display = 'flex';
-        modal.style.visibility = 'visible';
-        modal.style.opacity = '1';
-        modal.style.position = 'fixed';
-        modal.style.zIndex = '9999';
-        modal.style.left = '0';
-        modal.style.top = '0';
-        modal.style.right = '0';
-        modal.style.bottom = '0';
+        // Step 3: Add classes
+        modal.className = 'invoice-detail-modal active show';
         
-        console.log('✅ Modal displayed with flex and active class');
-        console.log('📍 Modal position:', modal.getBoundingClientRect());
-        console.log('🎨 Modal computed style:', {
-            display: window.getComputedStyle(modal).display,
-            visibility: window.getComputedStyle(modal).visibility,
-            position: window.getComputedStyle(modal).position,
-            zIndex: window.getComputedStyle(modal).zIndex
-        });
+        // Step 4: Verify it worked
+        setTimeout(() => {
+            const computed = window.getComputedStyle(modal);
+            console.log('✅ MODAL DISPLAY RESULT:', {
+                display: computed.display,
+                visibility: computed.visibility,
+                opacity: computed.opacity,
+                zIndex: computed.zIndex,
+                isVisible: modal.offsetParent !== null
+            });
+            
+            if (computed.display === 'none') {
+                console.error('❌ MODAL STILL HIDDEN - Something is overriding our styles!');
+            }
+        }, 10);
         
         // Log what's inside the modal
         const modalBody = modal.querySelector('#modalBody');
@@ -1386,66 +1406,20 @@ class MasterDashboard {
         console.log('🔐 Closing modal...');
         const modal = document.getElementById('detailModal');
         if (modal) {
-            // Set flags
-            this.modalClosing = true;
-            this.modalIsIntentionallyOpen = false;
-            
-            // Method 1: Direct style manipulation
-            modal.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important;';
-            
-            // Method 2: Remove all classes
-            modal.className = '';
-            
-            // Method 3: Add a style element to ensure it stays hidden
-            let hideStyle = document.getElementById('modal-force-hide');
-            if (!hideStyle) {
-                hideStyle = document.createElement('style');
-                hideStyle.id = 'modal-force-hide';
-                document.head.appendChild(hideStyle);
-            }
-            hideStyle.textContent = '#detailModal { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }';
-            
-            // Clear body class
-            document.body.classList.remove('modal-open');
-            
-            // Remove any override styles
-            const overrideStyle = document.getElementById('master-modal-force-display');
-            if (overrideStyle) {
-                overrideStyle.remove();
-            }
-            
-            // Double-check it's hidden after a delay
-            setTimeout(() => {
-                if (modal && (modal.offsetParent !== null || window.getComputedStyle(modal).display !== 'none')) {
-                    console.warn('⚠️ Modal still visible, applying nuclear option');
-                    modal.remove();
-                    // Re-add the modal structure for future use
-                    const newModal = document.createElement('div');
-                    newModal.id = 'detailModal';
-                    newModal.className = 'invoice-detail-modal';
-                    newModal.style.display = 'none';
-                    newModal.innerHTML = `
-                        <div class="invoice-detail-overlay"></div>
-                        <div class="invoice-detail-panel">
-                            <div class="invoice-detail-header">
-                                <h2>Invoice Details</h2>
-                                <button class="invoice-detail-close" id="closeModal" aria-label="Close modal">&times;</button>
-                            </div>
-                            <div class="invoice-detail-content" id="modalBody" role="region" aria-label="Invoice details" data-testid="invoice-detail">
-                            </div>
-                            <div class="invoice-detail-footer">
-                                <button id="exportCsv" class="btn-primary">Export CSV</button>
-                                <button id="closeModalBtn" class="btn-secondary">Close</button>
-                            </div>
-                        </div>
-                    `;
-                    document.body.appendChild(newModal);
-                    // Re-attach event listeners
-                    this.setupEventListeners();
+            // Remove any force-show styles
+            document.querySelectorAll('style').forEach(style => {
+                if (style.id && style.id.includes('modal-force-show')) {
+                    style.remove();
                 }
-                // Clear the closing flag
-                this.modalClosing = false;
-            }, 100);
+            });
+            
+            // Simple hide
+            modal.style.display = 'none';
+            modal.classList.remove('active', 'show');
+            
+            // Clear flags
+            this.modalClosing = false;
+            this.modalIsIntentionallyOpen = false;
             
             console.log('✅ Modal closed');
         }
@@ -1603,18 +1577,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.showModal = function() {
         const modal = document.getElementById('detailModal');
         if (modal) {
-            // Remove any hiding styles
-            ['absolute-modal-hide', 'modal-force-hide', 'permanent-modal-hide'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.remove();
-            });
-            
-            // Force show
-            modal.className = 'invoice-detail-modal active show';
-            modal.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important; z-index: 99999 !important;';
-            console.log('🚀 Modal forced to show');
-            console.log('Display:', window.getComputedStyle(modal).display);
-            console.log('Visibility:', window.getComputedStyle(modal).visibility);
+            // Use the same bulletproof method as the dashboard
+            dashboard.forceModalDisplay(modal);
+        } else {
+            console.error('Modal element not found!');
         }
     };
     console.log('🔧 Debug: To force show modal, type: showModal()');
