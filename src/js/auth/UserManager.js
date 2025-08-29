@@ -12,11 +12,21 @@ export class UserManager {
   }
   
   async initializeAuth() {
+    // Check if user explicitly logged out
+    const explicitLogout = localStorage.getItem('marine_invoice_explicit_logout');
+    if (explicitLogout === 'true') {
+      console.log('🚫 User explicitly logged out - skipping auto-login');
+      // Clear the flag after checking
+      localStorage.removeItem('marine_invoice_explicit_logout');
+      return;
+    }
+    
     // First try to load from storage
     await this.loadUserFromStorage();
     
     // If still not authenticated, auto-sign in test user (for development)
-    if (!this.isAuthenticated()) {
+    // But only if they didn't explicitly log out
+    if (!this.isAuthenticated() && explicitLogout !== 'true') {
       await this.autoSignInTestUser();
     }
   }
@@ -167,6 +177,9 @@ export class UserManager {
       if (serverAuth.success) {
         console.log('✅ Server authentication successful');
         
+        // Clear the explicit logout flag since user is signing in
+        localStorage.removeItem('marine_invoice_explicit_logout');
+        
         // Check if user is master
         if (serverAuth.isMaster) {
           console.log('👑 Master user detected - redirecting to dashboard');
@@ -268,9 +281,28 @@ export class UserManager {
   }
   
   // Sign out user
-  logout() {
+  async logout() {
+    // Call server to destroy session
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      console.log('✅ Server session destroyed');
+    } catch (error) {
+      console.error('Failed to destroy server session:', error);
+    }
+    
+    // Clear local state
     this.currentUser = null;
+    
+    // IMPORTANT: Clear BOTH session and user data to prevent auto-login
     localStorage.removeItem(this.sessionKey);
+    localStorage.removeItem(this.storageKey);
+    
+    // Also set a flag to prevent auto-login after explicit logout
+    localStorage.setItem('marine_invoice_explicit_logout', 'true');
+    
     this.notify();
   }
   
