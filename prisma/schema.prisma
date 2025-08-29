@@ -116,3 +116,14 @@ model User {
   
   invoices  Invoice[]
 }
+
+model IdempotencyRecord {
+  id         String   @id @default(uuid())
+  key        String   @unique
+  requestId  String
+  response   Json
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  
+  @@index([expiresAt])
+}

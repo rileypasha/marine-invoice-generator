@@ -139,6 +139,10 @@ app.use('/api/manual-fix', manualFixRouter);
 const migrationRouter = require('./routes/run-migration');
 app.use('/api/migration', migrationRouter);
 
+// V2 API routes with improved validation and error handling
+const invoiceV2Router = require('./routes/invoiceV2');
+app.use('/api/v2/invoice', invoiceV2Router);
+
 // Standard API routes
 app.use('/api/v1', apiRouter);
 
@@ -180,15 +184,9 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Error handling
-app.use((err, req, res, next) => {
-  logger.error(err);
-  res.status(err.status || 500).json({
-    error: process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
-      : err.message
-  });
-});
+// Error handling middleware (must be last)
+const { errorHandler } = require('./middleware/errorHandler');
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0'; // Important for Render

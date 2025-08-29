@@ -112,20 +112,25 @@ export class InvoiceStorage {
     }
     
     try {
+      // Ensure data is sent as object, not string
       const requestBody = {
         title: invoice.title,
-        data: invoice.data,
-        metadata: invoice.metadata
+        data: typeof invoice.data === 'string' ? JSON.parse(invoice.data) : invoice.data,
+        metadata: typeof invoice.metadata === 'string' ? JSON.parse(invoice.metadata) : invoice.metadata
       };
       
       console.log(`📋 [${requestId}] Request body:`, JSON.stringify(requestBody, null, 2));
       console.log(`👤 [${requestId}] Current user:`, this.userManager.getCurrentUser());
       
-      const response = await fetch('/api/v1/invoice/save', {
+      // Generate idempotency key for this save
+      const idempotencyKey = `${invoice.id}_${Date.now()}_${requestId}`;
+      
+      const response = await fetch('/api/v2/invoice/save', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Request-ID': requestId
+          'X-Request-ID': requestId,
+          'Idempotency-Key': idempotencyKey
         },
         credentials: 'include', // Include session cookies
         body: JSON.stringify(requestBody)
@@ -308,20 +313,22 @@ export class InvoiceStorage {
     try {
       const url = serverId 
         ? `/api/v1/invoice/${serverId}`
-        : '/api/v1/invoice/save';
+        : '/api/v2/invoice/save';
       
       const method = serverId ? 'PUT' : 'POST';
+      const idempotencyKey = `draft_${draft.id}_${Date.now()}`;
       
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey
         },
         credentials: 'include',
         body: JSON.stringify({
           title: draft.title,
-          data: draft.data,
-          metadata: draft.metadata,
+          data: typeof draft.data === 'string' ? JSON.parse(draft.data) : draft.data,
+          metadata: typeof draft.metadata === 'string' ? JSON.parse(draft.metadata) : draft.metadata,
           status: 'saved' // Server uses 'saved' status
         })
       });
