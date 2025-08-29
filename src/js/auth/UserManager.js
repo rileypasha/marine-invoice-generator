@@ -24,9 +24,14 @@ export class UserManager {
     // First try to load from storage
     await this.loadUserFromStorage();
     
-    // If still not authenticated, auto-sign in test user (for development)
-    // But only if they didn't explicitly log out
-    if (!this.isAuthenticated() && explicitLogout !== 'true') {
+    // Only auto-sign in test user in development (localhost)
+    const isProduction = window.location.hostname !== 'localhost' && 
+                        window.location.hostname !== '127.0.0.1';
+    
+    // If still not authenticated, auto-sign in test user (for development ONLY)
+    // But only if they didn't explicitly log out and we're not in production
+    if (!this.isAuthenticated() && explicitLogout !== 'true' && !isProduction) {
+      console.log('🧪 Development mode - attempting auto-login');
       await this.autoSignInTestUser();
     }
   }
@@ -91,14 +96,18 @@ export class UserManager {
             });
             
             if (!response.ok) {
-              // No server session, try to create one
-              console.log('📌 No server session found, attempting to recreate...');
+              // No server session exists
+              // This is expected on initial page load if user hasn't logged in
               
-              // If this is the test user, use known credentials
-              if (userData.email === 'test@marinegroup.com') {
+              // Only try to recreate session for test user in development
+              const isProduction = window.location.hostname !== 'localhost' && 
+                                  window.location.hostname !== '127.0.0.1';
+              
+              if (userData.email === 'test@marinegroup.com' && !isProduction) {
+                console.log('📌 No server session found for test user, attempting to recreate...');
                 const serverAuth = await this.serverSignIn(userData.email, 'password123');
                 if (serverAuth.success) {
-                  console.log('✅ Server session recreated for stored user');
+                  console.log('✅ Server session recreated for test user');
                 } else {
                   // Even test user failed - clear everything
                   console.warn('⚠️ Could not recreate server session for test user - clearing local session');
@@ -108,9 +117,8 @@ export class UserManager {
                   return;
                 }
               } else {
-                console.warn('⚠️ Cannot recreate server session - clearing local session and requiring login');
-                // CRITICAL: Clear local session to force re-authentication
-                // Otherwise the user appears logged in but all API calls fail
+                // Not test user or in production - clear local session silently
+                // This is expected behavior when session expires
                 this.clearLocalSession();
                 this.currentUser = null;
                 this.notify();
@@ -120,7 +128,11 @@ export class UserManager {
               console.log('✅ Valid server session exists');
             }
           } catch (err) {
-            console.warn('Could not verify server session:', err);
+            // Network error or other issue - clear session silently
+            this.clearLocalSession();
+            this.currentUser = null;
+            this.notify();
+            return;
           }
           
           this.notify();
