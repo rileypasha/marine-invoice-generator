@@ -524,18 +524,27 @@ class MasterDashboard {
     }
     
     showDetailModal(invoice) {
-        // Remove any nuclear hide styles first
-        const hideStyle = document.getElementById('absolute-modal-hide');
-        if (hideStyle) {
-            hideStyle.remove();
-        }
-        const forceHideStyle = document.getElementById('modal-force-hide');
-        if (forceHideStyle) {
-            forceHideStyle.remove();
-        }
+        // Set flag that modal is intentionally being opened
+        this.modalIsIntentionallyOpen = true;
+        
+        // Remove ALL hide styles that might be blocking the modal
+        const hideStyles = ['absolute-modal-hide', 'modal-force-hide', 'permanent-modal-hide'];
+        hideStyles.forEach(id => {
+            const style = document.getElementById(id);
+            if (style) {
+                style.remove();
+                console.log(`🧹 Removed ${id} style`);
+            }
+        });
         
         const modal = document.getElementById('detailModal');
         const modalBody = document.getElementById('modalBody');
+        
+        // Clear any inline styles that might be hiding it
+        if (modal) {
+            modal.removeAttribute('style');
+            modal.style.display = 'none'; // Start with none, will set to flex later
+        }
         
         // Defensive checks
         if (!modal || !modalBody) {
@@ -1328,14 +1337,17 @@ class MasterDashboard {
             return;
         }
         
-        // Remove any force-hide styles first
-        const hideStyle = document.getElementById('modal-force-hide');
-        if (hideStyle) {
-            hideStyle.remove();
-        }
+        // Remove ANY styles that might be hiding the modal
+        const hideStyles = ['absolute-modal-hide', 'modal-force-hide', 'permanent-modal-hide'];
+        hideStyles.forEach(id => {
+            const style = document.getElementById(id);
+            if (style) style.remove();
+        });
         
-        // Simple, direct approach to show the modal
-        modal.style.display = 'flex';
+        // Clear all inline styles and set fresh display
+        modal.removeAttribute('style');
+        modal.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important;';
+        modal.classList.add('active');
         console.log('✅ Modal displayed with flex');
         
         // Log what's inside the modal
@@ -1354,8 +1366,9 @@ class MasterDashboard {
         console.log('🔐 Closing modal...');
         const modal = document.getElementById('detailModal');
         if (modal) {
-            // Set a flag to prevent any re-display
+            // Set flags
             this.modalClosing = true;
+            this.modalIsIntentionallyOpen = false;
             
             // Method 1: Direct style manipulation
             modal.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important;';
@@ -1497,19 +1510,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Make globally accessible for debugging
     window.masterDashboard = dashboard;
     
-    // ABSOLUTE NUCLEAR OPTION - Hide modal on page load no matter what
+    // Check if modal is incorrectly shown on page load
     setTimeout(() => {
         const modal = document.getElementById('detailModal');
-        if (modal) {
-            console.log('🚨 NUCLEAR: Force hiding modal on page load');
-            modal.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; position: fixed !important; left: -9999px !important; top: -9999px !important;';
-            modal.className = '';
-            
-            // Also inject a style to keep it hidden
-            const style = document.createElement('style');
-            style.id = 'absolute-modal-hide';
-            style.textContent = '#detailModal { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }';
-            document.head.appendChild(style);
+        if (modal && !dashboard.modalIsIntentionallyOpen) {
+            const computedStyle = window.getComputedStyle(modal);
+            if (computedStyle.display !== 'none') {
+                console.log('🔧 Modal was unintentionally visible on page load, hiding it');
+                modal.style.display = 'none';
+                modal.classList.remove('active', 'show');
+            }
         }
     }, 100);
     
