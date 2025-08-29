@@ -519,22 +519,40 @@ class MasterDashboard {
         console.log('📊 Invoice data structure:', {
             hasId: !!invoice.id,
             hasStatus: !!invoice.status,
+            hasData: !!invoice.data,
             hasParsedData: !!invoice.parsedData,
             hasVesselName: !!invoice.vesselName,
             hasCustomerName: !!invoice.customerName,
-            parsedDataKeys: invoice.parsedData ? Object.keys(invoice.parsedData) : []
+            dataType: typeof invoice.data,
+            parsedDataType: typeof invoice.parsedData,
+            dataKeys: invoice.data && typeof invoice.data === 'object' ? Object.keys(invoice.data) : [],
+            parsedDataKeys: invoice.parsedData && typeof invoice.parsedData === 'object' ? Object.keys(invoice.parsedData) : []
         });
         
         // Lock body scroll when modal opens
         document.body.classList.add('modal-open');
         
-        // Parse invoice data - check if we have the actual data structure
-        const invoiceData = invoice.parsedData || {};
+        // Parse invoice data - check multiple possible data locations
+        // Backend might send data in different formats depending on the query
+        const invoiceData = invoice.parsedData || invoice.data || {};
+        
+        // Ensure invoiceData is an object (might be a string that needs parsing)
+        let parsedInvoiceData = {};
+        if (typeof invoiceData === 'string') {
+            try {
+                parsedInvoiceData = JSON.parse(invoiceData);
+            } catch (e) {
+                console.error('Failed to parse invoice data:', e);
+                parsedInvoiceData = {};
+            }
+        } else {
+            parsedInvoiceData = invoiceData;
+        }
         
         // Extract the actual vessel and customer info from the parsed data
-        const vessel = invoiceData.vessel || {};
-        const customer = invoiceData.customer || {};
-        const scope = invoiceData.scope || {};
+        const vessel = parsedInvoiceData.vessel || {};
+        const customer = parsedInvoiceData.customer || {};
+        const scope = parsedInvoiceData.scope || {};
         const lineItems = scope.lineItems || [];
         
         // Check if invoice has changes

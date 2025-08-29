@@ -551,10 +551,31 @@ router.get('/invoices/:id', requireMaster, async (req, res) => {
     // Parse the JSON data field if it exists
     let invoiceData = {};
     try {
-      invoiceData = invoice.data ? JSON.parse(invoice.data) : {};
+      if (invoice.data) {
+        // Handle both string and object formats
+        invoiceData = typeof invoice.data === 'string' 
+          ? JSON.parse(invoice.data) 
+          : invoice.data;
+      }
     } catch (e) {
       logger.warn({
         event: 'INVOICE_DATA_PARSE_ERROR',
+        invoiceId: id,
+        error: e.message
+      });
+    }
+
+    // Parse metadata field as well
+    let metadata = {};
+    try {
+      if (invoice.metadata) {
+        metadata = typeof invoice.metadata === 'string'
+          ? JSON.parse(invoice.metadata)
+          : invoice.metadata;
+      }
+    } catch (e) {
+      logger.warn({
+        event: 'INVOICE_METADATA_PARSE_ERROR',
         invoiceId: id,
         error: e.message
       });
@@ -571,12 +592,14 @@ router.get('/invoices/:id', requireMaster, async (req, res) => {
     // Ensure response structure with all required fields
     const responseData = {
       ...invoice,
-      parsedData: invoiceData || {},
+      data: invoiceData || {}, // Send parsed data as 'data'
+      parsedData: invoiceData || {}, // Also send as 'parsedData' for backwards compatibility
+      metadata: metadata || {},
       // Ensure critical fields exist for frontend
       id: invoice.id,
       status: invoice.status || 'unknown',
-      vesselName: invoice.vesselName || 'N/A',
-      customerName: invoice.customerName || 'N/A',
+      vesselName: invoice.vesselName || invoiceData?.vessel?.name || 'N/A',
+      customerName: invoice.customerName || invoiceData?.customer?.customerName || 'N/A',
       total: invoice.total || 0,
       savedAt: invoice.savedAt,
       submittedAt: invoice.submittedAt
