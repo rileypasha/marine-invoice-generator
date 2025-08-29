@@ -595,20 +595,23 @@ body.modal-open {
 }
 
 .invoice-detail-panel {
-    position: relative; /* Changed from fixed to relative since parent centers it */
+    position: relative;
     width: 90%;
     max-width: 1200px;
     max-height: 90vh;
     height: 90vh;
-    background: #1a1a1a; /* Direct color instead of var */
+    background: #1a1a1a !important;
     border-radius: 16px;
     border: 1px solid #333;
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.9);
     display: grid;
     grid-template-rows: auto 1fr auto;
     overflow: hidden;
-    margin: 0 auto; /* Center horizontally */
-    z-index: 10000; /* Ensure it's on top */
+    margin: 0 auto;
+    z-index: 10000;
+    /* Ensure panel is visible */
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 @keyframes modalSlideIn {
@@ -691,11 +694,15 @@ body.modal-open {
     color: #ffffff !important;
     scrollbar-width: thin;
     scrollbar-color: #4a9eff #2a2a2a;
+    min-height: 400px;
+    /* Ensure content area takes space */
+    flex: 1;
+    display: block !important;
 }
 
 /* Ensure all text in modal is visible */
 .invoice-detail-content * {
-    color: inherit;
+    color: inherit !important;
 }
 
 /* Custom scrollbar for modal content */

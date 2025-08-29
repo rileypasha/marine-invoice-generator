@@ -1348,16 +1348,27 @@ class MasterDashboard {
         // Step 3: Verify it worked
         setTimeout(() => {
             const computed = window.getComputedStyle(modal);
+            const modalBody = modal.querySelector('#modalBody');
+            const rect = modal.getBoundingClientRect();
+            
             console.log('✅ MODAL DISPLAY RESULT:', {
                 display: computed.display,
                 visibility: computed.visibility,
                 opacity: computed.opacity,
                 zIndex: computed.zIndex,
-                isVisible: modal.offsetParent !== null
+                position: computed.position,
+                width: rect.width,
+                height: rect.height,
+                bodyHasContent: modalBody ? modalBody.innerHTML.length > 0 : false,
+                bodyHeight: modalBody ? modalBody.offsetHeight : 0
             });
             
             if (computed.display === 'none') {
                 console.error('❌ MODAL STILL HIDDEN - Something is overriding our styles!');
+            } else if (modalBody && modalBody.innerHTML.length > 0 && modalBody.offsetHeight === 0) {
+                console.error('❌ MODAL BODY HAS NO HEIGHT - Content may be hidden!');
+                // Force the modal body to have height
+                modalBody.style.minHeight = '400px';
             }
         }, 10);
         
@@ -1491,18 +1502,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Make globally accessible for debugging
     window.masterDashboard = dashboard;
     
-    // Check if modal is incorrectly shown on page load
-    setTimeout(() => {
-        const modal = document.getElementById('detailModal');
-        if (modal && !dashboard.modalIsIntentionallyOpen) {
-            const computedStyle = window.getComputedStyle(modal);
-            if (computedStyle.display !== 'none') {
-                console.log('🔧 Modal was unintentionally visible on page load, hiding it');
-                modal.style.display = 'none';
-                modal.classList.remove('active', 'show');
-            }
+    // Ensure modal is hidden on page load
+    const modal = document.getElementById('detailModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active', 'show');
+        // Clear any content that might be there
+        const modalBody = document.getElementById('modalBody');
+        if (modalBody) {
+            modalBody.innerHTML = '';
         }
-    }, 100);
+    }
     
     // Add console helper for testing
     console.log('🔧 Debug: To test modal display, run: window.masterDashboard.testModal()');
