@@ -330,10 +330,7 @@ export class Sidebar {
       window.app.state.state = invoice.data;
       window.app.state.notify();
       
-      // Set this as the saved state to prevent false unsaved changes detection
-      this.invoiceStorage.setSavedState(invoice.data);
-      
-      // Update form components
+      // Update form components first
       if (window.app.vesselForm) {
         window.app.vesselForm.populate(invoice.data.vessel);
       }
@@ -343,6 +340,14 @@ export class Sidebar {
       if (window.app.scopeForm) {
         window.app.scopeForm.populate(invoice.data.scope);
       }
+      
+      // Set the saved state AFTER all forms have been populated and change events have fired
+      // This ensures we capture the final state after any form-triggered updates
+      setTimeout(() => {
+        const finalState = window.app.state.getState();
+        this.invoiceStorage.setSavedState(finalState);
+        console.log('✅ Set saved state AFTER form population complete');
+      }, 50); // Give time for all form updates to complete
       
       console.log('Loaded invoice:', invoice.title);
     }

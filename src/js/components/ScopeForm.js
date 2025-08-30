@@ -460,19 +460,27 @@ export class ScopeForm {
       setTimeout(() => {
         const row = document.querySelector(`[data-row="${item.id}"]`);
         if (row) {
-          row.querySelector('.job-type-select').value = item.jobType;
-          row.querySelector('.job-type-select').dispatchEvent(new Event('change'));
-          row.querySelector('.item-type-select').value = item.itemType;
-          row.querySelector('.item-type-select').dispatchEvent(new Event('change'));
+          // Set values first, then trigger change events to ensure proper field visibility
+          row.querySelector('.job-type-select').value = item.jobType || '';
+          row.querySelector('.item-type-select').value = item.itemType || '';
+          
+          // Now trigger change events to set up field visibility - but only if we have values
+          if (item.jobType) {
+            row.querySelector('.job-type-select').dispatchEvent(new Event('change'));
+          }
+          if (item.itemType) {
+            row.querySelector('.item-type-select').dispatchEvent(new Event('change'));
+          }
+          
           const costInput = row.querySelector('.manual-cost-input');
           if (item.manualCost) {
             costInput.value = formatCurrencyInput(item.manualCost);
           } else {
             costInput.value = '';
           }
-          row.querySelector('.labor-hours-input').value = item.laborHours;
-          row.querySelector('.ot-hours-input').value = item.otHours;
-          row.querySelector('.description-input').value = item.description;
+          row.querySelector('.labor-hours-input').value = item.laborHours || '';
+          row.querySelector('.ot-hours-input').value = item.otHours || '';
+          row.querySelector('.description-input').value = item.description || '';
           
           // Update the item header with the description
           const itemDescriptionSpan = row.querySelector('.item-description');
