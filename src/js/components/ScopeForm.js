@@ -7,6 +7,12 @@ export class ScopeForm {
     this.state = state;
     this.initElements();
     this.attachListeners();
+    
+    // Subscribe to state changes to automatically update line items
+    this.state.subscribe(() => {
+      console.log('🔄 ScopeForm received state update, checking for line item changes...');
+      this.updateLineItemsFromState();
+    });
   }
   
   // Validation functions
@@ -447,6 +453,81 @@ export class ScopeForm {
   
   clearLineItems() {
     this.lineItemsList.innerHTML = '';
+  }
+  
+  // Update displayed line items to match the current state
+  updateLineItemsFromState() {
+    const currentState = this.state.getState();
+    const stateLineItems = currentState.scope.lineItems || [];
+    
+    // Get currently displayed line items
+    const displayedCards = Array.from(document.querySelectorAll('.line-item-card[data-row]'));
+    const displayedIds = displayedCards.map(card => parseInt(card.getAttribute('data-row')));
+    
+    console.log('📋 State line items:', stateLineItems.map(item => ({ id: item.id, jobType: item.jobType })));
+    console.log('📋 Displayed items:', displayedIds);
+    
+    // Add missing line items from state
+    stateLineItems.forEach(item => {
+      if (!displayedIds.includes(item.id)) {
+        console.log('➕ Adding missing line item to display:', item.id, item.jobType);
+        this.renderLineItem(item.id);
+        
+        // Populate the newly added line item with its data
+        setTimeout(() => {
+          const row = document.querySelector(`[data-row="${item.id}"]`);
+          if (row) {
+            console.log('📝 Populating newly added line item:', item.id);
+            this.populateLineItem(row, item);
+          }
+        }, 10);
+      }
+    });
+    
+    // Remove line items that are no longer in state
+    const stateIds = stateLineItems.map(item => item.id);
+    displayedCards.forEach(card => {
+      const displayedId = parseInt(card.getAttribute('data-row'));
+      if (!stateIds.includes(displayedId)) {
+        console.log('➖ Removing line item from display:', displayedId);
+        card.remove();
+      }
+    });
+  }
+  
+  // Helper method to populate a single line item
+  populateLineItem(row, item) {
+    const jobTypeSelect = row.querySelector('.job-type-select');
+    const itemTypeSelect = row.querySelector('.item-type-select');
+    
+    // Set values
+    jobTypeSelect.value = item.jobType || '';
+    itemTypeSelect.value = item.itemType || '';
+    
+    // Set other fields
+    const costInput = row.querySelector('.manual-cost-input');
+    if (item.manualCost) {
+      costInput.value = formatCurrencyInput(item.manualCost);
+    } else {
+      costInput.value = '';
+    }
+    row.querySelector('.labor-hours-input').value = item.laborHours || '';
+    row.querySelector('.ot-hours-input').value = item.otHours || '';
+    row.querySelector('.description-input').value = item.description || '';
+    
+    // Trigger change events to set up field visibility
+    if (item.jobType) {
+      jobTypeSelect.dispatchEvent(new Event('change'));
+    }
+    if (item.itemType) {
+      itemTypeSelect.dispatchEvent(new Event('change'));
+    }
+    
+    // Update the item header with the description
+    const itemDescriptionSpan = row.querySelector('.item-description');
+    if (itemDescriptionSpan && item.description) {
+      itemDescriptionSpan.textContent = `: ${item.description}`;
+    }
   }
   
   populate(scopeData) {
