@@ -1490,6 +1490,35 @@ class MasterDashboard {
         this.currentPage = 1;
         this.loadInvoices();
     }
+
+    async logout() {
+        try {
+            const response = await fetch('/api/logout', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                // Clear session storage
+                sessionStorage.clear();
+                localStorage.removeItem('userEmail');
+                
+                // Redirect to login page
+                window.location.href = '/master-login.html';
+            } else {
+                throw new Error('Logout failed');
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Even if logout fails on server, clear local data and redirect
+            sessionStorage.clear();
+            localStorage.removeItem('userEmail');
+            window.location.href = '/master-login.html';
+        }
+    }
     
     updatePagination() {
         document.getElementById('currentPage').textContent = this.currentPage;
