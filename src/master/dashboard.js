@@ -1493,7 +1493,7 @@ class MasterDashboard {
 
     async logout() {
         try {
-            const response = await fetch('/api/logout', {
+            const response = await fetch('/api/auth/logout', {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -1502,21 +1502,29 @@ class MasterDashboard {
             });
 
             if (response.ok) {
-                // Clear session storage
+                console.log('Logout successful, clearing storage and redirecting...');
+                // Clear all storage
                 sessionStorage.clear();
-                localStorage.removeItem('userEmail');
+                localStorage.clear();
                 
-                // Redirect to login page
-                window.location.href = '/master-login.html';
+                // Force redirect after slight delay to ensure cleanup
+                setTimeout(() => {
+                    window.location.replace('/master-login.html');
+                }, 100);
             } else {
+                console.warn('Logout response not ok:', response.status);
                 throw new Error('Logout failed');
             }
         } catch (error) {
             console.error('Logout error:', error);
             // Even if logout fails on server, clear local data and redirect
             sessionStorage.clear();
-            localStorage.removeItem('userEmail');
-            window.location.href = '/master-login.html';
+            localStorage.clear();
+            
+            // Force redirect after cleanup
+            setTimeout(() => {
+                window.location.replace('/master-login.html');
+            }, 100);
         }
     }
     
