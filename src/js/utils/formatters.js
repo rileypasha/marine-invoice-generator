@@ -12,7 +12,9 @@ export function formatPercentage(value) {
 }
 
 export function formatPhoneNumber(phone) {
-  const cleaned = phone.replace(/\D/g, '');
+  // Ensure phone is a string
+  const phoneString = phone != null ? String(phone) : '';
+  const cleaned = phoneString.replace(/\D/g, '');
   
   if (cleaned.length === 0) {
     return '';
@@ -42,8 +44,11 @@ export function parseNumber(value) {
 }
 
 export function formatCurrencyInput(value) {
+  // Ensure value is a string
+  const stringValue = value != null ? String(value) : '';
+  
   // Remove any non-digit characters except decimal point
-  const cleanedValue = value.replace(/[^\d.]/g, '');
+  const cleanedValue = stringValue.replace(/[^\d.]/g, '');
   
   // Handle empty or invalid input
   if (!cleanedValue || cleanedValue === '.') {

@@ -189,7 +189,9 @@ function formatPercentage(value) {
 }
 
 function formatPhoneNumber(phone) {
-  const cleaned = phone.replace(/\D/g, '');
+  // Ensure phone is a string
+  const phoneString = phone != null ? String(phone) : '';
+  const cleaned = phoneString.replace(/\D/g, '');
   
   if (cleaned.length === 0) {
     return '';
