@@ -72,6 +72,9 @@ export class InvoiceStorage {
     
     // Track this as the saved state
     this.lastSavedState = JSON.parse(JSON.stringify(invoiceData));
+    console.log('💾 saveInvoice: Set lastSavedState - Stack trace:');
+    console.trace();
+    console.log('💾 saveInvoice: Data:', JSON.stringify(this.lastSavedState, null, 2));
     
     // Save to server
     try {
@@ -290,6 +293,11 @@ export class InvoiceStorage {
     // Track this as the saved state (for manual drafts, not auto-saves)
     if (title && !title.includes('Auto-Save')) {
       this.lastSavedState = JSON.parse(JSON.stringify(invoiceData));
+      console.log('💾 saveDraft: Set lastSavedState - Stack trace:');
+      console.trace();
+      console.log('💾 saveDraft: Data:', JSON.stringify(this.lastSavedState, null, 2));
+    } else {
+      console.log('💾 saveDraft: Skipped setting lastSavedState (auto-save or no title), title:', title);
     }
     
     // Save to server (non-blocking)
@@ -633,18 +641,50 @@ export class InvoiceStorage {
   }
 
   hasUnsavedChanges(currentState) {
+    console.log('🚨 hasUnsavedChanges called! Stack trace:');
+    console.trace();
+    
     // If there's no content, no unsaved changes
     if (!this.hasContent(currentState)) {
+      console.log('🔍 hasUnsavedChanges: No content found');
       return false;
     }
 
     // If nothing was ever saved, then any content is unsaved
     if (!this.lastSavedState) {
+      console.log('🔍 hasUnsavedChanges: No saved state exists, content is unsaved');
       return true;
     }
 
     // Deep compare current state with last saved state
-    return !this.deepEqual(currentState, this.lastSavedState);
+    const hasChanges = !this.deepEqual(currentState, this.lastSavedState);
+    console.log('🔍 hasUnsavedChanges: Deep comparison result =', hasChanges);
+    
+    if (hasChanges) {
+      console.log('🔍 DETAILED COMPARISON:');
+      console.log('🔍 Current state keys:', Object.keys(currentState));
+      console.log('🔍 Last saved state keys:', Object.keys(this.lastSavedState));
+      
+      // Check each top-level key
+      for (let key of Object.keys(currentState)) {
+        const currentValue = currentState[key];
+        const savedValue = this.lastSavedState[key];
+        if (!this.deepEqual(currentValue, savedValue)) {
+          console.log(`🔍 DIFFERENCE in key "${key}":`);
+          console.log('🔍   Current:', JSON.stringify(currentValue, null, 2));
+          console.log('🔍   Saved:', JSON.stringify(savedValue, null, 2));
+        }
+      }
+      
+      // Check for keys only in saved state
+      for (let key of Object.keys(this.lastSavedState)) {
+        if (!(key in currentState)) {
+          console.log(`🔍 KEY MISSING from current state: "${key}"`);
+          console.log('🔍   Saved value:', JSON.stringify(this.lastSavedState[key], null, 2));
+        }
+      }
+    }
+    return hasChanges;
   }
 
   deepEqual(obj1, obj2) {
@@ -672,11 +712,16 @@ export class InvoiceStorage {
   // Call this when loading an existing invoice to set the saved state
   setSavedState(invoiceData) {
     this.lastSavedState = JSON.parse(JSON.stringify(invoiceData));
+    console.log('🔄 setSavedState called - Stack trace:');
+    console.trace();
+    console.log('🔄 setSavedState data:', JSON.stringify(this.lastSavedState, null, 2));
   }
 
   // Clear saved state (call when creating new invoice)
   clearSavedState() {
     this.lastSavedState = null;
+    console.log('🔄 clearSavedState called - Stack trace:');
+    console.trace();
   }
   
   // Clear failed saves queue (useful for resetting)
