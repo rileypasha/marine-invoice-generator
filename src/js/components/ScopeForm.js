@@ -9,9 +9,12 @@ export class ScopeForm {
     this.attachListeners();
     
     // Subscribe to state changes to automatically update line items
+    this.isUpdatingFromState = false; // Prevent infinite loops
     this.state.subscribe(() => {
-      console.log('🔄 ScopeForm received state update, checking for line item changes...');
-      this.updateLineItemsFromState();
+      if (!this.isUpdatingFromState) {
+        console.log('🔄 ScopeForm received state update, checking for line item changes...');
+        this.updateLineItemsFromState();
+      }
     });
   }
   
@@ -457,6 +460,8 @@ export class ScopeForm {
   
   // Update displayed line items to match the current state
   updateLineItemsFromState() {
+    this.isUpdatingFromState = true; // Prevent recursive calls
+    
     const currentState = this.state.getState();
     const stateLineItems = currentState.scope.lineItems || [];
     
@@ -493,6 +498,8 @@ export class ScopeForm {
         card.remove();
       }
     });
+    
+    this.isUpdatingFromState = false; // Reset flag
   }
   
   // Helper method to populate a single line item
@@ -500,7 +507,7 @@ export class ScopeForm {
     const jobTypeSelect = row.querySelector('.job-type-select');
     const itemTypeSelect = row.querySelector('.item-type-select');
     
-    // Set values
+    // Set values first
     jobTypeSelect.value = item.jobType || '';
     itemTypeSelect.value = item.itemType || '';
     
@@ -516,10 +523,11 @@ export class ScopeForm {
     row.querySelector('.description-input').value = item.description || '';
     
     // Trigger change events to set up field visibility
+    // For clearance fees and other service types, this will show the cost field
     if (item.jobType) {
       jobTypeSelect.dispatchEvent(new Event('change'));
     }
-    if (item.itemType) {
+    if (item.itemType && item.jobType === 'Manual Entry') {
       itemTypeSelect.dispatchEvent(new Event('change'));
     }
     
