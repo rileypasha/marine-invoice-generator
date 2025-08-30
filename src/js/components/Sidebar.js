@@ -310,9 +310,9 @@ export class Sidebar {
     // Check for unsaved changes first
     if (window.app && window.app.invoiceStorage) {
       const currentState = window.app.state.getState();
-      const hasContent = window.app.invoiceStorage.hasContent(currentState);
+      const hasUnsavedChanges = window.app.invoiceStorage.hasUnsavedChanges(currentState);
       
-      if (hasContent) {
+      if (hasUnsavedChanges) {
         const confirmed = await window.app.promptModal.showConfirm(
           'Warning',
           'You have unsaved changes. Continue without saving?'
@@ -329,6 +329,9 @@ export class Sidebar {
       // Load invoice data into the app state
       window.app.state.state = invoice.data;
       window.app.state.notify();
+      
+      // Set this as the saved state to prevent false unsaved changes detection
+      this.invoiceStorage.setSavedState(invoice.data);
       
       // Update form components
       if (window.app.vesselForm) {
@@ -364,9 +367,9 @@ export class Sidebar {
     // Check for unsaved changes first
     if (window.app && window.app.invoiceStorage) {
       const currentState = window.app.state.getState();
-      const hasContent = window.app.invoiceStorage.hasContent(currentState);
+      const hasUnsavedChanges = window.app.invoiceStorage.hasUnsavedChanges(currentState);
       
-      if (hasContent) {
+      if (hasUnsavedChanges) {
         const confirmed = await window.app.promptModal.showConfirm(
           'Warning',
           'You have unsaved changes. Continue without saving?'

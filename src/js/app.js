@@ -459,9 +459,9 @@ InvoiceApp.prototype.createNewInvoice = function() {
   
   // Check if there's unsaved content
   const currentState = this.state.getState();
-  const hasContent = this.invoiceStorage.hasContent(currentState);
+  const hasUnsavedChanges = this.invoiceStorage.hasUnsavedChanges(currentState);
   
-  if (hasContent) {
+  if (hasUnsavedChanges) {
     if (!confirm('Create a new invoice? Any unsaved changes will be lost.')) {
       return;
     }
@@ -469,6 +469,9 @@ InvoiceApp.prototype.createNewInvoice = function() {
   
   // Reset the state
   this.state.reset();
+  
+  // Clear saved state since we're creating a new invoice
+  this.invoiceStorage.clearSavedState();
   
   // Clear all form fields
   if (this.vesselForm) {

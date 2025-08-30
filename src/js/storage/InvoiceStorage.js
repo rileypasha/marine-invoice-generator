@@ -9,6 +9,7 @@ export class InvoiceStorage {
     this.serverInvoiceMap = new Map(); // Map local IDs to server IDs
     this.authFailed = false; // Track auth failures to prevent retry storms
     this.onAuthRequired = null; // Callback for auth required events
+    this.lastSavedState = null; // Track the last saved state to detect unsaved changes
     
     this.setupAutoSave();
     
@@ -68,6 +69,9 @@ export class InvoiceStorage {
     const invoices = this.getAllInvoices();
     invoices.push(invoice);
     localStorage.setItem(this.storageKey, JSON.stringify(invoices));
+    
+    // Track this as the saved state
+    this.lastSavedState = JSON.parse(JSON.stringify(invoiceData));
     
     // Save to server
     try {
@@ -282,6 +286,11 @@ export class InvoiceStorage {
     
     // Save to localStorage first
     localStorage.setItem(this.draftsKey, JSON.stringify(drafts));
+    
+    // Track this as the saved state (for manual drafts, not auto-saves)
+    if (title && !title.includes('Auto-Save')) {
+      this.lastSavedState = JSON.parse(JSON.stringify(invoiceData));
+    }
     
     // Save to server (non-blocking)
     this.saveDraftToServer(draft, serverId).then(serverInvoice => {
@@ -621,6 +630,53 @@ export class InvoiceStorage {
       invoiceData.customer?.customerName ||
       (invoiceData.scope?.lineItems && invoiceData.scope.lineItems.length > 0)
     );
+  }
+
+  hasUnsavedChanges(currentState) {
+    // If there's no content, no unsaved changes
+    if (!this.hasContent(currentState)) {
+      return false;
+    }
+
+    // If nothing was ever saved, then any content is unsaved
+    if (!this.lastSavedState) {
+      return true;
+    }
+
+    // Deep compare current state with last saved state
+    return !this.deepEqual(currentState, this.lastSavedState);
+  }
+
+  deepEqual(obj1, obj2) {
+    if (obj1 === obj2) return true;
+    
+    if (obj1 == null || obj2 == null) return obj1 === obj2;
+    
+    if (typeof obj1 !== typeof obj2) return false;
+    
+    if (typeof obj1 !== 'object') return obj1 === obj2;
+    
+    const keys1 = Object.keys(obj1);
+    const keys2 = Object.keys(obj2);
+    
+    if (keys1.length !== keys2.length) return false;
+    
+    for (let key of keys1) {
+      if (!keys2.includes(key)) return false;
+      if (!this.deepEqual(obj1[key], obj2[key])) return false;
+    }
+    
+    return true;
+  }
+
+  // Call this when loading an existing invoice to set the saved state
+  setSavedState(invoiceData) {
+    this.lastSavedState = JSON.parse(JSON.stringify(invoiceData));
+  }
+
+  // Clear saved state (call when creating new invoice)
+  clearSavedState() {
+    this.lastSavedState = null;
   }
   
   // Clear failed saves queue (useful for resetting)
