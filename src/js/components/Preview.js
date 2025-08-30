@@ -84,7 +84,15 @@ export class Preview {
       row.setAttribute('data-row', item.id);
       
       const cost = calculateLineItemCost(item);
-      const totalWithMarkup = applyMarkup(cost, scope.markupRate);
+      
+      // Skip markup for Labor items and Clearance Fee since they're fixed amounts
+      let totalWithMarkup;
+      if ((item.jobType === 'Manual Entry' && item.itemType === 'Labor') || 
+          item.jobType === 'Clearance Fee') {
+        totalWithMarkup = cost; // No markup for these items
+      } else {
+        totalWithMarkup = applyMarkup(cost, scope.markupRate);
+      }
       
       // Create service type display (hide "Manual Entry" text)
       let serviceTypeDisplay = item.jobType;
