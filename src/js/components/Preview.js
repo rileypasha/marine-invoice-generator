@@ -125,8 +125,8 @@ export class Preview {
         <td>${item.description}${laborInfo}</td>
         <td>${serviceTypeDisplay}</td>
         <td class="cost-cell">${formatCurrency(cost)}</td>
-        <td class="total-with-markup">${formatCurrency(totalWithMarkup)}</td>
         <td class="tax-cell">${formatCurrency(lineTax)}</td>
+        <td class="total-with-markup">${formatCurrency(totalWithMarkup)}</td>
       `;
       
       this.lineItemsContainer.appendChild(row);
