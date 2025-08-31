@@ -142,6 +142,7 @@
                                     <th>Type</th>
                                     <th>Cost</th>
                                     <th>Total</th>
+                                    <th class="tax-column">Tax</th>
                                 </tr>
                             </thead>
                             <tbody id="preview-line-items">
@@ -241,6 +242,24 @@
                                 <input type="number" class="ot-hours-input form-input" placeholder="0.0" min="0" step="0.5">
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Tax Configuration Section -->
+                <div class="tax-configuration-section">
+                    <div class="field-group tax-status-field">
+                        <label class="field-label">Tax Status</label>
+                        <select class="tax-status-select form-input">
+                            <option value="taxable">Taxable (8.75%)</option>
+                            <option value="non-taxable">Non-Taxable</option>
+                            <option value="exempt">Tax Exempt</option>
+                        </select>
+                    </div>
+                    
+                    <div class="field-group tax-rate-field" style="display: none;">
+                        <label class="field-label">Tax Rate (%)</label>
+                        <input type="number" class="tax-rate-input form-input" 
+                               min="0" max="100" step="0.01" value="8.75" placeholder="8.75">
                     </div>
                 </div>
 

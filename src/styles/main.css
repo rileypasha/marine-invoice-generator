@@ -251,6 +251,72 @@
   border: 1px solid var(--color-border);
 }
 
+/* Tax Configuration Section */
+.tax-configuration-section {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid rgba(74, 222, 128, 0.2);
+  background: rgba(74, 222, 128, 0.03);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+.tax-status-field {
+  flex: 1;
+  min-width: 150px;
+}
+
+.tax-rate-field {
+  flex: 0 0 120px;
+}
+
+.tax-status-select {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.tax-status-select:focus {
+  border-color: rgba(74, 222, 128, 0.6);
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
+}
+
+.tax-rate-input {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.tax-rate-input:focus {
+  border-color: rgba(74, 222, 128, 0.6);
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
+}
+
+/* Tax Configuration Labels */
+.tax-configuration-section .field-label {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-1);
+}
+
+/* Responsive Tax Configuration */
+@media (max-width: 768px) {
+  .tax-configuration-section {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .tax-rate-field {
+    flex: 1;
+  }
+}
+
 /* Description Field */
 .description-field {
   margin-top: var(--space-2);

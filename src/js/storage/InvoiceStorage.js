@@ -1,3 +1,5 @@
+import { TaxCalculator } from '../utils/taxCalculator.js';
+
 export class InvoiceStorage {
   constructor(userManager) {
     this.userManager = userManager;
@@ -10,6 +12,7 @@ export class InvoiceStorage {
     this.authFailed = false; // Track auth failures to prevent retry storms
     this.onAuthRequired = null; // Callback for auth required events
     this.lastSavedState = null; // Track the last saved state to detect unsaved changes
+    this.taxMigrationVersion = 1; // Version for tax data migration
     
     this.setupAutoSave();
     
@@ -28,6 +31,97 @@ export class InvoiceStorage {
         }
       });
     }
+    
+    // Run tax data migration on startup
+    this.migrateTaxData();
+  }
+  
+  /**
+   * Migrate tax data for existing invoices and drafts to use per-line tax configuration
+   */
+  migrateTaxData() {
+    const migrationKey = 'tax_migration_version';
+    const currentVersion = parseInt(localStorage.getItem(migrationKey) || '0');
+    
+    if (currentVersion >= this.taxMigrationVersion) {
+      console.log('📋 Tax data already migrated to version', currentVersion);
+      return;
+    }
+    
+    console.log('🔄 Starting tax data migration...');
+    
+    try {
+      // Migrate invoices
+      const invoices = this.getAllInvoices();
+      let invoicesMigrated = 0;
+      const migratedInvoices = invoices.map(invoice => {
+        if (this.migrateInvoiceTaxData(invoice)) {
+          invoicesMigrated++;
+        }
+        return invoice;
+      });
+      localStorage.setItem(this.storageKey, JSON.stringify(migratedInvoices));
+      
+      // Migrate drafts
+      const drafts = this.getAllDrafts();
+      let draftsMigrated = 0;
+      const migratedDrafts = drafts.map(draft => {
+        if (this.migrateInvoiceTaxData(draft)) {
+          draftsMigrated++;
+        }
+        return draft;
+      });
+      localStorage.setItem(this.draftsKey, JSON.stringify(migratedDrafts));
+      
+      // Update migration version
+      localStorage.setItem(migrationKey, this.taxMigrationVersion.toString());
+      
+      console.log(`✅ Tax data migration complete. Migrated ${invoicesMigrated} invoices and ${draftsMigrated} drafts`);
+    } catch (error) {
+      console.error('❌ Tax data migration failed:', error);
+    }
+  }
+  
+  /**
+   * Migrate a single invoice/draft to use per-line tax configuration
+   * @param {Object} invoice - Invoice or draft object
+   * @returns {boolean} - Whether migration was performed
+   */
+  migrateInvoiceTaxData(invoice) {
+    if (!invoice.data || !invoice.data.scope || !invoice.data.scope.lineItems) {
+      return false;
+    }
+    
+    let migrated = false;
+    const scopeIsTaxable = invoice.data.scope.isTaxable || false;
+    
+    // Migrate each line item
+    invoice.data.scope.lineItems = invoice.data.scope.lineItems.map(item => {
+      // Check if this line item already has per-line tax configuration
+      if ('taxStatus' in item && 'taxRate' in item) {
+        // Already migrated, just ensure tax amount is calculated
+        if (!('taxAmount' in item)) {
+          item.taxAmount = TaxCalculator.calculateLineTax(item, invoice.data.scope.markupRate || '2.5');
+          migrated = true;
+        }
+        return item;
+      }
+      
+      // Migrate legacy line item
+      const migratedItem = TaxCalculator.migrateLineItemTax(item, scopeIsTaxable);
+      migratedItem.taxAmount = TaxCalculator.calculateLineTax(migratedItem, invoice.data.scope.markupRate || '2.5');
+      migrated = true;
+      
+      return migratedItem;
+    });
+    
+    // Add migration marker
+    if (migrated) {
+      invoice.data._taxMigrated = true;
+      invoice.data._taxMigrationVersion = this.taxMigrationVersion;
+    }
+    
+    return migrated;
   }
   
   // Subscribe to storage changes
@@ -378,7 +472,46 @@ export class InvoiceStorage {
     const invoices = this.getAllInvoices();
     const drafts = this.getAllDrafts();
     
-    return invoices.find(inv => inv.id === id) || drafts.find(draft => draft.id === id);
+    const invoice = invoices.find(inv => inv.id === id) || drafts.find(draft => draft.id === id);
+    
+    if (invoice && invoice.data) {
+      // Ensure tax calculations are up to date after loading
+      this.validateAndRecalculateTaxes(invoice.data);
+    }
+    
+    return invoice;
+  }
+  
+  /**
+   * Validate and recalculate tax amounts for loaded invoice data
+   * @param {Object} invoiceData - Invoice data object
+   */
+  validateAndRecalculateTaxes(invoiceData) {
+    if (!invoiceData.scope || !invoiceData.scope.lineItems) {
+      return;
+    }
+    
+    let recalculated = false;
+    const markupRate = invoiceData.scope.markupRate || '2.5';
+    
+    invoiceData.scope.lineItems.forEach(item => {
+      if (!('taxStatus' in item) || !('taxRate' in item)) {
+        console.warn('Line item missing tax configuration:', item);
+        return;
+      }
+      
+      // Recalculate tax amount to ensure consistency
+      const calculatedTax = TaxCalculator.calculateLineTax(item, markupRate);
+      if (Math.abs((item.taxAmount || 0) - calculatedTax) > 0.01) {
+        console.log(`💰 Recalculating tax for item: ${item.description} (was: ${item.taxAmount}, now: ${calculatedTax})`);
+        item.taxAmount = calculatedTax;
+        recalculated = true;
+      }
+    });
+    
+    if (recalculated) {
+      console.log('🔄 Tax amounts recalculated for loaded invoice');
+    }
   }
   
   // Delete invoice/draft - Also deletes from server
@@ -619,17 +752,60 @@ export class InvoiceStorage {
   }
   
   calculateTotal(invoiceData) {
-    // Simple total calculation - this should match your actual calculation logic
     try {
       if (!invoiceData.scope?.lineItems) return 0;
       
-      let total = 0;
-      // Add up line items with markup, etc.
-      // This is a simplified version - use your actual calculation logic
-      return total;
-    } catch {
+      // Use TaxCalculator to get total with tax included
+      let subtotal = 0;
+      let totalTax = 0;
+      const markupRate = invoiceData.scope.markupRate || '2.5';
+      
+      invoiceData.scope.lineItems.forEach(item => {
+        // Calculate subtotal (base cost + markup if applicable)
+        const baseCost = this.calculateLineItemBaseCost(item);
+        if (TaxCalculator.isMarkupExempt(item)) {
+          subtotal += baseCost;
+        } else {
+          subtotal += baseCost * (1 + parseFloat(markupRate) / 100);
+        }
+        
+        // Add tax
+        totalTax += TaxCalculator.calculateLineTax(item, markupRate);
+      });
+      
+      return subtotal + totalTax;
+    } catch (error) {
+      console.error('Error calculating total:', error);
       return 0;
     }
+  }
+  
+  /**
+   * Calculate base cost for a line item
+   * @param {Object} item - Line item
+   * @returns {number} Base cost
+   */
+  calculateLineItemBaseCost(item) {
+    if (item.jobType === 'Clearance Fee') {
+      return parseFloat(item.manualCost) || 0;
+    }
+    
+    if (item.jobType === 'Manual Entry') {
+      if (item.itemType === 'Labor') {
+        const regularHours = parseFloat(item.laborHours) || 0;
+        const otHours = parseFloat(item.otHours) || 0;
+        return (regularHours * 100) + (otHours * 150);
+      }
+      return parseFloat(item.manualCost) || 0;
+    }
+    
+    if (item.jobType === 'Agent Services') {
+      const regularHours = parseFloat(item.laborHours) || 0;
+      const otHours = parseFloat(item.otHours) || 0;
+      return (regularHours * 100) + (otHours * 150);
+    }
+    
+    return parseFloat(item.manualCost) || 0;
   }
   
   hasContent(invoiceData) {

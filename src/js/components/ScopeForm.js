@@ -405,6 +405,54 @@ export class ScopeForm {
       this.updateValidationState();
     });
     
+    // Tax configuration event listeners
+    const taxStatusSelect = card.querySelector('.tax-status-select');
+    const taxRateField = card.querySelector('.tax-rate-field');
+    const taxRateInput = card.querySelector('.tax-rate-input');
+    
+    // Tax status change handler
+    taxStatusSelect.addEventListener('change', (e) => {
+      const taxStatus = e.target.value;
+      console.log(`💰 Tax status changed for item ${id}:`, taxStatus);
+      
+      // Update line item with new tax status
+      const updates = { taxStatus };
+      
+      // Set appropriate tax rate based on status
+      if (taxStatus === 'taxable') {
+        updates.taxRate = 0.0875; // 8.75%
+        taxRateInput.value = '8.75';
+      } else if (taxStatus === 'non-taxable' || taxStatus === 'exempt') {
+        updates.taxRate = 0;
+        taxRateInput.value = '0';
+      }
+      
+      this.state.updateLineItem(id, updates);
+      
+      // Show/hide tax rate field for future custom rates enhancement
+      if (taxStatus === 'custom') {
+        taxRateField.style.display = 'block';
+      } else {
+        taxRateField.style.display = 'none';
+      }
+      
+      this.updateValidationState();
+    });
+    
+    // Tax rate change handler (for future custom rates)
+    taxRateInput.addEventListener('input', (e) => {
+      const taxRatePercent = parseFloat(e.target.value) || 0;
+      const taxRate = taxRatePercent / 100; // Convert percentage to decimal
+      
+      console.log(`💰 Tax rate changed for item ${id}: ${taxRatePercent}% (${taxRate})`);
+      
+      if (taxRatePercent >= 0 && taxRatePercent <= 100) {
+        this.state.updateLineItem(id, { taxRate });
+      }
+      
+      this.updateValidationState();
+    });
+    
     removeBtn.addEventListener('click', () => {
       this.state.removeLineItem(id);
       card.remove();
@@ -523,6 +571,19 @@ export class ScopeForm {
     row.querySelector('.ot-hours-input').value = item.otHours || '';
     row.querySelector('.description-input').value = item.description || '';
     
+    // Set tax configuration fields
+    const taxStatusSelect = row.querySelector('.tax-status-select');
+    const taxRateInput = row.querySelector('.tax-rate-input');
+    
+    if (taxStatusSelect) {
+      taxStatusSelect.value = item.taxStatus || 'taxable';
+    }
+    
+    if (taxRateInput) {
+      const taxRatePercent = ((item.taxRate || 0.0875) * 100).toFixed(2);
+      taxRateInput.value = taxRatePercent;
+    }
+    
     // Trigger change events to set up field visibility
     // For clearance fees and other service types, this will show the cost field
     if (item.jobType) {
@@ -530,6 +591,11 @@ export class ScopeForm {
     }
     if (item.itemType && item.jobType === 'Manual Entry') {
       itemTypeSelect.dispatchEvent(new Event('change'));
+    }
+    
+    // Trigger tax status change to set up tax field visibility
+    if (taxStatusSelect) {
+      taxStatusSelect.dispatchEvent(new Event('change'));
     }
     
     // Update the item header with the description

@@ -1,5 +1,6 @@
 import { formatCurrency, formatPercentage, formatDate } from '../utils/formatters.js';
 import { calculateLineItemCost, calculateTotals, applyMarkup } from '../utils/calculations.js';
+import { TaxCalculator } from '../utils/taxCalculator.js';
 
 export class Preview {
   constructor(state, userManager) {
@@ -95,6 +96,9 @@ export class Preview {
         totalWithMarkup = applyMarkup(cost, scope.markupRate);
       }
       
+      // Calculate tax for this line item using the new tax system
+      const lineTax = TaxCalculator.calculateLineTax(item, scope.markupRate);
+      
       // Create service type display (hide "Manual Entry" text)
       let serviceTypeDisplay = item.jobType;
       if (item.jobType === 'Manual Entry') {
@@ -122,6 +126,7 @@ export class Preview {
         <td>${serviceTypeDisplay}</td>
         <td class="cost-cell">${formatCurrency(cost)}</td>
         <td class="total-with-markup">${formatCurrency(totalWithMarkup)}</td>
+        <td class="tax-cell">${formatCurrency(lineTax)}</td>
       `;
       
       this.lineItemsContainer.appendChild(row);
@@ -131,15 +136,16 @@ export class Preview {
   }
   
   updateTotals(state) {
-    // Calculate totals without adding clearance fee separately since it's now a line item
+    // Calculate totals using per-line tax system
     let subtotal = 0;
+    let totalTax = 0;
     let baseCost = 0;
     
     state.scope.lineItems.forEach(item => {
       const cost = calculateLineItemCost(item);
       baseCost += cost;
       
-      // Skip markup for Labor items, Agent Services, and Clearance Fee since they're already fixed amounts
+      // Calculate subtotal (existing logic)
       if ((item.jobType === 'Manual Entry' && item.itemType === 'Labor') || 
           item.jobType === 'Agent Services' ||
           item.jobType === 'Clearance Fee') {
@@ -147,22 +153,29 @@ export class Preview {
       } else {
         subtotal += applyMarkup(cost, state.scope.markupRate);
       }
+      
+      // Calculate tax per line item using new tax system
+      const lineTax = TaxCalculator.calculateLineTax(item, state.scope.markupRate);
+      totalTax += lineTax;
     });
     
     this.subtotal.textContent = formatCurrency(subtotal);
     
     // Hide clearance fee row since it's now a line item
-    const clearanceFeeRow = document.querySelector('.preview-clearance-fee').closest('.total-row');
+    const clearanceFeeRow = document.querySelector('.preview-clearance-fee');
     if (clearanceFeeRow) {
-      clearanceFeeRow.style.display = 'none';
+      const clearanceFeeRowElement = clearanceFeeRow.closest('.total-row');
+      if (clearanceFeeRowElement) {
+        clearanceFeeRowElement.style.display = 'none';
+      }
     }
     
-    const tax = state.scope.isTaxable ? subtotal * 0.0875 : 0;
-    const total = subtotal + tax;
+    // Update tax display using per-line tax totals
+    const total = subtotal + totalTax;
     
-    if (state.scope.isTaxable) {
+    if (totalTax > 0) {
       this.taxRow.style.display = 'flex';
-      this.taxAmount.textContent = formatCurrency(tax);
+      this.taxAmount.textContent = formatCurrency(totalTax);
     } else {
       this.taxRow.style.display = 'none';
     }
