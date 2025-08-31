@@ -99,12 +99,12 @@ export class Preview {
       // Calculate tax for this line item using the new tax system
       const lineTax = TaxCalculator.calculateLineTax(item, scope.markupRate);
       
-      // Create service type display (hide "Manual Entry" text)
-      let serviceTypeDisplay = item.jobType;
+      // Create service type display (show only itemType to avoid redundancy with Item column)
+      let serviceTypeDisplay = item.itemType || item.jobType || 'Service';
+      
+      // For Manual Entry, always show the itemType
       if (item.jobType === 'Manual Entry') {
         serviceTypeDisplay = item.itemType || 'Service';
-      } else if (item.itemType) {
-        serviceTypeDisplay += ` - ${item.itemType}`;
       }
       
       // Add labor hours info if it's a labor item or Agent Services
