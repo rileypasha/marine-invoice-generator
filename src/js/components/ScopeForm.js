@@ -14,6 +14,7 @@ export class ScopeForm {
       if (!this.isUpdatingFromState) {
         console.log('🔄 ScopeForm received state update, checking for line item changes...');
         this.updateLineItemsFromState();
+        this.updateValidationState();
       }
     });
   }
@@ -182,9 +183,9 @@ export class ScopeForm {
         return;
       }
       
-      const id = this.state.addLineItem();
-      this.renderLineItem(id);
-      this.updateValidationState();
+      // Just add to state - the subscription will handle rendering automatically
+      this.state.addLineItem();
+      // updateValidationState will be called by the state subscription
     });
   }
   
