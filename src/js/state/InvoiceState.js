@@ -1,4 +1,5 @@
 import { TaxCalculator, TaxValidator } from '../utils/taxCalculator.js';
+import { MarkupValidator } from '../utils/markupValidator.js';
 
 export class InvoiceState {
   constructor() {
@@ -76,6 +77,7 @@ export class InvoiceState {
   
   addLineItem(lineItem = {}) {
     const defaultTaxConfig = TaxCalculator.getDefaultTaxConfig(lineItem.jobType);
+    const defaultMarkupConfig = this.getDefaultMarkupConfig(lineItem.jobType);
     
     const newItem = {
       id: this.lineItemIdCounter++,
@@ -86,15 +88,41 @@ export class InvoiceState {
       otHours: '',
       description: '',
       ...defaultTaxConfig,
+      ...defaultMarkupConfig,
       ...lineItem
     };
     
-    // Calculate initial tax amount
-    newItem.taxAmount = TaxCalculator.calculateLineTax(newItem, this.state.scope.markupRate);
+    // Calculate initial tax amount using per-line markup
+    newItem.taxAmount = TaxCalculator.calculateLineTax(newItem, newItem.markupRate);
     
     this.state.scope.lineItems.push(newItem);
     this.notify();
     return newItem.id;
+  }
+  
+  /**
+   * Get default markup configuration for new line items
+   * @param {string} jobType - Job type for context-specific defaults
+   * @returns {Object} Default markup configuration
+   */
+  getDefaultMarkupConfig(jobType = null) {
+    // Check if this job type should be markup exempt
+    if (jobType === 'Agent Services' || 
+        (jobType === 'Manual Entry') || // Will be refined based on itemType
+        jobType === 'Clearance Fee') {
+      return {
+        markupType: 'exempt',
+        markupRate: '0',
+        isMarkupExempt: true
+      };
+    }
+    
+    // Default to current global markup rate for backward compatibility
+    return {
+      markupType: 'preset',
+      markupRate: this.state.scope.markupRate || '2.5',
+      isMarkupExempt: false
+    };
   }
   
   updateLineItem(id, updates) {
@@ -113,6 +141,31 @@ export class InvoiceState {
           }
         }
         
+        // Validate markup-related updates
+        if ('markupRate' in updates && updates.markupType === 'custom') {
+          const validation = MarkupValidator.validateCustomMarkup(updates.markupRate);
+          if (!validation.isValid) {
+            throw new Error(`Invalid markup rate: ${validation.errors.join(', ')}`);
+          }
+          updates.markupRate = String(validation.sanitizedValue);
+        }
+        
+        // Handle markup exemption logic for specific job types
+        if ('jobType' in updates || 'itemType' in updates) {
+          const item = this.state.scope.lineItems[index];
+          const newJobType = updates.jobType || item.jobType;
+          const newItemType = updates.itemType || item.itemType;
+          
+          // Auto-exempt certain combinations
+          if (newJobType === 'Agent Services' || 
+              newJobType === 'Clearance Fee' ||
+              (newJobType === 'Manual Entry' && newItemType === 'Labor')) {
+            updates.isMarkupExempt = true;
+            updates.markupType = 'exempt';
+            updates.markupRate = '0';
+          }
+        }
+        
         // Apply updates
         this.state.scope.lineItems[index] = {
           ...this.state.scope.lineItems[index],
@@ -121,19 +174,25 @@ export class InvoiceState {
         
         // Recalculate tax if tax-related fields or cost fields changed
         if ('taxStatus' in updates || 'taxRate' in updates || 
-            'manualCost' in updates || 'laborHours' in updates || 'otHours' in updates) {
+            'manualCost' in updates || 'laborHours' in updates || 'otHours' in updates ||
+            'markupRate' in updates || 'markupType' in updates || 'isMarkupExempt' in updates) {
           this.recalculateLineTax(id);
         }
         
         this.notify();
       } catch (error) {
-        console.error('Error updating line item tax:', error);
+        console.error('Error updating line item:', error);
         // Revert to safe defaults for tax fields
         if ('taxRate' in updates) {
           updates.taxRate = 0.0875; // Default to standard rate
         }
         if ('taxStatus' in updates) {
           updates.taxStatus = 'taxable'; // Default to taxable
+        }
+        // Revert to safe defaults for markup fields
+        if ('markupRate' in updates) {
+          updates.markupRate = '2.5'; // Default to standard rate
+          updates.markupType = 'preset';
         }
         
         // Apply safe updates
@@ -143,6 +202,9 @@ export class InvoiceState {
         };
         this.recalculateLineTax(id);
         this.notify();
+        
+        // Re-throw for UI error handling
+        throw error;
       }
     }
   }
@@ -161,8 +223,9 @@ export class InvoiceState {
   recalculateLineTax(id) {
     const item = this.state.scope.lineItems.find(item => item.id === id);
     if (item) {
-      item.taxAmount = TaxCalculator.calculateLineTax(item, this.state.scope.markupRate);
-      console.log(`💰 Recalculated tax for item ${id}: ${item.taxAmount}`);
+      // Use per-line markup rate for tax calculation
+      item.taxAmount = TaxCalculator.calculateLineTax(item, item.markupRate || '0');
+      console.log(`💰 Recalculated tax for item ${id}: ${item.taxAmount} (markup: ${item.markupRate}%)`);
     }
   }
   
@@ -173,7 +236,8 @@ export class InvoiceState {
   recalculateAllTaxes() {
     console.log('💰 Recalculating taxes for all line items...');
     this.state.scope.lineItems.forEach(item => {
-      item.taxAmount = TaxCalculator.calculateLineTax(item, this.state.scope.markupRate);
+      // Use per-line markup rate for tax calculation
+      item.taxAmount = TaxCalculator.calculateLineTax(item, item.markupRate || '0');
     });
     this.notify();
   }

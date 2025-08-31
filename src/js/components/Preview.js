@@ -1,5 +1,5 @@
 import { formatCurrency, formatPercentage, formatDate } from '../utils/formatters.js';
-import { calculateLineItemCost, calculateTotals, applyMarkup } from '../utils/calculations.js';
+import { calculateLineItemCost, calculateTotals, calculateLineItemTotal, applyMarkup } from '../utils/calculations.js';
 import { TaxCalculator } from '../utils/taxCalculator.js';
 
 export class Preview {
@@ -86,18 +86,11 @@ export class Preview {
       
       const cost = calculateLineItemCost(item);
       
-      // Skip markup for Labor items, Agent Services, and Clearance Fee since they're fixed amounts
-      let totalWithMarkup;
-      if ((item.jobType === 'Manual Entry' && item.itemType === 'Labor') || 
-          item.jobType === 'Agent Services' ||
-          item.jobType === 'Clearance Fee') {
-        totalWithMarkup = cost; // No markup for these items
-      } else {
-        totalWithMarkup = applyMarkup(cost, scope.markupRate);
-      }
+      // Calculate total using per-line markup configuration
+      const totalWithMarkup = calculateLineItemTotal(item);
       
-      // Calculate tax for this line item using the new tax system
-      const lineTax = TaxCalculator.calculateLineTax(item, scope.markupRate);
+      // Calculate tax for this line item using per-line markup system
+      const lineTax = TaxCalculator.calculateLineTax(item, item.markupRate || '0');
       
       // Create service type display (show only itemType to avoid redundancy with Item column)
       let serviceTypeDisplay = item.itemType || item.jobType || 'Service';
@@ -145,17 +138,12 @@ export class Preview {
       const cost = calculateLineItemCost(item);
       baseCost += cost;
       
-      // Calculate subtotal (existing logic)
-      if ((item.jobType === 'Manual Entry' && item.itemType === 'Labor') || 
-          item.jobType === 'Agent Services' ||
-          item.jobType === 'Clearance Fee') {
-        subtotal += cost; // Use cost directly without markup
-      } else {
-        subtotal += applyMarkup(cost, state.scope.markupRate);
-      }
+      // Calculate subtotal using per-line markup configuration
+      const lineTotal = calculateLineItemTotal(item);
+      subtotal += lineTotal;
       
-      // Calculate tax per line item using new tax system
-      const lineTax = TaxCalculator.calculateLineTax(item, state.scope.markupRate);
+      // Calculate tax per line item using per-line markup system
+      const lineTax = TaxCalculator.calculateLineTax(item, item.markupRate || '0');
       totalTax += lineTax;
     });
     

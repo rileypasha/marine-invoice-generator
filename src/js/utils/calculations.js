@@ -42,7 +42,92 @@ export function calculateLineItemCost(lineItem) {
   return parseNumber(manualCost);
 }
 
+/**
+ * Calculate total for individual line item with per-line markup
+ * @param {Object} lineItem - Line item object
+ * @returns {number} Total cost including markup (if applicable)
+ */
+export function calculateLineItemTotal(lineItem) {
+  const baseCost = calculateLineItemCost(lineItem);
+  
+  // Check if markup is exempt
+  if (lineItem.isMarkupExempt || isMarkupExempt(lineItem)) {
+    return baseCost;
+  }
+  
+  const markupRate = parseNumber(lineItem.markupRate || '0');
+  return applyMarkup(baseCost, markupRate);
+}
+
+/**
+ * Check if line item should be exempt from markup
+ * @param {Object} lineItem - Line item object
+ * @returns {boolean} True if exempt from markup
+ */
+export function isMarkupExempt(lineItem) {
+  return (lineItem.jobType === 'Manual Entry' && lineItem.itemType === 'Labor') ||
+         lineItem.jobType === 'Agent Services' ||
+         lineItem.jobType === 'Clearance Fee';
+}
+
+/**
+ * Calculate totals using per-line markup system
+ * @param {Array} lineItems - Array of line item objects
+ * @param {string} fallbackMarkupRate - Fallback markup rate for backward compatibility
+ * @returns {Object} Calculation results
+ */
+export function calculateTotalsWithPerLineMarkup(lineItems) {
+  let baseCost = 0;
+  let subtotal = 0;
+  let totalTax = 0;
+  
+  lineItems.forEach(item => {
+    const cost = calculateLineItemCost(item);
+    baseCost += cost;
+    
+    // Calculate subtotal with per-line markup
+    const lineTotal = calculateLineItemTotal(item);
+    subtotal += lineTotal;
+    
+    // Add per-line tax (if taxAmount is precalculated)
+    if (item.taxAmount) {
+      totalTax += item.taxAmount;
+    }
+  });
+  
+  const total = subtotal + totalTax;
+  const grossProfit = calculateGrossProfit(subtotal, baseCost);
+  const grossProfitPercent = calculateGrossProfitPercentage(grossProfit, total);
+  
+  return {
+    baseCost,
+    subtotal,
+    tax: totalTax,
+    total,
+    grossProfit,
+    grossProfitPercent
+  };
+}
+
+/**
+ * Legacy calculateTotals function for backward compatibility
+ * @param {Array} lineItems - Array of line item objects  
+ * @param {string} markupRate - Universal markup rate
+ * @param {boolean} isTaxable - Whether invoice is taxable
+ * @param {string} vesselWeight - Vessel weight for clearance fee calculation
+ * @returns {Object} Calculation results
+ */
 export function calculateTotals(lineItems, markupRate, isTaxable, vesselWeight) {
+  // Check if we have per-line markup data
+  const hasPerLineMarkup = lineItems.some(item => 
+    item.hasOwnProperty('markupRate') || item.hasOwnProperty('isMarkupExempt')
+  );
+  
+  if (hasPerLineMarkup) {
+    return calculateTotalsWithPerLineMarkup(lineItems);
+  }
+  
+  // Legacy calculation for backward compatibility
   let baseCost = 0;
   let subtotal = 0;
   

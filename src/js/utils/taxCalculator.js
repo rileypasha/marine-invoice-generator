@@ -51,13 +51,15 @@ export class TaxCalculator {
   }
   
   /**
-   * Calculate total tax for all line items
+   * Calculate total tax for all line items using per-line markup rates
    * @param {Array} lineItems - Array of line item objects
-   * @param {string} markupRate - The markup rate as string
+   * @param {string} fallbackMarkupRate - Fallback markup rate for backward compatibility
    * @returns {number} Total tax amount
    */
-  static calculateTotalTax(lineItems, markupRate) {
+  static calculateTotalTax(lineItems, fallbackMarkupRate = '0') {
     return lineItems.reduce((total, item) => {
+      // Use per-line markup rate if available, otherwise fallback
+      const markupRate = item.markupRate || fallbackMarkupRate;
       return total + this.calculateLineTax(item, markupRate);
     }, 0);
   }

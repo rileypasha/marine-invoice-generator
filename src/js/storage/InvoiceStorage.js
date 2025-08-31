@@ -83,7 +83,7 @@ export class InvoiceStorage {
   }
   
   /**
-   * Migrate a single invoice/draft to use per-line tax configuration
+   * Migrate a single invoice/draft to use per-line tax and markup configuration
    * @param {Object} invoice - Invoice or draft object
    * @returns {boolean} - Whether migration was performed
    */
@@ -94,34 +94,86 @@ export class InvoiceStorage {
     
     let migrated = false;
     const scopeIsTaxable = invoice.data.scope.isTaxable || false;
+    const globalMarkupRate = invoice.data.scope.markupRate || '2.5';
     
     // Migrate each line item
     invoice.data.scope.lineItems = invoice.data.scope.lineItems.map(item => {
+      let itemMigrated = false;
+      
       // Check if this line item already has per-line tax configuration
-      if ('taxStatus' in item && 'taxRate' in item) {
-        // Already migrated, just ensure tax amount is calculated
-        if (!('taxAmount' in item)) {
-          item.taxAmount = TaxCalculator.calculateLineTax(item, invoice.data.scope.markupRate || '2.5');
-          migrated = true;
-        }
-        return item;
+      if (!('taxStatus' in item) || !('taxRate' in item)) {
+        // Migrate legacy line item tax
+        const migratedTaxItem = TaxCalculator.migrateLineItemTax(item, scopeIsTaxable);
+        Object.assign(item, migratedTaxItem);
+        itemMigrated = true;
       }
       
-      // Migrate legacy line item
-      const migratedItem = TaxCalculator.migrateLineItemTax(item, scopeIsTaxable);
-      migratedItem.taxAmount = TaxCalculator.calculateLineTax(migratedItem, invoice.data.scope.markupRate || '2.5');
-      migrated = true;
+      // Check if this line item already has per-line markup configuration
+      if (!('markupType' in item) || !('markupRate' in item) || !('isMarkupExempt' in item)) {
+        // Migrate legacy markup configuration
+        const markupConfig = this.migrateLineItemMarkup(item, globalMarkupRate);
+        Object.assign(item, markupConfig);
+        itemMigrated = true;
+      }
       
-      return migratedItem;
+      // Recalculate tax amount with per-line markup
+      if (itemMigrated || !('taxAmount' in item)) {
+        item.taxAmount = TaxCalculator.calculateLineTax(item, item.markupRate || '0');
+        itemMigrated = true;
+      }
+      
+      if (itemMigrated) {
+        migrated = true;
+      }
+      
+      return item;
     });
     
     // Add migration marker
     if (migrated) {
       invoice.data._taxMigrated = true;
+      invoice.data._markupMigrated = true;
       invoice.data._taxMigrationVersion = this.taxMigrationVersion;
     }
     
     return migrated;
+  }
+  
+  /**
+   * Migrate legacy line item to include per-line markup configuration
+   * @param {Object} lineItem - Legacy line item
+   * @param {string} globalMarkupRate - Global markup rate from scope
+   * @returns {Object} Markup configuration for line item
+   */
+  migrateLineItemMarkup(lineItem, globalMarkupRate) {
+    // Check if this job type should be markup exempt
+    const isExempt = this.isLegacyMarkupExempt(lineItem);
+    
+    if (isExempt) {
+      return {
+        markupType: 'exempt',
+        markupRate: '0',
+        isMarkupExempt: true
+      };
+    }
+    
+    // Use the global markup rate as preset
+    return {
+      markupType: 'preset',
+      markupRate: globalMarkupRate,
+      isMarkupExempt: false
+    };
+  }
+  
+  /**
+   * Check if legacy line item should be markup exempt
+   * @param {Object} lineItem - Line item to check
+   * @returns {boolean} True if should be exempt from markup
+   */
+  isLegacyMarkupExempt(lineItem) {
+    return (lineItem.jobType === 'Manual Entry' && lineItem.itemType === 'Labor') ||
+           lineItem.jobType === 'Agent Services' ||
+           lineItem.jobType === 'Clearance Fee';
   }
   
   // Subscribe to storage changes
@@ -742,12 +794,94 @@ export class InvoiceStorage {
   }
   
   extractMetadata(invoiceData) {
+    const markup = this.analyzeMarkupUsage(invoiceData);
+    const tax = this.analyzeTaxUsage(invoiceData);
+    
     return {
       vesselName: invoiceData.vessel?.name || '',
       customerName: invoiceData.customer?.customerName || '',
       customerEmail: invoiceData.customer?.customerEmail || '',
       lineItemCount: invoiceData.scope?.lineItems?.length || 0,
-      totalAmount: this.calculateTotal(invoiceData)
+      totalAmount: this.calculateTotal(invoiceData),
+      markupConfiguration: markup,
+      taxConfiguration: tax
+    };
+  }
+  
+  /**
+   * Analyze markup usage across line items
+   * @param {Object} invoiceData - Invoice data
+   * @returns {Object} Markup usage analysis
+   */
+  analyzeMarkupUsage(invoiceData) {
+    if (!invoiceData.scope?.lineItems) {
+      return {
+        hasCustomMarkups: false,
+        uniqueMarkupRates: ['2.5'],
+        exemptItemCount: 0,
+        totalMarkupTypes: { preset: 1, custom: 0, exempt: 0 }
+      };
+    }
+    
+    const rates = new Set();
+    const markupTypes = { preset: 0, custom: 0, exempt: 0 };
+    let hasCustom = false;
+    let exemptCount = 0;
+    
+    invoiceData.scope.lineItems.forEach(item => {
+      const markupType = item.markupType || 'preset';
+      markupTypes[markupType]++;
+      
+      if (item.isMarkupExempt) {
+        exemptCount++;
+      } else {
+        const rate = item.markupRate || '2.5';
+        rates.add(rate);
+        if (markupType === 'custom') {
+          hasCustom = true;
+        }
+      }
+    });
+    
+    return {
+      hasCustomMarkups: hasCustom,
+      uniqueMarkupRates: Array.from(rates),
+      exemptItemCount: exemptCount,
+      totalMarkupTypes: markupTypes
+    };
+  }
+  
+  /**
+   * Analyze tax usage across line items
+   * @param {Object} invoiceData - Invoice data
+   * @returns {Object} Tax usage analysis
+   */
+  analyzeTaxUsage(invoiceData) {
+    if (!invoiceData.scope?.lineItems) {
+      return {
+        hasMixedTaxStatus: false,
+        uniqueTaxRates: ['0.0875'],
+        totalTaxTypes: { taxable: 1, 'non-taxable': 0, exempt: 0 }
+      };
+    }
+    
+    const rates = new Set();
+    const taxTypes = { taxable: 0, 'non-taxable': 0, exempt: 0 };
+    
+    invoiceData.scope.lineItems.forEach(item => {
+      const taxStatus = item.taxStatus || 'taxable';
+      taxTypes[taxStatus]++;
+      
+      const rate = item.taxRate || 0.0875;
+      rates.add(rate.toString());
+    });
+    
+    const hasMixedTaxStatus = Object.values(taxTypes).filter(count => count > 0).length > 1;
+    
+    return {
+      hasMixedTaxStatus,
+      uniqueTaxRates: Array.from(rates),
+      totalTaxTypes: taxTypes
     };
   }
   

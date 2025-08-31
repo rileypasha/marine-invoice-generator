@@ -263,6 +263,73 @@
   padding: var(--space-3);
 }
 
+/* Markup Configuration Section */
+.markup-configuration-section {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: rgba(37, 99, 235, 0.03);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: var(--radius-md);
+}
+
+.markup-type-field {
+  flex: 1;
+  min-width: 150px;
+}
+
+.custom-markup-field {
+  flex: 0 0 120px;
+  transition: opacity 0.2s ease;
+}
+
+.markup-type-select {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.markup-type-select:focus {
+  border-color: rgba(37, 99, 235, 0.6);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.custom-markup-input {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.custom-markup-input:focus {
+  border-color: rgba(37, 99, 235, 0.6);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.markup-error {
+  color: var(--color-error);
+  font-size: var(--text-xs);
+  margin-top: var(--space-1);
+  display: block;
+}
+
+.markup-type-select.error,
+.custom-markup-input.error {
+  border-color: var(--color-error);
+  background: rgba(220, 38, 38, 0.1);
+}
+
+/* Markup Configuration Labels */
+.markup-configuration-section .field-label {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-1);
+}
+
 .tax-status-field {
   flex: 1;
   min-width: 150px;
@@ -313,6 +380,15 @@
   }
   
   .tax-rate-field {
+    flex: 1;
+  }
+  
+  .markup-configuration-section {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .custom-markup-field {
     flex: 1;
   }
 }

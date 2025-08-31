@@ -1,6 +1,7 @@
 import { CONSTANTS } from '../utils/constants.js';
 import { validateNumber } from '../state/validators.js';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/formatters.js';
+import { MarkupValidator } from '../utils/markupValidator.js';
 
 export class ScopeForm {
   constructor(state) {
@@ -453,6 +454,73 @@ export class ScopeForm {
       this.updateValidationState();
     });
     
+    // Markup configuration event listeners
+    const markupTypeSelect = card.querySelector('.markup-type-select');
+    const customMarkupField = card.querySelector('.custom-markup-field');
+    const customMarkupInput = card.querySelector('.custom-markup-input');
+    const markupError = card.querySelector('.markup-error');
+    
+    // Markup type change handler
+    markupTypeSelect.addEventListener('change', (e) => {
+      const selectValue = e.target.value;
+      console.log(`📈 Markup type changed for item ${id}:`, selectValue);
+      
+      // Parse markup configuration
+      const markupConfig = MarkupValidator.parseMarkupType(selectValue);
+      
+      // Show/hide custom markup field
+      if (selectValue === 'custom') {
+        customMarkupField.style.display = 'block';
+        // Focus the custom input
+        setTimeout(() => customMarkupInput.focus(), 100);
+      } else {
+        customMarkupField.style.display = 'none';
+        this.clearMarkupError(id);
+      }
+      
+      // Update line item with markup configuration
+      this.state.updateLineItem(id, markupConfig);
+      this.updateValidationState();
+    });
+    
+    // Custom markup input handlers
+    customMarkupInput.addEventListener('input', (e) => {
+      const value = e.target.value;
+      console.log(`📈 Custom markup input for item ${id}:`, value);
+      
+      // Real-time validation feedback (but don't update state yet)
+      const validation = MarkupValidator.validateCustomMarkup(value);
+      if (!validation.isValid && value.trim() !== '') {
+        this.showMarkupError(id, validation.errors[0]);
+      } else {
+        this.clearMarkupError(id);
+      }
+    });
+    
+    customMarkupInput.addEventListener('blur', (e) => {
+      const value = e.target.value;
+      console.log(`📈 Custom markup blur for item ${id}:`, value);
+      
+      if (value.trim() === '') {
+        // Empty value, set to 0
+        e.target.value = '0.00';
+        this.state.updateLineItem(id, { markupRate: '0' });
+        this.clearMarkupError(id);
+      } else {
+        // Validate and apply custom markup
+        this.validateAndApplyCustomMarkup(value, id);
+      }
+      
+      this.updateValidationState();
+    });
+    
+    // Enter key handler for custom markup
+    customMarkupInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.target.blur(); // Trigger blur validation
+      }
+    });
+    
     removeBtn.addEventListener('click', () => {
       this.state.removeLineItem(id);
       card.remove();
@@ -584,6 +652,26 @@ export class ScopeForm {
       taxRateInput.value = taxRatePercent;
     }
     
+    // Set markup configuration fields
+    const markupTypeSelect = row.querySelector('.markup-type-select');
+    const customMarkupField = row.querySelector('.custom-markup-field');
+    const customMarkupInput = row.querySelector('.custom-markup-input');
+    
+    if (markupTypeSelect) {
+      const selectValue = MarkupValidator.getSelectValue(item);
+      markupTypeSelect.value = selectValue;
+      
+      // Show/hide custom markup field based on type
+      if (selectValue === 'custom') {
+        customMarkupField.style.display = 'block';
+        if (customMarkupInput && item.markupRate) {
+          customMarkupInput.value = parseFloat(item.markupRate).toFixed(2);
+        }
+      } else {
+        customMarkupField.style.display = 'none';
+      }
+    }
+    
     // Trigger change events to set up field visibility
     // For clearance fees and other service types, this will show the cost field
     if (item.jobType) {
@@ -646,5 +734,88 @@ export class ScopeForm {
         }
       }, 0);
     });
+  }
+
+  /**
+   * Show markup validation error for a line item
+   * @param {number} lineItemId - Line item ID
+   * @param {string} message - Error message to display
+   */
+  showMarkupError(lineItemId, message) {
+    const card = document.querySelector(`[data-row="${lineItemId}"]`);
+    if (!card) return;
+    
+    const errorElement = card.querySelector('.markup-error');
+    const input = card.querySelector('.custom-markup-input');
+    
+    if (errorElement) {
+      errorElement.textContent = message;
+      errorElement.style.display = 'block';
+    }
+    
+    if (input) {
+      input.classList.add('error');
+    }
+    
+    // Auto-clear after 5 seconds
+    setTimeout(() => this.clearMarkupError(lineItemId), 5000);
+  }
+
+  /**
+   * Clear markup validation error for a line item
+   * @param {number} lineItemId - Line item ID
+   */
+  clearMarkupError(lineItemId) {
+    const card = document.querySelector(`[data-row="${lineItemId}"]`);
+    if (!card) return;
+    
+    const errorElement = card.querySelector('.markup-error');
+    const input = card.querySelector('.custom-markup-input');
+    
+    if (errorElement) {
+      errorElement.textContent = '';
+      errorElement.style.display = 'none';
+    }
+    
+    if (input) {
+      input.classList.remove('error');
+    }
+  }
+
+  /**
+   * Validate and apply custom markup value
+   * @param {string} value - Custom markup value to validate
+   * @param {number} lineItemId - Line item ID
+   */
+  validateAndApplyCustomMarkup(value, lineItemId) {
+    try {
+      const validation = MarkupValidator.validateCustomMarkup(value);
+      
+      if (validation.isValid) {
+        // Format and apply the validated value
+        const formattedValue = validation.sanitizedValue.toFixed(2);
+        const input = document.querySelector(`[data-row="${lineItemId}"] .custom-markup-input`);
+        if (input) {
+          input.value = formattedValue;
+        }
+        
+        // Update state with the sanitized value
+        this.state.updateLineItem(lineItemId, { 
+          markupRate: String(validation.sanitizedValue),
+          markupType: 'custom'
+        });
+        
+        this.clearMarkupError(lineItemId);
+        console.log(`📈 Applied custom markup for item ${lineItemId}: ${validation.sanitizedValue}%`);
+      } else {
+        // Show validation error
+        this.showMarkupError(lineItemId, validation.errors[0]);
+        console.warn(`📈 Invalid custom markup for item ${lineItemId}:`, validation.errors);
+      }
+    } catch (error) {
+      // Handle any unexpected errors from state update
+      console.error('Error applying custom markup:', error);
+      this.showMarkupError(lineItemId, 'Error updating markup. Please try again.');
+    }
   }
 }

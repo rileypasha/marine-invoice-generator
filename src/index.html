@@ -67,23 +67,6 @@
 
                     <!-- Services Tab -->
                     <div class="tab-panel" data-section="scope">
-                        <div class="scope-controls">
-                            <div class="form-group">
-                                <label for="markup-rate">Markup</label>
-                                <select id="markup-rate" class="form-input">
-                                    <option value="2.5">2.5%</option>
-                                    <option value="12.5">12.5%</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="taxable-select">Tax</label>
-                                <select id="taxable-select" class="form-input">
-                                    <option value="no" selected>Non-taxable</option>
-                                    <option value="yes">Taxable (8.75%)</option>
-                                </select>
-                            </div>
-                        </div>
-
                         <div class="line-items-container">
                             <h3>Line Items</h3>
                             <button id="add-line-item" class="btn btn-primary">Add Line Item</button>
@@ -260,6 +243,26 @@
                         <label class="field-label">Tax Rate (%)</label>
                         <input type="number" class="tax-rate-input form-input" 
                                min="0" max="100" step="0.01" value="8.75" placeholder="8.75">
+                    </div>
+                </div>
+
+                <!-- Markup Configuration Section -->
+                <div class="markup-configuration-section">
+                    <div class="field-group markup-type-field">
+                        <label class="field-label">Markup</label>
+                        <select class="markup-type-select form-input">
+                            <option value="preset-2.5">2.5%</option>
+                            <option value="preset-12.5">12.5%</option>
+                            <option value="custom">Custom %</option>
+                            <option value="exempt">No Markup</option>
+                        </select>
+                    </div>
+                    
+                    <div class="field-group custom-markup-field" style="display: none;">
+                        <label class="field-label">Custom Markup (%)</label>
+                        <input type="number" class="custom-markup-input form-input" 
+                               min="0" max="1000" step="0.01" placeholder="0.00">
+                        <span class="markup-error error-message"></span>
                     </div>
                 </div>
 
