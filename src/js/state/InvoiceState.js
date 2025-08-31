@@ -75,7 +75,7 @@ export class InvoiceState {
   }
   
   addLineItem(lineItem = {}) {
-    const defaultTaxConfig = TaxCalculator.getDefaultTaxConfig();
+    const defaultTaxConfig = TaxCalculator.getDefaultTaxConfig(lineItem.jobType);
     
     const newItem = {
       id: this.lineItemIdCounter++,

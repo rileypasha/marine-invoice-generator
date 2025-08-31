@@ -191,7 +191,10 @@ export class VesselForm {
         description: `Clearance Fee (${weightNum > CONSTANTS.WEIGHT_THRESHOLD ? 'Over' : 'Under'} 500 tons)`,
         itemType: 'Administrative',
         manualCost: clearanceFeeAmount,
-        cost: clearanceFeeAmount
+        cost: clearanceFeeAmount,
+        taxStatus: 'non-taxable',
+        taxRate: 0,
+        taxAmount: 0
       };
       
       if (existingClearanceIndex >= 0) {

@@ -64,9 +64,20 @@ export class TaxCalculator {
   
   /**
    * Get default tax configuration for a new line item
+   * @param {string} jobType - Job type for context-specific defaults
    * @returns {Object} Default tax configuration
    */
-  static getDefaultTaxConfig() {
+  static getDefaultTaxConfig(jobType = null) {
+    // Clearance fees are non-taxable by default
+    if (jobType === 'Clearance Fee') {
+      return {
+        taxStatus: 'non-taxable',
+        taxRate: 0,
+        taxAmount: 0
+      };
+    }
+    
+    // Default for most line items
     return {
       taxStatus: 'taxable',
       taxRate: 0.0875, // 8.75%
