@@ -85,9 +85,10 @@ export class Preview {
       
       const cost = calculateLineItemCost(item);
       
-      // Skip markup for Labor items and Clearance Fee since they're fixed amounts
+      // Skip markup for Labor items, Agent Services, and Clearance Fee since they're fixed amounts
       let totalWithMarkup;
       if ((item.jobType === 'Manual Entry' && item.itemType === 'Labor') || 
+          item.jobType === 'Agent Services' ||
           item.jobType === 'Clearance Fee') {
         totalWithMarkup = cost; // No markup for these items
       } else {
@@ -138,8 +139,9 @@ export class Preview {
       const cost = calculateLineItemCost(item);
       baseCost += cost;
       
-      // Skip markup for Labor items and Clearance Fee since they're already fixed amounts
+      // Skip markup for Labor items, Agent Services, and Clearance Fee since they're already fixed amounts
       if ((item.jobType === 'Manual Entry' && item.itemType === 'Labor') || 
+          item.jobType === 'Agent Services' ||
           item.jobType === 'Clearance Fee') {
         subtotal += cost; // Use cost directly without markup
       } else {
