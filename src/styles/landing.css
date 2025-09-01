@@ -178,7 +178,7 @@ body {
 
 .portal-hero {
   position: relative;
-  padding: var(--space-10) var(--space-5) var(--space-8);
+  padding: var(--space-6) var(--space-5) var(--space-5);
   background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
   overflow: hidden;
 }
@@ -222,7 +222,7 @@ body {
 
 .welcome-section {
   text-align: center;
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-5);
 }
 
 .welcome-badge {
@@ -262,7 +262,7 @@ body {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
   max-width: 700px;
-  margin: 0 auto var(--space-8);
+  margin: 0 auto var(--space-5);
   overflow: hidden;
 }
 
@@ -440,7 +440,7 @@ body {
 .portal-footer {
   background: var(--color-text-primary);
   color: white;
-  padding: var(--space-6) var(--space-5);
+  padding: var(--space-3) var(--space-5);
   margin-top: auto;
 }
 
@@ -449,7 +449,7 @@ body {
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-6);
+  gap: var(--space-3);
   align-items: center;
 }
 
