@@ -22,6 +22,22 @@ export class Sidebar {
   }
   
   createSidebar() {
+    // Check if sidebar already exists in the DOM
+    const existingSidebar = document.querySelector('.app-sidebar');
+    
+    if (existingSidebar) {
+      console.log('🔍 Sidebar already exists in DOM, using existing one');
+      this.sidebar = existingSidebar;
+      
+      // Ensure app container has the with-sidebar class
+      const appContainer = document.querySelector('.app-container');
+      if (appContainer) {
+        appContainer.classList.add('with-sidebar');
+      }
+      return;
+    }
+    
+    // Create sidebar if it doesn't exist
     this.sidebar = document.createElement('div');
     this.sidebar.className = 'app-sidebar';
     this.sidebar.innerHTML = `

@@ -13,7 +13,68 @@
     <link rel="shortcut icon" href="./assets/favicon.png">
 </head>
 <body>
-    <div class="app-container">
+    <div class="app-container with-sidebar">
+        <!-- Sidebar -->
+        <div class="app-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-toggle">
+                    <button class="sidebar-toggle-btn" title="Toggle sidebar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m9 18 6-6-6-6"/>
+                        </svg>
+                    </button>
+                </div>
+                <button class="new-invoice-btn" title="New invoice">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14m-7-7h14"/>
+                    </svg>
+                    <span class="btn-text">New Invoice</span>
+                </button>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <h3>Saved</h3>
+                    </div>
+                    <div class="invoice-list" id="recent-list">
+                        <div class="empty-state">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10,9 9,9 8,9"/>
+                            </svg>
+                            <p>No recent invoices</p>
+                            <span>Create your first invoice to get started</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <button class="user-section" id="user-section" style="display: none;" title="Settings">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                        </div>
+                        <div class="user-details">
+                            <div class="user-name" id="user-name">User Name</div>
+                            <div class="user-email" id="user-email">user@example.com</div>
+                        </div>
+                    </div>
+                </button>
+                
+                <div class="auth-section" id="auth-section">
+                    <button class="auth-btn primary" id="sign-in-btn">Sign In</button>
+                    <button class="auth-btn secondary" id="sign-up-btn">Sign Up</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Main Content -->
         <main class="main-content">
