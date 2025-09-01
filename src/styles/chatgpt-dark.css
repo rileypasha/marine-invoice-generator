@@ -380,6 +380,7 @@ input[type="number"] {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-2);
+  position: relative;
 }
 
 .comment-author {
@@ -405,6 +406,112 @@ input[type="number"] {
   display: flex;
   gap: var(--space-2);
   margin-top: var(--space-2);
+}
+
+/* Comment Menu (Edit/Delete buttons) */
+.comment-menu {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.comment-item:hover .comment-menu {
+  opacity: 1;
+}
+
+.edit-comment-btn,
+.delete-comment-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.edit-comment-btn:hover {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.delete-comment-btn:hover {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+
+/* Edit Comment Container */
+.edit-comment-container {
+  margin-bottom: var(--space-2);
+}
+
+.edit-comment-input {
+  width: 100%;
+  min-height: 60px;
+  resize: vertical;
+  margin-bottom: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.edit-comment-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+.edit-comment-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.save-edit-btn,
+.cancel-edit-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.save-edit-btn {
+  background: var(--color-accent);
+  color: white;
+  border: none;
+}
+
+.save-edit-btn:hover {
+  background: var(--color-accent-hover);
+}
+
+.cancel-edit-btn {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.cancel-edit-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+/* Edited Indicator */
+.edited-indicator {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  margin-left: 6px;
 }
 
 .reply-btn {

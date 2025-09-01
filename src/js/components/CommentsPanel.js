@@ -96,13 +96,40 @@ export class CommentsPanel {
     
     const currentUser = this.userManager.getCurrentUser();
     const canReply = currentUser && currentUser.role === 'master';
+    const canEditDelete = currentUser && (currentUser.email === comment.authorEmail || currentUser.role === 'master');
     
     commentDiv.innerHTML = `
       <div class="comment-header">
         <div class="comment-author">${this.escapeHtml(comment.author)}</div>
-        <div class="comment-timestamp">${formatTimeAgo(new Date(comment.timestamp))}</div>
+        <div class="comment-timestamp">
+          ${formatTimeAgo(new Date(comment.timestamp))}
+          ${comment.edited ? '<span class="edited-indicator">(edited)</span>' : ''}
+        </div>
+        ${canEditDelete ? `
+          <div class="comment-menu">
+            <button class="edit-comment-btn" data-comment-id="${comment.id}" title="Edit comment">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button class="delete-comment-btn" data-comment-id="${comment.id}" title="Delete comment">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3,6 5,6 21,6"/>
+                <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"/>
+              </svg>
+            </button>
+          </div>
+        ` : ''}
       </div>
-      <div class="comment-text">${this.escapeHtml(comment.text).replace(/\n/g, '<br>')}</div>
+      <div class="comment-text" data-comment-id="${comment.id}">${this.escapeHtml(comment.text).replace(/\n/g, '<br>')}</div>
+      <div class="edit-comment-container" style="display: none;" data-comment-id="${comment.id}">
+        <textarea class="edit-comment-input" rows="3">${this.escapeHtml(comment.text)}</textarea>
+        <div class="edit-comment-actions">
+          <button class="save-edit-btn" data-comment-id="${comment.id}">Save</button>
+          <button class="cancel-edit-btn" data-comment-id="${comment.id}">Cancel</button>
+        </div>
+      </div>
       ${comment.replies && comment.replies.length > 0 ? this.renderReplies(comment.replies) : ''}
       ${canReply ? `
         <div class="comment-actions">
@@ -141,11 +168,19 @@ export class CommentsPanel {
   }
   
   attachCommentEventListeners(commentElement, commentId) {
+    // Reply functionality
     const replyBtn = commentElement.querySelector('.reply-btn');
     const submitReplyBtn = commentElement.querySelector('.submit-reply-btn');
     const cancelReplyBtn = commentElement.querySelector('.cancel-reply-btn');
     const replyInput = commentElement.querySelector('.reply-input');
     const replyContainer = commentElement.querySelector('.reply-input-container');
+    
+    // Edit/Delete functionality
+    const editBtn = commentElement.querySelector('.edit-comment-btn');
+    const deleteBtn = commentElement.querySelector('.delete-comment-btn');
+    const saveEditBtn = commentElement.querySelector('.save-edit-btn');
+    const cancelEditBtn = commentElement.querySelector('.cancel-edit-btn');
+    const editInput = commentElement.querySelector('.edit-comment-input');
     
     if (replyBtn) {
       replyBtn.addEventListener('click', () => {
@@ -173,6 +208,43 @@ export class CommentsPanel {
         } else if (e.key === 'Escape') {
           this.hideReplyInput(commentId);
         }
+      });
+    }
+    
+    // Edit comment functionality
+    if (editBtn) {
+      editBtn.addEventListener('click', () => {
+        this.showEditComment(commentId);
+      });
+    }
+    
+    if (saveEditBtn) {
+      saveEditBtn.addEventListener('click', () => {
+        this.saveEditComment(commentId);
+      });
+    }
+    
+    if (cancelEditBtn) {
+      cancelEditBtn.addEventListener('click', () => {
+        this.hideEditComment(commentId);
+      });
+    }
+    
+    if (editInput) {
+      editInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) {
+          e.preventDefault();
+          this.saveEditComment(commentId);
+        } else if (e.key === 'Escape') {
+          this.hideEditComment(commentId);
+        }
+      });
+    }
+    
+    // Delete comment functionality
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => {
+        this.deleteComment(commentId);
       });
     }
   }
@@ -238,6 +310,84 @@ export class CommentsPanel {
       
       console.log('💬 Added reply to comment:', commentId, reply);
     }
+  }
+  
+  showEditComment(commentId) {
+    const commentElement = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
+    const commentText = commentElement?.querySelector(`.comment-text[data-comment-id="${commentId}"]`);
+    const editContainer = commentElement?.querySelector(`.edit-comment-container[data-comment-id="${commentId}"]`);
+    
+    if (commentText && editContainer) {
+      commentText.style.display = 'none';
+      editContainer.style.display = 'block';
+      
+      const editInput = editContainer.querySelector('.edit-comment-input');
+      if (editInput) {
+        editInput.focus();
+        editInput.setSelectionRange(editInput.value.length, editInput.value.length);
+      }
+    }
+  }
+  
+  hideEditComment(commentId) {
+    const commentElement = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
+    const commentText = commentElement?.querySelector(`.comment-text[data-comment-id="${commentId}"]`);
+    const editContainer = commentElement?.querySelector(`.edit-comment-container[data-comment-id="${commentId}"]`);
+    
+    if (commentText && editContainer) {
+      commentText.style.display = 'block';
+      editContainer.style.display = 'none';
+    }
+  }
+  
+  saveEditComment(commentId) {
+    const commentElement = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
+    const editInput = commentElement?.querySelector('.edit-comment-input');
+    
+    if (!editInput) return;
+    
+    const newText = editInput.value.trim();
+    if (!newText) {
+      alert('Comment cannot be empty');
+      return;
+    }
+    
+    // Update state
+    const currentState = this.state.getState();
+    const comments = [...(currentState.notes?.comments || [])];
+    const commentIndex = comments.findIndex(c => c.id === commentId);
+    
+    if (commentIndex !== -1) {
+      comments[commentIndex] = {
+        ...comments[commentIndex],
+        text: newText,
+        edited: true,
+        editedAt: new Date().toISOString()
+      };
+      
+      this.state.updateNotes({
+        comments: comments
+      });
+      
+      console.log('💬 Comment edited:', commentId);
+    }
+  }
+  
+  deleteComment(commentId) {
+    if (!confirm('Are you sure you want to delete this comment?')) {
+      return;
+    }
+    
+    // Update state
+    const currentState = this.state.getState();
+    const comments = [...(currentState.notes?.comments || [])];
+    const filteredComments = comments.filter(c => c.id !== commentId);
+    
+    this.state.updateNotes({
+      comments: filteredComments
+    });
+    
+    console.log('💬 Comment deleted:', commentId);
   }
   
   escapeHtml(text) {
