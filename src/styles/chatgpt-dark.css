@@ -453,7 +453,6 @@ input[type="number"] {
   text-align: right;
   width: 15%;
   font-weight: bold;
-  color: var(--color-text-secondary);
 }
 
 .invoice-table td:nth-child(5) {
