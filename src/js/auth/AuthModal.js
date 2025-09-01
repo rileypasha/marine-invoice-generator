@@ -23,7 +23,6 @@ export class AuthModal {
           
           <div class="auth-tabs">
             <button class="auth-tab active" data-mode="signin">Sign In</button>
-            <button class="auth-tab" data-mode="signup">Create Account</button>
           </div>
           
           <form class="auth-form">
@@ -89,13 +88,6 @@ export class AuthModal {
               </span>
             </button>
           </form>
-          
-          <div class="auth-footer">
-            <p class="auth-switch">
-              <span class="switch-text">Don't have an account?</span>
-              <button class="auth-switch-btn" data-mode="signup">Create one</button>
-            </p>
-          </div>
         </div>
       </div>
     `;
@@ -121,18 +113,14 @@ export class AuthModal {
       }
     });
     
-    // Tab switching
+    // Tab switching (signin only)
     this.modal.querySelectorAll('.auth-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         const mode = tab.dataset.mode;
-        this.switchMode(mode);
+        if (mode === 'signin') {
+          this.switchMode(mode);
+        }
       });
-    });
-    
-    // Switch button
-    this.modal.querySelector('.auth-switch-btn').addEventListener('click', () => {
-      const newMode = this.mode === 'signin' ? 'signup' : 'signin';
-      this.switchMode(newMode);
     });
     
     // Form submission
@@ -150,58 +138,41 @@ export class AuthModal {
   }
   
   switchMode(mode) {
-    this.mode = mode;
+    // Only support signin mode
+    this.mode = 'signin';
     
     // Update tabs
     this.modal.querySelectorAll('.auth-tab').forEach(tab => {
-      tab.classList.toggle('active', tab.dataset.mode === mode);
+      tab.classList.toggle('active', tab.dataset.mode === 'signin');
     });
     
-    // Update form
+    // Update form for signin only
     const nameGroup = this.modal.querySelector('#name-group');
     const nameInput = this.modal.querySelector('#auth-name');
     const confirmGroup = this.modal.querySelector('#confirm-password-group');
     const confirmInput = this.modal.querySelector('#auth-confirm-password');
     const rememberGroup = this.modal.querySelector('#remember-group');
     const submitBtn = this.modal.querySelector('.btn-text');
-    const switchText = this.modal.querySelector('.switch-text');
-    const switchBtn = this.modal.querySelector('.auth-switch-btn');
     
-    if (mode === 'signup') {
-      nameGroup.style.display = 'block';
-      nameInput.setAttribute('required', '');
-      confirmGroup.style.display = 'block';
-      confirmInput.setAttribute('required', '');
-      rememberGroup.style.display = 'none';
-      submitBtn.textContent = 'Create Account';
-      switchText.textContent = 'Already have an account?';
-      switchBtn.textContent = 'Sign in';
-      switchBtn.dataset.mode = 'signin';
-    } else {
-      nameGroup.style.display = 'none';
-      nameInput.removeAttribute('required');
-      confirmGroup.style.display = 'none';
-      confirmInput.removeAttribute('required');
-      rememberGroup.style.display = 'block';
-      submitBtn.textContent = 'Sign In';
-      switchText.textContent = "Don't have an account?";
-      switchBtn.textContent = 'Create one';
-      switchBtn.dataset.mode = 'signup';
-    }
+    // Always set up as signin
+    nameGroup.style.display = 'none';
+    nameInput.removeAttribute('required');
+    confirmGroup.style.display = 'none';
+    confirmInput.removeAttribute('required');
+    rememberGroup.style.display = 'block';
+    submitBtn.textContent = 'Sign In';
     
     this.clearError();
   }
   
   async handleSubmit() {
-    console.log('🔐 Form submission started, mode:', this.mode);
+    console.log('🔐 Sign in form submission started');
     
     const email = this.modal.querySelector('#auth-email').value.trim();
     const password = this.modal.querySelector('#auth-password').value;
-    const name = this.modal.querySelector('#auth-name').value.trim();
-    const confirmPassword = this.modal.querySelector('#auth-confirm-password').value;
     const rememberMe = this.modal.querySelector('#auth-remember').checked;
     
-    console.log('📝 Form data:', { email: email ? 'provided' : 'missing', password: password ? 'provided' : 'missing', name: name || 'N/A', rememberMe });
+    console.log('📝 Form data:', { email: email ? 'provided' : 'missing', password: password ? 'provided' : 'missing', rememberMe });
     
     // Basic validation
     if (!email || !password) {
@@ -209,34 +180,12 @@ export class AuthModal {
       return;
     }
     
-    if (this.mode === 'signup') {
-      if (!name) {
-        this.showError('Please enter your full name');
-        return;
-      }
-      
-      if (password !== confirmPassword) {
-        this.showError('Passwords do not match');
-        return;
-      }
-      
-      if (password.length < 6) {
-        this.showError('Password must be at least 6 characters long');
-        return;
-      }
-    }
-    
     this.setLoading(true);
     this.clearError();
     
     try {
-      console.log('🔄 Calling UserManager...');
-      let result;
-      if (this.mode === 'signup') {
-        result = await this.userManager.register(email, password, name);
-      } else {
-        result = await this.userManager.signIn(email, password, rememberMe);
-      }
+      console.log('🔄 Calling UserManager sign in...');
+      const result = await this.userManager.signIn(email, password, rememberMe);
       
       console.log('📋 Auth result:', result);
       

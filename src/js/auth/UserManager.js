@@ -147,47 +147,12 @@ export class UserManager {
   
   // Register new user
   async register(email, password, name) {
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if user already exists
-      const existingUsers = this.getAllUsers();
-      if (existingUsers.find(user => user.email === email)) {
-        throw new Error('User already exists with this email');
-      }
-      
-      // Create new user
-      const user = {
-        id: this.generateId(),
-        email,
-        name,
-        hashedPassword: this.hashPassword(password),
-        createdAt: new Date().toISOString(),
-        preferences: {
-          theme: 'dark',
-          autoSave: true
-        }
-      };
-      
-      // Save user to storage
-      this.saveUser(user);
-      
-      // Log them in
-      this.currentUser = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        preferences: user.preferences
-      };
-      
-      this.saveSession();
-      this.notify();
-      
-      return { success: true, user: this.currentUser };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    // Public registration is disabled for security
+    // Users must be added by the master account through the admin dashboard
+    return { 
+      success: false, 
+      error: 'Public registration is disabled. Please contact your administrator to create an account.' 
+    };
   }
   
   // Sign in existing user

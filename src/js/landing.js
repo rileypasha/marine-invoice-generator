@@ -53,7 +53,6 @@ class LandingPage {
   initEventListeners() {
     // Header navigation buttons
     const signInNavBtn = document.getElementById('sign-in-nav-btn');
-    const signUpNavBtn = document.getElementById('sign-up-nav-btn');
     
     // Hero CTA buttons
     const getStartedBtn = document.getElementById('get-started-btn');
@@ -62,18 +61,11 @@ class LandingPage {
     // Final CTA button
     const finalCtaBtn = document.getElementById('final-cta-btn');
     
-    // Sign in buttons
-    if (signInNavBtn) {
-      signInNavBtn.addEventListener('click', () => {
-        this.showAuthModal('signin');
-      });
-    }
-    
-    // Sign up / Get started buttons
-    [signUpNavBtn, getStartedBtn, finalCtaBtn].forEach(btn => {
+    // Sign in buttons (all buttons now show signin)
+    [signInNavBtn, getStartedBtn, finalCtaBtn].forEach(btn => {
       if (btn) {
         btn.addEventListener('click', () => {
-          this.showAuthModal('signup');
+          this.showAuthModal('signin');
         });
       }
     });
