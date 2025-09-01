@@ -407,8 +407,7 @@
 
 /* Sidebar Footer - Match action-buttons alignment exactly */
 .sidebar-footer {
-  padding: var(--space-3) var(--space-4);
-  border-top: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-4);
   transition: padding 0.3s ease;
   display: flex;
   align-items: center;
@@ -422,7 +421,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  border-top: none;
 }
 
 /* User Section - Now a clickable button */
