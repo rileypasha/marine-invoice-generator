@@ -54,34 +54,17 @@ class LandingPage {
     // Header navigation buttons
     const signInNavBtn = document.getElementById('sign-in-nav-btn');
     
-    // Hero CTA buttons
+    // System access buttons
     const getStartedBtn = document.getElementById('get-started-btn');
-    const learnMoreBtn = document.getElementById('learn-more-btn');
-    
-    // Final CTA button
-    const finalCtaBtn = document.getElementById('final-cta-btn');
     
     // Sign in buttons (all buttons now show signin)
-    [signInNavBtn, getStartedBtn, finalCtaBtn].forEach(btn => {
+    [signInNavBtn, getStartedBtn].forEach(btn => {
       if (btn) {
         btn.addEventListener('click', () => {
           this.showAuthModal('signin');
         });
       }
     });
-    
-    // Learn more button - scroll to features
-    if (learnMoreBtn) {
-      learnMoreBtn.addEventListener('click', () => {
-        const featuresSection = document.querySelector('.features-section');
-        if (featuresSection) {
-          featuresSection.scrollIntoView({ 
-            behavior: 'smooth',
-            block: 'start'
-          });
-        }
-      });
-    }
     
     // Listen for successful authentication
     this.userManager.onAuthChange((user) => {
