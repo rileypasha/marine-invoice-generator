@@ -1,10 +1,12 @@
 import { formatTimeAgo } from '../utils/formatters.js';
+import { ConfirmModal } from './ConfirmModal.js';
 
 export class CommentsPanel {
   constructor(state, userManager) {
     console.log('💬 Initializing CommentsPanel component...');
     this.state = state;
     this.userManager = userManager;
+    this.confirmModal = new ConfirmModal();
     this.initElements();
     
     console.log('📡 Subscribing to state changes...');
@@ -340,7 +342,7 @@ export class CommentsPanel {
     }
   }
   
-  saveEditComment(commentId) {
+  async saveEditComment(commentId) {
     const commentElement = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
     const editInput = commentElement?.querySelector('.edit-comment-input');
     
@@ -348,7 +350,14 @@ export class CommentsPanel {
     
     const newText = editInput.value.trim();
     if (!newText) {
-      alert('Comment cannot be empty');
+      await this.confirmModal.show({
+        title: 'Invalid Comment',
+        message: 'Comment cannot be empty. Please enter some text or cancel editing.',
+        confirmText: 'OK',
+        cancelText: '',
+        type: 'warning'
+      });
+      editInput.focus();
       return;
     }
     
@@ -373,8 +382,16 @@ export class CommentsPanel {
     }
   }
   
-  deleteComment(commentId) {
-    if (!confirm('Are you sure you want to delete this comment?')) {
+  async deleteComment(commentId) {
+    const confirmed = await this.confirmModal.show({
+      title: 'Delete Comment',
+      message: 'Are you sure you want to delete this comment? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    
+    if (!confirmed) {
       return;
     }
     
