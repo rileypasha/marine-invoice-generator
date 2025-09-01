@@ -169,9 +169,8 @@ body {
 
 /* Systems Grid */
 .systems-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--space-4);
+  display: flex;
+  justify-content: center;
   margin-bottom: var(--space-8);
 }
 
@@ -182,6 +181,8 @@ body {
   padding: var(--space-5);
   transition: all 0.2s ease;
   position: relative;
+  width: 100%;
+  max-width: 400px;
 }
 
 .system-card:hover {
