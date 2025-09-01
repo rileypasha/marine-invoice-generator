@@ -15,7 +15,7 @@ export class NotesForm {
     this.cancelCommentBtn = document.getElementById('cancel-comment-btn');
     
     if (!this.newCommentText || !this.addCommentBtn || !this.cancelCommentBtn) {
-      console.error('❌ NotesForm: Cannot initialize, some elements are missing');
+      console.warn('⚠️ NotesForm: Notes form elements not found in DOM, skipping initialization');
       return false;
     }
     
@@ -23,7 +23,10 @@ export class NotesForm {
   }
   
   attachEventListeners() {
-    if (!this.initElements()) return;
+    if (!this.initElements()) {
+      console.log('📝 NotesForm: Elements not ready yet, will try again later');
+      return;
+    }
     
     this.addCommentBtn.addEventListener('click', () => {
       this.addComment();
@@ -67,6 +70,8 @@ export class NotesForm {
   }
   
   addComment() {
+    if (!this.newCommentText) return;
+    
     const text = this.newCommentText.value.trim();
     if (!text) return;
     
@@ -102,6 +107,8 @@ export class NotesForm {
   }
   
   cancelComment() {
+    if (!this.newCommentText) return;
+    
     this.newCommentText.value = '';
     this.collapseCommentInput();
   }

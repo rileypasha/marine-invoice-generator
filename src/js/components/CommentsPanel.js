@@ -23,7 +23,7 @@ export class CommentsPanel {
     this.noComments = document.getElementById('no-comments');
     
     if (!this.commentsList || !this.noComments) {
-      console.error('❌ CommentsPanel: Cannot initialize, some elements are missing');
+      console.warn('⚠️ CommentsPanel: Comments panel elements not found in DOM, skipping initialization');
       return false;
     }
     
@@ -31,7 +31,14 @@ export class CommentsPanel {
   }
   
   update() {
-    if (!this.initElements()) return;
+    // Always try to re-initialize elements in case they weren't available during construction
+    this.commentsList = document.getElementById('comments-list');
+    this.noComments = document.getElementById('no-comments');
+    
+    if (!this.commentsList || !this.noComments) {
+      // Silently skip if elements not available yet
+      return;
+    }
     
     const state = this.state.getState();
     const comments = state.notes?.comments || [];
