@@ -35,19 +35,29 @@ export class CommentsPanel {
     this.commentsList = document.getElementById('comments-list');
     this.noComments = document.getElementById('no-comments');
     
+    console.log('💬 CommentsPanel.update() called');
+    console.log('  - commentsList found:', !!this.commentsList);
+    console.log('  - noComments found:', !!this.noComments);
+    
     if (!this.commentsList || !this.noComments) {
-      // Silently skip if elements not available yet
+      console.log('  - Skipping update, elements not available');
       return;
     }
     
     const state = this.state.getState();
     const comments = state.notes?.comments || [];
     
+    console.log('  - State notes:', state.notes);
+    console.log('  - Comments count:', comments.length);
+    console.log('  - Comments:', comments);
+    
     if (comments.length === 0) {
+      console.log('  - Showing no comments message');
       this.showNoComments();
       return;
     }
     
+    console.log('  - Rendering comments');
     this.hideNoComments();
     this.renderComments(comments);
   }

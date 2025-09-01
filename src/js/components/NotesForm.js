@@ -90,11 +90,19 @@ export class NotesForm {
     
     // Add to state
     const currentState = this.state.getState();
+    console.log('📝 Current state before adding comment:', currentState);
+    console.log('📝 Current notes:', currentState.notes);
+    
     const updatedComments = [...(currentState.notes?.comments || []), comment];
+    console.log('📝 Updated comments array:', updatedComments);
     
     this.state.updateNotes({
       comments: updatedComments
     });
+    
+    // Verify state after update
+    const newState = this.state.getState();
+    console.log('📝 State after update:', newState.notes);
     
     // Clear input and collapse
     this.newCommentText.value = '';
