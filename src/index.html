@@ -85,6 +85,7 @@
                     <button class="tab-button active" data-tab="vessel">Vessel</button>
                     <button class="tab-button" data-tab="customer">Customer</button>
                     <button class="tab-button" data-tab="scope">Services</button>
+                    <button class="tab-button" data-tab="notes">Notes</button>
                 </nav>
 
                 <!-- Tab Content -->
@@ -136,6 +137,24 @@
                             <h3>Line Items</h3>
                             <button id="add-line-item" class="btn btn-primary">Add Line Item</button>
                             <div id="line-items-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Notes Tab -->
+                    <div class="tab-panel" data-section="notes">
+                        <div class="notes-container">
+                            <h3>Comments</h3>
+                            <p class="notes-description">Add comments and collaborate on this invoice. Comments are visible to team members but won't appear on the final invoice.</p>
+                            
+                            <div class="add-comment-section">
+                                <div class="comment-input-container">
+                                    <textarea id="new-comment-text" class="form-input comment-textarea" rows="3" placeholder="Add a comment..."></textarea>
+                                    <div class="comment-actions">
+                                        <button id="add-comment-btn" class="btn btn-primary">Add Comment</button>
+                                        <button id="cancel-comment-btn" class="btn btn-secondary" style="display: none;">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -224,6 +243,18 @@
                                 <span>Gross Profit %:</span>
                                 <span class="gross-profit-percent">0.00%</span>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Comments Panel -->
+            <section class="comments-panel">
+                <div class="comments-container">
+                    <h3>Comments</h3>
+                    <div class="comments-list" id="comments-list">
+                        <div class="no-comments" id="no-comments">
+                            <p>No comments yet. Add the first comment from the Notes tab.</p>
                         </div>
                     </div>
                 </div>

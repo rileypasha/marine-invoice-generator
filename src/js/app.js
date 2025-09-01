@@ -5,8 +5,10 @@ import { InvoiceState } from './state/InvoiceState.js';
 import { VesselForm } from './components/VesselForm.js';
 import { CustomerForm } from './components/CustomerForm.js';
 import { ScopeForm } from './components/ScopeForm.js';
+import { NotesForm } from './components/NotesForm.js';
 import { Preview } from './components/Preview.js';
 import { Sidebar } from './components/Sidebar.js';
+import { CommentsPanel } from './components/CommentsPanel.js';
 import { UserManager } from './auth/UserManager.js';
 import { AuthModal } from './auth/AuthModal.js';
 import { ThemeManager } from './settings/ThemeManager.js';
@@ -90,7 +92,9 @@ class InvoiceApp {
     this.vesselForm = new VesselForm(this.state);
     this.customerForm = new CustomerForm(this.state);
     this.scopeForm = new ScopeForm(this.state);
+    this.notesForm = new NotesForm(this.state, this.userManager);
     this.preview = new Preview(this.state, this.userManager);
+    this.commentsPanel = new CommentsPanel(this.state, this.userManager);
   }
   
   initTabNavigation() {

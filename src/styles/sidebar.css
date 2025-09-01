@@ -16,7 +16,8 @@
 }
 
 .with-sidebar .main-content {
-  grid-template-columns: 400px 1fr;
+  grid-template-columns: 400px 1fr 300px;
+  display: grid;
 }
 
 .with-sidebar .input-panel {
