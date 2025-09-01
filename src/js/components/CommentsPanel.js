@@ -39,8 +39,8 @@ export class CommentsPanel {
     console.log('  - commentsList found:', !!this.commentsList);
     console.log('  - noComments found:', !!this.noComments);
     
-    if (!this.commentsList || !this.noComments) {
-      console.log('  - Skipping update, elements not available');
+    if (!this.commentsList) {
+      console.log('  - Skipping update, commentsList not available');
       return;
     }
     
@@ -63,21 +63,30 @@ export class CommentsPanel {
   }
   
   showNoComments() {
-    this.noComments.style.display = 'block';
+    if (this.noComments) {
+      this.noComments.style.display = 'block';
+    }
     this.commentsList.innerHTML = '';
   }
   
   hideNoComments() {
-    this.noComments.style.display = 'none';
+    if (this.noComments) {
+      this.noComments.style.display = 'none';
+    }
   }
   
   renderComments(comments) {
+    console.log('💬 renderComments called with:', comments.length, 'comments');
     this.commentsList.innerHTML = '';
     
-    comments.forEach(comment => {
+    comments.forEach((comment, index) => {
+      console.log(`💬 Rendering comment ${index}:`, comment);
       const commentElement = this.createCommentElement(comment);
       this.commentsList.appendChild(commentElement);
+      console.log(`💬 Comment ${index} added to DOM`);
     });
+    
+    console.log('💬 renderComments completed');
   }
   
   createCommentElement(comment) {
