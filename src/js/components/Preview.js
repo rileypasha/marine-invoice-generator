@@ -34,6 +34,7 @@ export class Preview {
     this.customerName = document.querySelector('.preview-customer-name');
     this.customerEmail = document.querySelector('.preview-customer-email');
     this.customerPhone = document.querySelector('.preview-customer-phone');
+    this.customerAddress = document.querySelector('.preview-customer-address');
     
     // Line items
     this.lineItemsContainer = document.getElementById('preview-line-items');
@@ -65,6 +66,7 @@ export class Preview {
     this.customerName.textContent = state.customer.customerName || '-';
     this.customerEmail.textContent = state.customer.customerEmail || '-';
     this.customerPhone.textContent = state.customer.customerPhone || '-';
+    this.customerAddress.textContent = state.customer.customerAddress || '-';
     
     // Update line items
     this.updateLineItems(state.scope);

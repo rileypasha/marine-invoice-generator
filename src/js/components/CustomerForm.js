@@ -12,6 +12,7 @@ export class CustomerForm {
     this.customerName = document.getElementById('customer-name');
     this.customerEmail = document.getElementById('customer-email');
     this.customerPhone = document.getElementById('customer-phone');
+    this.customerAddress = document.getElementById('customer-address');
     this.emailError = document.querySelector('.email-error');
   }
   
@@ -20,9 +21,10 @@ export class CustomerForm {
     console.log('  - customerName:', this.customerName ? '✅' : '❌');
     console.log('  - customerEmail:', this.customerEmail ? '✅' : '❌');
     console.log('  - customerPhone:', this.customerPhone ? '✅' : '❌');
+    console.log('  - customerAddress:', this.customerAddress ? '✅' : '❌');
     console.log('  - emailError:', this.emailError ? '✅' : '❌');
     
-    if (!this.customerName || !this.customerEmail || !this.customerPhone) {
+    if (!this.customerName || !this.customerEmail || !this.customerPhone || !this.customerAddress) {
       console.error('❌ CustomerForm: Cannot attach listeners, some elements are missing');
       return;
     }
@@ -56,12 +58,16 @@ export class CustomerForm {
       e.target.value = formatted;
       this.state.updateCustomer({ customerPhone: formatted });
     });
+    
+    this.customerAddress.addEventListener('input', (e) => {
+      this.state.updateCustomer({ customerAddress: e.target.value });
+    });
   }
   
   populate(customerData) {
     console.log('🔄 CustomerForm: Populating data...', customerData);
     
-    if (!this.customerName || !this.customerEmail || !this.customerPhone) {
+    if (!this.customerName || !this.customerEmail || !this.customerPhone || !this.customerAddress) {
       console.error('❌ CustomerForm: Cannot populate, some elements are missing');
       return;
     }
@@ -69,5 +75,6 @@ export class CustomerForm {
     this.customerName.value = customerData.customerName || '';
     this.customerEmail.value = customerData.customerEmail || '';
     this.customerPhone.value = customerData.customerPhone || '';
+    this.customerAddress.value = customerData.customerAddress || '';
   }
 }
