@@ -22,72 +22,159 @@
                     <img src="https://i.imgur.com/A9K1ByZ.png" alt="Marine Group" class="header-logo">
                     <div class="brand-info">
                         <h1 class="app-title">Marine Group</h1>
-                        <span class="portal-subtitle">Employee Portal</span>
+                        <span class="portal-badge">Employee Portal</span>
                     </div>
                 </div>
                 <nav class="header-nav">
-                    <button class="nav-btn nav-btn-primary" id="sign-in-nav-btn">Employee Sign In</button>
+                    <span class="nav-status">Secure Access</span>
+                    <button class="nav-btn nav-btn-primary" id="sign-in-nav-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                            <polyline points="10 17 15 12 10 7"/>
+                            <line x1="15" y1="12" x2="3" y2="12"/>
+                        </svg>
+                        Sign In
+                    </button>
                 </nav>
             </div>
         </header>
 
         <!-- Main Content -->
         <main class="portal-main">
-            <div class="portal-content">
-                <div class="welcome-section">
-                    <h1 class="portal-title">Welcome to Marine Group</h1>
-                    <p class="portal-subtitle">Employee portal for internal systems and tools</p>
+            <div class="portal-hero">
+                <div class="hero-background">
+                    <div class="hero-gradient"></div>
+                    <div class="hero-pattern"></div>
                 </div>
                 
-                <div class="systems-grid">
-                    <div class="system-card primary-system">
-                        <div class="system-icon">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                <polyline points="14,2 14,8 20,8"/>
-                                <line x1="16" y1="13" x2="8" y2="13"/>
-                                <line x1="16" y1="17" x2="8" y2="17"/>
-                                <polyline points="10,9 9,9 8,9"/>
-                            </svg>
-                        </div>
-                        <h3 class="system-title">Invoice Management</h3>
-                        <p class="system-description">Create, manage, and process marine service invoices with integrated pricing and vessel data.</p>
-                        <button class="system-access-btn" id="get-started-btn">Access System</button>
+                <div class="portal-content">
+                    <div class="welcome-section">
+                        <div class="welcome-badge">Marine Group Global Services</div>
+                        <h1 class="portal-title">Invoice Management System</h1>
+                        <p class="portal-description">
+                            Professional marine service invoicing platform with integrated vessel data, 
+                            automated calculations, and comprehensive service catalog.
+                        </p>
                     </div>
-                </div>
-                
-                <div class="portal-notice">
-                    <div class="notice-content">
-                        <div class="notice-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <line x1="12" y1="8" x2="12" y2="12"/>
-                                <line x1="12" y1="16" x2="12.01" y2="16"/>
-                            </svg>
+                    
+                    <div class="access-card">
+                        <div class="card-header">
+                            <div class="card-status">
+                                <span class="status-dot"></span>
+                                System Online
+                            </div>
+                            <div class="card-badge">v2.0</div>
                         </div>
-                        <div class="notice-text">
-                            <strong>Employee Access Required</strong>
-                            <p>This portal is restricted to Marine Group employees. Please sign in with your company credentials.</p>
+                        
+                        <div class="card-content">
+                            <div class="feature-list">
+                                <div class="feature-item">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14,2 14,8 20,8"/>
+                                    </svg>
+                                    <span>Create professional invoices</span>
+                                </div>
+                                <div class="feature-item">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <polyline points="12,6 12,12 16,14"/>
+                                    </svg>
+                                    <span>Real-time collaboration</span>
+                                </div>
+                                <div class="feature-item">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                        <path d="M2 17l10 5 10-5"/>
+                                    </svg>
+                                    <span>Integrated pricing database</span>
+                                </div>
+                                <div class="feature-item">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                    </svg>
+                                    <span>Secure data protection</span>
+                                </div>
+                            </div>
+                            
+                            <div class="card-actions">
+                                <button class="access-btn" id="get-started-btn">
+                                    Access Invoice System
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="5" y1="12" x2="19" y2="12"/>
+                                        <polyline points="12 5 19 12 12 19"/>
+                                    </svg>
+                                </button>
+                                <p class="access-note">Employee credentials required</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                </svg>
+                            </div>
+                            <h3>Support Team</h3>
+                            <p>IT assistance available Monday-Friday, 8AM-6PM EST</p>
+                            <a href="mailto:support@marinegroup.com" class="info-link">Contact Support</a>
+                        </div>
+                        
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                                </svg>
+                            </div>
+                            <h3>Quick Access</h3>
+                            <p>Bookmark this page for faster access to the portal</p>
+                            <span class="info-badge">Ctrl+D to bookmark</span>
+                        </div>
+                        
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 6v6l4 2"/>
+                                </svg>
+                            </div>
+                            <h3>System Hours</h3>
+                            <p>Available 24/7 with scheduled maintenance windows</p>
+                            <span class="info-badge">99.9% uptime</span>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
 
-
         <!-- Footer -->
         <footer class="portal-footer">
             <div class="footer-content">
-                <div class="footer-info">
+                <div class="footer-section">
                     <div class="footer-brand">
                         <img src="https://i.imgur.com/A9K1ByZ.png" alt="Marine Group" class="footer-logo">
-                        <span class="footer-company-name">Marine Group</span>
+                        <div>
+                            <h4 class="footer-title">Marine Group</h4>
+                            <p class="footer-subtitle">Global Marine Services</p>
+                        </div>
                     </div>
-                    <p class="footer-copyright">&copy; 2025 Marine Group. All rights reserved.</p>
                 </div>
-                <div class="footer-support">
-                    <p class="support-text">IT Support: <a href="mailto:support@marinegroup.com" class="support-link">support@marinegroup.com</a></p>
-                    <p class="support-text">Employee Portal v1.0</p>
+                
+                <div class="footer-section">
+                    <p class="footer-text">
+                        &copy; 2025 Marine Group. All rights reserved.<br>
+                        Internal Use Only - Confidential
+                    </p>
+                </div>
+                
+                <div class="footer-section">
+                    <p class="footer-label">Technical Support</p>
+                    <a href="mailto:support@marinegroup.com" class="footer-link">support@marinegroup.com</a>
+                    <p class="footer-text">Extension: 5555</p>
                 </div>
             </div>
         </footer>
