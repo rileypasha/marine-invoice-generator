@@ -159,15 +159,16 @@ export class ScopeForm {
   }
   
   initElements() {
-    this.markupRate = document.getElementById('markup-rate');
-    this.taxableSelect = document.getElementById('taxable-select');
+    // Only look for elements that actually exist in the HTML
     this.addLineItemBtn = document.getElementById('add-line-item');
     this.lineItemsList = document.getElementById('line-items-list');
     this.lineItemTemplate = document.getElementById('line-item-template');
     
+    // These elements don't exist in the current HTML, so don't look for them
+    // this.markupRate = document.getElementById('markup-rate');
+    // this.taxableSelect = document.getElementById('taxable-select');
+    
     console.log('🔍 ScopeForm DOM elements:');
-    console.log('  - markupRate:', this.markupRate ? '✅' : '❌');
-    console.log('  - taxableSelect:', this.taxableSelect ? '✅' : '❌');
     console.log('  - addLineItemBtn:', this.addLineItemBtn ? '✅' : '❌');
     console.log('  - lineItemsList:', this.lineItemsList ? '✅' : '❌');
     console.log('  - lineItemTemplate:', this.lineItemTemplate ? '✅' : '❌');
@@ -176,21 +177,8 @@ export class ScopeForm {
   attachListeners() {
     console.log('🔗 ScopeForm: Attaching event listeners...');
     
-    if (this.markupRate) {
-      this.markupRate.addEventListener('change', (e) => {
-        this.state.updateScope({ markupRate: e.target.value });
-      });
-    } else {
-      console.warn('⚠️ Markup rate element not found');
-    }
-    
-    if (this.taxableSelect) {
-      this.taxableSelect.addEventListener('change', (e) => {
-        this.state.updateScope({ isTaxable: e.target.value === 'yes' });
-      });
-    } else {
-      console.warn('⚠️ Taxable select element not found');
-    }
+    // Skip markup rate and taxable select - these elements don't exist in current HTML
+    // The markup and tax logic is now handled per line item in the line item template
     
     if (this.addLineItemBtn) {
       this.addLineItemBtn.addEventListener('click', () => {
