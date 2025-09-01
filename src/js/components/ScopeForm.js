@@ -164,30 +164,51 @@ export class ScopeForm {
     this.addLineItemBtn = document.getElementById('add-line-item');
     this.lineItemsList = document.getElementById('line-items-list');
     this.lineItemTemplate = document.getElementById('line-item-template');
+    
+    console.log('🔍 ScopeForm DOM elements:');
+    console.log('  - markupRate:', this.markupRate ? '✅' : '❌');
+    console.log('  - taxableSelect:', this.taxableSelect ? '✅' : '❌');
+    console.log('  - addLineItemBtn:', this.addLineItemBtn ? '✅' : '❌');
+    console.log('  - lineItemsList:', this.lineItemsList ? '✅' : '❌');
+    console.log('  - lineItemTemplate:', this.lineItemTemplate ? '✅' : '❌');
   }
   
   attachListeners() {
-    this.markupRate.addEventListener('change', (e) => {
-      this.state.updateScope({ markupRate: e.target.value });
-    });
+    console.log('🔗 ScopeForm: Attaching event listeners...');
     
-    this.taxableSelect.addEventListener('change', (e) => {
-      this.state.updateScope({ isTaxable: e.target.value === 'yes' });
-    });
+    if (this.markupRate) {
+      this.markupRate.addEventListener('change', (e) => {
+        this.state.updateScope({ markupRate: e.target.value });
+      });
+    } else {
+      console.warn('⚠️ Markup rate element not found');
+    }
     
-    this.addLineItemBtn.addEventListener('click', () => {
-      // Check if existing line items are complete
-      const incompleteItems = this.validateAllLineItems();
-      console.log('Incomplete items found:', incompleteItems);
-      if (incompleteItems.length > 0) {
-        alert(`Please complete Item ${incompleteItems[0].index} before adding a new line item.`);
-        return;
-      }
-      
-      // Just add to state - the subscription will handle rendering automatically
-      this.state.addLineItem();
-      // updateValidationState will be called by the state subscription
-    });
+    if (this.taxableSelect) {
+      this.taxableSelect.addEventListener('change', (e) => {
+        this.state.updateScope({ isTaxable: e.target.value === 'yes' });
+      });
+    } else {
+      console.warn('⚠️ Taxable select element not found');
+    }
+    
+    if (this.addLineItemBtn) {
+      this.addLineItemBtn.addEventListener('click', () => {
+        // Check if existing line items are complete
+        const incompleteItems = this.validateAllLineItems();
+        console.log('Incomplete items found:', incompleteItems);
+        if (incompleteItems.length > 0) {
+          alert(`Please complete Item ${incompleteItems[0].index} before adding a new line item.`);
+          return;
+        }
+        
+        // Just add to state - the subscription will handle rendering automatically
+        this.state.addLineItem();
+        // updateValidationState will be called by the state subscription
+      });
+    } else {
+      console.warn('⚠️ Add line item button not found');
+    }
   }
   
   renderLineItem(id) {

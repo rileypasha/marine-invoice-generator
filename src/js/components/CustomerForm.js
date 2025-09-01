@@ -16,6 +16,17 @@ export class CustomerForm {
   }
   
   attachListeners() {
+    console.log('🔗 CustomerForm: Attaching event listeners...');
+    console.log('  - customerName:', this.customerName ? '✅' : '❌');
+    console.log('  - customerEmail:', this.customerEmail ? '✅' : '❌');
+    console.log('  - customerPhone:', this.customerPhone ? '✅' : '❌');
+    console.log('  - emailError:', this.emailError ? '✅' : '❌');
+    
+    if (!this.customerName || !this.customerEmail || !this.customerPhone) {
+      console.error('❌ CustomerForm: Cannot attach listeners, some elements are missing');
+      return;
+    }
+    
     this.customerName.addEventListener('input', (e) => {
       this.state.updateCustomer({ customerName: e.target.value });
     });
@@ -27,9 +38,13 @@ export class CustomerForm {
     this.customerEmail.addEventListener('blur', (e) => {
       const email = e.target.value;
       if (email && !validateEmail(email)) {
-        this.emailError.textContent = 'Please enter a valid email address';
+        if (this.emailError) {
+          this.emailError.textContent = 'Please enter a valid email address';
+        }
       } else {
-        this.emailError.textContent = '';
+        if (this.emailError) {
+          this.emailError.textContent = '';
+        }
       }
     });
     
@@ -44,6 +59,13 @@ export class CustomerForm {
   }
   
   populate(customerData) {
+    console.log('🔄 CustomerForm: Populating data...', customerData);
+    
+    if (!this.customerName || !this.customerEmail || !this.customerPhone) {
+      console.error('❌ CustomerForm: Cannot populate, some elements are missing');
+      return;
+    }
+    
     this.customerName.value = customerData.customerName || '';
     this.customerEmail.value = customerData.customerEmail || '';
     this.customerPhone.value = customerData.customerPhone || '';

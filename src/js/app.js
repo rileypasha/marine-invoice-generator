@@ -189,21 +189,43 @@ class InvoiceApp {
     const emailBtn = document.getElementById('compose-email');
     const printBtn = document.getElementById('print-invoice');
     
-    saveBtn.addEventListener('click', () => {
-      this.saveInvoice();
-    });
+    console.log('🔍 Action buttons found:');
+    console.log('  - saveBtn:', saveBtn ? '✅' : '❌');
+    console.log('  - pdfBtn:', pdfBtn ? '✅' : '❌');
+    console.log('  - emailBtn:', emailBtn ? '✅' : '❌');
+    console.log('  - printBtn:', printBtn ? '✅' : '❌');
     
-    pdfBtn.addEventListener('click', () => {
-      generatePDF();
-    });
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        this.saveInvoice();
+      });
+    } else {
+      console.error('❌ Save button not found');
+    }
     
-    emailBtn.addEventListener('click', () => {
-      composeEmail(this.state, this.userManager);
-    });
+    if (pdfBtn) {
+      pdfBtn.addEventListener('click', () => {
+        generatePDF();
+      });
+    } else {
+      console.error('❌ PDF button not found');
+    }
     
-    printBtn.addEventListener('click', () => {
-      printInvoice();
-    });
+    if (emailBtn) {
+      emailBtn.addEventListener('click', () => {
+        composeEmail(this.state, this.userManager);
+      });
+    } else {
+      console.error('❌ Email button not found');
+    }
+    
+    if (printBtn) {
+      printBtn.addEventListener('click', () => {
+        printInvoice();
+      });
+    } else {
+      console.error('❌ Print button not found');
+    }
     
     // Handle Electron IPC messages if available
     if (window.require) {

@@ -29,6 +29,13 @@ export class VesselForm {
   }
   
   attachListeners() {
+    console.log('🔗 VesselForm: Attaching event listeners...');
+    
+    if (!this.vesselName || !this.vesselWeight || !this.vesselBeam) {
+      console.error('❌ VesselForm: Cannot attach listeners, some elements are missing');
+      return;
+    }
+    
     this.vesselName.addEventListener('input', (e) => {
       this.state.updateVessel({ name: e.target.value });
     });
@@ -146,25 +153,40 @@ export class VesselForm {
   }
   
   populate(vesselData) {
+    console.log('🔄 VesselForm: Populating data...', vesselData);
+    
+    if (!this.vesselName || !this.vesselWeight || !this.vesselBeam) {
+      console.error('❌ VesselForm: Cannot populate, some elements are missing');
+      return;
+    }
+    
     this.vesselName.value = vesselData.name || '';
     this.vesselWeight.value = vesselData.weight || '';
     this.vesselBeam.value = vesselData.beam || '';
     
     // Update suffix visibility for populated values
     if (vesselData.weight && vesselData.weight.trim() !== '') {
-      this.weightWrapper.classList.add('has-value');
+      if (this.weightWrapper) {
+        this.weightWrapper.classList.add('has-value');
+      }
       // Also manage clearance fee when populating from saved data
       this.manageClearanceFee(vesselData.weight);
     } else {
-      this.weightWrapper.classList.remove('has-value');
+      if (this.weightWrapper) {
+        this.weightWrapper.classList.remove('has-value');
+      }
       // Remove clearance fee if no weight
       this.manageClearanceFee('');
     }
     
     if (vesselData.beam && vesselData.beam.trim() !== '') {
-      this.beamWrapper.classList.add('has-value');
+      if (this.beamWrapper) {
+        this.beamWrapper.classList.add('has-value');
+      }
     } else {
-      this.beamWrapper.classList.remove('has-value');
+      if (this.beamWrapper) {
+        this.beamWrapper.classList.remove('has-value');
+      }
     }
   }
   
