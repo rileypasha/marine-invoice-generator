@@ -1,4 +1,5 @@
 import '../styles/landing.css';
+import '../styles/auth.css';
 import { UserManager } from './auth/UserManager.js';
 import { AuthModal } from './auth/AuthModal.js';
 
