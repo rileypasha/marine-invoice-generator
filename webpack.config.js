@@ -3,10 +3,13 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-  entry: path.resolve(__dirname, 'src/js/app.js'),
+  entry: {
+    main: path.resolve(__dirname, 'src/js/app.js'),
+    landing: path.resolve(__dirname, 'src/js/landing.js')
+  },
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'bundle.js'
+    filename: '[name].bundle.js'
   },
   module: {
     rules: [
@@ -31,9 +34,18 @@ module.exports = {
     ]
   },
   plugins: [
+    // Landing page (public, no auth required)
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, 'src/landing.html'),
+      filename: 'index.html',
+      chunks: ['landing'],
+      favicon: path.resolve(__dirname, 'src/assets/favicon.png')
+    }),
+    // Main app (auth required)
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, 'src/index.html'),
-      filename: 'index.html',
+      filename: 'app.html',
+      chunks: ['main'],
       favicon: path.resolve(__dirname, 'src/assets/favicon.png')
     }),
     new CopyWebpackPlugin({

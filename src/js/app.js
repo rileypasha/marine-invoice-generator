@@ -29,44 +29,97 @@ window.addLineItem = function(lineItem) {
 
 class InvoiceApp {
   constructor() {
-    // Check if user is master FIRST
-    this.checkMasterUser();
-    
-    // Initialize core systems
+    // Initialize core systems first
     this.userManager = new UserManager();
-    this.themeManager = new ThemeManager(this.userManager);
-    this.invoiceStorage = new InvoiceStorage(this.userManager);
     
-    // Initialize UI components
-    this.authModal = new AuthModal(this.userManager);
-    this.settingsModal = new SettingsModal(this.userManager, this.themeManager);
-    this.promptModal = new PromptModal();
-    
-    // Initialize invoice state and components
-    this.state = new InvoiceState();
-    this.initComponents();
-    this.initTabNavigation();
-    this.initActionButtons();
-    this.initKeyboardShortcuts();
-    
-    // Initialize sidebar (must be after other components)
-    console.log('🏗️ About to create sidebar...');
-    console.log('🏗️ Constructor params:', {
-      userManager: !!this.userManager,
-      invoiceStorage: !!this.invoiceStorage, 
-      authModal: !!this.authModal,
-      settingsModal: !!this.settingsModal
+    // Check authentication before initializing app
+    this.checkAuthentication().then(isAuthenticated => {
+      if (!isAuthenticated) {
+        console.log('🚫 User not authenticated, redirecting to landing page...');
+        window.location.href = '/';
+        return;
+      }
+      
+      // Check if user is master
+      this.checkMasterUser();
+      
+      // Continue with app initialization
+      this.themeManager = new ThemeManager(this.userManager);
+      this.invoiceStorage = new InvoiceStorage(this.userManager);
+      
+      // Initialize UI components
+      this.authModal = new AuthModal(this.userManager);
+      this.settingsModal = new SettingsModal(this.userManager, this.themeManager);
+      this.promptModal = new PromptModal();
+      
+      // Initialize invoice state and components
+      this.state = new InvoiceState();
+      this.initComponents();
+      this.initTabNavigation();
+      this.initActionButtons();
+      this.initKeyboardShortcuts();
+      
+      // Initialize sidebar (must be after other components)
+      console.log('🏗️ About to create sidebar...');
+      console.log('🏗️ Constructor params:', {
+        userManager: !!this.userManager,
+        invoiceStorage: !!this.invoiceStorage, 
+        authModal: !!this.authModal,
+        settingsModal: !!this.settingsModal
+      });
+      this.sidebar = new Sidebar(this.userManager, this.invoiceStorage, this.authModal, this.settingsModal);
+      console.log('✅ Sidebar created successfully');
+      
+      // Setup invoice item listeners
+      this.sidebar.setupInvoiceItemListeners();
+      
+      // Make state available for testing
+      window.app = this;
+      
+      console.log('✅ Full app initialized with authentication and storage');
+      
+      // Check for failed saves on startup and retry
+      if (this.invoiceStorage && this.invoiceStorage.retryFailedSaves) {
+        setTimeout(async () => {
+          const failedSaves = JSON.parse(localStorage.getItem('failedSaves') || '[]');
+          if (failedSaves.length > 0) {
+            console.log(`📦 Found ${failedSaves.length} failed saves. Attempting retry...`);
+            const result = await this.invoiceStorage.retryFailedSaves();
+            if (result && result.stillFailed > 0) {
+              this.showNotification(`${result.stillFailed} invoices are pending save. Will retry later.`, 'warning');
+            }
+          }
+        }, 2000);
+      }
     });
-    this.sidebar = new Sidebar(this.userManager, this.invoiceStorage, this.authModal, this.settingsModal);
-    console.log('✅ Sidebar created successfully');
-    
-    // Setup invoice item listeners
-    this.sidebar.setupInvoiceItemListeners();
-    
-    // Make state available for testing
-    window.app = this;
-    
-    console.log('✅ Full app initialized with authentication and storage');
+  }
+  
+  async checkAuthentication() {
+    try {
+      // First check local authentication state
+      if (this.userManager.isAuthenticated()) {
+        console.log('👤 User authenticated locally');
+        return true;
+      }
+      
+      // Check server authentication status
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        console.log('👤 User authenticated via server');
+        this.userManager.setCurrentUser(userData.user);
+        return true;
+      }
+      
+      console.log('🚫 User not authenticated');
+      return false;
+    } catch (error) {
+      console.log('🚫 Authentication check failed:', error);
+      return false;
+    }
   }
   
   async checkMasterUser() {
@@ -283,60 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1000);
     
     
-    // Add global debug functions for console testing
-    window.debugApp = {
-      app: app,
-      testTabSwitch: (tabName) => {
-        console.log(`🧪 Testing tab switch to: ${tabName}`);
-        const button = document.querySelector(`[data-tab="${tabName}"]`);
-        if (button) {
-          button.click();
-          console.log('✅ Tab click triggered');
-        } else {
-          console.error(`❌ No tab button found for: ${tabName}`);
-        }
-      },
-      testStateUpdate: (section, data) => {
-        console.log(`🧪 Testing state update: ${section}`, data);
-        switch(section) {
-          case 'vessel':
-            app.state.updateVessel(data);
-            break;
-          case 'customer':
-            app.state.updateCustomer(data);
-            break;
-          case 'scope':
-            app.state.updateScope(data);
-            break;
-        }
-      },
-      getState: () => app.state.getState(),
-      listTabs: () => {
-        const buttons = document.querySelectorAll('.tab-button');
-        const panels = document.querySelectorAll('.tab-panel');
-        console.log('🗂️ Available tabs:');
-        buttons.forEach((btn, i) => console.log(`  ${i}: ${btn.getAttribute('data-tab')} - "${btn.textContent.trim()}"`));
-        console.log('📁 Available panels:');
-        panels.forEach((panel, i) => console.log(`  ${i}: ${panel.getAttribute('data-section')} - visible: ${panel.classList.contains('visible')}`));
-      }
-    };
-    
-    console.log('🛠️ Debug tools added to window.debugApp');
-    console.log('💡 Try: debugApp.listTabs() or debugApp.testTabSwitch("customer")');
-    
-    // Check for failed saves on startup and retry
-    if (app.invoiceStorage && app.invoiceStorage.retryFailedSaves) {
-      setTimeout(async () => {
-        const failedSaves = JSON.parse(localStorage.getItem('failedSaves') || '[]');
-        if (failedSaves.length > 0) {
-          console.log(`📦 Found ${failedSaves.length} failed saves. Attempting retry...`);
-          const result = await app.invoiceStorage.retryFailedSaves();
-          if (result && result.stillFailed > 0) {
-            app.showNotification(`${result.stillFailed} invoices are pending save. Will retry later.`, 'warning');
-          }
-        }
-      }, 2000);
-    }
+    // Debug tools will be added after successful authentication
     
   } catch (error) {
     console.error('❌ Error initializing app:', error);
