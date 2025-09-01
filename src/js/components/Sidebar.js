@@ -113,10 +113,20 @@ export class Sidebar {
     console.log('🔗 Attaching sidebar listeners...');
     console.log('🔍 AuthModal available:', !!this.authModal);
     
+    if (!this.sidebar) {
+      console.error('❌ Sidebar element is null, cannot attach listeners');
+      return;
+    }
+    
     // Sidebar toggle
-    this.sidebar.querySelector('.sidebar-toggle-btn').addEventListener('click', () => {
-      this.toggleSidebar();
-    });
+    const toggleBtn = this.sidebar.querySelector('.sidebar-toggle-btn');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        this.toggleSidebar();
+      });
+    } else {
+      console.warn('⚠️ Sidebar toggle button not found');
+    }
     
     // New invoice
     const newInvoiceBtn = this.sidebar.querySelector('.new-invoice-btn');
@@ -190,9 +200,14 @@ export class Sidebar {
       console.log('🔍 Available buttons:', this.sidebar.querySelectorAll('button'));
     }
     
-    this.sidebar.querySelector('#sign-up-btn').addEventListener('click', () => {
-      this.authModal.show('signup');
-    });
+    const signUpBtn = this.sidebar.querySelector('#sign-up-btn');
+    if (signUpBtn) {
+      signUpBtn.addEventListener('click', () => {
+        this.authModal.show('signup');
+      });
+    } else {
+      console.error('❌ Sign-up button not found!');
+    }
     
     // User section click - opens settings
     const userSection = this.sidebar.querySelector('#user-section');
@@ -217,8 +232,18 @@ export class Sidebar {
   }
   
   updateUserSection(user) {
+    if (!this.sidebar) {
+      console.error('❌ Cannot update user section: sidebar is null');
+      return;
+    }
+    
     const userSection = this.sidebar.querySelector('#user-section');
     const authSection = this.sidebar.querySelector('#auth-section');
+    
+    if (!userSection || !authSection) {
+      console.error('❌ Cannot find user or auth sections');
+      return;
+    }
     
     if (user) {
       // Show user section
@@ -226,8 +251,11 @@ export class Sidebar {
       authSection.style.display = 'none';
       
       // Update user info
-      this.sidebar.querySelector('#user-name').textContent = user.name;
-      this.sidebar.querySelector('#user-email').textContent = user.email;
+      const userNameEl = this.sidebar.querySelector('#user-name');
+      const userEmailEl = this.sidebar.querySelector('#user-email');
+      
+      if (userNameEl) userNameEl.textContent = user.name;
+      if (userEmailEl) userEmailEl.textContent = user.email;
     } else {
       // Show auth section
       userSection.style.display = 'none';
@@ -240,7 +268,17 @@ export class Sidebar {
   }
   
   updateSavedList() {
+    if (!this.sidebar) {
+      console.error('❌ Cannot update saved list: sidebar is null');
+      return;
+    }
+    
     const container = this.sidebar.querySelector('#recent-list');
+    if (!container) {
+      console.error('❌ Cannot find #recent-list container');
+      return;
+    }
+    
     const saved = this.invoiceStorage.getSavedItems(5);
     
     if (saved.length === 0) {
@@ -304,6 +342,11 @@ export class Sidebar {
   
   // Event delegation for invoice items
   setupInvoiceItemListeners() {
+    if (!this.sidebar) {
+      console.error('❌ Cannot setup invoice item listeners: sidebar is null');
+      return;
+    }
+    
     this.sidebar.addEventListener('click', (e) => {
       const invoiceItem = e.target.closest('.invoice-item');
       if (!invoiceItem) return;
@@ -459,6 +502,11 @@ export class Sidebar {
   }
   
   toggleSidebar() {
+    if (!this.sidebar) {
+      console.error('❌ Cannot toggle sidebar: sidebar is null');
+      return;
+    }
+    
     this.isCollapsed = !this.isCollapsed;
     this.sidebar.classList.toggle('collapsed', this.isCollapsed);
     
