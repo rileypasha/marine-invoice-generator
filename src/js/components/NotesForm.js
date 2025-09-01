@@ -92,11 +92,8 @@ export class NotesForm {
     const currentState = this.state.getState();
     const updatedComments = [...(currentState.notes?.comments || []), comment];
     
-    this.state.updateState({
-      notes: {
-        ...currentState.notes,
-        comments: updatedComments
-      }
+    this.state.updateNotes({
+      comments: updatedComments
     });
     
     // Clear input and collapse

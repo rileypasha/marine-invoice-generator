@@ -18,6 +18,9 @@ export class InvoiceState {
         markupRate: '2.5',
         isTaxable: false,
         lineItems: []
+      },
+      notes: {
+        comments: []
       }
     };
     
@@ -73,6 +76,15 @@ export class InvoiceState {
     } else {
       this.notify();
     }
+  }
+  
+  updateNotes(updates) {
+    console.log('📝 Updating notes state:', updates);
+    const oldNotes = { ...this.state.notes };
+    this.state.notes = { ...this.state.notes, ...updates };
+    console.log('  - Old notes:', oldNotes);
+    console.log('  - New notes:', this.state.notes);
+    this.notify();
   }
   
   addLineItem(lineItem = {}) {
@@ -286,6 +298,9 @@ export class InvoiceState {
         markupRate: '2.5',
         isTaxable: false,
         lineItems: []
+      },
+      notes: {
+        comments: []
       }
     };
     this.lineItemIdCounter = 0;

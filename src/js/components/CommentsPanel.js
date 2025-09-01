@@ -210,11 +210,8 @@ export class CommentsPanel {
       }
       comments[commentIndex].replies.push(reply);
       
-      this.state.updateState({
-        notes: {
-          ...currentState.notes,
-          comments: comments
-        }
+      this.state.updateNotes({
+        comments: comments
       });
       
       // Hide reply input
