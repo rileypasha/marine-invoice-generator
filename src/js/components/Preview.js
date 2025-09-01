@@ -114,10 +114,14 @@ export class Preview {
         }
       }
       
+      // Calculate markup amount
+      const markupAmount = totalWithMarkup - cost;
+      
       row.innerHTML = `
         <td>${item.description}${laborInfo}</td>
         <td>${serviceTypeDisplay}</td>
         <td class="cost-cell">${formatCurrency(cost)}</td>
+        <td class="markup-cell">${formatCurrency(markupAmount)}</td>
         <td class="tax-cell">${formatCurrency(lineTax)}</td>
         <td class="total-with-markup">${formatCurrency(totalWithMarkup)}</td>
       `;
