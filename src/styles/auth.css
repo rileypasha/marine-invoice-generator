@@ -32,14 +32,14 @@
 }
 
 .auth-modal-content {
-  background: var(--color-surface);
+  background: #ffffff;
   border-radius: 20px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
   width: 100%;
   max-width: 450px;
   max-height: 98vh;
   position: relative;
-  padding: var(--space-3) var(--space-4);
+  padding: 24px 32px;
   border: none;
   backdrop-filter: blur(20px);
   transform: scale(0.95);
@@ -105,10 +105,10 @@
 
 .auth-tabs {
   display: flex;
-  background: var(--color-background);
+  background: #f1f5f9;
   border-radius: 16px;
   padding: 6px;
-  margin-bottom: var(--space-4);
+  margin-bottom: 24px;
   position: relative;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -165,12 +165,12 @@
 .auth-form input[type="password"] {
   width: 100%;
   padding: 14px 18px;
-  font-size: var(--text-base);
-  font-family: var(--font-system);
-  background: var(--color-background);
-  border: 2px solid var(--color-border);
+  font-size: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
   border-radius: 12px;
-  color: var(--color-text-primary);
+  color: #0f172a;
   transition: all 0.3s ease;
   outline: none;
   appearance: none;
@@ -181,9 +181,9 @@
 .auth-form input[type="text"]:focus,
 .auth-form input[type="email"]:focus,
 .auth-form input[type="password"]:focus {
-  border-color: var(--color-accent);
-  background: var(--color-surface);
-  box-shadow: 0 0 0 4px rgba(25, 195, 125, 0.1);
+  border-color: #1e40af;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.1);
   transform: translateY(-1px);
 }
 
@@ -382,23 +382,23 @@
 .auth-submit-btn {
   width: 100%;
   padding: 16px 24px;
-  background: linear-gradient(135deg, var(--color-accent) 0%, #1a9671 100%);
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
   color: white;
   border: none;
   border-radius: 12px;
-  font-size: var(--text-base);
-  font-weight: var(--font-semibold);
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: 8px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 14px rgba(25, 195, 125, 0.2);
-  margin-top: var(--space-3);
-  margin-bottom: var(--space-3);
+  box-shadow: 0 4px 14px rgba(30, 64, 175, 0.3);
+  margin-top: 16px;
+  margin-bottom: 16px;
 }
 
 .auth-submit-btn::before {
@@ -417,9 +417,9 @@
 }
 
 .auth-submit-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--color-accent-hover) 0%, #157a63 100%);
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e3a8a 100%);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(25, 195, 125, 0.3);
+  box-shadow: 0 6px 20px rgba(30, 64, 175, 0.4);
 }
 
 .auth-submit-btn:active:not(:disabled) {
