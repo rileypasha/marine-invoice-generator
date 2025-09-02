@@ -67,7 +67,7 @@ class LandingPage {
     });
     
     // Listen for successful authentication
-    this.userManager.onAuthChange((user) => {
+    this.userManager.subscribe((user) => {
       if (user) {
         console.log('👤 User authenticated, redirecting to app...');
         setTimeout(() => {
