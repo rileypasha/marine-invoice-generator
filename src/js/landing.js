@@ -37,7 +37,10 @@ class LandingPage {
       if (response.ok) {
         const userData = await response.json();
         console.log('👤 User authenticated via server, redirecting to app...');
-        this.userManager.setCurrentUser(userData.user);
+        // Set the user data directly and notify listeners
+        this.userManager.currentUser = userData.user;
+        this.userManager.saveSession(true);
+        this.userManager.notify();
         this.redirectToApp();
       }
     } catch (error) {
