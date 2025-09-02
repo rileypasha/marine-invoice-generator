@@ -379,7 +379,7 @@
 .auth-submit-btn {
   width: 100%;
   padding: 12px 20px;
-  background: #3b82f6;
+  background: #1e40af;
   color: white;
   border: none;
   border-radius: 8px;
@@ -414,14 +414,14 @@
 }
 
 .auth-submit-btn:hover:not(:disabled) {
-  background: #2563eb;
+  background: #1e3a8a;
   transform: translateY(-1px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .auth-submit-btn:active:not(:disabled) {
   transform: translateY(0);
-  background: #1d4ed8;
+  background: #1e3a8a;
 }
 
 .auth-submit-btn:disabled {
