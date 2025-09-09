@@ -96,10 +96,9 @@ class InvoiceApp {
   
   async checkAuthentication() {
     try {
-      console.log('🔍 Checking authentication with server...');
+      console.log('🔍 Checking authentication (hybrid mode)...');
       
-      // ALWAYS check server authentication status first
-      // This prevents redirect loops caused by stale localStorage
+      // First check for cookie-based session
       const response = await fetch('/api/auth/me', {
         method: 'GET',
         credentials: 'include',
@@ -109,60 +108,85 @@ class InvoiceApp {
         }
       });
       
-      console.log('📡 Auth response status:', response.status);
+      console.log('📡 Cookie auth response:', response.status);
       
       if (response.ok) {
         const userData = await response.json();
-        console.log('✅ User authenticated via server:', userData);
-        // Set the user data directly since setCurrentUser doesn't exist
+        console.log('✅ Cookie authentication successful:', userData);
         this.userManager.currentUser = userData.user;
         this.userManager.saveSession(true);
         this.userManager.notify();
+        localStorage.setItem('auth_method', 'cookie');
         return true;
       }
       
-      // Don't immediately clear session - let's see what the error is
-      console.log('⚠️ Server auth check returned:', response.status);
+      // Cookie auth failed, try token auth
+      console.log('🔄 Cookie auth failed, trying token authentication...');
       
-      // Try to get error details
-      try {
-        const errorData = await response.json();
-        console.log('❌ Auth error details:', errorData);
-      } catch (e) {
-        console.log('❌ Could not parse error response');
-      }
+      const token = localStorage.getItem('auth_token');
+      const tokenExpiry = localStorage.getItem('auth_token_expiry');
       
-      // For now, don't redirect if we're already on /app
-      // This prevents redirect loops
-      if (window.location.pathname === '/app') {
-        console.log('⚠️ Already on /app, not redirecting to avoid loop');
-        // Try to use localStorage as fallback
-        const storedUser = localStorage.getItem('marine_invoice_user');
-        if (storedUser) {
-          console.log('📦 Using localStorage user data as fallback');
-          this.userManager.currentUser = JSON.parse(storedUser);
-          this.userManager.notify();
-          return true;
+      if (token && tokenExpiry) {
+        // Check if token is expired
+        if (Number(tokenExpiry) < Date.now()) {
+          console.log('⚠️ Token expired, clearing...');
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_token_expiry');
+          localStorage.removeItem('auth_method');
+        } else {
+          // Verify token with server
+          const tokenResponse = await fetch('/api/token-auth/verify', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (tokenResponse.ok) {
+            const tokenData = await tokenResponse.json();
+            console.log('✅ Token authentication successful:', tokenData);
+            this.userManager.currentUser = tokenData.user;
+            this.userManager.saveSession(true);
+            this.userManager.notify();
+            localStorage.setItem('auth_method', 'token');
+            
+            // Store token for API calls
+            window.authToken = token;
+            return true;
+          } else {
+            console.log('❌ Token verification failed');
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_token_expiry');
+          }
         }
       }
       
-      // Only clear session if we're definitely not authenticated
-      this.userManager.clearSession();
-      console.log('🚫 User not authenticated on server');
-      return false;
-    } catch (error) {
-      console.log('🚫 Authentication check failed:', error);
+      // Both cookie and token auth failed, check localStorage fallback
+      const storedUser = localStorage.getItem('marine_invoice_user');
+      if (storedUser && window.location.pathname === '/app') {
+        console.log('📦 Using localStorage fallback (offline mode)');
+        this.userManager.currentUser = JSON.parse(storedUser);
+        this.userManager.notify();
+        localStorage.setItem('auth_method', 'localStorage');
+        return true;
+      }
       
-      // For network errors, try localStorage fallback
+      // No valid authentication found
+      console.log('🚫 No valid authentication found');
+      this.userManager.clearSession();
+      return false;
+      
+    } catch (error) {
+      console.log('🚫 Authentication check error:', error);
+      
+      // On network error, try localStorage fallback
       const storedUser = localStorage.getItem('marine_invoice_user');
       if (storedUser) {
-        console.log('📦 Network error - using localStorage user data as fallback');
+        console.log('📦 Network error - using localStorage fallback');
         this.userManager.currentUser = JSON.parse(storedUser);
         this.userManager.notify();
         return true;
       }
       
-      // Clear any stale localStorage on error
       this.userManager.clearSession();
       return false;
     }
