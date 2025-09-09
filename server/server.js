@@ -169,6 +169,10 @@ app.use(trackRevision);
 app.use('/api/auth', authRouter);
 app.use('/api/auth', authFormRouter);
 
+// Cookie testing routes (temporary for debugging)
+const cookieTestRouter = require('./routes/cookie-test');
+app.use('/api/cookie-test', cookieTestRouter);
+
 // Emergency login page (temporary fix for modal issues)
 app.get('/login', (req, res) => {
   const loginPath = path.join(__dirname, '../src/emergency-login.html');
@@ -197,6 +201,12 @@ app.get('/diagnostic', (req, res) => {
 app.get('/cloudflare-diagnostic', (req, res) => {
   const diagnosticPath = path.join(__dirname, '../src/cloudflare-diagnostic.html');
   res.sendFile(diagnosticPath);
+});
+
+// Cookie test page
+app.get('/cookie-test', (req, res) => {
+  const testPath = path.join(__dirname, '../src/cookie-test.html');
+  res.sendFile(testPath);
 });
 
 // JavaScript test page
