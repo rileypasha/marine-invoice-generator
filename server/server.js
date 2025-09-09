@@ -150,6 +150,12 @@ app.use(trackRevision);
 // Auth routes (login/logout)
 app.use('/api/auth', authRouter);
 
+// Emergency login page (temporary fix for modal issues)
+app.get('/login', (req, res) => {
+  const loginPath = path.join(__dirname, '../src/emergency-login.html');
+  res.sendFile(loginPath);
+});
+
 // TEMPORARY: Security fix route (REMOVE AFTER FIXING PRODUCTION DATA)
 const securityFixRouter = require('./routes/security-fix');
 app.use('/api/security', securityFixRouter);
