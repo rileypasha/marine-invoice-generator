@@ -1,5 +1,6 @@
 import '../styles/landing.css';
 import '../styles/auth.css';
+import '../styles/mobile-responsive.css';
 import { UserManager } from './auth/UserManager.js';
 import { AuthModal } from './auth/AuthModal.js';
 

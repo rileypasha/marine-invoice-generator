@@ -1,6 +1,7 @@
 console.log('🔥 APP.JS FILE LOADED');
 
 import '../styles/main.css';
+import '../styles/mobile-responsive.css';
 import { InvoiceState } from './state/InvoiceState.js';
 import { VesselForm } from './components/VesselForm.js';
 import { CustomerForm } from './components/CustomerForm.js';
@@ -15,6 +16,7 @@ import { ThemeManager } from './settings/ThemeManager.js';
 import { SettingsModal } from './settings/SettingsModal.js';
 import { InvoiceStorage } from './storage/InvoiceStorage.js';
 import { PromptModal } from './components/PromptModal.js';
+import { MobileMenu } from './components/MobileMenu.js';
 import { generatePDF } from './exports/pdf.js';
 import { composeEmail } from './exports/email.js';
 import { printInvoice } from './exports/print.js';
@@ -72,6 +74,10 @@ class InvoiceApp {
       
       // Setup invoice item listeners
       this.sidebar.setupInvoiceItemListeners();
+      
+      // Initialize mobile menu
+      this.mobileMenu = new MobileMenu();
+      console.log('📱 Mobile menu initialized');
       
       // Make state available for testing
       window.app = this;
