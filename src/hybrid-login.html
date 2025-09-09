@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marine Invoice - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .logo p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e4e8;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+        
+        .auth-status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .auth-status strong {
+            color: #333;
+        }
+        
+        .test-account {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .test-account p {
+            color: #856404;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        
+        .test-account button {
+            background: #ffc107;
+            color: #333;
+            font-size: 14px;
+            padding: 10px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>🚢 Marine Invoice</h1>
+            <p>Hybrid Authentication System</p>
+        </div>
+        
+        <div id="message" class="message"></div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    placeholder="your@email.com"
+                    required
+                    autocomplete="email"
+                >
+            </div>
+            
+            <button type="submit" id="submitBtn">
+                <span id="btnText">Sign In</span>
+                <span id="btnLoader" class="loading" style="display: none;"></span>
+            </button>
+        </form>
+        
+        <div class="test-account">
+            <p>Test Account Available</p>
+            <button type="button" onclick="useTestAccount()">
+                Use Test Account
+            </button>
+        </div>
+        
+        <div class="auth-status">
+            <strong>Status:</strong> <span id="status">Checking...</span><br>
+            <strong>Method:</strong> <span id="method">-</span><br>
+            <strong>Domain:</strong> <span id="domain">-</span><br>
+            <strong>Cookies:</strong> <span id="cookies">-</span>
+        </div>
+    </div>
+
+    <script src="/src/js/hybrid-auth.js"></script>
+    <script>
+        const auth = new HybridAuth();
+        const form = document.getElementById('loginForm');
+        const message = document.getElementById('message');
+        const statusEl = document.getElementById('status');
+        const methodEl = document.getElementById('method');
+        const domainEl = document.getElementById('domain');
+        const cookiesEl = document.getElementById('cookies');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const btnLoader = document.getElementById('btnLoader');
+
+        // Update status display
+        function updateStatus() {
+            domainEl.textContent = window.location.hostname;
+            
+            const cookies = document.cookie.split(';').map(c => c.trim());
+            const sessionCookie = cookies.find(c => c.startsWith('connect.sid'));
+            cookiesEl.textContent = sessionCookie ? 'Session cookie present' : `${cookies.length} cookies (no session)`;
+            
+            const authMethod = localStorage.getItem('auth_method');
+            methodEl.textContent = authMethod || 'None';
+        }
+
+        // Check initial auth status
+        async function checkInitialAuth() {
+            updateStatus();
+            
+            const result = await auth.checkAuth();
+            
+            if (result.authenticated) {
+                statusEl.textContent = 'Authenticated';
+                methodEl.textContent = result.method;
+                showMessage(`Already logged in as ${result.user.email}`, 'success');
+                
+                // Redirect after 2 seconds
+                setTimeout(() => {
+                    window.location.href = '/app';
+                }, 2000);
+            } else {
+                statusEl.textContent = 'Not authenticated';
+                showMessage('Please sign in to continue', 'info');
+            }
+        }
+
+        // Show message
+        function showMessage(text, type = 'info') {
+            message.textContent = text;
+            message.className = `message ${type}`;
+        }
+
+        // Handle form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            
+            if (!email) {
+                showMessage('Please enter your email', 'error');
+                return;
+            }
+            
+            // Disable button and show loader
+            submitBtn.disabled = true;
+            btnText.style.display = 'none';
+            btnLoader.style.display = 'inline-block';
+            
+            try {
+                showMessage('Attempting login...', 'info');
+                
+                const result = await auth.login(email);
+                
+                if (result.success) {
+                    showMessage(`✅ Login successful! Method: ${result.method}`, 'success');
+                    statusEl.textContent = 'Authenticated';
+                    methodEl.textContent = result.method;
+                    updateStatus();
+                    
+                    // Log details for debugging
+                    console.log('Login result:', result);
+                    console.log('Cookies after login:', document.cookie);
+                    console.log('LocalStorage auth_token:', localStorage.getItem('auth_token'));
+                    
+                    // Redirect to app
+                    setTimeout(() => {
+                        showMessage('Redirecting to app...', 'info');
+                        window.location.href = '/app';
+                    }, 1500);
+                } else {
+                    showMessage(`❌ Login failed: ${result.error || 'Unknown error'}`, 'error');
+                    updateStatus();
+                }
+            } catch (error) {
+                showMessage(`❌ Error: ${error.message}`, 'error');
+                console.error('Login error:', error);
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                btnText.style.display = 'inline';
+                btnLoader.style.display = 'none';
+            }
+        });
+
+        // Use test account
+        function useTestAccount() {
+            document.getElementById('email').value = 'test@marinegroupbw.com';
+            form.dispatchEvent(new Event('submit'));
+        }
+
+        // Initialize
+        checkInitialAuth();
+        
+        // Update status every 5 seconds
+        setInterval(updateStatus, 5000);
+    </script>
+</body>
+</html>

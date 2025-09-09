@@ -176,6 +176,10 @@ app.use(trackRevision);
 app.use('/api/auth', authRouter);
 app.use('/api/auth', authFormRouter);
 
+// Token-based auth for CloudFlare cookie issues
+const tokenAuthRouter = require('./routes/token-auth');
+app.use('/api/token-auth', tokenAuthRouter);
+
 // Cookie testing routes (temporary for debugging)
 const cookieTestRouter = require('./routes/cookie-test');
 app.use('/api/cookie-test', cookieTestRouter);
@@ -214,6 +218,12 @@ app.get('/cloudflare-diagnostic', (req, res) => {
 app.get('/cookie-test', (req, res) => {
   const testPath = path.join(__dirname, '../src/cookie-test.html');
   res.sendFile(testPath);
+});
+
+// Hybrid login page (token + cookie auth)
+app.get('/hybrid-login', (req, res) => {
+  const loginPath = path.join(__dirname, '../src/hybrid-login.html');
+  res.sendFile(loginPath);
 });
 
 // JavaScript test page
