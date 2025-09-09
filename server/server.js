@@ -156,6 +156,12 @@ app.get('/login', (req, res) => {
   res.sendFile(loginPath);
 });
 
+// Simple login page (guaranteed to work)
+app.get('/simple-login', (req, res) => {
+  const loginPath = path.join(__dirname, '../src/simple-login.html');
+  res.sendFile(loginPath);
+});
+
 // TEMPORARY: Security fix route (REMOVE AFTER FIXING PRODUCTION DATA)
 const securityFixRouter = require('./routes/security-fix');
 app.use('/api/security', securityFixRouter);
