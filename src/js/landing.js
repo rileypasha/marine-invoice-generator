@@ -22,8 +22,7 @@ class LandingPage {
   
   async checkAuthentication() {
     try {
-      // ALWAYS check server authentication status first
-      // This prevents redirect loops caused by stale localStorage
+      // Check server authentication status
       const response = await fetch('/api/auth/me', {
         credentials: 'include'
       });
@@ -37,14 +36,13 @@ class LandingPage {
         this.userManager.notify();
         this.redirectToApp();
       } else {
-        // Clear any stale localStorage if server says not authenticated
-        this.userManager.clearSession();
+        // Don't clear localStorage - just show landing page
+        // Users can still have valid localStorage from previous sessions
         console.log('No server authentication found, showing landing page');
       }
     } catch (error) {
       console.log('Authentication check failed, showing landing page:', error);
-      // Clear any stale localStorage on error
-      this.userManager.clearSession();
+      // Don't clear localStorage on network errors
     }
   }
   
