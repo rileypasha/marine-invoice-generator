@@ -137,6 +137,7 @@ app.get('/health', (req, res) => {
 const apiRouter = require('./routes/api');
 const masterRouter = require('./routes/master');
 const authRouter = require('./routes/auth');
+const authFormRouter = require('./routes/auth-form');
 const masterChangesRouter = require('./routes/master-changes');
 const { loadUser, requireMaster } = require('./middleware/auth');
 const { trackRevision } = require('./middleware/revision-tracker');
@@ -149,6 +150,7 @@ app.use(trackRevision);
 
 // Auth routes (login/logout)
 app.use('/api/auth', authRouter);
+app.use('/api/auth', authFormRouter);
 
 // Emergency login page (temporary fix for modal issues)
 app.get('/login', (req, res) => {
@@ -159,6 +161,12 @@ app.get('/login', (req, res) => {
 // Simple login page (guaranteed to work)
 app.get('/simple-login', (req, res) => {
   const loginPath = path.join(__dirname, '../src/simple-login.html');
+  res.sendFile(loginPath);
+});
+
+// Form-based login page (server-side redirect)
+app.get('/form-login', (req, res) => {
+  const loginPath = path.join(__dirname, '../src/form-login.html');
   res.sendFile(loginPath);
 });
 
