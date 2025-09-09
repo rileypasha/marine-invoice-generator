@@ -194,6 +194,12 @@ app.get('/diagnostic', (req, res) => {
   res.sendFile(diagnosticPath);
 });
 
+// CloudFlare diagnostic page
+app.get('/cloudflare-diagnostic', (req, res) => {
+  const diagnosticPath = path.join(__dirname, '../src/cloudflare-diagnostic.html');
+  res.sendFile(diagnosticPath);
+});
+
 // JavaScript test page
 app.get('/test-js', (req, res) => {
   const testPath = path.join(__dirname, '../src/test-js.html');

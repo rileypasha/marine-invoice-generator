@@ -138,6 +138,25 @@ router.post('/login', async (req, res) => {
 });
 
 /**
+ * GET /api/auth/debug-headers
+ * Debug endpoint to check headers and CloudFlare detection
+ */
+router.get('/debug-headers', (req, res) => {
+  res.json({
+    headers: req.headers,
+    cookies: req.cookies,
+    sessionID: req.sessionID,
+    hasSession: !!req.session,
+    hasUser: !!req.session?.user,
+    protocol: req.protocol,
+    secure: req.secure,
+    hostname: req.hostname,
+    ip: req.ip,
+    originalUrl: req.originalUrl
+  });
+});
+
+/**
  * POST /api/auth/logout
  * Logout endpoint to destroy session
  */
