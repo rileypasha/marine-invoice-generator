@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JavaScript Test</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        #output {
+            background: #f0f0f0;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #ccc;
+            min-height: 100px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>JavaScript Execution Test</h1>
+    
+    <div id="output">
+        <div id="js-status">Checking JavaScript...</div>
+    </div>
+    
+    <button id="test-btn">Test Button (addEventListener)</button>
+    <button id="fetch-btn">Test Fetch API</button>
+    <button id="cookie-btn">Test Cookies</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        // Test if JavaScript executes at all
+        document.getElementById('js-status').innerHTML = '<span class="success">✅ JavaScript is executing!</span>';
+        
+        // Test addEventListener (no inline handlers)
+        document.addEventListener('DOMContentLoaded', function() {
+            const output = document.getElementById('output');
+            const results = document.getElementById('results');
+            
+            // Add timestamp
+            const now = new Date().toISOString();
+            output.innerHTML += '<br>Page loaded at: ' + now;
+            
+            // Test button with addEventListener
+            const testBtn = document.getElementById('test-btn');
+            if (testBtn) {
+                testBtn.addEventListener('click', function() {
+                    results.innerHTML += '<div class="success">✅ Button click worked! (' + new Date().toISOString() + ')</div>';
+                });
+                output.innerHTML += '<br>✅ Event listener attached';
+            } else {
+                output.innerHTML += '<br>❌ Could not find test button';
+            }
+            
+            // Test fetch
+            const fetchBtn = document.getElementById('fetch-btn');
+            if (fetchBtn) {
+                fetchBtn.addEventListener('click', async function() {
+                    try {
+                        const response = await fetch('/api/auth/me', {
+                            credentials: 'include'
+                        });
+                        const status = response.status;
+                        results.innerHTML += '<div>Fetch test: Status ' + status + '</div>';
+                    } catch (error) {
+                        results.innerHTML += '<div class="error">Fetch error: ' + error.message + '</div>';
+                    }
+                });
+            }
+            
+            // Test cookies
+            const cookieBtn = document.getElementById('cookie-btn');
+            if (cookieBtn) {
+                cookieBtn.addEventListener('click', function() {
+                    const cookies = document.cookie;
+                    if (cookies) {
+                        results.innerHTML += '<div>Cookies found: ' + cookies.substring(0, 100) + '...</div>';
+                    } else {
+                        results.innerHTML += '<div class="error">No cookies found</div>';
+                    }
+                });
+            }
+            
+            // Test localStorage
+            try {
+                localStorage.setItem('test', 'value');
+                const testValue = localStorage.getItem('test');
+                if (testValue === 'value') {
+                    output.innerHTML += '<br>✅ localStorage works';
+                }
+                localStorage.removeItem('test');
+            } catch (e) {
+                output.innerHTML += '<br>❌ localStorage error: ' + e.message;
+            }
+            
+            // Test console
+            console.log('Console test:', new Date().toISOString());
+            output.innerHTML += '<br>✅ Check browser console for log message';
+        });
+    </script>
+</body>
+</html>

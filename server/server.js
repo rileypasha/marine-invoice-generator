@@ -177,6 +177,12 @@ app.get('/diagnostic', (req, res) => {
   res.sendFile(diagnosticPath);
 });
 
+// JavaScript test page
+app.get('/test-js', (req, res) => {
+  const testPath = path.join(__dirname, '../src/test-js.html');
+  res.sendFile(testPath);
+});
+
 // TEMPORARY: Security fix route (REMOVE AFTER FIXING PRODUCTION DATA)
 const securityFixRouter = require('./routes/security-fix');
 app.use('/api/security', securityFixRouter);
