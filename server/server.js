@@ -244,16 +244,35 @@ if (process.env.NODE_ENV === 'production') {
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static('dist'));
+  // IMPORTANT: Define specific routes BEFORE static middleware
+  // This ensures /app route is handled correctly
   
-  // Serve app.html for /app route
+  // Serve app.html for /app route - must be before static
   app.get('/app', (req, res) => {
+    console.log('Serving app.html for /app route');
     res.sendFile(path.join(__dirname, '../dist/app.html'));
   });
   
-  // Serve index.html for all other routes
-  app.get('*', (req, res) => {
+  // Serve static files (CSS, JS, images, etc.)
+  // But NOT HTML files - we handle those with specific routes
+  app.use(express.static('dist', {
+    // Don't serve index.html automatically for directories
+    index: false
+  }));
+  
+  // Serve index.html for root and unmatched routes (must be last)
+  app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../dist/index.html'));
+  });
+  
+  // Catch all other routes
+  app.get('*', (req, res) => {
+    // If it's not a file request, serve index.html
+    if (!req.path.includes('.')) {
+      res.sendFile(path.join(__dirname, '../dist/index.html'));
+    } else {
+      res.status(404).send('File not found');
+    }
   });
 }
 
