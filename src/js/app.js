@@ -96,15 +96,24 @@ class InvoiceApp {
   
   async checkAuthentication() {
     try {
+      console.log('🔍 Checking authentication with server...');
+      
       // ALWAYS check server authentication status first
       // This prevents redirect loops caused by stale localStorage
       const response = await fetch('/api/auth/me', {
-        credentials: 'include'
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
+      
+      console.log('📡 Auth response status:', response.status);
       
       if (response.ok) {
         const userData = await response.json();
-        console.log('👤 User authenticated via server');
+        console.log('✅ User authenticated via server:', userData);
         // Set the user data directly since setCurrentUser doesn't exist
         this.userManager.currentUser = userData.user;
         this.userManager.saveSession(true);
@@ -112,12 +121,47 @@ class InvoiceApp {
         return true;
       }
       
-      // If server says not authenticated, clear any stale localStorage
+      // Don't immediately clear session - let's see what the error is
+      console.log('⚠️ Server auth check returned:', response.status);
+      
+      // Try to get error details
+      try {
+        const errorData = await response.json();
+        console.log('❌ Auth error details:', errorData);
+      } catch (e) {
+        console.log('❌ Could not parse error response');
+      }
+      
+      // For now, don't redirect if we're already on /app
+      // This prevents redirect loops
+      if (window.location.pathname === '/app') {
+        console.log('⚠️ Already on /app, not redirecting to avoid loop');
+        // Try to use localStorage as fallback
+        const storedUser = localStorage.getItem('marine_invoice_user');
+        if (storedUser) {
+          console.log('📦 Using localStorage user data as fallback');
+          this.userManager.currentUser = JSON.parse(storedUser);
+          this.userManager.notify();
+          return true;
+        }
+      }
+      
+      // Only clear session if we're definitely not authenticated
       this.userManager.clearSession();
       console.log('🚫 User not authenticated on server');
       return false;
     } catch (error) {
       console.log('🚫 Authentication check failed:', error);
+      
+      // For network errors, try localStorage fallback
+      const storedUser = localStorage.getItem('marine_invoice_user');
+      if (storedUser) {
+        console.log('📦 Network error - using localStorage user data as fallback');
+        this.userManager.currentUser = JSON.parse(storedUser);
+        this.userManager.notify();
+        return true;
+      }
+      
       // Clear any stale localStorage on error
       this.userManager.clearSession();
       return false;
