@@ -23,7 +23,8 @@ const prisma = new PrismaClient();
 const app = express();
 
 // Trust proxy - MUST be before session middleware
-app.set('trust proxy', 1);
+// This is critical for CloudFlare and custom domains
+app.set('trust proxy', true);
 
 // Session middleware - must come before other middleware
 const sessionConfig = {
@@ -46,16 +47,16 @@ const sessionConfig = {
   }
 };
 
-// Configure cookie domain dynamically based on request host
-// Don't set a domain - let the browser use the current domain
-// This allows cookies to work on both mginvoices.com and onrender.com
-if (process.env.COOKIE_DOMAIN && process.env.FORCE_COOKIE_DOMAIN === 'true') {
-  // Only use explicit domain if forced (for backwards compatibility)
-  sessionConfig.cookie.domain = process.env.COOKIE_DOMAIN;
-  logger.info(`Setting cookie domain to: ${process.env.COOKIE_DOMAIN}`);
-} else {
-  // Don't set domain - cookie will work for current domain only
-  logger.info('Cookie domain not set - will use current domain');
+// Configure cookie domain - CRITICAL for custom domains
+// Custom domains through CloudFlare need special handling
+if (process.env.NODE_ENV === 'production') {
+  // In production, we need to handle multiple domains
+  // DO NOT set domain attribute - let each domain have its own cookies
+  // This allows both mginvoices.com and onrender.com to work
+  logger.info('Production mode - cookies will be domain-specific');
+  
+  // Remove any domain setting to ensure cookies work per-domain
+  delete sessionConfig.cookie.domain;
 }
 
 // Configure secure cookies based on environment
@@ -78,6 +79,10 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(session(sessionConfig));
 
+// Apply cookie fix for custom domains
+const cookieFix = require('./middleware/cookie-fix');
+app.use(cookieFix);
+
 // Log session creation for debugging
 app.use((req, res, next) => {
   if (req.session && !req.session.logged) {
@@ -86,7 +91,9 @@ app.use((req, res, next) => {
       event: 'SESSION_MIDDLEWARE',
       sessionId: req.sessionID,
       hasUser: !!req.session.user,
-      path: req.path
+      path: req.path,
+      hostname: req.hostname,
+      cookieHeader: req.headers.cookie
     });
   }
   next();
