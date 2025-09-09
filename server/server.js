@@ -45,10 +45,16 @@ const sessionConfig = {
   }
 };
 
-// Configure cookie domain for production
-if (process.env.COOKIE_DOMAIN) {
+// Configure cookie domain dynamically based on request host
+// Don't set a domain - let the browser use the current domain
+// This allows cookies to work on both mginvoices.com and onrender.com
+if (process.env.COOKIE_DOMAIN && process.env.FORCE_COOKIE_DOMAIN === 'true') {
+  // Only use explicit domain if forced (for backwards compatibility)
   sessionConfig.cookie.domain = process.env.COOKIE_DOMAIN;
   logger.info(`Setting cookie domain to: ${process.env.COOKIE_DOMAIN}`);
+} else {
+  // Don't set domain - cookie will work for current domain only
+  logger.info('Cookie domain not set - will use current domain');
 }
 
 // Only require secure cookies if explicitly in production with HTTPS

@@ -113,11 +113,13 @@
             infoEl.innerHTML = 'Checking...';
             
             try {
-                log('Fetching /api/auth/me...');
+                log('Fetching /api/auth/me with credentials: include...');
                 const response = await fetch('/api/auth/me', {
+                    method: 'GET',
                     credentials: 'include',
                     headers: {
-                        'Cache-Control': 'no-cache'
+                        'Cache-Control': 'no-cache',
+                        'Accept': 'application/json'
                     }
                 });
                 
