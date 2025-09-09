@@ -57,13 +57,24 @@ if (process.env.COOKIE_DOMAIN && process.env.FORCE_COOKIE_DOMAIN === 'true') {
   logger.info('Cookie domain not set - will use current domain');
 }
 
-// Only require secure cookies if explicitly in production with HTTPS
-if (process.env.NODE_ENV === 'production' && process.env.REQUIRE_HTTPS === 'true') {
-  sessionConfig.cookie.secure = true;
-  sessionConfig.cookie.sameSite = 'none';
-} else if (process.env.NODE_ENV === 'production') {
-  // For production without explicit HTTPS requirement, use secure cookies
-  sessionConfig.cookie.secure = true;
+// Configure secure cookies based on environment
+// CloudFlare proxy can cause issues with secure cookies, so we need to be careful
+if (process.env.NODE_ENV === 'production') {
+  // In production, check if we're behind a proxy (CloudFlare)
+  // If REQUIRE_HTTPS is explicitly set, use that setting
+  if (process.env.REQUIRE_HTTPS === 'true') {
+    sessionConfig.cookie.secure = true;
+    sessionConfig.cookie.sameSite = 'none';
+  } else if (process.env.REQUIRE_HTTPS === 'false') {
+    // Explicitly disable secure cookies (useful for CloudFlare proxy issues)
+    sessionConfig.cookie.secure = false;
+    sessionConfig.cookie.sameSite = 'lax';
+  } else {
+    // Default: secure cookies in production
+    // This might cause issues with CloudFlare proxy
+    sessionConfig.cookie.secure = true;
+    sessionConfig.cookie.sameSite = 'lax';
+  }
 }
 
 app.use(session(sessionConfig));
