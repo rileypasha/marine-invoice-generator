@@ -275,6 +275,13 @@ export class UserManager {
     localStorage.removeItem(this.storageKey);
   }
   
+  // Public method to clear session (used when server says not authenticated)
+  clearSession() {
+    this.currentUser = null;
+    this.clearLocalSession();
+    this.notify();
+  }
+  
   // Sign out user
   async logout() {
     // Call server to destroy session

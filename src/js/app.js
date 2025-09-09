@@ -96,13 +96,8 @@ class InvoiceApp {
   
   async checkAuthentication() {
     try {
-      // First check local authentication state
-      if (this.userManager.isAuthenticated()) {
-        console.log('👤 User authenticated locally');
-        return true;
-      }
-      
-      // Check server authentication status
+      // ALWAYS check server authentication status first
+      // This prevents redirect loops caused by stale localStorage
       const response = await fetch('/api/auth/me', {
         credentials: 'include'
       });
@@ -110,14 +105,21 @@ class InvoiceApp {
       if (response.ok) {
         const userData = await response.json();
         console.log('👤 User authenticated via server');
-        this.userManager.setCurrentUser(userData.user);
+        // Set the user data directly since setCurrentUser doesn't exist
+        this.userManager.currentUser = userData.user;
+        this.userManager.saveSession(true);
+        this.userManager.notify();
         return true;
       }
       
-      console.log('🚫 User not authenticated');
+      // If server says not authenticated, clear any stale localStorage
+      this.userManager.clearSession();
+      console.log('🚫 User not authenticated on server');
       return false;
     } catch (error) {
       console.log('🚫 Authentication check failed:', error);
+      // Clear any stale localStorage on error
+      this.userManager.clearSession();
       return false;
     }
   }

@@ -22,14 +22,8 @@ class LandingPage {
   
   async checkAuthentication() {
     try {
-      // Check if user is already logged in
-      if (this.userManager.isAuthenticated()) {
-        console.log('👤 User already authenticated, redirecting to app...');
-        this.redirectToApp();
-        return;
-      }
-      
-      // Check server authentication status
+      // ALWAYS check server authentication status first
+      // This prevents redirect loops caused by stale localStorage
       const response = await fetch('/api/auth/me', {
         credentials: 'include'
       });
@@ -42,9 +36,15 @@ class LandingPage {
         this.userManager.saveSession(true);
         this.userManager.notify();
         this.redirectToApp();
+      } else {
+        // Clear any stale localStorage if server says not authenticated
+        this.userManager.clearSession();
+        console.log('No server authentication found, showing landing page');
       }
     } catch (error) {
-      console.log('No existing authentication found, showing landing page');
+      console.log('Authentication check failed, showing landing page:', error);
+      // Clear any stale localStorage on error
+      this.userManager.clearSession();
     }
   }
   
