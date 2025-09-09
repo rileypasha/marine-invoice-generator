@@ -83,6 +83,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       imgSrc: ["'self'", "https://i.imgur.com", "data:", "https:"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers
       styleSrc: ["'self'", "'unsafe-inline'"],
       connectSrc: ["'self'"],
       fontSrc: ["'self'", "data:"],
