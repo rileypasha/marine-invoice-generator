@@ -37,11 +37,12 @@ const sessionConfig = {
   saveUninitialized: true, // Changed to true to ensure sessions are created
   rolling: true, // Reset expiry on activity
   cookie: {
-    secure: false, // Set to false for now - HTTPS not required
+    secure: false, // CRITICAL: Must be false for CloudFlare proxy to work
     httpOnly: true,
-    sameSite: 'lax', // Changed from 'none' to 'lax' for better compatibility
+    sameSite: 'lax', // 'lax' for better compatibility
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    path: '/' // Ensure cookie is available on all paths
+    path: '/', // Ensure cookie is available on all paths
+    // Don't set domain - let browser handle it
   }
 };
 
@@ -58,22 +59,20 @@ if (process.env.COOKIE_DOMAIN && process.env.FORCE_COOKIE_DOMAIN === 'true') {
 }
 
 // Configure secure cookies based on environment
-// CloudFlare proxy can cause issues with secure cookies, so we need to be careful
+// IMPORTANT: CloudFlare handles SSL termination, so we should NOT use secure cookies
+// when behind CloudFlare proxy, as it causes cookie setting to fail
 if (process.env.NODE_ENV === 'production') {
-  // In production, check if we're behind a proxy (CloudFlare)
-  // If REQUIRE_HTTPS is explicitly set, use that setting
+  // Check explicit REQUIRE_HTTPS setting
   if (process.env.REQUIRE_HTTPS === 'true') {
+    // Only use secure cookies if explicitly required
     sessionConfig.cookie.secure = true;
     sessionConfig.cookie.sameSite = 'none';
-  } else if (process.env.REQUIRE_HTTPS === 'false') {
-    // Explicitly disable secure cookies (useful for CloudFlare proxy issues)
+  } else {
+    // Default for production: non-secure cookies to work with CloudFlare
+    // CloudFlare provides SSL to users, but backend communication may be HTTP
     sessionConfig.cookie.secure = false;
     sessionConfig.cookie.sameSite = 'lax';
-  } else {
-    // Default: secure cookies in production
-    // This might cause issues with CloudFlare proxy
-    sessionConfig.cookie.secure = true;
-    sessionConfig.cookie.sameSite = 'lax';
+    logger.info('Using non-secure cookies for CloudFlare compatibility');
   }
 }
 

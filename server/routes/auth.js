@@ -105,7 +105,8 @@ router.post('/login', async (req, res) => {
         sessionId: req.sessionID,
         userEmail: user.email,
         sessionUser: req.session.user,
-        cookie: req.session.cookie
+        cookie: req.session.cookie,
+        cookieHeader: res.getHeaders()['set-cookie']
       });
 
       logger.info({
@@ -116,6 +117,18 @@ router.post('/login', async (req, res) => {
         timestamp: new Date().toISOString()
       });
 
+      // Explicitly set cookie header for debugging
+      const cookieValue = req.sessionID;
+      const cookieOptions = req.session.cookie;
+      
+      // Log what we're sending
+      logger.info({
+        event: 'COOKIE_BEING_SET',
+        cookieName: 'connect.sid',
+        sessionId: cookieValue,
+        options: cookieOptions
+      });
+
       res.json({
         success: true,
         user: {
@@ -124,7 +137,8 @@ router.post('/login', async (req, res) => {
           name: user.name,
           role: user.role
         },
-        sessionId: req.sessionID // Include for debugging
+        sessionId: req.sessionID, // Include for debugging
+        cookieSet: !!res.getHeaders()['set-cookie'] // Debug info
       });
     });
   } catch (error) {
