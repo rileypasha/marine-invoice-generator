@@ -212,6 +212,13 @@ if (process.env.NODE_ENV === 'production') {
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static('dist'));
+  
+  // Serve app.html for /app route
+  app.get('/app', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/app.html'));
+  });
+  
+  // Serve index.html for all other routes
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../dist/index.html'));
   });
