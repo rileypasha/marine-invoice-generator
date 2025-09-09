@@ -45,10 +45,19 @@ const sessionConfig = {
   }
 };
 
+// Configure cookie domain for production
+if (process.env.COOKIE_DOMAIN) {
+  sessionConfig.cookie.domain = process.env.COOKIE_DOMAIN;
+  logger.info(`Setting cookie domain to: ${process.env.COOKIE_DOMAIN}`);
+}
+
 // Only require secure cookies if explicitly in production with HTTPS
 if (process.env.NODE_ENV === 'production' && process.env.REQUIRE_HTTPS === 'true') {
   sessionConfig.cookie.secure = true;
   sessionConfig.cookie.sameSite = 'none';
+} else if (process.env.NODE_ENV === 'production') {
+  // For production without explicit HTTPS requirement, use secure cookies
+  sessionConfig.cookie.secure = true;
 }
 
 app.use(session(sessionConfig));
@@ -80,10 +89,28 @@ app.use(helmet({
     },
   },
 }));
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+// Configure CORS to allow multiple origins
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or Postman)
+    if (!origin) return callback(null, true);
+    
+    // Parse allowed origins from environment variable
+    const allowedOrigins = process.env.ALLOWED_ORIGINS 
+      ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+      : ['http://localhost:3000'];
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      logger.warn(`CORS blocked origin: ${origin}`);
+      callback(null, false);
+    }
+  },
   credentials: true
-}));
+};
+
+app.use(cors(corsOptions));
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
