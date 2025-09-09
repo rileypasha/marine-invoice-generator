@@ -204,14 +204,20 @@
                     log('/app redirected', 'warning');
                 } else if (response.ok) {
                     const text = await response.text();
-                    const hasAppContent = text.includes('Marine Invoice Generator');
+                    // Check for multiple indicators that this is the app page
+                    const hasAppContent = text.includes('Marine') && text.includes('Invoice') && 
+                                         (text.includes('invoice-preview') || text.includes('main.bundle.js'));
+                    const hasLandingContent = text.includes('landing.bundle.js') || text.includes('Get Started');
                     
-                    if (hasAppContent) {
+                    if (hasAppContent && !hasLandingContent) {
                         infoEl.innerHTML = '<span class="success">✅ /app accessible - app content found</span>';
                         log('/app accessible', 'success');
+                    } else if (hasLandingContent) {
+                        infoEl.innerHTML = '<span class="warning">⚠️ /app returned landing page instead of app</span>';
+                        log('/app returned landing page', 'warning');
                     } else {
-                        infoEl.innerHTML = '<span class="warning">⚠️ /app returned wrong content</span>';
-                        log('/app wrong content', 'warning');
+                        infoEl.innerHTML = '<span class="warning">⚠️ /app content unclear - check manually</span>';
+                        log('/app content unclear', 'warning');
                     }
                 } else {
                     infoEl.innerHTML = `<span class="error">❌ /app returned ${response.status}</span>`;
