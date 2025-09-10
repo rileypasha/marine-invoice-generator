@@ -39,14 +39,8 @@ class InvoiceApp {
       console.log('🎯 Authentication check result:', isAuthenticated);
       
       if (!isAuthenticated) {
-        console.log('🚫 User not authenticated, would redirect to landing page...');
-        console.log('🚫 REDIRECT TO / TRIGGERED - THIS IS THE PROBLEM');
-        
-        // Add 3 second delay to see console logs before redirect
-        setTimeout(() => {
-          console.log('🚫 Now redirecting to /');
-          window.location.href = '/';
-        }, 3000);
+        console.log('🚫 User not authenticated, redirecting to landing page...');
+        window.location.href = '/';
         return;
       }
       
@@ -126,7 +120,36 @@ class InvoiceApp {
       console.log('  - auth_token:', localStorage.getItem('auth_token'));
       console.log('  - auth_method:', localStorage.getItem('auth_method'));
       
-      // First check for cookie-based session
+      // FIRST - Check localStorage fallback (most reliable for custom domains)
+      const storedUser = localStorage.getItem('marine_invoice_user');
+      if (storedUser) {
+        console.log('📦 Found stored user, using localStorage authentication');
+        try {
+          const user = JSON.parse(storedUser);
+          console.log('✅ Successfully parsed user:', user);
+          
+          this.userManager.currentUser = user;
+          this.userManager.saveSession(true);
+          this.userManager.notify();
+          localStorage.setItem('auth_method', 'localStorage');
+          
+          console.log('✅ UserManager updated with user');
+          
+          // Force sidebar update
+          if (this.sidebar) {
+            console.log('🔄 Updating sidebar with user');
+            this.sidebar.updateUserSection(user);
+          }
+          
+          console.log('✅ AUTHENTICATION SUCCESSFUL via localStorage (priority)');
+          return true;
+        } catch (e) {
+          console.error('❌ Failed to parse stored user:', e);
+          localStorage.removeItem('marine_invoice_user');
+        }
+      }
+      
+      // SECOND - Try cookie-based session
       const response = await fetch('/api/auth/me', {
         method: 'GET',
         credentials: 'include',
@@ -188,41 +211,7 @@ class InvoiceApp {
         }
       }
       
-      // Both cookie and token auth failed, check localStorage fallback
-      console.log('🔄 Cookie and token auth failed, checking localStorage fallback...');
-      const storedUser = localStorage.getItem('marine_invoice_user');
-      console.log('📦 Stored user data exists:', !!storedUser);
-      
-      if (storedUser) {
-        console.log('📦 Using localStorage fallback (offline mode)');
-        console.log('📦 Stored user data:', storedUser);
-        try {
-          const user = JSON.parse(storedUser);
-          console.log('✅ Successfully parsed user:', user);
-          
-          this.userManager.currentUser = user;
-          this.userManager.saveSession(true);
-          this.userManager.notify();
-          localStorage.setItem('auth_method', 'localStorage');
-          
-          console.log('✅ UserManager updated with user');
-          
-          // Force sidebar update
-          if (this.sidebar) {
-            console.log('🔄 Updating sidebar with user');
-            this.sidebar.updateUserSection(user);
-          }
-          
-          console.log('✅ AUTHENTICATION SUCCESSFUL via localStorage');
-          return true;
-        } catch (e) {
-          console.error('❌ Failed to parse stored user:', e);
-          console.error('Stored data was:', storedUser);
-          localStorage.removeItem('marine_invoice_user');
-        }
-      } else {
-        console.log('❌ No stored user found in localStorage');
-      }
+      // All auth methods failed
       
       // No valid authentication found
       console.log('🚫 No valid authentication found');
