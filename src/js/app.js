@@ -175,12 +175,25 @@ class InvoiceApp {
       
       // Both cookie and token auth failed, check localStorage fallback
       const storedUser = localStorage.getItem('marine_invoice_user');
-      if (storedUser && window.location.pathname === '/app') {
+      if (storedUser) {
         console.log('📦 Using localStorage fallback (offline mode)');
-        this.userManager.currentUser = JSON.parse(storedUser);
-        this.userManager.notify();
-        localStorage.setItem('auth_method', 'localStorage');
-        return true;
+        try {
+          const user = JSON.parse(storedUser);
+          this.userManager.currentUser = user;
+          this.userManager.saveSession(true);
+          this.userManager.notify();
+          localStorage.setItem('auth_method', 'localStorage');
+          
+          // Force sidebar update
+          if (this.sidebar) {
+            this.sidebar.updateUserSection(user);
+          }
+          
+          return true;
+        } catch (e) {
+          console.error('Failed to parse stored user:', e);
+          localStorage.removeItem('marine_invoice_user');
+        }
       }
       
       // No valid authentication found
@@ -195,9 +208,23 @@ class InvoiceApp {
       const storedUser = localStorage.getItem('marine_invoice_user');
       if (storedUser) {
         console.log('📦 Network error - using localStorage fallback');
-        this.userManager.currentUser = JSON.parse(storedUser);
-        this.userManager.notify();
-        return true;
+        try {
+          const user = JSON.parse(storedUser);
+          this.userManager.currentUser = user;
+          this.userManager.saveSession(true);
+          this.userManager.notify();
+          localStorage.setItem('auth_method', 'localStorage');
+          
+          // Force sidebar update
+          if (this.sidebar) {
+            this.sidebar.updateUserSection(user);
+          }
+          
+          return true;
+        } catch (e) {
+          console.error('Failed to parse stored user:', e);
+          localStorage.removeItem('marine_invoice_user');
+        }
       }
       
       this.userManager.clearSession();

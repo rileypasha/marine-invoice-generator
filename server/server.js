@@ -297,17 +297,17 @@ if (process.env.NODE_ENV === 'production') {
   app.use('/master', express.static(path.join(__dirname, '../src/master')));
 }
 
-// Serve app.html for /app route (both dev and production)
-app.get('/app', (req, res) => {
-  console.log('Serving app.html for /app route');
-  const appPath = process.env.NODE_ENV === 'production' 
-    ? path.join(__dirname, '../dist/app.html')
-    : path.join(__dirname, '../src/app.html');
-  res.sendFile(appPath);
-});
-
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
+  // IMPORTANT: Define specific routes BEFORE static middleware
+  // This ensures /app route is handled correctly
+  
+  // Serve app.html for /app route - must be before static
+  app.get('/app', (req, res) => {
+    console.log('Serving app.html for /app route');
+    res.sendFile(path.join(__dirname, '../dist/app.html'));
+  });
+  
   // Serve static files (CSS, JS, images, etc.)
   // But NOT HTML files - we handle those with specific routes
   app.use(express.static('dist', {
