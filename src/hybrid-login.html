@@ -460,9 +460,10 @@
                 methodEl.textContent = result.method;
                 showMessage(`Already logged in as ${result.user.email}`, 'success');
                 
-                // Simple redirect
+                // Simple redirect with full URL
+                const appUrl = window.location.origin + '/app';
                 setTimeout(() => {
-                    window.location.href = '/app';
+                    window.location.href = appUrl;
                 }, 1000);
             } else {
                 statusEl.textContent = 'Not authenticated';
@@ -511,10 +512,13 @@
                     // Redirect to app
                     showMessage('Redirecting to app...', 'info');
                     
+                    // Build full URL for redirect
+                    const appUrl = window.location.origin + '/app';
+                    console.log('Redirecting to:', appUrl);
+                    
                     // Simple redirect after a brief delay to ensure localStorage is saved
                     setTimeout(() => {
-                        console.log('Redirecting to /app');
-                        window.location.href = '/app';
+                        window.location.href = appUrl;
                     }, 500);
                 } else {
                     showMessage(`❌ Login failed: ${result.error || 'Unknown error'}`, 'error');
