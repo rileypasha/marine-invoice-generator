@@ -503,10 +503,22 @@
                     methodEl.textContent = result.method;
                     updateStatus();
                     
-                    // Log details for debugging
+                    // CRITICAL: Log ALL localStorage data
+                    console.log('🔍 LOGIN SUCCESS - Checking localStorage:');
                     console.log('Login result:', result);
                     console.log('Cookies after login:', document.cookie);
                     console.log('LocalStorage auth_token:', localStorage.getItem('auth_token'));
+                    console.log('LocalStorage marine_invoice_user:', localStorage.getItem('marine_invoice_user'));
+                    console.log('LocalStorage auth_method:', localStorage.getItem('auth_method'));
+                    console.log('LocalStorage auth_token_expiry:', localStorage.getItem('auth_token_expiry'));
+                    
+                    // VERIFY data is actually saved
+                    if (!localStorage.getItem('marine_invoice_user')) {
+                        console.error('❌ CRITICAL: marine_invoice_user NOT saved in localStorage!');
+                        showMessage('⚠️ User data not saved properly. Trying manual save...', 'warning');
+                        // Force save user data
+                        localStorage.setItem('marine_invoice_user', JSON.stringify(result.user));
+                    }
                     
                     // Redirect to app - try multiple methods for reliability
                     showMessage('Redirecting to app...', 'info');
@@ -516,9 +528,18 @@
                     
                     // Small delay to ensure localStorage is saved
                     setTimeout(() => {
+                        console.log('🚀 REDIRECT: Starting redirect sequence');
+                        console.log('Current URL:', window.location.href);
+                        console.log('Target: /app');
+                        
+                        // FINAL CHECK before redirect
+                        const storedUser = localStorage.getItem('marine_invoice_user');
+                        console.log('Final check - marine_invoice_user exists:', !!storedUser);
+                        
                         // Try multiple redirect methods
                         try {
                             // Primary method
+                            console.log('Executing: window.location.href = "/app"');
                             window.location.href = '/app';
                             
                             // Fallback after 500ms if still on same page
