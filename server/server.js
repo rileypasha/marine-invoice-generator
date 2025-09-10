@@ -226,6 +226,12 @@ app.get('/hybrid-login', (req, res) => {
   res.sendFile(loginPath);
 });
 
+// Redirect test page
+app.get('/redirect-test', (req, res) => {
+  const testPath = path.join(__dirname, '../src/redirect-test.html');
+  res.sendFile(testPath);
+});
+
 // JavaScript test page
 app.get('/test-js', (req, res) => {
   const testPath = path.join(__dirname, '../src/test-js.html');

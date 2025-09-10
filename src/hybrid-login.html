@@ -508,11 +508,45 @@
                     console.log('Cookies after login:', document.cookie);
                     console.log('LocalStorage auth_token:', localStorage.getItem('auth_token'));
                     
-                    // Redirect to app
+                    // Redirect to app - try multiple methods for reliability
+                    showMessage('Redirecting to app...', 'info');
+                    
+                    // Method 1: Immediate redirect (most reliable)
+                    console.log('Attempting redirect to /app');
+                    
+                    // Small delay to ensure localStorage is saved
                     setTimeout(() => {
-                        showMessage('Redirecting to app...', 'info');
-                        window.location.href = '/app';
-                    }, 1500);
+                        // Try multiple redirect methods
+                        try {
+                            // Primary method
+                            window.location.href = '/app';
+                            
+                            // Fallback after 500ms if still on same page
+                            setTimeout(() => {
+                                if (window.location.pathname !== '/app') {
+                                    console.log('Primary redirect failed, trying replace');
+                                    window.location.replace('/app');
+                                }
+                            }, 500);
+                            
+                            // Final fallback after 1s
+                            setTimeout(() => {
+                                if (window.location.pathname !== '/app') {
+                                    console.log('All redirects failed, trying assign');
+                                    window.location.assign('/app');
+                                }
+                            }, 1000);
+                        } catch (e) {
+                            console.error('Redirect error:', e);
+                            // Manual fallback
+                            showMessage('Auto-redirect failed. Please click here to continue.', 'warning');
+                            const link = document.createElement('a');
+                            link.href = '/app';
+                            link.textContent = 'Continue to App';
+                            link.style.color = '#667eea';
+                            message.appendChild(link);
+                        }
+                    }, 100); // Small delay to ensure state is saved
                 } else {
                     showMessage(`❌ Login failed: ${result.error || 'Unknown error'}`, 'error');
                     updateStatus();
