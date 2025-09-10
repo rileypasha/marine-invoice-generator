@@ -228,25 +228,28 @@ class InvoiceApp {
       }
       
       // THIRD - Try standard cookie-based session
-      const response = await fetch('/api/auth/me', {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+      // SKIP THIS if we already have localStorage auth to prevent clearing the session
+      if (!this.userManager.currentUser) {
+        const response = await fetch('/api/auth/me', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log('📡 Cookie auth response:', response.status);
+        
+        if (response.ok) {
+          const userData = await response.json();
+          console.log('✅ Cookie authentication successful:', userData);
+          this.userManager.currentUser = userData.user;
+          this.userManager.saveSession(true);
+          this.userManager.notify();
+          localStorage.setItem('auth_method', 'cookie');
+          return true;
         }
-      });
-      
-      console.log('📡 Cookie auth response:', response.status);
-      
-      if (response.ok) {
-        const userData = await response.json();
-        console.log('✅ Cookie authentication successful:', userData);
-        this.userManager.currentUser = userData.user;
-        this.userManager.saveSession(true);
-        this.userManager.notify();
-        localStorage.setItem('auth_method', 'cookie');
-        return true;
       }
       
       // Cookie auth failed, try token auth
@@ -290,6 +293,12 @@ class InvoiceApp {
       }
       
       // All auth methods failed
+      
+      // Check if we still have a current user from localStorage before clearing
+      if (this.userManager.currentUser) {
+        console.log('✅ Still have user from localStorage, keeping authentication');
+        return true;
+      }
       
       // No valid authentication found
       console.log('🚫 No valid authentication found');
