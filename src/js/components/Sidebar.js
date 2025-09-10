@@ -223,11 +223,20 @@ export class Sidebar {
       this.refreshInvoiceList();
     });
     
-    // Force initial update with current user
+    // CRITICAL: Force immediate initial update with current user
     const currentUser = this.userManager.getCurrentUser();
-    console.log('🚀 Sidebar init - current user:', currentUser);
+    console.log('🚀 Sidebar setupSubscriptions - current user:', currentUser);
     if (currentUser) {
+      console.log('✅ User found during sidebar init, updating immediately');
       this.updateUserSection(currentUser);
+      
+      // Update again after a short delay to ensure DOM is ready
+      setTimeout(() => {
+        console.log('🔄 Secondary update after DOM ready');
+        this.updateUserSection(currentUser);
+      }, 50);
+    } else {
+      console.log('⚠️ No user found during sidebar init');
     }
   }
   

@@ -76,11 +76,45 @@ class InvoiceApp {
       this.sidebar = new Sidebar(this.userManager, this.invoiceStorage, this.authModal, this.settingsModal);
       console.log('✅ Sidebar created successfully');
       
-      // Force sidebar to update with current user
+      // CRITICAL: Force sidebar to update with current user immediately
       const currentUser = this.userManager.getCurrentUser();
+      console.log('🔍 Current user after sidebar creation:', currentUser);
+      
       if (currentUser) {
-        console.log('🔄 Forcing sidebar update with authenticated user');
+        console.log('🔄 Forcing sidebar update with authenticated user:', currentUser.email);
+        
+        // Update immediately (don't wait for DOM)
         this.sidebar.updateUserSection(currentUser);
+        
+        // Also trigger UserManager notify to ensure all subscribers are updated
+        this.userManager.notify();
+        
+        // Wait a tick for DOM to be ready then update again
+        setTimeout(() => {
+          this.sidebar.updateUserSection(currentUser);
+          
+          // Double-check by directly manipulating DOM if needed
+          const authSection = document.getElementById('auth-section');
+          const userSection = document.getElementById('user-section');
+          if (authSection && userSection) {
+            console.log('🔧 Directly updating DOM - hiding auth section, showing user section');
+            authSection.style.display = 'none';
+            userSection.style.display = 'flex';
+            
+            const userNameEl = document.getElementById('user-name');
+            const userEmailEl = document.getElementById('user-email');
+            if (userNameEl) userNameEl.textContent = currentUser.name || currentUser.email || 'User';
+            if (userEmailEl) userEmailEl.textContent = currentUser.email || '';
+          }
+        }, 100);
+        
+        // Final update after everything is loaded
+        setTimeout(() => {
+          console.log('🔄 Final sidebar update after full load');
+          this.sidebar.updateUserSection(currentUser);
+        }, 500);
+      } else {
+        console.error('❌ No current user found after sidebar creation!');
       }
       
       // Setup invoice item listeners
@@ -131,8 +165,20 @@ class InvoiceApp {
           const sessionData = await sessionResponse.json();
           if (sessionData.authenticated) {
             console.log('✅ SERVER SESSION VALID:', sessionData.user);
+            
+            // CRITICAL: Set user and save to localStorage for persistence
             this.userManager.currentUser = sessionData.user;
-            this.userManager.saveSession(true);
+            
+            // Save to localStorage for future page loads
+            localStorage.setItem('marine_invoice_user', JSON.stringify(sessionData.user));
+            const session = {
+              userId: sessionData.user.id || 'test-user-1',
+              timestamp: new Date().getTime(),
+              rememberMe: true
+            };
+            localStorage.setItem('marine_invoice_session', JSON.stringify(session));
+            
+            // Notify all listeners
             this.userManager.notify();
             return true;
           }
@@ -149,14 +195,25 @@ class InvoiceApp {
           const user = JSON.parse(storedUser);
           console.log('✅ Successfully parsed user:', user);
           
+          // CRITICAL: Set user in UserManager and save session properly
           this.userManager.currentUser = user;
-          this.userManager.saveSession(true);
+          
+          // Save both user and session data
+          localStorage.setItem('marine_invoice_user', JSON.stringify(user));
+          const sessionData = {
+            userId: user.id || 'test-user-1',
+            timestamp: new Date().getTime(),
+            rememberMe: true
+          };
+          localStorage.setItem('marine_invoice_session', JSON.stringify(sessionData));
+          
+          // Notify all listeners that user is set
           this.userManager.notify();
           localStorage.setItem('auth_method', 'localStorage');
           
-          console.log('✅ UserManager updated with user');
+          console.log('✅ UserManager updated with user and session saved');
           
-          // Force sidebar update
+          // Force sidebar update (shouldn't be needed since sidebar isn't created yet)
           if (this.sidebar) {
             console.log('🔄 Updating sidebar with user');
             this.sidebar.updateUserSection(user);
