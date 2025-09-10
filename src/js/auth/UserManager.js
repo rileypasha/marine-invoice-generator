@@ -276,7 +276,24 @@ export class UserManager {
   }
   
   // Public method to clear session (used when server says not authenticated)
-  clearSession() {
+  clearSession(force = false) {
+    // Don't clear if we have a valid localStorage user unless forced
+    if (!force) {
+      const storedUser = localStorage.getItem(this.storageKey);
+      const storedSession = localStorage.getItem(this.sessionKey);
+      if (storedUser && storedSession) {
+        console.log('📌 Preserving localStorage authentication despite server auth failure');
+        try {
+          const user = JSON.parse(storedUser);
+          this.currentUser = user;
+          // IMPORTANT: Don't notify to prevent UI updates that would clear auth state
+          return; // Don't clear or notify
+        } catch (e) {
+          console.error('Failed to preserve localStorage user:', e);
+        }
+      }
+    }
+    
     this.currentUser = null;
     this.clearLocalSession();
     this.notify();
@@ -326,12 +343,38 @@ export class UserManager {
   
   // Get current user
   getCurrentUser() {
+    // If currentUser is null, try to load from localStorage
+    if (!this.currentUser) {
+      const storedUser = localStorage.getItem(this.storageKey);
+      const storedSession = localStorage.getItem(this.sessionKey);
+      if (storedUser && storedSession) {
+        try {
+          const user = JSON.parse(storedUser);
+          const session = JSON.parse(storedSession);
+          // Check if session is still valid (24 hours)
+          const now = new Date().getTime();
+          if (now - session.timestamp < 24 * 60 * 60 * 1000) {
+            this.currentUser = user;
+            console.log('🔄 Restored user from localStorage in getCurrentUser()');
+          }
+        } catch (e) {
+          console.error('Failed to restore user from localStorage:', e);
+        }
+      }
+    }
     return this.currentUser;
   }
   
   // Check if user is authenticated
   isAuthenticated() {
-    return !!this.currentUser;
+    // First check currentUser
+    if (this.currentUser) {
+      return true;
+    }
+    
+    // If not, try to get user (which will restore from localStorage if valid)
+    const user = this.getCurrentUser();
+    return !!user;
   }
   
   // Helper methods
