@@ -244,6 +244,12 @@ app.get('/simple-redirect-test', (req, res) => {
   res.sendFile(testPath);
 });
 
+// Minimal test redirect
+app.get('/test-redirect', (req, res) => {
+  const testPath = path.join(__dirname, '../src/test-redirect.html');
+  res.sendFile(testPath);
+});
+
 // TEMPORARY: Security fix route (REMOVE AFTER FIXING PRODUCTION DATA)
 const securityFixRouter = require('./routes/security-fix');
 app.use('/api/security', securityFixRouter);
@@ -297,16 +303,24 @@ if (process.env.NODE_ENV === 'production') {
   app.use('/master', express.static(path.join(__dirname, '../src/master')));
 }
 
+// Always serve /app route regardless of environment
+app.get('/app', (req, res) => {
+  console.log(`[${new Date().toISOString()}] Serving app.html for /app route`);
+  console.log('Request from:', req.hostname);
+  console.log('Environment:', process.env.NODE_ENV);
+  
+  const appPath = process.env.NODE_ENV === 'production'
+    ? path.join(__dirname, '../dist/app.html')
+    : path.join(__dirname, '../src/app.html');
+    
+  console.log('Serving file:', appPath);
+  res.sendFile(appPath);
+});
+
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   // IMPORTANT: Define specific routes BEFORE static middleware
   // This ensures /app route is handled correctly
-  
-  // Serve app.html for /app route - must be before static
-  app.get('/app', (req, res) => {
-    console.log('Serving app.html for /app route');
-    res.sendFile(path.join(__dirname, '../dist/app.html'));
-  });
   
   // Serve static files (CSS, JS, images, etc.)
   // But NOT HTML files - we handle those with specific routes
