@@ -460,10 +460,10 @@
                 methodEl.textContent = result.method;
                 showMessage(`Already logged in as ${result.user.email}`, 'success');
                 
-                // Redirect after 2 seconds
+                // Simple redirect
                 setTimeout(() => {
                     window.location.href = '/app';
-                }, 2000);
+                }, 1000);
             } else {
                 statusEl.textContent = 'Not authenticated';
                 showMessage('Please sign in to continue', 'info');
@@ -508,45 +508,14 @@
                     console.log('Cookies after login:', document.cookie);
                     console.log('LocalStorage auth_token:', localStorage.getItem('auth_token'));
                     
-                    // Redirect to app - try multiple methods for reliability
+                    // Redirect to app
                     showMessage('Redirecting to app...', 'info');
                     
-                    // Method 1: Immediate redirect (most reliable)
-                    console.log('Attempting redirect to /app');
-                    
-                    // Small delay to ensure localStorage is saved
+                    // Simple redirect after a brief delay to ensure localStorage is saved
                     setTimeout(() => {
-                        // Try multiple redirect methods
-                        try {
-                            // Primary method
-                            window.location.href = '/app';
-                            
-                            // Fallback after 500ms if still on same page
-                            setTimeout(() => {
-                                if (window.location.pathname !== '/app') {
-                                    console.log('Primary redirect failed, trying replace');
-                                    window.location.replace('/app');
-                                }
-                            }, 500);
-                            
-                            // Final fallback after 1s
-                            setTimeout(() => {
-                                if (window.location.pathname !== '/app') {
-                                    console.log('All redirects failed, trying assign');
-                                    window.location.assign('/app');
-                                }
-                            }, 1000);
-                        } catch (e) {
-                            console.error('Redirect error:', e);
-                            // Manual fallback
-                            showMessage('Auto-redirect failed. Please click here to continue.', 'warning');
-                            const link = document.createElement('a');
-                            link.href = '/app';
-                            link.textContent = 'Continue to App';
-                            link.style.color = '#667eea';
-                            message.appendChild(link);
-                        }
-                    }, 100); // Small delay to ensure state is saved
+                        console.log('Redirecting to /app');
+                        window.location.href = '/app';
+                    }, 500);
                 } else {
                     showMessage(`❌ Login failed: ${result.error || 'Unknown error'}`, 'error');
                     updateStatus();
