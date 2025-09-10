@@ -180,6 +180,10 @@ app.use('/api/auth', authFormRouter);
 const tokenAuthRouter = require('./routes/token-auth');
 app.use('/api/token-auth', tokenAuthRouter);
 
+// Simple auth that ACTUALLY WORKS
+const simpleAuthRouter = require('./routes/simple-auth');
+app.use('/api/simple-auth', simpleAuthRouter);
+
 // Cookie testing routes (temporary for debugging)
 const cookieTestRouter = require('./routes/cookie-test');
 app.use('/api/cookie-test', cookieTestRouter);
@@ -223,6 +227,12 @@ app.get('/cookie-test', (req, res) => {
 // Hybrid login page (token + cookie auth)
 app.get('/hybrid-login', (req, res) => {
   const loginPath = path.join(__dirname, '../src/hybrid-login.html');
+  res.sendFile(loginPath);
+});
+
+// WORKING login page with proper session
+app.get('/working-login', (req, res) => {
+  const loginPath = path.join(__dirname, '../src/working-login.html');
   res.sendFile(loginPath);
 });
 

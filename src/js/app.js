@@ -113,14 +113,35 @@ class InvoiceApp {
   
   async checkAuthentication() {
     try {
-      console.log('🔍 APP.JS: Checking authentication (hybrid mode)...');
-      console.log('🔍 Current URL:', window.location.href);
-      console.log('🔍 localStorage contents:');
-      console.log('  - marine_invoice_user:', localStorage.getItem('marine_invoice_user'));
-      console.log('  - auth_token:', localStorage.getItem('auth_token'));
-      console.log('  - auth_method:', localStorage.getItem('auth_method'));
+      console.log('🔍 APP.JS: Checking authentication...');
       
-      // FIRST - Check localStorage fallback (most reliable for custom domains)
+      // FIRST - Check SERVER session (most reliable)
+      try {
+        const sessionResponse = await fetch('/api/simple-auth/check', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        console.log('📡 Session check response:', sessionResponse.status);
+        
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          if (sessionData.authenticated) {
+            console.log('✅ SERVER SESSION VALID:', sessionData.user);
+            this.userManager.currentUser = sessionData.user;
+            this.userManager.saveSession(true);
+            this.userManager.notify();
+            return true;
+          }
+        }
+      } catch (err) {
+        console.log('Session check failed:', err);
+      }
+      
+      // SECOND - Check localStorage fallback
       const storedUser = localStorage.getItem('marine_invoice_user');
       if (storedUser) {
         console.log('📦 Found stored user, using localStorage authentication');
@@ -141,7 +162,7 @@ class InvoiceApp {
             this.sidebar.updateUserSection(user);
           }
           
-          console.log('✅ AUTHENTICATION SUCCESSFUL via localStorage (priority)');
+          console.log('✅ AUTHENTICATION SUCCESSFUL via localStorage');
           return true;
         } catch (e) {
           console.error('❌ Failed to parse stored user:', e);
@@ -149,7 +170,7 @@ class InvoiceApp {
         }
       }
       
-      // SECOND - Try cookie-based session
+      // THIRD - Try standard cookie-based session
       const response = await fetch('/api/auth/me', {
         method: 'GET',
         credentials: 'include',
