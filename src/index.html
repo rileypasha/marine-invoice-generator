@@ -4,6 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MG Invoices - Marine Group Invoice Generator</title>
+    <script>
+        // Immediate authentication check to fix sidebar display
+        (function() {
+            const storedUser = localStorage.getItem('marine_invoice_user');
+            if (storedUser) {
+                try {
+                    const user = JSON.parse(storedUser);
+                    // Add class to body to indicate authenticated state
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const authSection = document.getElementById('auth-section');
+                        const userSection = document.getElementById('user-section');
+                        if (authSection && userSection && user) {
+                            authSection.style.display = 'none';
+                            userSection.style.display = 'flex';
+                            const userNameEl = document.getElementById('user-name');
+                            const userEmailEl = document.getElementById('user-email');
+                            if (userNameEl) userNameEl.textContent = user.name || user.email || 'User';
+                            if (userEmailEl) userEmailEl.textContent = user.email || '';
+                        }
+                    });
+                } catch(e) {}
+            }
+        })();
+    </script>
     <meta name="description" content="Professional invoice generator for Marine Group services">
     <meta property="og:title" content="MG Invoices">
     <meta property="og:description" content="Professional invoice generator for Marine Group services">
@@ -71,7 +95,6 @@
                 
                 <div class="auth-section" id="auth-section">
                     <button class="auth-btn primary" id="sign-in-btn">Sign In</button>
-                    <button class="auth-btn secondary" id="sign-up-btn">Sign Up</button>
                 </div>
             </div>
         </div>
