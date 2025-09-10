@@ -96,7 +96,6 @@ export class Sidebar {
         
         <div class="auth-section" id="auth-section">
           <button class="auth-btn primary" id="sign-in-btn">Sign In</button>
-          <button class="auth-btn secondary" id="sign-up-btn">Sign Up</button>
         </div>
       </div>
     `;
@@ -200,14 +199,7 @@ export class Sidebar {
       console.log('🔍 Available buttons:', this.sidebar.querySelectorAll('button'));
     }
     
-    const signUpBtn = this.sidebar.querySelector('#sign-up-btn');
-    if (signUpBtn) {
-      signUpBtn.addEventListener('click', () => {
-        this.authModal.show('signup');
-      });
-    } else {
-      console.error('❌ Sign-up button not found!');
-    }
+    // Sign up button has been removed
     
     // User section click - opens settings
     const userSection = this.sidebar.querySelector('#user-section');
@@ -221,6 +213,7 @@ export class Sidebar {
   setupSubscriptions() {
     // Listen for user changes
     this.userManager.subscribe((user) => {
+      console.log('🔔 UserManager notification received in Sidebar:', user);
       this.updateUserSection(user);
       this.refreshInvoiceList();
     });
@@ -229,9 +222,18 @@ export class Sidebar {
     this.invoiceStorage.subscribe(() => {
       this.refreshInvoiceList();
     });
+    
+    // Force initial update with current user
+    const currentUser = this.userManager.getCurrentUser();
+    console.log('🚀 Sidebar init - current user:', currentUser);
+    if (currentUser) {
+      this.updateUserSection(currentUser);
+    }
   }
   
   updateUserSection(user) {
+    console.log('🔄 Updating user section with:', user);
+    
     if (!this.sidebar) {
       console.error('❌ Cannot update user section: sidebar is null');
       return;
@@ -242,10 +244,15 @@ export class Sidebar {
     
     if (!userSection || !authSection) {
       console.error('❌ Cannot find user or auth sections');
+      console.log('Available elements:', {
+        userSection: !!userSection,
+        authSection: !!authSection
+      });
       return;
     }
     
     if (user) {
+      console.log('✅ User authenticated, showing user section');
       // Show user section
       userSection.style.display = 'flex';
       authSection.style.display = 'none';
@@ -254,9 +261,10 @@ export class Sidebar {
       const userNameEl = this.sidebar.querySelector('#user-name');
       const userEmailEl = this.sidebar.querySelector('#user-email');
       
-      if (userNameEl) userNameEl.textContent = user.name;
-      if (userEmailEl) userEmailEl.textContent = user.email;
+      if (userNameEl) userNameEl.textContent = user.name || user.email || 'User';
+      if (userEmailEl) userEmailEl.textContent = user.email || '';
     } else {
+      console.log('⚠️ No user, showing auth section');
       // Show auth section
       userSection.style.display = 'none';
       authSection.style.display = 'flex';

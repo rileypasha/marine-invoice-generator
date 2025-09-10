@@ -72,6 +72,13 @@ class InvoiceApp {
       this.sidebar = new Sidebar(this.userManager, this.invoiceStorage, this.authModal, this.settingsModal);
       console.log('✅ Sidebar created successfully');
       
+      // Force sidebar to update with current user
+      const currentUser = this.userManager.getCurrentUser();
+      if (currentUser) {
+        console.log('🔄 Forcing sidebar update with authenticated user');
+        this.sidebar.updateUserSection(currentUser);
+      }
+      
       // Setup invoice item listeners
       this.sidebar.setupInvoiceItemListeners();
       
