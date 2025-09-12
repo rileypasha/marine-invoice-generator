@@ -17,6 +17,32 @@
     function enhanceDashboard() {
         const dashboard = window.masterDashboard;
         
+        // Add success notification method
+        dashboard.showSuccess = function(message) {
+            const container = document.querySelector('.dashboard-container') || document.body;
+            let successEl = document.getElementById('systemSuccess');
+            
+            if (!successEl) {
+                successEl = document.createElement('div');
+                successEl.id = 'systemSuccess';
+                successEl.className = 'system-success';
+                successEl.style.cssText = 'background: #10b981; color: white; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 14px; transition: opacity 0.3s ease;';
+                container.insertBefore(successEl, container.firstChild);
+            }
+            
+            successEl.textContent = message;
+            successEl.style.display = 'block';
+            successEl.style.opacity = '1';
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                successEl.style.opacity = '0';
+                setTimeout(() => {
+                    successEl.style.display = 'none';
+                }, 300);
+            }, 3000);
+        };
+        
         // Override the viewInvoice method
         dashboard.viewInvoice = async function(invoiceId) {
             if (!invoiceId) {
@@ -45,7 +71,11 @@
                 this.showInvoicePreview(invoice);
             } catch (error) {
                 console.error("Error in viewInvoice:", error);
-                alert("Failed to load invoice. Please try again.");
+                if (this.showError) {
+                    this.showError("Failed to load invoice. Please try again.");
+                } else {
+                    alert("Failed to load invoice. Please try again.");
+                }
             }
         };
         
@@ -398,12 +428,33 @@
                     commentInput.value = '';
                 }
                 
-                // Show success message
-                alert('Comment added successfully');
+                // Show success message with themed notification
+                if (window.masterDashboard && window.masterDashboard.showSuccess) {
+                    window.masterDashboard.showSuccess('Comment added successfully');
+                } else {
+                    // Fallback to inline success message
+                    const container = document.querySelector('.dashboard-container') || document.body;
+                    const successEl = document.createElement('div');
+                    successEl.style.cssText = 'background: #10b981; color: white; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 14px; position: fixed; top: 20px; right: 20px; z-index: 10001;';
+                    successEl.textContent = 'Comment added successfully';
+                    container.appendChild(successEl);
+                    setTimeout(() => successEl.remove(), 3000);
+                }
                 
             } catch (error) {
                 console.error('Error adding comment:', error);
-                alert('Failed to add comment. Please try again.');
+                // Show error message with themed notification
+                if (window.masterDashboard && window.masterDashboard.showError) {
+                    window.masterDashboard.showError('Failed to add comment. Please try again.');
+                } else {
+                    // Fallback to inline error message
+                    const container = document.querySelector('.dashboard-container') || document.body;
+                    const errorEl = document.createElement('div');
+                    errorEl.style.cssText = 'background: #f44336; color: white; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 14px; position: fixed; top: 20px; right: 20px; z-index: 10001;';
+                    errorEl.textContent = 'Failed to add comment. Please try again.';
+                    container.appendChild(errorEl);
+                    setTimeout(() => errorEl.remove(), 3000);
+                }
             }
         };
         

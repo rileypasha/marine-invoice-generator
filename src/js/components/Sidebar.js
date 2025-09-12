@@ -304,6 +304,7 @@ export class Sidebar {
     }
     
     const saved = this.invoiceStorage.getSavedItems(5);
+    console.log(`📊 Sidebar: Found ${saved.length} saved items to display`);
     
     if (saved.length === 0) {
       container.innerHTML = `

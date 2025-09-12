@@ -529,6 +529,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const app = new InvoiceApp();
     console.log('✅ App initialized successfully');
     
+    // Expose debug functions to window for troubleshooting
+    window.debugApp = {
+      invoiceStorage: app.invoiceStorage,
+      userManager: app.userManager,
+      sidebar: app.sidebar,
+      forceRefresh: () => {
+        console.log('🔄 Force refreshing invoices...');
+        app.invoiceStorage.forceMigrationAndRefresh();
+      },
+      showInvoices: () => {
+        const invoices = app.invoiceStorage.getAllInvoices();
+        console.table(invoices.map(inv => ({
+          title: inv.title,
+          userId: inv.userId,
+          userEmail: inv.userEmail,
+          status: inv.status
+        })));
+      },
+      currentUser: () => {
+        const user = app.userManager.getCurrentUser();
+        console.log('Current user:', user);
+        return user;
+      }
+    };
+    console.log('💡 Debug functions available: window.debugApp.forceRefresh(), window.debugApp.showInvoices(), window.debugApp.currentUser()');
+    
     // Test if sidebar was created
     setTimeout(() => {
       const sidebar = document.querySelector('.app-sidebar');
