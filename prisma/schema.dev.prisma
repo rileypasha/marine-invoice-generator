@@ -30,6 +30,7 @@ model InvoiceSubmission {
   submittedAt DateTime @default(now())
   status      String   @default("pending")
   notes       String?
+  comments    String?  @db.Text // Comments from users and master
   
   invoice     Invoice  @relation(fields: [invoiceId], references: [id])
 }

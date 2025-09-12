@@ -329,8 +329,11 @@
                 </div>
             `;
             
-            // Show the modal
+            // Show the modal and prevent body scroll
             modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
             
             // Store invoice data for export
             modal.dataset.invoiceId = invoice.id;
@@ -364,6 +367,9 @@
                     `${existingComments}\n\n${newComment}` : newComment;
                 
                 // Update invoice with new comment
+                console.log('Sending comment to:', `/api/master/invoices/${invoiceId}/comment`);
+                console.log('Comment payload:', { comment: updatedComments });
+                
                 const response = await fetch(`/api/master/invoices/${invoiceId}/comment`, {
                     method: 'POST',
                     credentials: 'include',
@@ -373,8 +379,12 @@
                     body: JSON.stringify({ comment: updatedComments })
                 });
                 
+                console.log('Response status:', response.status);
+                
                 if (!response.ok) {
-                    throw new Error('Failed to add comment');
+                    const errorText = await response.text();
+                    console.error('Server error response:', errorText);
+                    throw new Error(`Failed to add comment: ${response.status} - ${errorText}`);
                 }
                 
                 // Update local data
@@ -402,6 +412,11 @@
             const modal = document.getElementById("invoicePreviewModal");
             if (modal) {
                 modal.classList.remove('active');
+                // Restore body scroll
+                document.body.style.overflow = '';
+                document.body.style.position = '';
+                document.body.style.width = '';
+                
                 const modalBody = document.getElementById("invoicePreviewBody");
                 if (modalBody) {
                     modalBody.innerHTML = '';
