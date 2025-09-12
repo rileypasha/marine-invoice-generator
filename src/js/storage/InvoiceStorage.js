@@ -51,60 +51,93 @@ export class InvoiceStorage {
     const currentUser = this.userManager.getCurrentUser();
     if (!currentUser || !currentUser.email) return;
     
-    console.log('🔄 Starting user email migration...');
-    let migrated = false;
+    console.log('🔄 Starting user email migration for:', currentUser.email);
+    let invoicesMigrated = 0;
+    let draftsMigrated = 0;
     
     try {
       // Migrate invoices
       const invoices = this.getAllInvoices();
       const updatedInvoices = invoices.map(invoice => {
+        // Skip if already has email set to a different user
+        if (invoice.userEmail && invoice.userEmail !== currentUser.email) {
+          return invoice;
+        }
+        
         // If invoice belongs to current user by ID but missing email, add it
         if (invoice.userId === currentUser.id && !invoice.userEmail) {
+          console.log(`  Migrating invoice "${invoice.title}" - matched by user ID`);
           invoice.userEmail = currentUser.email;
-          migrated = true;
+          invoicesMigrated++;
         }
-        // Also check for common test/default user IDs and claim them if they match email
+        // For test user, claim ALL invoices without email (aggressive migration)
+        else if (currentUser.email === 'test@marinegroup.com' && !invoice.userEmail) {
+          console.log(`  Migrating invoice "${invoice.title}" - test user claiming orphaned invoice`);
+          invoice.userEmail = currentUser.email;
+          invoicesMigrated++;
+        }
+        // Also check for common test/default user IDs
         else if (!invoice.userEmail && 
                  (invoice.userId === 'test_user_123' || 
                   invoice.userId === 'test-user-1' ||
-                  invoice.userId === 'user_' + currentUser.email.replace('@', '_').replace('.', '_'))) {
-          // Claim these invoices for the current user
+                  invoice.userId === currentUser.id.toString())) {
+          console.log(`  Migrating invoice "${invoice.title}" - matched by common test ID`);
           invoice.userEmail = currentUser.email;
-          migrated = true;
+          invoicesMigrated++;
         }
         return invoice;
       });
       
-      if (migrated) {
+      if (invoicesMigrated > 0) {
         localStorage.setItem(this.storageKey, JSON.stringify(updatedInvoices));
+        console.log(`  Migrated ${invoicesMigrated} invoice(s)`);
       }
       
       // Migrate drafts
-      migrated = false;
       const drafts = this.getAllDrafts();
       const updatedDrafts = drafts.map(draft => {
+        // Skip if already has email set to a different user
+        if (draft.userEmail && draft.userEmail !== currentUser.email) {
+          return draft;
+        }
+        
         // If draft belongs to current user by ID but missing email, add it
         if (draft.userId === currentUser.id && !draft.userEmail) {
+          console.log(`  Migrating draft "${draft.title}" - matched by user ID`);
           draft.userEmail = currentUser.email;
-          migrated = true;
+          draftsMigrated++;
+        }
+        // For test user, claim ALL drafts without email
+        else if (currentUser.email === 'test@marinegroup.com' && !draft.userEmail) {
+          console.log(`  Migrating draft "${draft.title}" - test user claiming orphaned draft`);
+          draft.userEmail = currentUser.email;
+          draftsMigrated++;
         }
         // Also check for common test/default user IDs
         else if (!draft.userEmail && 
                  (draft.userId === 'test_user_123' || 
                   draft.userId === 'test-user-1' ||
-                  draft.userId === 'user_' + currentUser.email.replace('@', '_').replace('.', '_'))) {
-          // Claim these drafts for the current user
+                  draft.userId === currentUser.id.toString())) {
+          console.log(`  Migrating draft "${draft.title}" - matched by common test ID`);
           draft.userEmail = currentUser.email;
-          migrated = true;
+          draftsMigrated++;
         }
         return draft;
       });
       
-      if (migrated) {
+      if (draftsMigrated > 0) {
         localStorage.setItem(this.draftsKey, JSON.stringify(updatedDrafts));
+        console.log(`  Migrated ${draftsMigrated} draft(s)`);
       }
       
-      console.log('✅ User email migration complete');
+      const totalMigrated = invoicesMigrated + draftsMigrated;
+      if (totalMigrated > 0) {
+        console.log(`✅ User email migration complete - migrated ${totalMigrated} total item(s)`);
+        // Notify listeners that storage has changed
+        this.notify();
+      } else {
+        console.log('✅ User email migration complete - no items needed migration');
+      }
     } catch (error) {
       console.error('❌ User email migration failed:', error);
     }
@@ -1156,6 +1189,14 @@ export class InvoiceStorage {
     console.log('🔓 Auth failure cleared - enabling server saves');
     // Try to process any queued saves
     this.retryFailedSaves();
+  }
+  
+  // Force migration and refresh (useful for debugging)
+  forceMigrationAndRefresh() {
+    console.log('🔄 Force migration and refresh triggered');
+    this.migrateUserEmails();
+    this.notify();
+    console.log('✅ Force migration complete, sidebar should update');
   }
   
   // Check if server saves are blocked
