@@ -1076,7 +1076,6 @@ router.post('/invoices/:id/comment', requireMaster, async (req, res) => {
       select: {
         id: true,
         data: true,
-        parsedData: true,
         comments: true
       }
     });
@@ -1094,26 +1093,6 @@ router.post('/invoices/:id/comment', requireMaster, async (req, res) => {
         updatedAt: new Date()
       }
     });
-    
-    // Also update the parsedData if it exists to include comments
-    if (invoice.parsedData) {
-      try {
-        const parsedData = typeof invoice.parsedData === 'string' 
-          ? JSON.parse(invoice.parsedData) 
-          : invoice.parsedData;
-        
-        parsedData.comments = comment;
-        
-        await prisma.invoice.update({
-          where: { id },
-          data: {
-            parsedData: JSON.stringify(parsedData)
-          }
-        });
-      } catch (parseError) {
-        console.log(`  ⚠️ Could not update parsedData with comment: ${parseError.message}`);
-      }
-    }
     
     // Also update the data field if it exists
     if (invoice.data) {
