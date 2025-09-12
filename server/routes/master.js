@@ -258,6 +258,7 @@ router.get('/invoices', requireMaster, async (req, res) => {
         total: true,
         grossProfit: true,
         profitPercent: true,
+        comments: true, // Include comments field
         // hasChanges: true, // Commented out - not all databases have this yet
         createdAt: true,
         updatedAt: true
@@ -473,6 +474,7 @@ router.get('/invoices/:id', requireMaster, async (req, res) => {
         "profitPercent",
         market,
         notes,
+        comments,
         "createdAt",
         "updatedAt",
         "savedAt",

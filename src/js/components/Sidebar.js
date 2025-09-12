@@ -296,6 +296,13 @@ export class Sidebar {
       return;
     }
     
+    // Force migration check when updating sidebar
+    const currentUser = this.userManager.getCurrentUser();
+    if (currentUser && currentUser.email) {
+      console.log('🔄 Checking for invoice migration...');
+      this.invoiceStorage.migrateUserEmails();
+    }
+    
     const saved = this.invoiceStorage.getSavedItems(5);
     
     if (saved.length === 0) {

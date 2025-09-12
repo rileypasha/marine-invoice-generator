@@ -70,18 +70,22 @@ export class InvoiceStorage {
           invoice.userEmail = currentUser.email;
           invoicesMigrated++;
         }
-        // For test user, claim ALL invoices without email (aggressive migration)
-        else if (currentUser.email === 'test@marinegroup.com' && !invoice.userEmail) {
-          console.log(`  Migrating invoice "${invoice.title}" - test user claiming orphaned invoice`);
-          invoice.userEmail = currentUser.email;
-          invoicesMigrated++;
+        // For test user, claim ALL invoices without email OR with test IDs (aggressive migration)
+        else if (currentUser.email === 'test@marinegroup.com') {
+          // Claim any invoice that doesn't have an email or has a test user ID
+          if (!invoice.userEmail || 
+              invoice.userId === 'test_user_123' || 
+              invoice.userId === 'test-user-1' ||
+              invoice.userId?.includes('test')) {
+            console.log(`  Migrating invoice "${invoice.title}" - test user claiming invoice`);
+            invoice.userEmail = currentUser.email;
+            invoicesMigrated++;
+          }
         }
-        // Also check for common test/default user IDs
+        // Also check for common test/default user IDs for other users
         else if (!invoice.userEmail && 
-                 (invoice.userId === 'test_user_123' || 
-                  invoice.userId === 'test-user-1' ||
-                  invoice.userId === currentUser.id.toString())) {
-          console.log(`  Migrating invoice "${invoice.title}" - matched by common test ID`);
+                 (invoice.userId === currentUser.id.toString())) {
+          console.log(`  Migrating invoice "${invoice.title}" - matched by user ID string`);
           invoice.userEmail = currentUser.email;
           invoicesMigrated++;
         }
@@ -107,18 +111,22 @@ export class InvoiceStorage {
           draft.userEmail = currentUser.email;
           draftsMigrated++;
         }
-        // For test user, claim ALL drafts without email
-        else if (currentUser.email === 'test@marinegroup.com' && !draft.userEmail) {
-          console.log(`  Migrating draft "${draft.title}" - test user claiming orphaned draft`);
-          draft.userEmail = currentUser.email;
-          draftsMigrated++;
+        // For test user, claim ALL drafts without email OR with test IDs
+        else if (currentUser.email === 'test@marinegroup.com') {
+          // Claim any draft that doesn't have an email or has a test user ID
+          if (!draft.userEmail || 
+              draft.userId === 'test_user_123' || 
+              draft.userId === 'test-user-1' ||
+              draft.userId?.includes('test')) {
+            console.log(`  Migrating draft "${draft.title}" - test user claiming draft`);
+            draft.userEmail = currentUser.email;
+            draftsMigrated++;
+          }
         }
-        // Also check for common test/default user IDs
+        // Also check for common test/default user IDs for other users
         else if (!draft.userEmail && 
-                 (draft.userId === 'test_user_123' || 
-                  draft.userId === 'test-user-1' ||
-                  draft.userId === currentUser.id.toString())) {
-          console.log(`  Migrating draft "${draft.title}" - matched by common test ID`);
+                 (draft.userId === currentUser.id.toString())) {
+          console.log(`  Migrating draft "${draft.title}" - matched by user ID string`);
           draft.userEmail = currentUser.email;
           draftsMigrated++;
         }
