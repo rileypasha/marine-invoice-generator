@@ -73,12 +73,73 @@
                 day: 'numeric'
             });
             
+            // Calculate line items and totals properly
+            let baseCost = 0;
+            let subtotal = 0;
+            let totalTax = 0;
+            
+            // Helper function to calculate line item cost
+            const calculateLineItemCost = (item) => {
+                // Priority: manualCost > cost > calculated from hours
+                if (item.manualCost != null && item.manualCost !== '') {
+                    return parseFloat(item.manualCost) || 0;
+                }
+                if (item.cost != null && item.cost !== '') {
+                    return parseFloat(item.cost) || 0;
+                }
+                
+                // Calculate from labor hours
+                let total = 0;
+                const laborHours = parseFloat(item.laborHours) || 0;
+                const otHours = parseFloat(item.otHours) || 0;
+                
+                if (item.jobType === 'Agent Services') {
+                    total = (laborHours * 100) + (otHours * 150);
+                } else if (item.itemType === 'Labor') {
+                    total = (laborHours * 100) + (otHours * 150);
+                } else {
+                    total = (laborHours * 85) + (otHours * 127.5);
+                }
+                
+                return total;
+            };
+            
+            // Helper function to apply markup
+            const applyMarkup = (cost, item) => {
+                // Check if item is markup exempt
+                if (item.isMarkupExempt || item.markupType === 'exempt') {
+                    return cost;
+                }
+                
+                // Use item's specific markup rate or fall back to scope markup
+                const markupRate = parseFloat(item.markupRate || scope.markupRate || '2.5') / 100;
+                return cost * (1 + markupRate);
+            };
+            
+            // Helper function to calculate tax
+            const calculateTax = (item, totalWithMarkup) => {
+                // Check tax status
+                if (item.taxStatus === 'non-taxable' || item.taxStatus === 'exempt') {
+                    return 0;
+                }
+                
+                const taxRate = parseFloat(item.taxRate || 0.0875);
+                return totalWithMarkup * taxRate;
+            };
+            
             // Generate line items HTML
             const lineItemsHTML = lineItems.map(item => {
-                const cost = item.cost || item.manualCost || 0;
-                const markupAmount = item.markupAmount || 0;
-                const taxAmount = item.taxAmount || 0;
-                const total = cost + markupAmount + taxAmount;
+                const cost = calculateLineItemCost(item);
+                baseCost += cost;
+                
+                const totalWithMarkup = applyMarkup(cost, item);
+                const markupAmount = totalWithMarkup - cost;
+                subtotal += totalWithMarkup;
+                
+                const taxAmount = calculateTax(item, totalWithMarkup);
+                totalTax += taxAmount;
+                
+                const total = totalWithMarkup + taxAmount;
                 
                 return `
                     <tr>
@@ -92,13 +153,16 @@
                 `;
             }).join('');
             
-            // Calculate totals
-            const subtotal = scope.subtotal || invoice.subtotal || 0;
+            // Calculate final totals
+            const total = subtotal + totalTax;
+            const grossProfit = subtotal - baseCost;
+            const profitPercent = baseCost > 0 ? (grossProfit / baseCost) * 100 : 0;
+            
+            // For backward compatibility, check if scope has totals already
+            const finalSubtotal = subtotal || scope.subtotal || invoice.subtotal || 0;
+            const finalTaxAmount = totalTax || scope.taxAmount || invoice.taxAmount || 0;
+            const finalTotal = total || scope.total || invoice.total || 0;
             const clearanceFee = scope.clearanceFee || 0;
-            const taxAmount = scope.taxAmount || invoice.taxAmount || 0;
-            const total = scope.total || invoice.total || 0;
-            const grossProfit = scope.grossProfit || invoice.grossProfit || 0;
-            const profitPercent = scope.profitPercent || invoice.profitPercent || 0;
             
             // Build the invoice preview HTML
             modalBody.innerHTML = `
@@ -151,7 +215,7 @@
                         <div class="invoice-totals">
                             <div class="total-row">
                                 <span>Subtotal:</span>
-                                <span>$${subtotal.toFixed(2)}</span>
+                                <span>$${finalSubtotal.toFixed(2)}</span>
                             </div>
                             ${clearanceFee > 0 ? `
                             <div class="total-row">
@@ -159,19 +223,18 @@
                                 <span>$${clearanceFee.toFixed(2)}</span>
                             </div>
                             ` : ''}
-                            ${taxAmount > 0 ? `
+                            ${finalTaxAmount > 0 ? `
                             <div class="total-row tax-row">
                                 <span>Tax (8.75%):</span>
-                                <span>$${taxAmount.toFixed(2)}</span>
+                                <span>$${finalTaxAmount.toFixed(2)}</span>
                             </div>
                             ` : ''}
                             <div class="total-row total-final">
                                 <span><strong>Total:</strong></span>
-                                <span><strong>$${total.toFixed(2)}</strong></span>
+                                <span><strong>$${finalTotal.toFixed(2)}</strong></span>
                             </div>
                         </div>
                         
-                        ${grossProfit > 0 ? `
                         <div class="profit-section">
                             <div class="profit-row">
                                 <span>Gross Profit:</span>
@@ -179,12 +242,28 @@
                             </div>
                             <div class="profit-row">
                                 <span>Profit Margin:</span>
-                                <span>${profitPercent.toFixed(1)}%</span>
+                                <span>${profitPercent.toFixed(2)}%</span>
                             </div>
                         </div>
-                        ` : ''}
                     </div>
                     ` : '<p>No line items available</p>'}
+                    
+                    ${invoice.comments ? `
+                    <div class="invoice-section comments-section">
+                        <h3>Comments</h3>
+                        <div class="comments-display">
+                            <p>${invoice.comments.replace(/\n/g, '<br>')}</p>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="invoice-section comments-section">
+                        <h3>Add Comment</h3>
+                        <div class="comment-input-container">
+                            <textarea id="masterCommentInput" class="comment-input" placeholder="Add a comment to this invoice..." rows="3"></textarea>
+                            <button id="addCommentBtn" class="btn btn-primary" onclick="window.masterDashboard.addComment('${invoice.id}')">Add Comment</button>
+                        </div>
+                    </div>
                 </div>
             `;
             
@@ -194,6 +273,66 @@
             // Store invoice data for export
             modal.dataset.invoiceId = invoice.id;
             this.currentInvoiceData = invoice;
+        };
+        
+        // Add comment functionality
+        dashboard.addComment = async function(invoiceId) {
+            const commentInput = document.getElementById('masterCommentInput');
+            const comment = commentInput ? commentInput.value.trim() : '';
+            
+            if (!comment) {
+                alert('Please enter a comment');
+                return;
+            }
+            
+            try {
+                // Get existing invoice data
+                const invoice = this.currentInvoiceData;
+                if (!invoice) {
+                    throw new Error('No invoice data available');
+                }
+                
+                // Append comment with timestamp and user info
+                const timestamp = new Date().toLocaleString();
+                const currentUser = 'Master Admin'; // You may want to get this from session
+                const newComment = `[${timestamp}] ${currentUser}: ${comment}`;
+                
+                const existingComments = invoice.comments || '';
+                const updatedComments = existingComments ? 
+                    `${existingComments}\n\n${newComment}` : newComment;
+                
+                // Update invoice with new comment
+                const response = await fetch(`/api/master/invoices/${invoiceId}/comment`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ comment: updatedComments })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to add comment');
+                }
+                
+                // Update local data
+                invoice.comments = updatedComments;
+                
+                // Refresh the preview
+                this.showInvoicePreview(invoice);
+                
+                // Clear input
+                if (commentInput) {
+                    commentInput.value = '';
+                }
+                
+                // Show success message
+                alert('Comment added successfully');
+                
+            } catch (error) {
+                console.error('Error adding comment:', error);
+                alert('Failed to add comment. Please try again.');
+            }
         };
         
         // Add close modal functionality

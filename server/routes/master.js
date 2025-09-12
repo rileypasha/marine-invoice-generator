@@ -1048,6 +1048,129 @@ router.get('/debug/recent-saves', requireMaster, async (req, res) => {
 });
 
 /**
+ * POST /api/master/invoices/:id/comment
+ * Add or update comments for an invoice
+ */
+router.post('/invoices/:id/comment', requireMaster, async (req, res) => {
+  const requestId = `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  try {
+    const { id } = req.params;
+    const { comment } = req.body;
+    
+    console.log(`\n📝 [${requestId}] MASTER ADD COMMENT`);
+    console.log(`  Invoice ID: ${id}`);
+    console.log(`  Comment length: ${comment ? comment.length : 0} chars`);
+    
+    if (!id) {
+      return res.status(400).json({ error: 'Invoice ID is required' });
+    }
+    
+    if (!comment && comment !== '') {
+      return res.status(400).json({ error: 'Comment is required' });
+    }
+    
+    // Fetch the invoice first
+    const invoice = await prisma.invoice.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        data: true,
+        parsedData: true,
+        comments: true
+      }
+    });
+    
+    if (!invoice) {
+      console.log(`  ❌ Invoice not found: ${id}`);
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    
+    // Update the invoice with the new comment
+    const updatedInvoice = await prisma.invoice.update({
+      where: { id },
+      data: {
+        comments: comment,
+        updatedAt: new Date()
+      }
+    });
+    
+    // Also update the parsedData if it exists to include comments
+    if (invoice.parsedData) {
+      try {
+        const parsedData = typeof invoice.parsedData === 'string' 
+          ? JSON.parse(invoice.parsedData) 
+          : invoice.parsedData;
+        
+        parsedData.comments = comment;
+        
+        await prisma.invoice.update({
+          where: { id },
+          data: {
+            parsedData: JSON.stringify(parsedData)
+          }
+        });
+      } catch (parseError) {
+        console.log(`  ⚠️ Could not update parsedData with comment: ${parseError.message}`);
+      }
+    }
+    
+    // Also update the data field if it exists
+    if (invoice.data) {
+      try {
+        const data = typeof invoice.data === 'string' 
+          ? JSON.parse(invoice.data) 
+          : invoice.data;
+        
+        data.comments = comment;
+        
+        await prisma.invoice.update({
+          where: { id },
+          data: {
+            data: JSON.stringify(data)
+          }
+        });
+      } catch (parseError) {
+        console.log(`  ⚠️ Could not update data with comment: ${parseError.message}`);
+      }
+    }
+    
+    console.log(`  ✅ Comment added successfully for invoice ${id}`);
+    
+    logger.info({
+      event: 'MASTER_COMMENT_ADDED',
+      requestId,
+      invoiceId: id,
+      commentLength: comment.length,
+      masterEmail: req.user?.email
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Comment added successfully',
+      invoiceId: id
+    });
+    
+  } catch (error) {
+    console.error(`  ❌ Error adding comment:`, error.message);
+    
+    logger.error({
+      event: 'MASTER_COMMENT_ERROR',
+      requestId,
+      error: error.message,
+      stack: error.stack,
+      email: req.user?.email,
+      invoiceId: req.params.id
+    });
+    
+    res.status(500).json({ 
+      error: 'Failed to add comment',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
  * GET /api/master/debug/orphan-invoices
  * Find invoices without proper user association
  */
