@@ -23,6 +23,11 @@ export class InvoiceStorage {
           // User logged in, reset auth failure flag and retry failed saves
           this.authFailed = false;
           console.log('🔓 User authenticated - enabling server saves');
+          
+          // Run email migration when user logs in
+          // This ensures invoices are properly associated with the logged-in user
+          this.migrateUserEmails();
+          
           this.retryFailedSaves();
         } else {
           // User logged out
@@ -34,6 +39,75 @@ export class InvoiceStorage {
     
     // Run tax data migration on startup
     this.migrateTaxData();
+    
+    // Run user email migration on startup
+    this.migrateUserEmails();
+  }
+  
+  /**
+   * Migrate existing invoices to include user email for backward compatibility
+   */
+  migrateUserEmails() {
+    const currentUser = this.userManager.getCurrentUser();
+    if (!currentUser || !currentUser.email) return;
+    
+    console.log('🔄 Starting user email migration...');
+    let migrated = false;
+    
+    try {
+      // Migrate invoices
+      const invoices = this.getAllInvoices();
+      const updatedInvoices = invoices.map(invoice => {
+        // If invoice belongs to current user by ID but missing email, add it
+        if (invoice.userId === currentUser.id && !invoice.userEmail) {
+          invoice.userEmail = currentUser.email;
+          migrated = true;
+        }
+        // Also check for common test/default user IDs and claim them if they match email
+        else if (!invoice.userEmail && 
+                 (invoice.userId === 'test_user_123' || 
+                  invoice.userId === 'test-user-1' ||
+                  invoice.userId === 'user_' + currentUser.email.replace('@', '_').replace('.', '_'))) {
+          // Claim these invoices for the current user
+          invoice.userEmail = currentUser.email;
+          migrated = true;
+        }
+        return invoice;
+      });
+      
+      if (migrated) {
+        localStorage.setItem(this.storageKey, JSON.stringify(updatedInvoices));
+      }
+      
+      // Migrate drafts
+      migrated = false;
+      const drafts = this.getAllDrafts();
+      const updatedDrafts = drafts.map(draft => {
+        // If draft belongs to current user by ID but missing email, add it
+        if (draft.userId === currentUser.id && !draft.userEmail) {
+          draft.userEmail = currentUser.email;
+          migrated = true;
+        }
+        // Also check for common test/default user IDs
+        else if (!draft.userEmail && 
+                 (draft.userId === 'test_user_123' || 
+                  draft.userId === 'test-user-1' ||
+                  draft.userId === 'user_' + currentUser.email.replace('@', '_').replace('.', '_'))) {
+          // Claim these drafts for the current user
+          draft.userEmail = currentUser.email;
+          migrated = true;
+        }
+        return draft;
+      });
+      
+      if (migrated) {
+        localStorage.setItem(this.draftsKey, JSON.stringify(updatedDrafts));
+      }
+      
+      console.log('✅ User email migration complete');
+    } catch (error) {
+      console.error('❌ User email migration failed:', error);
+    }
   }
   
   /**
@@ -203,6 +277,7 @@ export class InvoiceStorage {
     const invoice = {
       id: this.generateId(),
       userId: currentUser.id,
+      userEmail: currentUser.email, // Store email for backward compatibility
       title: title || this.generateTitle(invoiceData),
       status: 'completed',
       data: invoiceData,
@@ -423,6 +498,7 @@ export class InvoiceStorage {
       draft = {
         id: this.generateId(),
         userId: currentUser.id,
+        userEmail: currentUser.email, // Store email for backward compatibility
         title: title || this.generateTitle(invoiceData, true),
         status: 'draft',
         data: invoiceData,
@@ -576,7 +652,11 @@ export class InvoiceStorage {
     
     // Check invoices
     let invoices = this.getAllInvoices();
-    const invoiceIndex = invoices.findIndex(inv => inv.id === id && inv.userId === currentUser.id);
+    const invoiceIndex = invoices.findIndex(inv => 
+      inv.id === id && 
+      (inv.userId === currentUser.id || 
+       (inv.userEmail && inv.userEmail === currentUser.email))
+    );
     if (invoiceIndex !== -1) {
       serverId = invoices[invoiceIndex].serverId;
       invoices.splice(invoiceIndex, 1);
@@ -587,7 +667,11 @@ export class InvoiceStorage {
     // Check drafts
     if (!deleted) {
       let drafts = this.getAllDrafts();
-      const draftIndex = drafts.findIndex(draft => draft.id === id && draft.userId === currentUser.id);
+      const draftIndex = drafts.findIndex(draft => 
+        draft.id === id && 
+        (draft.userId === currentUser.id || 
+         (draft.userEmail && draft.userEmail === currentUser.email))
+      );
       if (draftIndex !== -1) {
         serverId = drafts[draftIndex].serverId;
         drafts.splice(draftIndex, 1);
@@ -638,7 +722,12 @@ export class InvoiceStorage {
     if (!original) return null;
     
     const currentUser = this.userManager.getCurrentUser();
-    if (!currentUser || original.userId !== currentUser.id) return null;
+    if (!currentUser) return null;
+    
+    // Check ownership by ID or email
+    const isOwner = original.userId === currentUser.id || 
+                    (original.userEmail && original.userEmail === currentUser.email);
+    if (!isOwner) return null;
     
     // Create duplicate as draft
     const duplicateData = JSON.parse(JSON.stringify(original.data));
@@ -654,7 +743,12 @@ export class InvoiceStorage {
     
     const invoices = this.getAllInvoices();
     return invoices
-      .filter(inv => inv.userId === currentUser.id)
+      .filter(inv => {
+        // Match by user ID OR by email (for backward compatibility)
+        // This handles cases where user IDs change between local and server auth
+        return inv.userId === currentUser.id || 
+               (inv.userEmail && inv.userEmail === currentUser.email);
+      })
       .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
   }
   
@@ -665,7 +759,12 @@ export class InvoiceStorage {
     
     const drafts = this.getAllDrafts();
     return drafts
-      .filter(draft => draft.userId === currentUser.id)
+      .filter(draft => {
+        // Match by user ID OR by email (for backward compatibility)
+        // This handles cases where user IDs change between local and server auth
+        return draft.userId === currentUser.id || 
+               (draft.userEmail && draft.userEmail === currentUser.email);
+      })
       .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
   }
   
