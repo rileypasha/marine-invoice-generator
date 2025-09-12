@@ -1509,7 +1509,7 @@ class MasterDashboard {
                 
                 // Force redirect after slight delay to ensure cleanup
                 setTimeout(() => {
-                    window.location.replace('/master-login.html');
+                    window.location.replace('/');
                 }, 100);
             } else {
                 console.warn('Logout response not ok:', response.status);
@@ -1523,7 +1523,7 @@ class MasterDashboard {
             
             // Force redirect after cleanup
             setTimeout(() => {
-                window.location.replace('/master-login.html');
+                window.location.replace('/');
             }, 100);
         }
     }
