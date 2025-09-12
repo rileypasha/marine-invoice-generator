@@ -106,20 +106,60 @@
             
             // Helper function to apply markup
             const applyMarkup = (cost, item) => {
-                // Check if item is markup exempt
-                if (item.isMarkupExempt || item.markupType === 'exempt') {
+                // Check if item is markup exempt by job type or description
+                // Clearance Fee, Agent Services, and Manual Entry Labor are exempt
+                if (item.isMarkupExempt || 
+                    item.markupType === 'exempt' ||
+                    item.jobType === 'Clearance Fee' ||
+                    (item.description && item.description.includes('Clearance Fee')) ||
+                    item.jobType === 'Agent Services' ||
+                    (item.jobType === 'Manual Entry' && item.itemType === 'Labor')) {
+                    return cost;
+                }
+                
+                // For items with markupRate set to '0' or 0, no markup
+                if (item.markupRate === '0' || item.markupRate === 0) {
                     return cost;
                 }
                 
                 // Use item's specific markup rate or fall back to scope markup
-                const markupRate = parseFloat(item.markupRate || scope.markupRate || '2.5') / 100;
+                // Note: markupRate might be stored as percentage (2.5) or decimal (0.025)
+                let markupRate = item.markupRate !== undefined ? item.markupRate : (scope.markupRate || '2.5');
+                
+                // Convert to number and ensure it's in decimal form
+                markupRate = parseFloat(markupRate);
+                if (markupRate > 1) {
+                    // It's a percentage, convert to decimal
+                    markupRate = markupRate / 100;
+                }
+                
                 return cost * (1 + markupRate);
             };
             
             // Helper function to calculate tax
             const calculateTax = (item, totalWithMarkup) => {
-                // Check tax status
-                if (item.taxStatus === 'non-taxable' || item.taxStatus === 'exempt') {
+                // Clearance Fee is always non-taxable
+                if (item.jobType === 'Clearance Fee') {
+                    return 0;
+                }
+                
+                // Check tax status - look at both item-level and legacy fields
+                if (item.taxStatus === 'non-taxable' || 
+                    item.taxStatus === 'exempt' ||
+                    item.isTaxExempt === true ||
+                    item.isTaxable === false) {
+                    return 0;
+                }
+                
+                // For items without explicit tax status, check if they're taxable
+                // Default to taxable unless explicitly set otherwise
+                if (item.taxStatus === undefined && item.isTaxable === false) {
+                    return 0;
+                }
+                
+                // Only apply tax if taxStatus is explicitly 'taxable' or undefined (default)
+                // If the line item doesn't have a taxStatus, check the description
+                if (!item.taxStatus && item.description && item.description.includes('Clearance Fee')) {
                     return 0;
                 }
                 
@@ -141,6 +181,18 @@
                 
                 const total = totalWithMarkup + taxAmount;
                 
+                // Log for debugging
+                if (item.jobType === 'Clearance Fee' || (item.description && item.description.includes('Clearance Fee'))) {
+                    console.log('Clearance Fee calculation:', {
+                        cost,
+                        totalWithMarkup,
+                        markupAmount,
+                        taxAmount,
+                        total,
+                        item
+                    });
+                }
+                
                 return `
                     <tr>
                         <td>${item.description || 'N/A'}</td>
@@ -157,6 +209,16 @@
             const total = subtotal + totalTax;
             const grossProfit = subtotal - baseCost;
             const profitPercent = baseCost > 0 ? (grossProfit / baseCost) * 100 : 0;
+            
+            // Log totals for debugging
+            console.log('Master Dashboard Totals:', {
+                baseCost,
+                subtotal,
+                totalTax,
+                total,
+                grossProfit,
+                profitPercent: profitPercent.toFixed(2) + '%'
+            });
             
             // For backward compatibility, check if scope has totals already
             const finalSubtotal = subtotal || scope.subtotal || invoice.subtotal || 0;
