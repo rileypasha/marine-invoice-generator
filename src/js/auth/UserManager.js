@@ -301,37 +301,25 @@ export class UserManager {
   
   // Sign out user
   async logout() {
-    console.log('🔄 UserManager.logout() called - starting logout process...');
+    // Force redirect after 2 seconds regardless of server response
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 2000);
     
-    // Call server to destroy session
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-      console.log('✅ Server session destroyed');
-    } catch (error) {
-      console.error('Failed to destroy server session:', error);
-    }
-    
-    // Clear local state
-    console.log('🧹 Clearing local user state...');
+    // Clear local state immediately
     this.currentUser = null;
-    
-    // IMPORTANT: Clear BOTH session and user data to prevent auto-login
     this.clearLocalSession();
-    
-    // Also set a flag to prevent auto-login after explicit logout
     localStorage.setItem('marine_invoice_explicit_logout', 'true');
-    console.log('🚩 Set explicit logout flag');
-    
     this.notify();
-    console.log('📢 Notified listeners of logout');
     
-    // Redirect to landing page
-    console.log('🔀 Redirecting to landing page...');
+    // Try to call server to destroy session (don't wait for it)
+    fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include'
+    }).catch(() => {}); // Ignore errors
+    
+    // Immediate redirect attempt
     window.location.href = '/';
-    console.log('🔀 Redirect command executed');
   }
   
   // Update user preferences

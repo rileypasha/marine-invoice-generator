@@ -203,21 +203,10 @@ export class Sidebar {
     
     // User section click - opens settings
     const userSection = this.sidebar.querySelector('#user-section');
-    console.log('🔍 User section element found:', !!userSection);
-    console.log('🔍 Settings modal available:', !!this.settingsModal);
     if (userSection) {
       userSection.addEventListener('click', () => {
-        console.log('🔘 User section clicked! Attempting to show settings modal...');
-        if (this.settingsModal) {
-          console.log('✅ Settings modal exists, calling show()');
-          this.settingsModal.show();
-        } else {
-          console.error('❌ Settings modal is null/undefined!');
-        }
+        this.settingsModal.show();
       });
-      console.log('✅ User section click listener attached');
-    } else {
-      console.error('❌ User section element not found in DOM!');
     }
   }
   
