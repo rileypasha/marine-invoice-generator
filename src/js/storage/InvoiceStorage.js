@@ -1144,24 +1144,8 @@ export class InvoiceStorage {
   }
 
   hasUnsavedChanges(currentState) {
-    console.log('🚨 hasUnsavedChanges called! Stack trace:');
-    console.trace();
-    
-    // If there's no content, no unsaved changes
-    if (!this.hasContent(currentState)) {
-      console.log('🔍 hasUnsavedChanges: No content found');
-      return false;
-    }
-
-    // If nothing was ever saved, then any content is unsaved
-    if (!this.lastSavedState) {
-      console.log('🔍 hasUnsavedChanges: No saved state exists, content is unsaved');
-      return true;
-    }
-
-    // Deep compare current state with last saved state
-    const hasChanges = !this.deepEqual(currentState, this.lastSavedState);
-    console.log('🔍 hasUnsavedChanges: Deep comparison result =', hasChanges);
+    // DISABLED: This was causing false positives and annoying the user
+    return false;
     
     if (hasChanges) {
       console.log('🔍 DETAILED COMPARISON:');
