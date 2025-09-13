@@ -448,7 +448,11 @@
                 
                 // Update invoice with new comment
                 console.log('Sending comment to:', `/api/master/invoices/${invoiceId}/comment`);
-                console.log('Comment payload:', { comment: updatedComments });
+                console.log('Comment payload:', { 
+                    comment: formattedComment,
+                    structuredComment: newCommentObj,
+                    existingDbComments: existingDbComments
+                });
                 
                 const response = await fetch(`/api/master/invoices/${invoiceId}/comment`, {
                     method: 'POST',
