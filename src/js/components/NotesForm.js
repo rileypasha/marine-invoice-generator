@@ -104,7 +104,8 @@ export class NotesForm {
     const newState = this.state.getState();
     console.log('📝 State after update:', newState.notes);
     
-    // Comment added to state, CommentsPanel should update automatically
+    // Auto-save the invoice with the new comment
+    this.saveCommentToDatabase(newState);
     
     // Clear input and collapse
     this.newCommentText.value = '';
@@ -120,4 +121,15 @@ export class NotesForm {
     this.collapseCommentInput();
   }
 
+  async saveCommentToDatabase(currentState) {
+    try {
+      // Use the app's save method to persist the comment
+      if (window.app && window.app.saveCurrentInvoice) {
+        await window.app.saveCurrentInvoice();
+        console.log('✅ Comment saved to database');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to save comment:', error);
+    }
+  }
 }
