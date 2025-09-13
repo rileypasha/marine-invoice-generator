@@ -642,3 +642,44 @@ html {
   background: var(--color-accent);
   color: white;
 }
+
+/* Fix for comment button flickering */
+.comment-item {
+  position: relative;
+}
+
+.comment-menu {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+}
+
+.comment-item:hover .comment-menu {
+  opacity: 1;
+  visibility: visible;
+}
+
+.comment-menu button {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comment-menu button:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(0, 0, 0, 0.2);
+}
