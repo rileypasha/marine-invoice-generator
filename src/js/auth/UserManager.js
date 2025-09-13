@@ -301,6 +301,8 @@ export class UserManager {
   
   // Sign out user
   async logout() {
+    console.log('🔄 UserManager.logout() called - starting logout process...');
+    
     // Call server to destroy session
     try {
       await fetch('/api/auth/logout', {
@@ -313,6 +315,7 @@ export class UserManager {
     }
     
     // Clear local state
+    console.log('🧹 Clearing local user state...');
     this.currentUser = null;
     
     // IMPORTANT: Clear BOTH session and user data to prevent auto-login
@@ -320,11 +323,15 @@ export class UserManager {
     
     // Also set a flag to prevent auto-login after explicit logout
     localStorage.setItem('marine_invoice_explicit_logout', 'true');
+    console.log('🚩 Set explicit logout flag');
     
     this.notify();
+    console.log('📢 Notified listeners of logout');
     
     // Redirect to landing page
+    console.log('🔀 Redirecting to landing page...');
     window.location.href = '/';
+    console.log('🔀 Redirect command executed');
   }
   
   // Update user preferences

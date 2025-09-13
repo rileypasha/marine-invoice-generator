@@ -202,10 +202,10 @@ export class SettingsModal {
     );
     
     if (confirmed) {
+      console.log('🔄 User confirmed logout, calling userManager.logout()...');
       this.hide();
-      // Don't show notification after logout as it will redirect
-      await this.userManager.logout();
-      // The logout method will redirect, so code after this won't execute
+      // Call logout directly - it will handle redirect
+      this.userManager.logout();
     }
   }
   
