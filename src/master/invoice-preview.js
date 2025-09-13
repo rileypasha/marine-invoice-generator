@@ -414,14 +414,37 @@
                     throw new Error('No invoice data available');
                 }
                 
-                // Append comment with timestamp and user info
-                const timestamp = new Date().toLocaleString();
-                const currentUser = 'Master Admin'; // You may want to get this from session
-                const newComment = `[${timestamp}] ${currentUser}: ${comment}`;
+                // Create a structured comment object for data.notes.comments array
+                const timestamp = new Date().toISOString();
+                const currentUser = 'Master Admin';
+                const newCommentObj = {
+                    id: Date.now().toString(),
+                    text: comment,
+                    author: currentUser,
+                    authorEmail: 'admin@master.com',
+                    timestamp: timestamp,
+                    replies: []
+                };
                 
-                const existingComments = invoice.comments || '';
-                const updatedComments = existingComments ? 
-                    `${existingComments}\n\n${newComment}` : newComment;
+                // Update the structured comments array
+                if (!invoice.data) {
+                    invoice.data = {};
+                }
+                if (!invoice.data.notes) {
+                    invoice.data.notes = {};
+                }
+                if (!invoice.data.notes.comments) {
+                    invoice.data.notes.comments = [];
+                }
+                
+                // Don't duplicate existing comments - just add the new one
+                invoice.data.notes.comments.push(newCommentObj);
+                
+                // Also prepare the plain text version for the database comments field
+                const formattedComment = `[${new Date(timestamp).toLocaleString()}] ${currentUser}: ${comment}`;
+                const existingDbComments = invoice.comments || '';
+                const updatedDbComments = existingDbComments ? 
+                    `${existingDbComments}\n\n${formattedComment}` : formattedComment;
                 
                 // Update invoice with new comment
                 console.log('Sending comment to:', `/api/master/invoices/${invoiceId}/comment`);
@@ -433,7 +456,11 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ comment: updatedComments })
+                    body: JSON.stringify({ 
+                        comment: formattedComment, // Single new comment for DB field
+                        structuredComment: newCommentObj, // Structured comment for data.notes.comments
+                        existingDbComments: existingDbComments // Pass existing comments to avoid duplication
+                    })
                 });
                 
                 console.log('Response status:', response.status);
@@ -445,7 +472,7 @@
                 }
                 
                 // Update local data
-                invoice.comments = updatedComments;
+                invoice.comments = updatedDbComments;
                 
                 // Refresh the preview
                 this.showInvoicePreview(invoice);
@@ -455,15 +482,18 @@
                     commentInput.value = '';
                 }
                 
-                // Show success message inside the modal
-                const modalContent = document.querySelector('.modal-content');
-                if (modalContent) {
+                // Show success message inside the modal using the same pattern as other notifications
+                const modalBody = document.getElementById('invoicePreviewBody');
+                const modalContainer = document.querySelector('.invoice-preview-container');
+                const targetElement = modalContainer || modalBody;
+                
+                if (targetElement) {
                     // Create notification inside the modal
                     const successEl = document.createElement('div');
-                    successEl.style.cssText = 'background: #10b981; color: white; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 14px; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 100; min-width: 250px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);';
+                    successEl.className = 'invoice-notification success';
+                    successEl.style.cssText = 'background: #10b981; color: white; padding: 12px 20px; border-radius: 6px; font-size: 14px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10002; min-width: 300px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: 500;';
                     successEl.textContent = 'Comment added successfully';
-                    modalContent.style.position = 'relative';
-                    modalContent.appendChild(successEl);
+                    document.body.appendChild(successEl);
                     
                     // Fade out and remove
                     setTimeout(() => {
@@ -472,8 +502,10 @@
                         setTimeout(() => successEl.remove(), 300);
                     }, 2500);
                 } else {
-                    // Fallback
-                    alert('Comment added successfully');
+                    // Use the dashboard's showSuccess method if available
+                    if (window.masterDashboard && window.masterDashboard.showSuccess) {
+                        window.masterDashboard.showSuccess('Comment added successfully');
+                    }
                 }
                 
             } catch (error) {

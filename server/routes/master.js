@@ -859,6 +859,104 @@ router.get('/invoices/:id/export.csv', requireMaster, async (req, res) => {
 });
 
 /**
+ * POST /api/master/invoices/:id/comment
+ * Add a comment to an invoice
+ */
+router.post('/invoices/:id/comment', requireMaster, async (req, res) => {
+  const requestId = crypto.randomUUID();
+  
+  try {
+    const { id } = req.params;
+    const { comment, structuredComment, existingDbComments } = req.body;
+    
+    logger.info({
+      event: 'MASTER_ADD_COMMENT',
+      invoiceId: id,
+      email: req.user?.email,
+      requestId
+    });
+    
+    // Get the invoice first
+    const invoice = await prisma.invoice.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        data: true,
+        comments: true
+      }
+    });
+    
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    
+    // Parse existing data
+    let invoiceData = {};
+    try {
+      invoiceData = typeof invoice.data === 'string' ? 
+        JSON.parse(invoice.data) : 
+        (invoice.data || {});
+    } catch (error) {
+      console.error('Error parsing invoice data:', error);
+      invoiceData = {};
+    }
+    
+    // Ensure notes.comments array exists
+    if (!invoiceData.notes) {
+      invoiceData.notes = {};
+    }
+    if (!invoiceData.notes.comments) {
+      invoiceData.notes.comments = [];
+    }
+    
+    // Add the structured comment to the array (just the new one, not duplicating)
+    if (structuredComment) {
+      invoiceData.notes.comments.push(structuredComment);
+    }
+    
+    // Update the invoice with both the DB comment field and the structured data
+    const updatedComments = existingDbComments ? 
+      `${existingDbComments}\n\n${comment}` : 
+      comment;
+    
+    await prisma.invoice.update({
+      where: { id },
+      data: {
+        comments: updatedComments,
+        data: JSON.stringify(invoiceData)
+      }
+    });
+    
+    logger.info({
+      event: 'MASTER_COMMENT_ADDED',
+      invoiceId: id,
+      email: req.user?.email,
+      requestId
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Comment added successfully',
+      comments: updatedComments 
+    });
+  } catch (error) {
+    logger.error({
+      event: 'MASTER_COMMENT_ERROR',
+      error: error.message,
+      stack: error.stack,
+      email: req.user?.email,
+      invoiceId: req.params.id,
+      requestId
+    });
+    
+    res.status(500).json({ 
+      error: 'Failed to add comment',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
  * GET /api/master/test-export/:id
  * Test CSV export without actually generating CSV
  */

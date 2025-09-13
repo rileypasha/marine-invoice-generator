@@ -322,6 +322,9 @@ export class UserManager {
     localStorage.setItem('marine_invoice_explicit_logout', 'true');
     
     this.notify();
+    
+    // Redirect to landing page
+    window.location.href = '/';
   }
   
   // Update user preferences
