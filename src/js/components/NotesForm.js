@@ -123,10 +123,20 @@ export class NotesForm {
 
   async saveCommentToDatabase(currentState) {
     try {
-      // Use the app's save method to persist the comment
-      if (window.app && window.app.saveCurrentInvoice) {
-        await window.app.saveCurrentInvoice();
-        console.log('✅ Comment saved to database');
+      // Silent save without prompting for name
+      if (window.app && window.app.invoiceStorage) {
+        // Check if this is an existing invoice by looking for lastSavedState
+        const hasLastSaved = window.app.invoiceStorage.lastSavedState;
+        
+        if (hasLastSaved) {
+          // Update existing invoice silently using the last saved title
+          const existingTitle = hasLastSaved.title || 'Invoice';
+          await window.app.invoiceStorage.saveInvoice(currentState, existingTitle);
+          console.log('✅ Comment saved to existing invoice');
+        } else {
+          // No existing invoice, skip auto-save (user needs to manually save first)
+          console.log('📝 No existing invoice found, skipping auto-save');
+        }
       }
     } catch (error) {
       console.warn('⚠️ Failed to save comment:', error);
