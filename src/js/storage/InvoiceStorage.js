@@ -18,11 +18,14 @@ export class InvoiceStorage {
     
     // Listen for user auth changes
     if (userManager) {
-      userManager.subscribe((user) => {
+      userManager.subscribe(async (user) => {
         if (user) {
           // User logged in, reset auth failure flag and retry failed saves
           this.authFailed = false;
           console.log('🔓 User authenticated - enabling server saves');
+          
+          // CRITICAL: Sync invoices from server when user logs in
+          await this.syncFromServer();
           
           // Run email migration when user logs in
           // This ensures invoices are properly associated with the logged-in user
@@ -1247,6 +1250,74 @@ export class InvoiceStorage {
     console.log('🔓 Auth failure cleared - enabling server saves');
     // Try to process any queued saves
     this.retryFailedSaves();
+  }
+  
+  /**
+   * Sync invoices from server to localStorage
+   * This ensures users don't lose their invoices when localStorage is cleared
+   */
+  async syncFromServer() {
+    const currentUser = this.userManager.getCurrentUser();
+    if (!currentUser) {
+      console.log('❌ No user logged in, cannot sync from server');
+      return;
+    }
+    
+    console.log('🔄 Syncing invoices from server for:', currentUser.email);
+    
+    try {
+      // Fetch user's invoices from server
+      const response = await fetch('/api/invoices/user', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const serverInvoices = await response.json();
+        console.log(`📥 Received ${serverInvoices.length} invoices from server`);
+        
+        // Get current localStorage invoices
+        const localInvoices = this.getAllInvoices();
+        console.log(`📦 Current localStorage has ${localInvoices.length} invoices`);
+        
+        // Merge server invoices with local (server takes precedence)
+        const invoiceMap = new Map();
+        
+        // Add local invoices first
+        localInvoices.forEach(inv => {
+          invoiceMap.set(inv.id, inv);
+        });
+        
+        // Override with server invoices (they're more authoritative)
+        serverInvoices.forEach(inv => {
+          // Ensure the invoice has the user's email for future filtering
+          inv.userEmail = currentUser.email;
+          inv.userId = inv.userId || currentUser.id;
+          invoiceMap.set(inv.id, inv);
+        });
+        
+        // Convert back to array
+        const mergedInvoices = Array.from(invoiceMap.values());
+        
+        // Save to localStorage
+        localStorage.setItem(this.storageKey, JSON.stringify(mergedInvoices));
+        console.log(`✅ Synced ${mergedInvoices.length} total invoices to localStorage`);
+        
+        // Notify listeners (update sidebar)
+        this.notify();
+      } else if (response.status === 404) {
+        console.log('📭 No invoices found on server for user');
+      } else {
+        console.error('❌ Failed to sync from server:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Error syncing from server:', error);
+      // Continue with local data if server sync fails
+    }
   }
   
   // Force migration and refresh (useful for debugging)

@@ -538,6 +538,11 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('🔄 Force refreshing invoices...');
         app.invoiceStorage.forceMigrationAndRefresh();
       },
+      syncFromServer: async () => {
+        console.log('📥 Manually syncing from server...');
+        await app.invoiceStorage.syncFromServer();
+        console.log('✅ Sync complete - check sidebar');
+      },
       showInvoices: () => {
         const invoices = app.invoiceStorage.getAllInvoices();
         console.log('📦 Total invoices in localStorage:', invoices.length);
