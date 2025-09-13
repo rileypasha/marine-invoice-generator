@@ -104,8 +104,7 @@ export class NotesForm {
     const newState = this.state.getState();
     console.log('📝 State after update:', newState.notes);
     
-    // Comments are saved with the invoice when user saves it
-    // No auto-save to avoid unsaved changes modal issues
+    // Comment added to state, CommentsPanel should update automatically
     
     // Clear input and collapse
     this.newCommentText.value = '';
@@ -120,4 +119,5 @@ export class NotesForm {
     this.newCommentText.value = '';
     this.collapseCommentInput();
   }
+
 }
