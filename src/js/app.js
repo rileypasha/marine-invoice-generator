@@ -832,3 +832,40 @@ InvoiceApp.prototype.saveInvoice = async function() {
   }
 };
 
+// Save current invoice silently (for auto-save after adding comments)
+InvoiceApp.prototype.saveCurrentInvoice = async function() {
+  if (!this.userManager.isAuthenticated()) {
+    console.log('User not authenticated, cannot auto-save');
+    return;
+  }
+  
+  const currentState = this.state.getState();
+  
+  if (!this.invoiceStorage.hasContent(currentState)) {
+    console.log('No content to save');
+    return;
+  }
+  
+  try {
+    // Use existing title or generate one
+    const title = currentState.title || this.invoiceStorage.generateTitle(currentState);
+    const id = this.invoiceStorage.saveInvoice(currentState, title);
+    
+    if (id) {
+      console.log('✅ Invoice auto-saved successfully');
+      this.sidebar.refreshInvoiceList();
+    } else {
+      console.error('Failed to auto-save invoice');
+    }
+  } catch (error) {
+    console.error('Error auto-saving invoice:', error);
+  }
+};
+
+// Initialize and expose app globally
+document.addEventListener('DOMContentLoaded', function() {
+  const app = new InvoiceApp();
+  window.app = app; // Expose globally for other components
+  app.init();
+});
+

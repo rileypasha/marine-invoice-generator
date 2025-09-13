@@ -104,6 +104,12 @@ export class NotesForm {
     const newState = this.state.getState();
     console.log('📝 State after update:', newState.notes);
     
+    // Auto-save the invoice to persist the comment to server
+    if (window.app && window.app.saveCurrentInvoice) {
+      console.log('📝 Auto-saving invoice with new comment...');
+      window.app.saveCurrentInvoice();
+    }
+    
     // Clear input and collapse
     this.newCommentText.value = '';
     this.collapseCommentInput();
