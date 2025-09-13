@@ -340,14 +340,41 @@
                     </div>
                     ` : '<p>No line items available</p>'}
                     
-                    ${invoice.comments ? `
-                    <div class="invoice-section comments-section">
-                        <h3>Comments</h3>
-                        <div class="comments-display">
-                            <p>${invoice.comments.replace(/\n/g, '<br>')}</p>
-                        </div>
-                    </div>
-                    ` : ''}
+                    ${(() => {
+                        // Check both database comments field and data.notes.comments array
+                        let commentsHtml = '';
+                        
+                        // Database comments (master dashboard format)
+                        if (invoice.comments) {
+                            commentsHtml += `<p class="db-comment">${invoice.comments.replace(/\n/g, '<br>')}</p>`;
+                        }
+                        
+                        // Standard user comments (in data.notes.comments array)
+                        const notesComments = invoice.data?.notes?.comments || [];
+                        if (notesComments.length > 0) {
+                            notesComments.forEach(comment => {
+                                const date = new Date(comment.timestamp).toLocaleString();
+                                commentsHtml += `
+                                    <div class="user-comment">
+                                        <strong>${comment.author}</strong> <span class="comment-date">(${date})</span>
+                                        <p>${comment.text}</p>
+                                    </div>
+                                `;
+                            });
+                        }
+                        
+                        if (commentsHtml) {
+                            return `
+                                <div class="invoice-section comments-section">
+                                    <h3>Comments</h3>
+                                    <div class="comments-display">
+                                        ${commentsHtml}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        return '';
+                    })()}
                     
                     <div class="invoice-section comments-section">
                         <h3>Add Comment</h3>

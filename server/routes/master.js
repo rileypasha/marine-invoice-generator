@@ -1096,14 +1096,32 @@ router.post('/invoices/:id/comment', requireMaster, async (req, res) => {
       }
     });
     
-    // Also update the data field if it exists
+    // Also update the data field to include comment in notes.comments array
     if (invoice.data) {
       try {
         const data = typeof invoice.data === 'string' 
           ? JSON.parse(invoice.data) 
           : invoice.data;
         
-        data.comments = comment;
+        // Initialize notes and comments if they don't exist
+        if (!data.notes) {
+          data.notes = {};
+        }
+        if (!data.notes.comments) {
+          data.notes.comments = [];
+        }
+        
+        // Add comment in the same format as standard users
+        const newComment = {
+          id: Date.now().toString(),
+          text: comment,
+          author: 'Master Admin',
+          authorEmail: req.user?.email || 'master@marinegroupbw.com',
+          timestamp: new Date().toISOString(),
+          replies: []
+        };
+        
+        data.notes.comments.push(newComment);
         
         await prisma.invoice.update({
           where: { id },
@@ -1111,8 +1129,10 @@ router.post('/invoices/:id/comment', requireMaster, async (req, res) => {
             data: JSON.stringify(data)
           }
         });
+        
+        console.log(`  ✅ Comment also added to data.notes.comments array`);
       } catch (parseError) {
-        console.log(`  ⚠️ Could not update data with comment: ${parseError.message}`);
+        console.log(`  ⚠️ Could not update data.notes.comments: ${parseError.message}`);
       }
     }
     

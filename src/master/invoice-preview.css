@@ -314,6 +314,38 @@
     gap: 12px;
 }
 
+/* Different comment types styling */
+.user-comment {
+    background: white;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 6px;
+    border-left: 3px solid #10b981;
+}
+
+.user-comment strong {
+    color: #064e3b;
+}
+
+.comment-date {
+    color: #6b7280;
+    font-size: 0.85em;
+    margin-left: 5px;
+}
+
+.user-comment p {
+    margin-top: 5px;
+    margin-bottom: 0;
+}
+
+.db-comment {
+    background: white;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 6px;
+    border-left: 3px solid #3b82f6;
+}
+
 .comment-input {
     width: 100%;
     padding: 10px 12px;
