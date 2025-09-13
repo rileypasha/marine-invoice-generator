@@ -104,11 +104,8 @@ export class NotesForm {
     const newState = this.state.getState();
     console.log('📝 State after update:', newState.notes);
     
-    // Auto-save the invoice to persist the comment to server
-    if (window.app && window.app.saveCurrentInvoice) {
-      console.log('📝 Auto-saving invoice with new comment...');
-      window.app.saveCurrentInvoice();
-    }
+    // Comments are saved with the invoice when user saves it
+    // No auto-save to avoid unsaved changes modal issues
     
     // Clear input and collapse
     this.newCommentText.value = '';

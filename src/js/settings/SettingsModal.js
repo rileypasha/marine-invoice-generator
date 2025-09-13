@@ -202,9 +202,10 @@ export class SettingsModal {
     );
     
     if (confirmed) {
-      this.userManager.logout();
       this.hide();
-      this.showNotification('Signed out successfully', 'info');
+      // Don't show notification after logout as it will redirect
+      await this.userManager.logout();
+      // The logout method will redirect, so code after this won't execute
     }
   }
   
