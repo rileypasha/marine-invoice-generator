@@ -540,12 +540,26 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       showInvoices: () => {
         const invoices = app.invoiceStorage.getAllInvoices();
+        console.log('📦 Total invoices in localStorage:', invoices.length);
         console.table(invoices.map(inv => ({
           title: inv.title,
           userId: inv.userId,
           userEmail: inv.userEmail,
-          status: inv.status
+          status: inv.status,
+          createdAt: inv.createdAt
         })));
+        return invoices;
+      },
+      checkStorage: () => {
+        // Direct localStorage check
+        const raw = localStorage.getItem('marine_invoices');
+        const invoices = raw ? JSON.parse(raw) : [];
+        console.log('🗄️ Direct localStorage check:');
+        console.log('Total invoices:', invoices.length);
+        invoices.forEach((inv, i) => {
+          console.log(`${i+1}. ${inv.title} - User: ${inv.userId || 'none'} - Email: ${inv.userEmail || 'none'}`);
+        });
+        return invoices;
       },
       currentUser: () => {
         const user = app.userManager.getCurrentUser();

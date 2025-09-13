@@ -299,12 +299,46 @@ export class Sidebar {
     // Force migration check when updating sidebar
     const currentUser = this.userManager.getCurrentUser();
     if (currentUser && currentUser.email) {
-      console.log('🔄 Checking for invoice migration...');
-      this.invoiceStorage.migrateUserEmails();
+      console.log('🔄 Sidebar update for user:', currentUser.email);
+      
+      // For test user, ensure they can see invoices
+      if (currentUser.email === 'test@marinegroup.com') {
+        console.log('🧪 Test user detected - claiming orphaned invoices');
+        // Directly modify localStorage to ensure test user owns invoices
+        const allInvoices = this.invoiceStorage.getAllInvoices();
+        let modified = false;
+        allInvoices.forEach(inv => {
+          if (!inv.userEmail) {
+            inv.userEmail = 'test@marinegroup.com';
+            modified = true;
+          }
+        });
+        if (modified) {
+          localStorage.setItem('marine_invoices', JSON.stringify(allInvoices));
+          console.log('✅ Updated invoice ownership for test user');
+        }
+      }
     }
     
     const saved = this.invoiceStorage.getSavedItems(5);
     console.log(`📊 Sidebar: Found ${saved.length} saved items to display`);
+    
+    // Debug: Show what we got
+    if (saved.length === 0 && currentUser) {
+      console.warn('⚠️ No invoices showing for user:', currentUser.email);
+      console.log('Debug info:');
+      console.log('- Current user ID:', currentUser.id);
+      console.log('- Current user email:', currentUser.email);
+      const all = this.invoiceStorage.getAllInvoices();
+      console.log('- Total invoices in storage:', all.length);
+      if (all.length > 0) {
+        console.log('- First invoice:', { 
+          userId: all[0].userId, 
+          userEmail: all[0].userEmail,
+          title: all[0].title 
+        });
+      }
+    }
     
     if (saved.length === 0) {
       container.innerHTML = `

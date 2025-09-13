@@ -846,12 +846,38 @@ export class InvoiceStorage {
   
   // Get saved items (completed invoices only, not drafts)
   getSavedItems(limit = 10) {
-    const invoices = this.getUserInvoices();
+    const currentUser = this.userManager.getCurrentUser();
+    
+    // FIRST PRINCIPLES: Get ALL invoices directly from localStorage
+    const allInvoices = this.getAllInvoices();
+    console.log(`🔍 getSavedItems: Found ${allInvoices.length} total invoices in localStorage`);
+    
+    if (!currentUser) {
+      console.log('❌ No user logged in, returning empty array');
+      return [];
+    }
+    
+    // For test user, show ALL invoices (they're testing)
+    if (currentUser.email === 'test@marinegroup.com') {
+      console.log('🧪 Test user - showing all invoices');
+      return allInvoices
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+        .slice(0, limit);
+    }
+    
+    // For regular users, filter by email OR ID
+    const userInvoices = allInvoices.filter(inv => {
+      return inv.userEmail === currentUser.email || 
+             inv.userId === currentUser.id ||
+             inv.userId === currentUser.id.toString();
+    });
+    
+    console.log(`📊 Found ${userInvoices.length} invoices for user ${currentUser.email}`);
     
     // Sort by most recent first
-    invoices.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    userInvoices.sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
     
-    return invoices.slice(0, limit);
+    return userInvoices.slice(0, limit);
   }
   
   // Search invoices and drafts

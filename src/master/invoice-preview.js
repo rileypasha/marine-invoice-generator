@@ -428,17 +428,25 @@
                     commentInput.value = '';
                 }
                 
-                // Show success message with themed notification
-                if (window.masterDashboard && window.masterDashboard.showSuccess) {
-                    window.masterDashboard.showSuccess('Comment added successfully');
-                } else {
-                    // Fallback to inline success message
-                    const container = document.querySelector('.dashboard-container') || document.body;
+                // Show success message inside the modal
+                const modalContent = document.querySelector('.modal-content');
+                if (modalContent) {
+                    // Create notification inside the modal
                     const successEl = document.createElement('div');
-                    successEl.style.cssText = 'background: #10b981; color: white; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 14px; position: fixed; top: 20px; right: 20px; z-index: 10001;';
+                    successEl.style.cssText = 'background: #10b981; color: white; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 14px; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 100; min-width: 250px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);';
                     successEl.textContent = 'Comment added successfully';
-                    container.appendChild(successEl);
-                    setTimeout(() => successEl.remove(), 3000);
+                    modalContent.style.position = 'relative';
+                    modalContent.appendChild(successEl);
+                    
+                    // Fade out and remove
+                    setTimeout(() => {
+                        successEl.style.transition = 'opacity 0.3s';
+                        successEl.style.opacity = '0';
+                        setTimeout(() => successEl.remove(), 300);
+                    }, 2500);
+                } else {
+                    // Fallback
+                    alert('Comment added successfully');
                 }
                 
             } catch (error) {
