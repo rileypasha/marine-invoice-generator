@@ -640,13 +640,40 @@ export class InvoiceStorage {
   }
   
   // Load invoice/draft
-  loadInvoice(id) {
+  async loadInvoice(id) {
     const invoices = this.getAllInvoices();
     const drafts = this.getAllDrafts();
     
     const invoice = invoices.find(inv => inv.id === id) || drafts.find(draft => draft.id === id);
     
     if (invoice && invoice.data) {
+      // Try to fetch latest data from server to get any saved comments
+      try {
+        const response = await fetch(`/api/invoices/user`, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const serverInvoices = await response.json();
+          const serverInvoice = serverInvoices.find(inv => 
+            inv.id === id || inv.id === invoice.serverId || inv.serverId === id
+          );
+          
+          if (serverInvoice && serverInvoice.data) {
+            console.log('📥 Loading fresh data from server for invoice:', id);
+            // Merge server data (especially comments) with local data
+            if (serverInvoice.data.notes && serverInvoice.data.notes.comments) {
+              if (!invoice.data.notes) invoice.data.notes = {};
+              invoice.data.notes.comments = serverInvoice.data.notes.comments;
+              console.log('💬 Loaded comments from server:', serverInvoice.data.notes.comments.length);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch latest invoice data from server:', error);
+        // Continue with localStorage data
+      }
+      
       // Ensure tax calculations are up to date after loading
       this.validateAndRecalculateTaxes(invoice.data);
     }

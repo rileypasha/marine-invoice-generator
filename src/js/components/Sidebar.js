@@ -442,7 +442,7 @@ export class Sidebar {
       }
     }
     
-    const invoice = this.invoiceStorage.loadInvoice(id);
+    const invoice = await this.invoiceStorage.loadInvoice(id);
     if (invoice && window.app) {
       // Load invoice data into the app state
       window.app.state.state = invoice.data;
