@@ -104,8 +104,7 @@ export class NotesForm {
     const newState = this.state.getState();
     console.log('📝 State after update:', newState.notes);
     
-    // Auto-save the invoice with the new comment
-    this.saveCommentToDatabase(newState);
+    // Comment added to state, will be saved when user manually saves invoice
     
     // Clear input and collapse
     this.newCommentText.value = '';
@@ -121,25 +120,4 @@ export class NotesForm {
     this.collapseCommentInput();
   }
 
-  async saveCommentToDatabase(currentState) {
-    try {
-      // Silent save without prompting for name
-      if (window.app && window.app.invoiceStorage) {
-        // Check if this is an existing invoice by looking for lastSavedState
-        const hasLastSaved = window.app.invoiceStorage.lastSavedState;
-        
-        if (hasLastSaved) {
-          // Update existing invoice silently using the last saved title
-          const existingTitle = hasLastSaved.title || 'Invoice';
-          await window.app.invoiceStorage.saveInvoice(currentState, existingTitle);
-          console.log('✅ Comment saved to existing invoice');
-        } else {
-          // No existing invoice, skip auto-save (user needs to manually save first)
-          console.log('📝 No existing invoice found, skipping auto-save');
-        }
-      }
-    } catch (error) {
-      console.warn('⚠️ Failed to save comment:', error);
-    }
-  }
 }
