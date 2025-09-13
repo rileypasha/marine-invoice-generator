@@ -88,4 +88,67 @@ router.get('/user', loadUser, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/invoices/:id/comment
+ * Add a comment to an invoice
+ */
+router.post('/:id/comment', loadUser, async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { id: invoiceId } = req.params;
+    const { comment, author, authorEmail, timestamp } = req.body;
+
+    console.log(`💬 Adding comment to invoice ${invoiceId} by ${author}`);
+
+    // Find the invoice
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId }
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    // Parse existing data
+    const invoiceData = invoice.data || {};
+    if (!invoiceData.notes) {
+      invoiceData.notes = {};
+    }
+    if (!invoiceData.notes.comments) {
+      invoiceData.notes.comments = [];
+    }
+
+    // Add new comment
+    const newComment = {
+      id: Date.now().toString(),
+      text: comment,
+      author: author,
+      authorEmail: authorEmail,
+      timestamp: timestamp || new Date().toISOString(),
+      replies: []
+    };
+
+    invoiceData.notes.comments.push(newComment);
+
+    // Update the invoice
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        data: invoiceData,
+        updatedAt: new Date()
+      }
+    });
+
+    console.log('✅ Comment added successfully');
+    res.json({ success: true, comment: newComment });
+
+  } catch (error) {
+    console.error('❌ Error adding comment:', error);
+    res.status(500).json({ error: 'Failed to add comment' });
+  }
+});
+
 module.exports = router;

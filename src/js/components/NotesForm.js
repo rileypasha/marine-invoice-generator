@@ -104,7 +104,8 @@ export class NotesForm {
     const newState = this.state.getState();
     console.log('📝 State after update:', newState.notes);
     
-    // Comment added to state, will be saved when user manually saves invoice
+    // Save comment immediately to database
+    this.saveCommentOnly(comment);
     
     // Clear input and collapse
     this.newCommentText.value = '';
@@ -120,4 +121,45 @@ export class NotesForm {
     this.collapseCommentInput();
   }
 
+  async saveCommentOnly(comment) {
+    try {
+      // Get current invoice from sidebar - this should give us the invoice we're working on
+      const currentInvoiceElement = document.querySelector('.invoice-item.active');
+      if (!currentInvoiceElement) {
+        console.log('📝 No active invoice found, cannot save comment');
+        return;
+      }
+      
+      const invoiceId = currentInvoiceElement.dataset.id;
+      if (!invoiceId) {
+        console.log('📝 No invoice ID found, cannot save comment');
+        return;
+      }
+      
+      console.log('💾 Saving comment to invoice:', invoiceId);
+      
+      // Direct API call to add comment to this specific invoice
+      const response = await fetch(`/api/invoices/${invoiceId}/comment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          comment: comment.text,
+          author: comment.author,
+          authorEmail: comment.authorEmail,
+          timestamp: comment.timestamp
+        })
+      });
+      
+      if (response.ok) {
+        console.log('✅ Comment saved to database successfully');
+      } else {
+        console.warn('⚠️ Failed to save comment:', response.status);
+      }
+    } catch (error) {
+      console.warn('⚠️ Error saving comment:', error);
+    }
+  }
 }
