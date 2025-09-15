@@ -61,6 +61,14 @@ module.exports = {
     },
     compress: true,
     port: 3000,
-    hot: true
+    hot: true,
+    proxy: [
+      {
+        context: ['/api'],
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        logLevel: 'debug'
+      }
+    ]
   }
 };// Cache bust: 1756107818
