@@ -196,45 +196,7 @@ export class UserManager {
       
       if (!user) {
         console.log('❌ No user found with email:', email);
-        console.log('🔧 Creating local fallback user for:', email);
-
-        // Create a local user for fallback authentication
-        // This ensures users can still login even if server is unreachable
-        const newUser = {
-          id: 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-          email: email,
-          name: email.split('@')[0],
-          hashedPassword: this.hashPassword(password),
-          role: 'standard',
-          createdAt: new Date().toISOString(),
-          preferences: {
-            theme: 'light',
-            autoSave: true
-          }
-        };
-
-        // Save the new user to local storage
-        const allUsers = this.getAllUsers();
-        allUsers.push(newUser);
-        localStorage.setItem('marine_invoice_users', JSON.stringify(allUsers));
-
-        console.log('✅ Local fallback user created:', email);
-
-        // Use the newly created user
-
-        // Log them in
-        this.currentUser = {
-          id: newUser.id,
-          email: newUser.email,
-          name: newUser.name,
-          role: newUser.role
-        };
-
-        this.saveSession(rememberMe);
-        this.notify();
-
-        console.log('✅ Local fallback sign-in successful');
-        return { success: true, user: this.currentUser };
+        throw new Error('No account found with this email');
       }
       
       console.log('👤 User found:', user.name);
