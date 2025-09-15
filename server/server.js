@@ -268,6 +268,10 @@ app.use('/api/migration', migrationRouter);
 const invoiceV2Router = require('./routes/invoiceV2');
 app.use('/api/v2/invoice', invoiceV2Router);
 
+// V3 API routes with Domain-Driven Design and smart save logic
+const invoiceV3Router = require('./routes/invoiceV3');
+app.use('/api/v3/invoices', invoiceV3Router);
+
 // User invoice sync routes
 const userInvoicesRouter = require('./routes/user-invoices');
 app.use('/api/invoices', userInvoicesRouter);

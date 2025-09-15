@@ -18,7 +18,6 @@ async function ensureDatabaseReady() {
         id: true,
         title: true,
         data: true,
-        hasChanges: true,
         userId: true,
         vesselName: true,
         customerName: true,
