@@ -23,9 +23,11 @@ export class InvoiceState {
         comments: []
       }
     };
-    
+
     this.listeners = [];
     this.lineItemIdCounter = 0;
+    this.currentInvoiceId = null; // Track invoice ID for edit mode
+    this.isEditMode = false; // Track whether we're editing existing invoice
   }
   
   subscribe(listener) {
@@ -278,10 +280,212 @@ export class InvoiceState {
     console.log('✅ Legacy tax data migration complete');
   }
   
+  /**
+   * Set the current invoice ID for edit mode
+   * @param {string} invoiceId - The invoice ID being edited
+   */
+  setCurrentInvoiceId(invoiceId) {
+    console.log('📝 Setting current invoice ID for edit mode:', invoiceId);
+    this.currentInvoiceId = invoiceId;
+    this.isEditMode = !!invoiceId;
+    console.log(`  - Edit mode: ${this.isEditMode}`);
+
+    // Persist edit state across page reloads
+    if (invoiceId) {
+      sessionStorage.setItem('marine_invoice_edit_id', invoiceId);
+      sessionStorage.setItem('marine_invoice_edit_timestamp', Date.now().toString());
+    } else {
+      sessionStorage.removeItem('marine_invoice_edit_id');
+      sessionStorage.removeItem('marine_invoice_edit_timestamp');
+    }
+
+    // Update UI to reflect edit mode
+    this.updateEditModeUI();
+  }
+
+  /**
+   * Get the current invoice ID
+   * @returns {string|null} Current invoice ID or null if creating new
+   */
+  getCurrentInvoiceId() {
+    return this.currentInvoiceId;
+  }
+
+  /**
+   * Check if currently in edit mode
+   * @returns {boolean} True if editing existing invoice
+   */
+  getIsEditMode() {
+    return this.isEditMode;
+  }
+
+  /**
+   * Load existing invoice data into state for editing
+   * @param {Object} invoiceData - The invoice data to load
+   * @param {string} invoiceId - The invoice ID
+   */
+  loadInvoiceForEditing(invoiceData, invoiceId) {
+    console.log('📂 Loading invoice for editing:', { invoiceId, data: invoiceData });
+
+    // Set edit mode
+    this.setCurrentInvoiceId(invoiceId);
+
+    // Load the invoice data into state
+    if (invoiceData.vessel) {
+      this.state.vessel = { ...this.state.vessel, ...invoiceData.vessel };
+    }
+
+    if (invoiceData.customer) {
+      this.state.customer = { ...this.state.customer, ...invoiceData.customer };
+    }
+
+    if (invoiceData.scope) {
+      this.state.scope = { ...this.state.scope, ...invoiceData.scope };
+
+      // Set line item ID counter to avoid ID conflicts
+      if (invoiceData.scope.lineItems && invoiceData.scope.lineItems.length > 0) {
+        const maxId = Math.max(...invoiceData.scope.lineItems.map(item => item.id || 0));
+        this.lineItemIdCounter = maxId + 1;
+      }
+    }
+
+    if (invoiceData.notes) {
+      this.state.notes = { ...this.state.notes, ...invoiceData.notes };
+    }
+
+    // Migrate legacy tax data if needed
+    this.migrateLegacyTaxData();
+
+    console.log('✅ Invoice loaded for editing. Current state:', this.state);
+    this.notify();
+  }
+
+  /**
+   * Clear edit mode and return to create mode
+   */
+  clearEditMode() {
+    console.log('🆕 Clearing edit mode, returning to create mode');
+    this.currentInvoiceId = null;
+    this.isEditMode = false;
+
+    // Clear session storage
+    sessionStorage.removeItem('marine_invoice_edit_id');
+    sessionStorage.removeItem('marine_invoice_edit_timestamp');
+
+    // Update UI to reflect create mode
+    this.updateEditModeUI();
+  }
+
+  /**
+   * Restore edit state from session storage (called on app initialization)
+   * @returns {string|null} Restored invoice ID or null if none found
+   */
+  restoreEditState() {
+    const storedEditId = sessionStorage.getItem('marine_invoice_edit_id');
+    const storedTimestamp = sessionStorage.getItem('marine_invoice_edit_timestamp');
+
+    if (storedEditId && storedTimestamp) {
+      // Check if the edit session is still valid (within 24 hours)
+      const sessionAge = Date.now() - parseInt(storedTimestamp);
+      const maxSessionAge = 24 * 60 * 60 * 1000; // 24 hours
+
+      if (sessionAge < maxSessionAge) {
+        console.log('🔄 Restoring edit state for invoice:', storedEditId);
+        this.currentInvoiceId = storedEditId;
+        this.isEditMode = true;
+        this.updateEditModeUI();
+        return storedEditId;
+      } else {
+        console.log('⚠️ Edit session expired, clearing stored state');
+        this.clearEditMode();
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Update UI elements to reflect current edit mode
+   */
+  updateEditModeUI() {
+    // Update save button text
+    const saveBtn = document.getElementById('save-invoice');
+    if (saveBtn) {
+      if (this.isEditMode) {
+        saveBtn.textContent = 'Update Invoice';
+        saveBtn.title = 'Update existing invoice';
+        saveBtn.classList.add('edit-mode');
+      } else {
+        saveBtn.textContent = 'Save Invoice';
+        saveBtn.title = 'Save new invoice';
+        saveBtn.classList.remove('edit-mode');
+      }
+    }
+
+    // Update or create edit mode indicator
+    this.updateEditModeIndicator();
+
+    // Update page title if needed
+    this.updatePageTitle();
+  }
+
+  /**
+   * Show/hide edit mode indicator
+   */
+  updateEditModeIndicator() {
+    const existingIndicator = document.querySelector('.edit-mode-indicator');
+
+    if (this.isEditMode) {
+      if (!existingIndicator) {
+        const indicator = document.createElement('div');
+        indicator.className = 'edit-mode-indicator';
+        indicator.innerHTML = `
+          <div class="edit-indicator-content">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+            </svg>
+            <span>Editing existing invoice</span>
+          </div>
+        `;
+
+        // Insert at top of main content area
+        const appContainer = document.querySelector('.app-container');
+        const sidebar = document.querySelector('.app-sidebar');
+
+        if (appContainer) {
+          // Insert after sidebar if it exists, otherwise at the beginning
+          if (sidebar && sidebar.nextSibling) {
+            appContainer.insertBefore(indicator, sidebar.nextSibling);
+          } else {
+            appContainer.insertBefore(indicator, appContainer.firstChild);
+          }
+        }
+      }
+    } else {
+      // Remove indicator in create mode
+      if (existingIndicator) {
+        existingIndicator.remove();
+      }
+    }
+  }
+
+  /**
+   * Update page title to reflect edit mode
+   */
+  updatePageTitle() {
+    const originalTitle = 'Marine Group - Invoice Generator';
+
+    if (this.isEditMode) {
+      document.title = '✏️ Editing Invoice - Marine Group';
+    } else {
+      document.title = originalTitle;
+    }
+  }
+
   getState() {
     return this.state;
   }
-  
+
   reset() {
     this.state = {
       vessel: {
@@ -304,6 +508,7 @@ export class InvoiceState {
       }
     };
     this.lineItemIdCounter = 0;
+    this.clearEditMode(); // Clear edit mode when resetting
     this.notify();
   }
 }

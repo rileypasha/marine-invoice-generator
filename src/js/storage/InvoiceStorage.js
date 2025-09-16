@@ -457,7 +457,137 @@ export class InvoiceStorage {
       throw error;
     }
   }
-  
+
+  /**
+   * Update existing invoice (edit mode)
+   * @param {string} existingId - The ID of the invoice to update
+   * @param {Object} invoiceData - Updated invoice data
+   * @param {string} title - Updated title (optional)
+   * @returns {string} The same invoice ID
+   */
+  async updateExistingInvoice(existingId, invoiceData, title = null) {
+    const currentUser = this.userManager.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Must be signed in to update invoices');
+    }
+
+    console.log('✏️ Updating existing invoice:', { existingId, title });
+
+    // Find the existing invoice
+    const invoices = this.getAllInvoices();
+    const index = invoices.findIndex(inv => inv.id === existingId);
+
+    if (index === -1) {
+      throw new Error('Invoice not found');
+    }
+
+    const existingInvoice = invoices[index];
+
+    // Validate ownership
+    if (existingInvoice.userId !== currentUser.id && existingInvoice.userEmail !== currentUser.email) {
+      throw new Error('Access denied - you can only edit your own invoices');
+    }
+
+    // Update the existing invoice
+    const updatedInvoice = {
+      ...existingInvoice,
+      title: title || existingInvoice.title,
+      data: invoiceData,
+      updatedAt: new Date().toISOString(),
+      metadata: this.extractMetadata(invoiceData)
+      // Preserve: id, userId, userEmail, createdAt, serverId
+    };
+
+    // Update in localStorage
+    invoices[index] = updatedInvoice;
+    localStorage.setItem(this.storageKey, JSON.stringify(invoices));
+
+    // Track this as the saved state
+    this.lastSavedState = JSON.parse(JSON.stringify(invoiceData));
+    console.log('💾 updateExistingInvoice: Set lastSavedState');
+
+    // Update on server
+    try {
+      await this.updateToServer(updatedInvoice);
+    } catch (error) {
+      console.error('Failed to update invoice on server:', error);
+      // Invoice is still updated locally
+    }
+
+    this.notify();
+    return existingId; // Return same ID to indicate update, not create
+  }
+
+  /**
+   * Update invoice on server
+   * @param {Object} invoice - Invoice object to update
+   */
+  async updateToServer(invoice) {
+    const requestId = `update_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`📤 [${requestId}] Starting server update for invoice:`, invoice.id);
+
+    // Check if we should skip server save due to previous auth failure
+    if (this.authFailed) {
+      console.log(`⏸️ [${requestId}] Skipping server update - auth previously failed`);
+      this.queueFailedSave(invoice, {
+        status: 401,
+        body: 'Authentication required - queued for later',
+        requestId,
+        skipped: true,
+        isUpdate: true
+      });
+      throw new Error('Authentication required - update queued locally');
+    }
+
+    try {
+      // Prepare request body for update
+      const requestBody = {
+        id: invoice.serverId || invoice.id, // Use server ID if available
+        title: invoice.title,
+        data: typeof invoice.data === 'string' ? JSON.parse(invoice.data) : invoice.data,
+        metadata: typeof invoice.metadata === 'string' ? JSON.parse(invoice.metadata) : invoice.metadata
+      };
+
+      console.log(`📋 [${requestId}] Update request body:`, JSON.stringify(requestBody, null, 2));
+
+      // Use V3 smart-save endpoint that handles updates
+      const response = await fetch('/api/v3/invoices/smart-save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-ID': requestId
+        },
+        credentials: 'include',
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log(`📨 [${requestId}] Update response status:`, response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`🔥 [${requestId}] Server update failed:`, errorText);
+        throw new Error(`Server update failed: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log(`✅ [${requestId}] Server update successful:`, result);
+
+      return result;
+
+    } catch (error) {
+      console.error(`🔥 [${requestId}] Server update failed:`, error);
+
+      // Queue for retry
+      this.queueFailedSave(invoice, {
+        error: error.message,
+        requestId,
+        isUpdate: true
+      });
+
+      throw error;
+    }
+  }
+
   // Queue failed saves for retry
   queueFailedSave(invoice, errorDetails) {
     const failedSaves = JSON.parse(localStorage.getItem('failedSaves') || '[]');

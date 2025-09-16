@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -12,8 +12,8 @@ model Invoice {
   invoiceNumber String?
   title         String
   status        String   @default("saved") // saved, archived, draft
-  data          String   @db.Text // JSON string of invoice data
-  metadata      String?  @db.Text
+  data          String   // JSON string of invoice data
+  metadata      String?
   
   // User info
   userId        String?
@@ -39,8 +39,8 @@ model Invoice {
   
   // Additional metadata
   market        String?  // Market/City field
-  notes         String?  @db.Text
-  comments      String? @db.Text // Comments from users and master
+  notes         String?
+  comments      String? // Comments from users and master
   
   // Change tracking
   // hasChanges    Boolean  @default(false) // Not in production DB yet
@@ -81,7 +81,7 @@ model InvoiceRevision {
   invoiceId      String
   revisionNumber Int
   actorEmail     String
-  changeSummary  String?  @db.Text
+  changeSummary  String?
   payloadJson    Json     // Full normalized state at this revision
   createdAt      DateTime @default(now())
   

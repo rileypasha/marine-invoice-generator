@@ -444,11 +444,12 @@ export class Sidebar {
     
     const invoice = await this.invoiceStorage.loadInvoice(id);
     if (invoice && window.app) {
-      // Load invoice data into the app state
-      window.app.state.state = invoice.data;
-      window.app.state.notify();
-      
-      // Update form components first
+      console.log('📂 Loading invoice for editing:', { id, title: invoice.title });
+
+      // Use the new loadInvoiceForEditing method to properly set up edit mode
+      window.app.state.loadInvoiceForEditing(invoice.data, id);
+
+      // Update form components to reflect the loaded data
       if (window.app.vesselForm) {
         window.app.vesselForm.populate(invoice.data.vessel);
       }
@@ -458,16 +459,17 @@ export class Sidebar {
       if (window.app.scopeForm) {
         window.app.scopeForm.populate(invoice.data.scope);
       }
-      
+
       // Set the saved state AFTER all forms have been populated and change events have fired
       // This ensures we capture the final state after any form-triggered updates
       setTimeout(() => {
         const finalState = window.app.state.getState();
         this.invoiceStorage.setSavedState(finalState);
         console.log('✅ Set saved state AFTER form population complete');
+        console.log(`✅ Edit mode active for invoice: ${id}`);
       }, 50); // Give time for all form updates to complete
-      
-      console.log('Loaded invoice:', invoice.title);
+
+      console.log('✅ Loaded invoice for editing:', invoice.title);
     }
   }
   
@@ -549,6 +551,12 @@ export class Sidebar {
       if (window.app && window.app.state && typeof window.app.state.reset === 'function') {
         console.log('🔄 Force resetting state');
         window.app.state.reset();
+
+        // Ensure edit mode is cleared when creating new invoice
+        if (typeof window.app.state.clearEditMode === 'function') {
+          window.app.state.clearEditMode();
+          console.log('✅ Edit mode cleared for new invoice');
+        }
       }
       
       console.log('💥 NUCLEAR CLEAR COMPLETED');

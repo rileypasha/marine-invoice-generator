@@ -64,6 +64,9 @@ class InvoiceApp {
       this.initTabNavigation();
       this.initActionButtons();
       this.initKeyboardShortcuts();
+
+      // Restore edit state from previous session if applicable
+      this.restoreEditSession();
       
       // Initialize sidebar (must be after other components)
       console.log('🏗️ About to create sidebar...');
@@ -605,50 +608,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // initializeFormatters();
 });
 
-// Add methods to InvoiceApp class
-InvoiceApp.prototype.saveInvoice = async function() {
-  try {
-    const currentUser = this.userManager.getCurrentUser();
-    if (!currentUser) {
-      this.authModal.show();
-      return;
-    }
-    
-    // Get current invoice data
-    const invoiceData = this.state.getState();
-    
-    // Validate minimum required data
-    if (!invoiceData.vessel?.name && !invoiceData.customer?.customerName) {
-      this.showNotification('Please add vessel or customer information before saving', 'warning');
-      return;
-    }
-    
-    // Generate title from vessel and customer
-    const title = `${invoiceData.vessel?.name || 'Unnamed'} - ${invoiceData.customer?.customerName || 'Unknown'}`;
-    
-    // Save to localStorage first for immediate UI update
-    const localId = await this.invoiceStorage.saveInvoice(invoiceData, title);
-    
-    // Update sidebar to show saved invoice
-    if (this.sidebar) {
-      this.sidebar.updateSavedItems();
-    }
-    
-    // Show success notification
-    this.showNotification('Invoice saved successfully', 'success');
-    
-    // Enable export buttons
-    document.querySelectorAll('.export-group button').forEach(btn => {
-      btn.disabled = false;
-    });
-    
-    console.log('✅ Invoice saved with ID:', localId);
-    
-  } catch (error) {
-    console.error('Failed to save invoice:', error);
-    this.showNotification('Failed to save invoice. Please try again.', 'error');
-  }
-};
+// REMOVED: Old simple save method that always created new invoices
+// This was causing the bug where edit mode would create duplicates instead of updating
+// The correct saveInvoice method with edit mode support is defined below (around line 800)
 
 InvoiceApp.prototype.saveCurrentInvoice = InvoiceApp.prototype.saveInvoice;
 
@@ -752,11 +714,14 @@ InvoiceApp.prototype.createNewInvoice = function() {
     }
   }
   
-  // Reset the state
+  // Reset the state (this already calls clearEditMode internally)
   this.state.reset();
-  
+
   // Clear saved state since we're creating a new invoice
   this.invoiceStorage.clearSavedState();
+
+  // Ensure edit mode is completely cleared
+  this.state.clearEditMode();
   
   // Clear all form fields
   if (this.vesselForm) {
@@ -815,13 +780,33 @@ InvoiceApp.prototype.saveInvoice = async function() {
   try {
     const title = await this.promptModal.show('Save Invoice', 'Enter a name for this invoice:', 'Untitled Invoice');
     if (title === null) return; // User cancelled
-    
+
     const finalTitle = title.trim() || 'Untitled Invoice';
-    
-    const id = this.invoiceStorage.saveInvoice(currentState, finalTitle);
-    
+
+    // Check if we're in edit mode
+    const currentInvoiceId = this.state.getCurrentInvoiceId();
+    const isEditMode = this.state.getIsEditMode();
+
+    let id;
+    let actionMessage;
+
+    if (isEditMode && currentInvoiceId) {
+      // Edit mode - update existing invoice
+      console.log('💾 Edit mode: Updating existing invoice:', currentInvoiceId);
+      id = await this.invoiceStorage.updateExistingInvoice(currentInvoiceId, currentState, finalTitle);
+      actionMessage = 'Invoice updated successfully!';
+    } else {
+      // Create mode - save new invoice
+      console.log('💾 Create mode: Saving new invoice');
+      id = await this.invoiceStorage.saveInvoice(currentState, finalTitle);
+      actionMessage = 'Invoice saved successfully!';
+
+      // Enter edit mode for the newly created invoice
+      this.state.setCurrentInvoiceId(id);
+    }
+
     if (id) {
-      await this.promptModal.showAlert('Success', 'Invoice saved successfully!');
+      await this.promptModal.showAlert('Success', actionMessage);
       this.sidebar.refreshInvoiceList();
     } else {
       await this.promptModal.showAlert('Error', 'Failed to save invoice');
@@ -829,6 +814,53 @@ InvoiceApp.prototype.saveInvoice = async function() {
   } catch (error) {
     console.error('Error saving invoice:', error);
     await this.promptModal.showAlert('Error', 'Error saving invoice: ' + error.message);
+  }
+};
+
+// Restore edit session from previous page load
+InvoiceApp.prototype.restoreEditSession = async function() {
+  console.log('🔄 Checking for previous edit session...');
+
+  // First restore the edit state from session storage
+  const restoredInvoiceId = this.state.restoreEditState();
+
+  if (restoredInvoiceId) {
+    console.log('📂 Found previous edit session, attempting to restore invoice:', restoredInvoiceId);
+
+    try {
+      // Load the invoice data
+      const invoice = await this.invoiceStorage.loadInvoice(restoredInvoiceId);
+
+      if (invoice) {
+        console.log('✅ Successfully restored invoice for editing:', invoice.title);
+
+        // Populate form components with the restored data
+        if (this.vesselForm) {
+          this.vesselForm.populate(invoice.data.vessel);
+        }
+        if (this.customerForm) {
+          this.customerForm.populate(invoice.data.customer);
+        }
+        if (this.scopeForm) {
+          this.scopeForm.populate(invoice.data.scope);
+        }
+
+        // Set the saved state to prevent false "unsaved changes" warnings
+        setTimeout(() => {
+          const finalState = this.state.getState();
+          this.invoiceStorage.setSavedState(finalState);
+          console.log('✅ Edit session restored successfully');
+        }, 100);
+      } else {
+        console.warn('⚠️ Could not load invoice for restored session, clearing edit state');
+        this.state.clearEditMode();
+      }
+    } catch (error) {
+      console.error('❌ Error restoring edit session:', error);
+      this.state.clearEditMode();
+    }
+  } else {
+    console.log('ℹ️ No previous edit session found, starting in create mode');
   }
 };
 
