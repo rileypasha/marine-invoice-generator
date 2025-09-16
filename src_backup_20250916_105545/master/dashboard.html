@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Dashboard - Marine Invoice System</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="stylesheet" href="/master/dashboard.css">
+    <link rel="stylesheet" href="/master/simple-date-picker.css">
+    <link rel="stylesheet" href="/master/dashboard-modal.css">
+    <link rel="stylesheet" href="/master/invoice-preview.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="header-title">
+                        <h1>Master Dashboard</h1>
+                        <span class="header-subtitle">Invoice Management System</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="user-section">
+                        <div class="user-info">
+                            <span class="user-email" id="userEmail"></span>
+                            <span class="user-badge">✓ MASTER ACCESS</span>
+                        </div>
+                        <button id="logoutBtn" class="btn-logout">Logout</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-value" id="totalSaved">0</div>
+                <div class="stat-label">Total Invoices</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="todayCount">0</div>
+                <div class="stat-label">Today Count</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="weekTotal">$0</div>
+                <div class="stat-label">Week Total</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <!-- Filters Section -->
+            <div class="filters-section">
+                <div class="filter-group">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search by customer, vessel, invoice #...">
+                </div>
+                <div class="filter-group">
+                    <div class="date-input-group">
+                        <label>From:</label>
+                        <input type="date" id="dateFrom" class="date-input" placeholder="Start date">
+                    </div>
+                    <div class="date-input-group">
+                        <label>To:</label>
+                        <input type="date" id="dateTo" class="date-input" placeholder="End date">
+                    </div>
+                </div>
+                <button id="applyFilters" class="btn-primary">Apply Filters</button>
+                <button id="clearFilters" class="btn-secondary">Clear</button>
+            </div>
+
+            <!-- Invoices Table -->
+            <div class="table-section">
+                <table class="invoices-table" id="invoicesTable">
+                    <thead>
+                        <tr>
+                            <th data-sort="savedAt">Saved At <span class="sort-icon">↕</span></th>
+                            <th data-sort="userName">Submitter</th>
+                            <th data-sort="vesselName">Vessel</th>
+                            <th data-sort="customerName">Customer</th>
+                            <th data-sort="total">Total</th>
+                            <th>Changes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoicesTableBody">
+                        <!-- Rows will be populated by JavaScript -->
+                    </tbody>
+                </table>
+
+                <!-- Loading indicator -->
+                <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+                    <div class="spinner"></div>
+                    <span>Loading invoices...</span>
+                </div>
+
+                <!-- No results message -->
+                <div id="noResults" class="no-results" style="display: none;">
+                    <p>No invoices found matching your criteria.</p>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination" id="pagination">
+                    <button id="prevPage" class="btn-page" disabled>Previous</button>
+                    <span class="page-info">
+                        Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                    </span>
+                    <button id="nextPage" class="btn-page">Next</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Invoice Preview Modal -->
+    <div id="invoicePreviewModal" class="invoice-preview-modal">
+        <div class="invoice-preview-container">
+            <div class="invoice-preview-header">
+                <h2>Invoice Preview</h2>
+                <button class="invoice-preview-close" id="closePreviewModal">&times;</button>
+            </div>
+            <div class="invoice-preview-body" id="invoicePreviewBody">
+                <!-- Invoice preview content will be loaded here -->
+            </div>
+            <div class="invoice-preview-footer">
+                <button id="exportInvoiceCsv" class="btn-export">Export CSV</button>
+                <button id="closePreviewBtn" class="btn-close-preview">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/master/SimpleDatePicker.js"></script>
+    <script src="/master/dashboard.js"></script>
+    <script src="/master/dashboard-simple.js"></script>
+    <script src="/master/invoice-preview.js"></script>
+</body>
+</html>

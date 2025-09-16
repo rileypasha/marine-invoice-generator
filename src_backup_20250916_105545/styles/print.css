@@ -1,0 +1,118 @@
+@media print {
+  /* Hide non-printable elements */
+  .app-header,
+  .input-panel,
+  .tab-navigation,
+  .action-buttons,
+  .trash-icon,
+  .remove-line-item {
+    display: none !important;
+  }
+
+  /* Reset page margins and force single page */
+  @page {
+    margin: 0.5in;
+    size: letter;
+  }
+  
+  /* Force everything to fit on one page */
+  html, body {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Full width for print */
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+
+  .app-container {
+    height: auto;
+  }
+
+  .main-content {
+    display: block;
+  }
+
+  .preview-panel {
+    padding: 0;
+    background: white;
+  }
+
+  .invoice-preview {
+    box-shadow: none;
+    padding: 0;
+    max-width: 100%;
+    max-height: 100vh;
+    overflow: hidden;
+    transform-origin: top left;
+  }
+
+  /* Disable page breaks to force single page */
+  .invoice-section {
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+
+  .invoice-table {
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+  
+  /* Scale content to fit if needed */
+  .main-content {
+    transform-origin: top left;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+  
+  /* Compact spacing for print */
+  .invoice-section {
+    margin-bottom: 15px;
+  }
+  
+  .invoice-table {
+    font-size: 12px;
+  }
+  
+  .invoice-totals .total-row {
+    padding: 2px 0;
+    font-size: 12px;
+  }
+
+  /* Print-specific text adjustments */
+  .invoice-header h2 {
+    color: black;
+  }
+
+  .total-final {
+    color: black;
+  }
+
+  /* Remove shadows and borders for cleaner print */
+  .card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+
+  /* Ensure logos print properly */
+  .invoice-logo {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Table styling for print */
+  .invoice-table th {
+    background: #f5f5f5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ensure colors print */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

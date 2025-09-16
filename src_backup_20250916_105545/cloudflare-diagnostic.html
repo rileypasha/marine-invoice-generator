@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CloudFlare Diagnostic</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        h1 { color: #00ffff; }
+        .section {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 20px 0;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+        }
+        .error { color: #ff0000; }
+        .success { color: #00ff00; }
+        .warning { color: #ffff00; }
+        .info { color: #00ffff; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        button:hover { background: #00ffff; }
+        pre {
+            background: #0a0a0a;
+            padding: 10px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        td, th {
+            border: 1px solid #00ff00;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: #0a0a0a;
+            color: #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 CloudFlare Diagnostic Tool</h1>
+    
+    <div class="section">
+        <h2>Environment Information</h2>
+        <div id="env-info"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Headers & CloudFlare Detection</h2>
+        <div id="cf-info">Checking...</div>
+    </div>
+    
+    <div class="section">
+        <h2>Cookie Analysis</h2>
+        <div id="cookie-analysis"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Login & Redirect Test</h2>
+        <button onclick="testLoginWithRedirect()">Test Login with Redirect</button>
+        <button onclick="testLoginNoRedirect()">Test Login (No Redirect)</button>
+        <div id="login-test"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Session Persistence Test</h2>
+        <button onclick="testSessionPersistence()">Test Session Persistence</button>
+        <div id="session-test"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Redirect Behavior Test</h2>
+        <button onclick="testRedirectBehavior()">Test Different Redirect Methods</button>
+        <div id="redirect-test"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Network Log</h2>
+        <pre id="network-log"></pre>
+    </div>
+
+    <script>
+        const log = (msg, type = 'info') => {
+            const logEl = document.getElementById('network-log');
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            const colorClass = type === 'error' ? 'error' : 
+                              type === 'success' ? 'success' : 
+                              type === 'warning' ? 'warning' : 'info';
+            logEl.innerHTML += `<span class="${colorClass}">[${timestamp}] ${msg}</span>\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        };
+
+        // Check environment
+        const checkEnvironment = async () => {
+            const envEl = document.getElementById('env-info');
+            const info = {
+                'Current URL': window.location.href,
+                'Hostname': window.location.hostname,
+                'Protocol': window.location.protocol,
+                'User Agent': navigator.userAgent,
+                'Cookies Enabled': navigator.cookieEnabled,
+                'Local Storage': typeof(Storage) !== "undefined" ? 'Available' : 'Not Available'
+            };
+            
+            let html = '<table>';
+            for (const [key, value] of Object.entries(info)) {
+                html += `<tr><th>${key}</th><td>${value}</td></tr>`;
+            }
+            html += '</table>';
+            envEl.innerHTML = html;
+            
+            log(`Environment: ${window.location.hostname}`, 'info');
+        };
+
+        // Check CloudFlare headers
+        const checkCloudFlare = async () => {
+            const cfEl = document.getElementById('cf-info');
+            
+            try {
+                // Make a request to check headers
+                const response = await fetch('/api/auth/debug-headers', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    let html = '<h3>Request Headers Seen by Server:</h3><table>';
+                    
+                    // Check for CloudFlare headers
+                    const cfHeaders = ['cf-ray', 'cf-connecting-ip', 'cf-ipcountry', 'cf-visitor'];
+                    let hasCloudFlare = false;
+                    
+                    for (const [key, value] of Object.entries(data.headers || {})) {
+                        const isCF = cfHeaders.some(cf => key.toLowerCase().includes(cf));
+                        if (isCF) hasCloudFlare = true;
+                        html += `<tr class="${isCF ? 'warning' : ''}"><th>${key}</th><td>${value}</td></tr>`;
+                    }
+                    html += '</table>';
+                    
+                    if (hasCloudFlare) {
+                        html = `<span class="warning">⚠️ CloudFlare Detected!</span><br>` + html;
+                        log('CloudFlare proxy detected', 'warning');
+                    } else {
+                        html = `<span class="success">✅ Direct Connection (No CloudFlare)</span><br>` + html;
+                        log('Direct connection, no CloudFlare', 'success');
+                    }
+                    
+                    cfEl.innerHTML = html;
+                } else {
+                    // Endpoint doesn't exist yet, that's OK
+                    cfEl.innerHTML = '<span class="info">Debug endpoint not available - checking client-side only</span>';
+                    
+                    // Client-side CloudFlare detection
+                    if (window.location.hostname.includes('mginvoices.com')) {
+                        cfEl.innerHTML += '<br><span class="warning">⚠️ Likely behind CloudFlare (custom domain)</span>';
+                        log('Likely behind CloudFlare based on domain', 'warning');
+                    } else if (window.location.hostname.includes('onrender.com')) {
+                        cfEl.innerHTML += '<br><span class="success">✅ Direct Render connection</span>';
+                        log('Direct Render connection', 'success');
+                    }
+                }
+            } catch (error) {
+                cfEl.innerHTML = `<span class="error">Error checking headers: ${error.message}</span>`;
+                log('Error checking CloudFlare: ' + error.message, 'error');
+            }
+        };
+
+        // Analyze cookies
+        const analyzeCookies = () => {
+            const cookieEl = document.getElementById('cookie-analysis');
+            const cookies = document.cookie;
+            
+            if (!cookies) {
+                cookieEl.innerHTML = '<span class="error">❌ No cookies found</span>';
+                log('No cookies present', 'error');
+                return;
+            }
+            
+            const cookieList = cookies.split(';').map(c => c.trim());
+            let html = '<table><tr><th>Cookie Name</th><th>Value (truncated)</th><th>Analysis</th></tr>';
+            
+            cookieList.forEach(cookie => {
+                const [name, ...valueParts] = cookie.split('=');
+                const value = valueParts.join('=');
+                const truncated = value.length > 50 ? value.substring(0, 50) + '...' : value;
+                
+                let analysis = '';
+                if (name === 'connect.sid') {
+                    analysis = '<span class="success">Session Cookie</span>';
+                } else if (name.startsWith('__cf')) {
+                    analysis = '<span class="warning">CloudFlare Cookie</span>';
+                } else {
+                    analysis = '<span class="info">Other</span>';
+                }
+                
+                html += `<tr><td>${name}</td><td>${truncated}</td><td>${analysis}</td></tr>`;
+            });
+            
+            html += '</table>';
+            cookieEl.innerHTML = html;
+            
+            const hasSession = cookieList.some(c => c.startsWith('connect.sid'));
+            log(`Cookie analysis: ${cookieList.length} cookies, session: ${hasSession}`, hasSession ? 'success' : 'warning');
+        };
+
+        // Test login with redirect
+        const testLoginWithRedirect = async () => {
+            const testEl = document.getElementById('login-test');
+            testEl.innerHTML = 'Testing login with redirect...';
+            
+            try {
+                log('Starting login test with redirect...');
+                
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email: 'test@marinegroupbw.com',
+                        password: 'test'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    testEl.innerHTML = '<span class="success">✅ Login successful!</span>';
+                    log('Login successful, attempting redirect...', 'success');
+                    
+                    // Try different redirect methods
+                    testEl.innerHTML += '<br>Testing redirect methods...';
+                    
+                    // Method 1: window.location.href
+                    testEl.innerHTML += '<br>1. window.location.href = "/app"';
+                    setTimeout(() => {
+                        window.location.href = '/app';
+                    }, 1000);
+                    
+                } else {
+                    testEl.innerHTML = `<span class="error">❌ Login failed: ${JSON.stringify(data)}</span>`;
+                    log('Login failed', 'error');
+                }
+            } catch (error) {
+                testEl.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                log('Login error: ' + error.message, 'error');
+            }
+        };
+
+        // Test login without redirect
+        const testLoginNoRedirect = async () => {
+            const testEl = document.getElementById('login-test');
+            testEl.innerHTML = 'Testing login without redirect...';
+            
+            try {
+                log('Starting login test (no redirect)...');
+                
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email: 'test@marinegroupbw.com',
+                        password: 'test'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    testEl.innerHTML = `<span class="success">✅ Login successful!</span><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    log('Login successful, session created', 'success');
+                    
+                    // Re-analyze cookies
+                    setTimeout(() => {
+                        analyzeCookies();
+                        testEl.innerHTML += '<br><span class="info">Cookies updated - check Cookie Analysis section</span>';
+                    }, 500);
+                    
+                } else {
+                    testEl.innerHTML = `<span class="error">❌ Login failed: ${JSON.stringify(data)}</span>`;
+                    log('Login failed', 'error');
+                }
+            } catch (error) {
+                testEl.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                log('Login error: ' + error.message, 'error');
+            }
+        };
+
+        // Test session persistence
+        const testSessionPersistence = async () => {
+            const testEl = document.getElementById('session-test');
+            testEl.innerHTML = 'Testing session persistence across requests...';
+            
+            try {
+                log('Testing session persistence...');
+                
+                // Test 1: Check current session
+                const check1 = await fetch('/api/auth/me', {
+                    credentials: 'include'
+                });
+                const data1 = await check1.text();
+                
+                // Test 2: Make another request
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const check2 = await fetch('/api/auth/me', {
+                    credentials: 'include'
+                });
+                const data2 = await check2.text();
+                
+                // Test 3: Check /app access
+                const appCheck = await fetch('/app', {
+                    credentials: 'include',
+                    redirect: 'manual'
+                });
+                
+                let html = '<h3>Session Persistence Results:</h3>';
+                html += `<p>First check: ${check1.status} ${check1.ok ? '✅' : '❌'}</p>`;
+                html += `<p>Second check: ${check2.status} ${check2.ok ? '✅' : '❌'}</p>`;
+                html += `<p>/app access: ${appCheck.status} ${appCheck.type}</p>`;
+                
+                if (check1.ok && check2.ok) {
+                    html += '<span class="success">✅ Session persists across requests</span>';
+                    log('Session persistence confirmed', 'success');
+                } else {
+                    html += '<span class="error">❌ Session not persisting</span>';
+                    log('Session not persisting', 'error');
+                }
+                
+                testEl.innerHTML = html;
+                
+            } catch (error) {
+                testEl.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                log('Session test error: ' + error.message, 'error');
+            }
+        };
+
+        // Test different redirect methods
+        const testRedirectBehavior = async () => {
+            const testEl = document.getElementById('redirect-test');
+            testEl.innerHTML = 'Testing redirect methods...<br>';
+            
+            log('Testing various redirect methods...');
+            
+            // First ensure we're logged in
+            const authCheck = await fetch('/api/auth/me', { credentials: 'include' });
+            
+            if (!authCheck.ok) {
+                testEl.innerHTML += '<span class="warning">Not logged in. Please login first.</span>';
+                return;
+            }
+            
+            testEl.innerHTML += '<span class="success">✅ Authenticated. Testing redirects...</span><br><br>';
+            
+            // Test different methods
+            testEl.innerHTML += `
+                <button onclick="window.location.href='/app'">Method 1: location.href</button>
+                <button onclick="window.location.replace('/app')">Method 2: location.replace</button>
+                <button onclick="window.location.assign('/app')">Method 3: location.assign</button>
+                <button onclick="window.location='/app'">Method 4: location direct</button>
+                <br><br>
+                <form action="/app" method="GET" style="display:inline">
+                    <button type="submit">Method 5: Form GET</button>
+                </form>
+                <br><br>
+                <a href="/app" class="button" style="background:#00ff00;color:#000;padding:10px 20px;text-decoration:none;">Method 6: Direct Link</a>
+            `;
+            
+            log('Redirect test buttons ready', 'info');
+        };
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            log('=== CloudFlare Diagnostic Started ===', 'success');
+            log(`Current domain: ${window.location.hostname}`, 'info');
+            checkEnvironment();
+            checkCloudFlare();
+            analyzeCookies();
+        });
+    </script>
+</body>
+</html>

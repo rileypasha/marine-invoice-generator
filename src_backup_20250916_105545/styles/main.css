@@ -1,0 +1,731 @@
+@import './chatgpt-dark.css';
+@import './light-theme.css';
+@import './auth.css';
+@import './settings.css';
+@import './sidebar.css';
+@import './print.css';
+
+/* Notifications */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.notification {
+  animation: slideIn 0.3s ease;
+}
+
+/* Edit Mode Indicator - REMOVED: Banner functionality removed per requirements */
+
+/* Save button edit mode styling */
+#save-invoice.edit-mode {
+  background: linear-gradient(135deg, #059669, #10b981);
+  border-color: #059669;
+}
+
+#save-invoice.edit-mode:hover {
+  background: linear-gradient(135deg, #047857, #059669);
+  border-color: #047857;
+}
+
+/* Responsive adjustments for edit indicator - REMOVED: Banner functionality removed */
+
+/* Tab System */
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-4) 0 var(--space-4);
+  min-height: 0;
+  position: relative;
+}
+
+/* Styled scrollbar for tab-content (was previously hidden causing scroll issues) */
+.tab-content::-webkit-scrollbar {
+  width: 8px;
+  background: var(--color-background);
+}
+
+.tab-content::-webkit-scrollbar-track {
+  background: var(--color-background);
+  border-radius: 4px;
+}
+
+.tab-content::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.tab-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* For Firefox - use thin scrollbar instead of none */
+.tab-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) var(--color-background);
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.visible {
+  display: block;
+  padding-bottom: var(--space-4);
+}
+
+/* Line Items Table */
+.line-items-table {
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.line-items-table th,
+.line-items-table td {
+  text-align: left;
+  padding: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.line-items-table th {
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.line-items-table td {
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+/* Invoice Totals */
+.invoice-totals {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.totals-row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+}
+
+.totals-row.total {
+  font-weight: var(--font-semibold);
+  font-size: var(--text-base);
+  border-top: 2px solid var(--color-border);
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+}
+
+/* Line Items Container */
+.line-items-container {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+}
+
+.line-items-container h3 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--space-3);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+#line-items-list {
+  margin-top: var(--space-2);
+  /* Ensure smooth scrolling for line items within Services tab */
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar styling for line items list */
+#line-items-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#line-items-list::-webkit-scrollbar-track {
+  background: var(--color-background);
+  border-radius: 3px;
+}
+
+#line-items-list::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+#line-items-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* Add Line Item */
+.add-line-item {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.add-line-item input {
+  flex: 1;
+}
+
+.add-line-item button,
+#add-line-item {
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: var(--transition);
+  margin-bottom: var(--space-2);
+}
+
+.add-line-item button:hover,
+#add-line-item:hover {
+  background: var(--color-accent-hover);
+}
+
+/* Line Item Card Styling */
+.line-item-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-4);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.line-item-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--color-accent);
+}
+
+/* Line Item Header */
+.line-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.line-item-number {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* Line Item Content */
+.line-item-content {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Field Groups */
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+/* Field Row - for side-by-side fields */
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+/* Primary Field Styling */
+.primary-field {
+  margin-bottom: var(--space-2);
+}
+
+.primary-field .form-input {
+  font-weight: 500;
+  border: 2px solid var(--color-border);
+}
+
+.primary-field .form-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(25, 195, 125, 0.1);
+}
+
+/* Secondary Fields Container */
+.secondary-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-background);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+/* Tax Configuration Section */
+.tax-configuration-section {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid rgba(74, 222, 128, 0.2);
+  background: rgba(74, 222, 128, 0.03);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+/* Markup Configuration Section */
+.markup-configuration-section {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: rgba(37, 99, 235, 0.03);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: var(--radius-md);
+}
+
+.markup-type-field {
+  flex: 1;
+  min-width: 150px;
+}
+
+.custom-markup-field {
+  flex: 0 0 120px;
+  transition: opacity 0.2s ease;
+}
+
+.markup-type-select {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.markup-type-select:focus {
+  border-color: rgba(37, 99, 235, 0.6);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.custom-markup-input {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.custom-markup-input:focus {
+  border-color: rgba(37, 99, 235, 0.6);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.markup-error {
+  color: var(--color-error);
+  font-size: var(--text-xs);
+  margin-top: var(--space-1);
+  display: block;
+}
+
+.markup-type-select.error,
+.custom-markup-input.error {
+  border-color: var(--color-error);
+  background: rgba(220, 38, 38, 0.1);
+}
+
+/* Markup Configuration Labels */
+.markup-configuration-section .field-label {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-1);
+}
+
+.tax-status-field {
+  flex: 1;
+  min-width: 150px;
+}
+
+.tax-rate-field {
+  flex: 0 0 120px;
+}
+
+.tax-status-select {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.tax-status-select:focus {
+  border-color: rgba(74, 222, 128, 0.6);
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
+}
+
+.tax-rate-input {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.tax-rate-input:focus {
+  border-color: rgba(74, 222, 128, 0.6);
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
+}
+
+/* Tax Configuration Labels */
+.tax-configuration-section .field-label {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-1);
+}
+
+/* Responsive Tax Configuration */
+@media (max-width: 768px) {
+  .tax-configuration-section {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .tax-rate-field {
+    flex: 1;
+  }
+  
+  .markup-configuration-section {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .custom-markup-field {
+    flex: 1;
+  }
+}
+
+/* Description Field */
+.description-field {
+  margin-top: var(--space-2);
+}
+
+.description-field .form-input {
+  min-height: 44px;
+}
+
+/* Form Input Enhancements */
+.line-item-card .form-input {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  transition: all 0.2s ease;
+}
+
+.line-item-card .form-input:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Line Items Container */
+.line-items-container {
+  margin-top: var(--space-4);
+}
+
+
+/* Empty state for line items */
+.line-items-list:empty::after {
+  content: "No line items yet. Click 'Add Line Item' to get started.";
+  display: block;
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  background: var(--color-surface);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  margin-top: var(--space-3);
+}
+
+/* Smooth transitions for showing/hiding field groups */
+.manual-entry-fields,
+.manual-cost-field,
+.labor-fields {
+  transition: all 0.3s ease;
+}
+
+/* Add some breathing room between sections */
+.secondary-fields:not(:empty) {
+  margin-top: var(--space-2);
+}
+
+/* Required field styling */
+.field-label.required::after {
+  content: " *";
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+.form-input.required {
+  border-color: rgba(220, 38, 38, 0.3);
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.form-input.required:focus {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.form-input.error {
+  border-color: var(--color-error);
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.form-input.error:focus {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+}
+
+/* Validation message */
+.validation-message {
+  color: var(--color-error);
+  font-size: var(--text-xs);
+  margin-top: var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.validation-message::before {
+  content: "⚠";
+  font-size: var(--text-sm);
+}
+
+/* Disable add button when validation fails */
+#add-line-item:disabled {
+  background: var(--color-text-tertiary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+#add-line-item:disabled:hover {
+  background: var(--color-text-tertiary);
+  transform: none;
+}
+
+/* Remove Item Button - Dark Theme Style */
+.remove-line-item {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.remove-line-item:hover {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+  transform: scale(1.05);
+}
+
+.remove-line-item:active {
+  transform: scale(0.95);
+}
+
+/* Error States */
+.error-message {
+  color: #ff3b30;
+  font-size: var(--text-xs);
+  margin-top: var(--space-1);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .main-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .input-panel {
+    border-right: none;
+    border-bottom: 0.5px solid var(--color-border-light);
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+  
+  .button-group {
+    justify-content: center;
+    gap: var(--space-3);
+  }
+  
+  .button-group.export-group {
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+    padding-left: 0;
+    padding-top: var(--space-3);
+  }
+}
+
+@media (max-width: 640px) {
+  .button-group {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .btn {
+    min-width: 120px;
+  }
+}
+
+/* Focus Visible for Accessibility */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Input with Suffix Styling */
+.input-with-suffix {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.input-with-suffix input {
+  width: 100%;
+  padding-right: 50px; /* Make room for suffix */
+}
+
+.input-with-suffix::after {
+  content: attr(data-suffix);
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-base);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.input-with-suffix.has-value::after {
+  opacity: 1;
+}
+
+/* Disabled States */
+.btn:disabled,
+.form-input:disabled,
+.form-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Loading State */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection Color */
+::selection {
+  background: var(--color-accent);
+  color: white;
+}
+
+::-moz-selection {
+  background: var(--color-accent);
+  color: white;
+}
+
+/* Fix for comment button flickering */
+.comment-item {
+  position: relative;
+}
+
+.comment-menu {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+}
+
+.comment-item:hover .comment-menu {
+  opacity: 1;
+  visibility: visible;
+}
+
+.comment-menu button {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comment-menu button:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(0, 0, 0, 0.2);
+}
