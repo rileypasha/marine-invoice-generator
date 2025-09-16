@@ -42,6 +42,9 @@ export class InvoiceState {
 
     // ✅ FIX: Initialize state normalization
     this.normalizeState();
+
+    // Unsaved changes manager (will be set by app)
+    this.unsavedChangesManager = null;
   }
 
   /**
@@ -686,11 +689,57 @@ export class InvoiceState {
   }
 
   /**
+   * Set up unsaved changes manager
+   * @param {Object} unsavedChangesManager - UnsavedChangesManager instance
+   */
+  setUnsavedChangesManager(unsavedChangesManager) {
+    this.unsavedChangesManager = unsavedChangesManager;
+    console.log('✅ UnsavedChangesManager integrated with InvoiceState');
+  }
+
+  /**
+   * Mark the current state as saved (integrates with unsaved changes manager)
+   */
+  markAsSaved() {
+    if (this.unsavedChangesManager) {
+      this.unsavedChangesManager.markAsSaved();
+    }
+  }
+
+  /**
+   * Check if there are unsaved changes (integrates with unsaved changes manager)
+   * @returns {boolean} True if there are unsaved changes
+   */
+  hasUnsavedChanges() {
+    if (this.unsavedChangesManager) {
+      return this.unsavedChangesManager.getHasUnsavedChanges();
+    }
+    return false;
+  }
+
+  /**
+   * Get a summary of unsaved changes
+   * @returns {Object} Changes summary
+   */
+  getUnsavedChangesSummary() {
+    if (this.unsavedChangesManager) {
+      return this.unsavedChangesManager.getChangesSummary();
+    }
+    return { hasChanges: false, changes: [] };
+  }
+
+  /**
    * Clean up all listeners and pending notifications to prevent memory leaks
    * Call this when the InvoiceState instance is no longer needed
    */
   cleanup() {
     console.log('🧹 Cleaning up InvoiceState: removing all listeners and clearing queue');
+
+    // Clean up unsaved changes manager
+    if (this.unsavedChangesManager) {
+      this.unsavedChangesManager.cleanup();
+      this.unsavedChangesManager = null;
+    }
 
     // Clear all listeners
     const listenerCount = this.listeners.length;

@@ -4,9 +4,13 @@ export class UserManager {
     this.listeners = [];
     this.storageKey = 'marine_invoice_user';
     this.sessionKey = 'marine_invoice_session';
-    
+
+    // Unsaved changes integration
+    this.unsavedChangesManager = null;
+    this.unsavedChangesDialog = null;
+
     this.initTestUser();
-    
+
     // Load user from storage and ensure server session
     this.initializeAuth();
   }
@@ -299,25 +303,120 @@ export class UserManager {
     this.notify();
   }
   
-  // Sign out user
+  /**
+   * Set up unsaved changes integration
+   * @param {Object} unsavedChangesManager - UnsavedChangesManager instance
+   * @param {Object} unsavedChangesDialog - UnsavedChangesDialog instance
+   */
+  setUnsavedChangesIntegration(unsavedChangesManager, unsavedChangesDialog) {
+    this.unsavedChangesManager = unsavedChangesManager;
+    this.unsavedChangesDialog = unsavedChangesDialog;
+    console.log('✅ UserManager integrated with unsaved changes system');
+  }
+
+  // Sign out user with unsaved changes protection
   async logout() {
+    console.log('🚪 Logout attempt detected');
+
+    // Check for unsaved changes
+    if (this.unsavedChangesManager && this.unsavedChangesDialog) {
+      const hasUnsavedChanges = this.unsavedChangesManager.getHasUnsavedChanges();
+
+      if (hasUnsavedChanges) {
+        console.log('⚠️ Logout blocked due to unsaved changes');
+
+        const changesSummary = this.unsavedChangesManager.getChangesSummary();
+
+        const action = await this.unsavedChangesDialog.show({
+          type: 'logout',
+          title: 'Sign Out?',
+          message: 'You have unsaved changes. What would you like to do before signing out?',
+          changes: changesSummary.changes,
+          showSave: true,
+          showDiscard: true,
+          saveText: 'Save & Sign Out',
+          discardText: 'Discard & Sign Out',
+          cancelText: 'Cancel'
+        });
+
+        if (action === 'save') {
+          await this.saveAndLogout();
+          return;
+        } else if (action === 'discard') {
+          await this.performLogout();
+          return;
+        } else {
+          console.log('📋 Logout cancelled by user');
+          return; // User cancelled
+        }
+      }
+    }
+
+    // No unsaved changes or no integration, proceed with logout
+    await this.performLogout();
+  }
+
+  /**
+   * Save changes and then logout
+   */
+  async saveAndLogout() {
+    try {
+      console.log('💾 Saving before logout...');
+
+      if (this.unsavedChangesDialog) {
+        this.unsavedChangesDialog.showSaveInProgress();
+      }
+
+      // Save the invoice
+      if (window.app && window.app.saveInvoice) {
+        await window.app.saveInvoice();
+      }
+
+      if (this.unsavedChangesDialog) {
+        this.unsavedChangesDialog.hideSaveInProgress();
+      }
+
+      console.log('✅ Save completed, proceeding with logout');
+
+      // Proceed with logout
+      await this.performLogout();
+
+    } catch (error) {
+      console.error('❌ Error saving before logout:', error);
+
+      if (this.unsavedChangesDialog) {
+        this.unsavedChangesDialog.hideSaveInProgress();
+        this.unsavedChangesDialog.announceMessage('Save failed. Logout cancelled.');
+      }
+
+      // Show error and cancel logout
+      alert('Failed to save changes. Logout cancelled.');
+    }
+  }
+
+  /**
+   * Perform the actual logout operation
+   */
+  async performLogout() {
+    console.log('🚪 Performing logout...');
+
     // Force redirect after 2 seconds regardless of server response
     setTimeout(() => {
       window.location.href = '/';
     }, 2000);
-    
+
     // Clear local state immediately
     this.currentUser = null;
     this.clearLocalSession();
     localStorage.setItem('marine_invoice_explicit_logout', 'true');
     this.notify();
-    
+
     // Try to call server to destroy session (don't wait for it)
     fetch('/api/auth/logout', {
       method: 'POST',
       credentials: 'include'
     }).catch(() => {}); // Ignore errors
-    
+
     // Immediate redirect attempt
     window.location.href = '/';
   }

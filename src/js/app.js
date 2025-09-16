@@ -21,6 +21,9 @@ import { generatePDF } from './exports/pdf.js';
 import { composeEmail } from './exports/email.js';
 import { printInvoice } from './exports/print.js';
 import { initializeFormatters } from './formatters.js';
+import { UnsavedChangesManager } from './utils/UnsavedChangesManager.js';
+import { UnsavedChangesDialog } from './components/UnsavedChangesDialog.js';
+import { NavigationProtection } from './utils/NavigationProtection.js';
 
 // Make addLineItem available globally for testing
 window.addLineItem = function(lineItem) {
@@ -64,6 +67,9 @@ class InvoiceApp {
       this.initTabNavigation();
       this.initActionButtons();
       this.initKeyboardShortcuts();
+
+      // Initialize unsaved changes system
+      this.initUnsavedChangesSystem();
 
       // Restore edit state from previous session if applicable
       this.restoreEditSession();
@@ -669,19 +675,92 @@ InvoiceApp.prototype.initKeyboardShortcuts = function() {
       e.preventDefault();
       this.saveInvoice();
     }
-    
+
     // Cmd/Ctrl + N = New invoice
     if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
       e.preventDefault();
       this.createNewInvoice();
     }
-    
+
     // Cmd/Ctrl + , = Settings (on Mac)
     if ((e.metaKey || e.ctrlKey) && e.key === ',') {
       e.preventDefault();
       this.settingsModal.show();
     }
   });
+};
+
+/**
+ * Initialize the unsaved changes warning system
+ */
+InvoiceApp.prototype.initUnsavedChangesSystem = function() {
+  console.log('🛡️ Initializing unsaved changes warning system...');
+
+  try {
+    // Create unsaved changes dialog
+    this.unsavedChangesDialog = new UnsavedChangesDialog();
+
+    // Create unsaved changes manager
+    this.unsavedChangesManager = new UnsavedChangesManager(this.state, this.invoiceStorage);
+
+    // Create navigation protection
+    this.navigationProtection = new NavigationProtection(this.unsavedChangesManager, this.unsavedChangesDialog);
+
+    // Integrate with InvoiceState
+    this.state.setUnsavedChangesManager(this.unsavedChangesManager);
+
+    // Integrate with UserManager for logout protection
+    this.userManager.setUnsavedChangesIntegration(this.unsavedChangesManager, this.unsavedChangesDialog);
+
+    // Subscribe to unsaved changes for UI updates
+    this.unsavedChangesManager.subscribe((changeData) => {
+      this.updateUnsavedChangesUI(changeData);
+    });
+
+    console.log('✅ Unsaved changes warning system initialized');
+  } catch (error) {
+    console.error('❌ Error initializing unsaved changes system:', error);
+  }
+};
+
+/**
+ * Update UI based on unsaved changes state
+ * @param {Object} changeData - Change data from UnsavedChangesManager
+ */
+InvoiceApp.prototype.updateUnsavedChangesUI = function(changeData) {
+  const { hasUnsavedChanges, changesSummary } = changeData;
+
+  // Update save button appearance
+  const saveBtn = document.getElementById('save-invoice');
+  if (saveBtn) {
+    if (hasUnsavedChanges) {
+      saveBtn.classList.add('has-unsaved-changes');
+      saveBtn.title = `Save invoice (${changesSummary.changes.join(', ')} changed)`;
+    } else {
+      saveBtn.classList.remove('has-unsaved-changes');
+      saveBtn.title = this.state.getIsEditMode() ? 'Update invoice' : 'Save invoice';
+    }
+  }
+
+  // Update any other UI indicators as needed
+  this.updatePageTitle(hasUnsavedChanges);
+};
+
+/**
+ * Update page title to show unsaved changes indicator
+ * @param {boolean} hasUnsavedChanges - Whether there are unsaved changes
+ */
+InvoiceApp.prototype.updatePageTitle = function(hasUnsavedChanges) {
+  const baseTitle = 'Marine Group - Invoice Generator';
+  const isEditMode = this.state.getIsEditMode();
+
+  if (hasUnsavedChanges) {
+    document.title = `● ${isEditMode ? 'Editing' : 'Creating'} Invoice - Marine Group`;
+  } else if (isEditMode) {
+    document.title = `✏️ Editing Invoice - Marine Group`;
+  } else {
+    document.title = baseTitle;
+  }
 };
 
 InvoiceApp.prototype.saveCurrentInvoice = function() {
@@ -701,19 +780,49 @@ InvoiceApp.prototype.saveCurrentInvoice = function() {
   console.log('Invoice saved with ID:', id);
 };
 
-InvoiceApp.prototype.createNewInvoice = function() {
+InvoiceApp.prototype.createNewInvoice = async function() {
   console.log('🆕 App createNewInvoice called');
-  
-  // Check if there's unsaved content
-  const currentState = this.state.getState();
-  const hasUnsavedChanges = this.invoiceStorage.hasUnsavedChanges(currentState);
-  
-  if (hasUnsavedChanges) {
-    if (!confirm('Create a new invoice? Any unsaved changes will be lost.')) {
-      return;
+
+  // Check for unsaved changes using the new system
+  if (this.state.hasUnsavedChanges && this.state.hasUnsavedChanges()) {
+    console.log('⚠️ New invoice creation blocked due to unsaved changes');
+
+    // The NavigationProtection system will handle this automatically
+    // when the button is clicked, so we shouldn't reach here normally.
+    // This is a fallback for programmatic calls
+    const changesSummary = this.state.getUnsavedChangesSummary();
+
+    if (this.unsavedChangesDialog) {
+      const action = await this.unsavedChangesDialog.show({
+        type: 'navigation',
+        title: 'Create New Invoice?',
+        message: 'You have unsaved changes. What would you like to do before creating a new invoice?',
+        changes: changesSummary.changes,
+        saveText: 'Save & Continue',
+        discardText: 'Discard Changes',
+        cancelText: 'Cancel'
+      });
+
+      if (action === 'save') {
+        try {
+          await this.saveInvoice();
+          // Continue with new invoice creation after save
+        } catch (error) {
+          console.error('❌ Error saving before new invoice:', error);
+          return; // Cancel if save failed
+        }
+      } else if (action === 'cancel') {
+        return; // User cancelled
+      }
+      // If discard, continue with creation
+    } else {
+      // Fallback to simple confirm if dialog not available
+      if (!confirm('Create a new invoice? Any unsaved changes will be lost.')) {
+        return;
+      }
     }
   }
-  
+
   // Reset the state (this already calls clearEditMode internally)
   this.state.reset();
 
@@ -810,6 +919,11 @@ InvoiceApp.prototype.saveInvoice = async function() {
     }
 
     if (id) {
+      // Mark changes as saved after successful save
+      if (this.state.markAsSaved) {
+        this.state.markAsSaved();
+      }
+
       await this.promptModal.showAlert('Success', actionMessage);
       this.sidebar.refreshInvoiceList();
     } else {
