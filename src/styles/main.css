@@ -32,37 +32,7 @@
   animation: slideIn 0.3s ease;
 }
 
-/* Edit Mode Indicator */
-.edit-mode-indicator {
-  position: fixed;
-  top: 0;
-  left: 280px; /* Adjust for sidebar width */
-  right: 0;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  color: white;
-  padding: 8px 16px;
-  z-index: 100;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  animation: slideIn 0.3s ease;
-  transition: all 0.3s ease;
-}
-
-.edit-indicator-content {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.edit-indicator-content svg {
-  opacity: 0.9;
-}
-
-/* Adjust main content when edit indicator is present */
-body:has(.edit-mode-indicator) .tab-content {
-  padding-top: calc(var(--space-2) + 40px); /* Account for indicator height */
-}
+/* Edit Mode Indicator - REMOVED: Banner functionality removed per requirements */
 
 /* Save button edit mode styling */
 #save-invoice.edit-mode {
@@ -75,16 +45,7 @@ body:has(.edit-mode-indicator) .tab-content {
   border-color: #047857;
 }
 
-/* Responsive adjustments for edit indicator */
-@media (max-width: 768px) {
-  .edit-mode-indicator {
-    left: 0; /* Full width on mobile */
-  }
-}
-
-.app-container.sidebar-collapsed .edit-mode-indicator {
-  left: 80px; /* Adjust for collapsed sidebar */
-}
+/* Responsive adjustments for edit indicator - REMOVED: Banner functionality removed */
 
 /* Tab System */
 .tab-content {

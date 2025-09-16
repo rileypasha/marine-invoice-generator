@@ -33,7 +33,7 @@ export class InvoiceState {
     this.notificationQueue = new Set();
     this.isNotificationScheduled = false;
   }
-  
+
   subscribe(listener) {
     if (typeof listener !== 'function') {
       console.warn('⚠️ Invalid listener: must be a function');
@@ -48,10 +48,17 @@ export class InvoiceState {
       console.log(`📉 Unsubscribed listener. Total listeners: ${this.listeners.length}`);
     };
   }
-  
+
   notify() {
-    // Add this notification to the queue
-    this.notificationQueue.add(this.state);
+    // ✅ CRITICAL FIX: Deep clone state to prevent reference corruption
+    try {
+      const stateSnapshot = JSON.parse(JSON.stringify(this.state));
+      this.notificationQueue.add(stateSnapshot);
+    } catch (error) {
+      console.error('❌ State serialization error during notify:', error);
+      // Fallback to direct notification with original state
+      this.notificationQueue.add(this.state);
+    }
 
     // Schedule batch processing if not already scheduled
     if (!this.isNotificationScheduled) {
@@ -73,20 +80,25 @@ export class InvoiceState {
     console.log(`🔔 Batched notification: ${this.notificationQueue.size} state changes queued`);
     console.log(`📊 Listeners count: ${this.listeners.length}`);
 
-    // Get the latest state from the queue (most recent)
+    // ✅ FIX: Get the latest state snapshot (now immutable)
     const latestState = Array.from(this.notificationQueue).pop();
 
-    // Notify all listeners with the latest state
+    // ✅ FIX: Error-wrapped listener calls to prevent corruption propagation
     this.listeners.forEach((listener, index) => {
-      console.log(`  - Calling listener ${index} with batched update`);
-      listener(latestState);
+      try {
+        console.log(`  - Calling listener ${index} with batched update`);
+        listener(latestState); // Now safe from corruption
+      } catch (error) {
+        console.error(`❌ Listener ${index} error:`, error);
+        // Continue processing other listeners
+      }
     });
 
     // Clear the queue and reset scheduling flag
     this.notificationQueue.clear();
     this.isNotificationScheduled = false;
   }
-  
+
   updateVessel(updates) {
     console.log('🚢 Updating vessel state:', updates);
     const oldVessel = { ...this.state.vessel };
@@ -95,7 +107,7 @@ export class InvoiceState {
     console.log('  - New vessel:', this.state.vessel);
     this.notify();
   }
-  
+
   updateCustomer(updates) {
     console.log('👤 Updating customer state:', updates);
     const oldCustomer = { ...this.state.customer };
@@ -104,14 +116,14 @@ export class InvoiceState {
     console.log('  - New customer:', this.state.customer);
     this.notify();
   }
-  
+
   updateScope(updates) {
     console.log('📋 Updating scope state:', updates);
     const oldScope = { ...this.state.scope };
     this.state.scope = { ...this.state.scope, ...updates };
     console.log('  - Old scope:', oldScope);
     console.log('  - New scope:', this.state.scope);
-    
+
     // Recalculate all taxes if markup rate changed
     if ('markupRate' in updates && updates.markupRate !== oldScope.markupRate) {
       console.log('💰 Markup rate changed, recalculating all taxes');
@@ -120,7 +132,7 @@ export class InvoiceState {
       this.notify();
     }
   }
-  
+
   updateNotes(updates) {
     console.log('📝 Updating notes state:', updates);
     const oldNotes = { ...this.state.notes };
@@ -129,13 +141,16 @@ export class InvoiceState {
     console.log('  - New notes:', this.state.notes);
     this.notify();
   }
-  
+
   addLineItem(lineItem = {}) {
     const defaultTaxConfig = TaxCalculator.getDefaultTaxConfig(lineItem.jobType);
     const defaultMarkupConfig = this.getDefaultMarkupConfig(lineItem.jobType);
-    
+
+    // ✅ FIX: Enhanced ID generation to prevent conflicts
+    const newItemId = this.lineItemIdCounter++;
+
     const newItem = {
-      id: this.lineItemIdCounter++,
+      id: newItemId,
       jobType: '',
       itemType: '',
       manualCost: '',
@@ -146,15 +161,23 @@ export class InvoiceState {
       ...defaultMarkupConfig,
       ...lineItem
     };
-    
+
     // Calculate initial tax amount using per-line markup
     newItem.taxAmount = TaxCalculator.calculateLineTax(newItem, newItem.markupRate);
-    
+
+    // ✅ FIX: Validate state integrity before adding
+    if (!Array.isArray(this.state.scope.lineItems)) {
+      console.warn('⚠️ LineItems array corrupted, reinitializing');
+      this.state.scope.lineItems = [];
+    }
+
     this.state.scope.lineItems.push(newItem);
+
+    console.log(`✅ Added line item with ID: ${newItemId}`, newItem);
     this.notify();
-    return newItem.id;
+    return newItemId;
   }
-  
+
   /**
    * Get default markup configuration for new line items
    * @param {string} jobType - Job type for context-specific defaults
@@ -162,7 +185,7 @@ export class InvoiceState {
    */
   getDefaultMarkupConfig(jobType = null) {
     // Check if this job type should be markup exempt
-    if (jobType === 'Agent Services' || 
+    if (jobType === 'Agent Services' ||
         (jobType === 'Manual Entry') || // Will be refined based on itemType
         jobType === 'Clearance Fee') {
       return {
@@ -171,7 +194,7 @@ export class InvoiceState {
         isMarkupExempt: true
       };
     }
-    
+
     // Default to current global markup rate for backward compatibility
     return {
       markupType: 'preset',
@@ -179,7 +202,7 @@ export class InvoiceState {
       isMarkupExempt: false
     };
   }
-  
+
   updateLineItem(id, updates) {
     const index = this.state.scope.lineItems.findIndex(item => item.id === id);
     if (index !== -1) {
@@ -188,14 +211,14 @@ export class InvoiceState {
         if ('taxRate' in updates) {
           TaxValidator.validateTaxRate(updates.taxRate);
         }
-        
+
         if ('taxStatus' in updates) {
           if (!TaxValidator.validateTaxStatus(updates.taxStatus)) {
             console.warn('Invalid tax status:', updates.taxStatus);
             updates.taxStatus = 'taxable'; // Default to safe value
           }
         }
-        
+
         // Validate markup-related updates
         if ('markupRate' in updates && updates.markupType === 'custom') {
           const validation = MarkupValidator.validateCustomMarkup(updates.markupRate);
@@ -204,15 +227,15 @@ export class InvoiceState {
           }
           updates.markupRate = String(validation.sanitizedValue);
         }
-        
+
         // Handle markup exemption logic for specific job types
         if ('jobType' in updates || 'itemType' in updates) {
           const item = this.state.scope.lineItems[index];
           const newJobType = updates.jobType || item.jobType;
           const newItemType = updates.itemType || item.itemType;
-          
+
           // Auto-exempt certain combinations
-          if (newJobType === 'Agent Services' || 
+          if (newJobType === 'Agent Services' ||
               newJobType === 'Clearance Fee' ||
               (newJobType === 'Manual Entry' && newItemType === 'Labor')) {
             updates.isMarkupExempt = true;
@@ -220,20 +243,27 @@ export class InvoiceState {
             updates.markupRate = '0';
           }
         }
-        
+
+        // ✅ FIX: Safer state update with validation
+        const currentItem = this.state.scope.lineItems[index];
+        if (!currentItem) {
+          console.error('❌ Line item disappeared during update:', id);
+          return;
+        }
+
         // Apply updates
         this.state.scope.lineItems[index] = {
-          ...this.state.scope.lineItems[index],
+          ...currentItem,
           ...updates
         };
-        
+
         // Recalculate tax if tax-related fields or cost fields changed
-        if ('taxStatus' in updates || 'taxRate' in updates || 
+        if ('taxStatus' in updates || 'taxRate' in updates ||
             'manualCost' in updates || 'laborHours' in updates || 'otHours' in updates ||
             'markupRate' in updates || 'markupType' in updates || 'isMarkupExempt' in updates) {
           this.recalculateLineTax(id);
         }
-        
+
         this.notify();
       } catch (error) {
         console.error('Error updating line item:', error);
@@ -249,7 +279,7 @@ export class InvoiceState {
           updates.markupRate = '2.5'; // Default to standard rate
           updates.markupType = 'preset';
         }
-        
+
         // Apply safe updates
         this.state.scope.lineItems[index] = {
           ...this.state.scope.lineItems[index],
@@ -257,20 +287,27 @@ export class InvoiceState {
         };
         this.recalculateLineTax(id);
         this.notify();
-        
+
         // Re-throw for UI error handling
         throw error;
       }
+    } else {
+      console.warn(`⚠️ Attempted to update non-existent line item with ID: ${id}`);
     }
   }
-  
+
   removeLineItem(id) {
+    const initialLength = this.state.scope.lineItems.length;
     this.state.scope.lineItems = this.state.scope.lineItems.filter(
       item => item.id !== id
     );
+
+    const removedCount = initialLength - this.state.scope.lineItems.length;
+    console.log(`🗑️ Removed ${removedCount} line item(s) with ID: ${id}`);
+
     this.notify();
   }
-  
+
   /**
    * Recalculate tax amount for a specific line item
    * @param {number} id - Line item ID
@@ -283,7 +320,7 @@ export class InvoiceState {
       console.log(`💰 Recalculated tax for item ${id}: ${item.taxAmount} (markup: ${item.markupRate}%)`);
     }
   }
-  
+
   /**
    * Recalculate tax amounts for all line items
    * (useful when markup rate changes)
@@ -296,7 +333,7 @@ export class InvoiceState {
     });
     this.notify();
   }
-  
+
   /**
    * Get total tax amount for all line items
    * @returns {number} Total tax amount
@@ -304,23 +341,23 @@ export class InvoiceState {
   getTotalTax() {
     return TaxCalculator.calculateTotalTax(this.state.scope.lineItems, this.state.scope.markupRate);
   }
-  
+
   /**
    * Migrate legacy invoice data to include per-line tax configuration
    */
   migrateLegacyTaxData() {
     console.log('🔄 Migrating legacy tax data...');
     const scopeIsTaxable = this.state.scope.isTaxable;
-    
+
     this.state.scope.lineItems = this.state.scope.lineItems.map(item => {
       return TaxCalculator.migrateLineItemTax(item, scopeIsTaxable);
     });
-    
+
     // Recalculate all tax amounts after migration
     this.recalculateAllTaxes();
     console.log('✅ Legacy tax data migration complete');
   }
-  
+
   /**
    * Set the current invoice ID for edit mode
    * @param {string} invoiceId - The invoice ID being edited
@@ -471,43 +508,19 @@ export class InvoiceState {
   }
 
   /**
-   * Show/hide edit mode indicator
+   * Update edit mode state (banner removed, preserving business logic)
    */
   updateEditModeIndicator() {
     const existingIndicator = document.querySelector('.edit-mode-indicator');
 
-    if (this.isEditMode) {
-      if (!existingIndicator) {
-        const indicator = document.createElement('div');
-        indicator.className = 'edit-mode-indicator';
-        indicator.innerHTML = `
-          <div class="edit-indicator-content">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-            </svg>
-            <span>Editing existing invoice</span>
-          </div>
-        `;
-
-        // Insert at top of main content area
-        const appContainer = document.querySelector('.app-container');
-        const sidebar = document.querySelector('.app-sidebar');
-
-        if (appContainer) {
-          // Insert after sidebar if it exists, otherwise at the beginning
-          if (sidebar && sidebar.nextSibling) {
-            appContainer.insertBefore(indicator, sidebar.nextSibling);
-          } else {
-            appContainer.insertBefore(indicator, appContainer.firstChild);
-          }
-        }
-      }
-    } else {
-      // Remove indicator in create mode
-      if (existingIndicator) {
-        existingIndicator.remove();
-      }
+    // Remove any existing indicator (banner functionality removed)
+    if (existingIndicator) {
+      existingIndicator.remove();
     }
+
+    // Note: isEditMode state is preserved for save/update business logic
+    // The save button text and behavior are still controlled by isEditMode
+    // Only the visual banner has been removed per requirements
   }
 
   /**
