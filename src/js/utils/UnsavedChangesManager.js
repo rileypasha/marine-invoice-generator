@@ -50,8 +50,9 @@ export class UnsavedChangesManager {
     // Restore from session if needed
     this.restoreUnsavedState();
 
-    // Set initial saved state
-    this.markAsSaved();
+    // 🔧 PHASE 2 FIX: Don't mark as saved immediately - wait for invoice load
+    // The markAsSaved() will be called after invoice data is properly loaded
+    console.log('🔧 PHASE 2 FIX: Skipping initial markAsSaved - will be called after invoice load');
 
     console.log('✅ UnsavedChangesManager initialized');
   }
@@ -87,6 +88,10 @@ export class UnsavedChangesManager {
         return;
       }
 
+      // 🔍 PHASE 1 INSTRUMENTATION: Add detailed state tracking
+      const stackTrace = new Error().stack?.split('\n').slice(1, 4).join(' | ') || 'unknown';
+      console.log(`🔍 TRACE: detectChanges called from: ${stackTrace}`);
+
       // Calculate change hash for efficient comparison
       const currentHash = this.calculateStateHash(currentState);
       const savedHash = this.calculateStateHash(this.lastSavedState);
@@ -94,14 +99,19 @@ export class UnsavedChangesManager {
       // Check if state has changed
       const hasChanges = currentHash !== savedHash;
 
-      // Update tracking if state changed
+      // 🔍 PHASE 1 INSTRUMENTATION: Detailed change analysis
       if (hasChanges !== this.hasUnsavedChanges) {
-        this.hasUnsavedChanges = hasChanges;
-        this.currentChangeHash = currentHash;
-
-        console.log(`🔄 Unsaved changes detected: ${hasChanges}`);
+        console.log(`🔄 PHASE 1 TRACE: isDirty state change: ${this.hasUnsavedChanges} → ${hasChanges}`);
         console.log(`  - Current hash: ${currentHash}`);
         console.log(`  - Saved hash: ${savedHash}`);
+
+        // Deep diff analysis to identify what changed
+        if (hasChanges) {
+          this.logDetailedDiff(currentState, this.lastSavedState);
+        }
+
+        this.hasUnsavedChanges = hasChanges;
+        this.currentChangeHash = currentHash;
 
         // Persist unsaved state
         this.persistUnsavedState();
@@ -189,21 +199,101 @@ export class UnsavedChangesManager {
   }
 
   /**
+   * 🔍 PHASE 1 INSTRUMENTATION: Log detailed differences between states
+   * @param {Object} currentState - Current state
+   * @param {Object} savedState - Last saved state
+   */
+  logDetailedDiff(currentState, savedState) {
+    try {
+      console.log('🔍 PHASE 1 DETAILED DIFF ANALYSIS:');
+
+      // Vessel changes
+      if (this.hasVesselChanges(currentState)) {
+        const current = currentState.vessel || {};
+        const saved = savedState.vessel || {};
+        console.log('  📊 VESSEL CHANGES:');
+        if (current.name !== saved.name) console.log(`    - name: "${saved.name}" → "${current.name}"`);
+        if (current.weight !== saved.weight) console.log(`    - weight: "${saved.weight}" → "${current.weight}"`);
+        if (current.beam !== saved.beam) console.log(`    - beam: "${saved.beam}" → "${current.beam}"`);
+      }
+
+      // Customer changes
+      if (this.hasCustomerChanges(currentState)) {
+        const current = currentState.customer || {};
+        const saved = savedState.customer || {};
+        console.log('  👤 CUSTOMER CHANGES:');
+        if (current.customerName !== saved.customerName) console.log(`    - name: "${saved.customerName}" → "${current.customerName}"`);
+        if (current.customerEmail !== saved.customerEmail) console.log(`    - email: "${saved.customerEmail}" → "${current.customerEmail}"`);
+        if (current.customerPhone !== saved.customerPhone) console.log(`    - phone: "${saved.customerPhone}" → "${current.customerPhone}"`);
+      }
+
+      // Line items changes
+      if (this.hasLineItemsChanges(currentState)) {
+        const currentItems = currentState.scope?.lineItems || [];
+        const savedItems = savedState.scope?.lineItems || [];
+        console.log('  📋 LINE ITEMS CHANGES:');
+        console.log(`    - count: ${savedItems.length} → ${currentItems.length}`);
+
+        // Check each item for changes
+        const maxLength = Math.max(currentItems.length, savedItems.length);
+        for (let i = 0; i < maxLength; i++) {
+          const current = currentItems[i] || {};
+          const saved = savedItems[i] || {};
+
+          if (!saved.id && current.id) {
+            console.log(`    - item ${i}: ADDED (${current.jobType})`);
+          } else if (saved.id && !current.id) {
+            console.log(`    - item ${i}: REMOVED (${saved.jobType})`);
+          } else if (current.id && saved.id) {
+            const fields = ['jobType', 'itemType', 'manualCost', 'laborHours', 'otHours', 'description'];
+            fields.forEach(field => {
+              if (current[field] !== saved[field]) {
+                console.log(`    - item ${i}.${field}: "${saved[field]}" → "${current[field]}"`);
+              }
+            });
+          }
+        }
+      }
+
+      // Notes changes
+      if (this.hasNotesChanges(currentState)) {
+        const currentComments = currentState.notes?.comments || [];
+        const savedComments = savedState.notes?.comments || [];
+        console.log('  💬 NOTES CHANGES:');
+        console.log(`    - comments count: ${savedComments.length} → ${currentComments.length}`);
+      }
+
+    } catch (error) {
+      console.error('❌ Error in detailed diff logging:', error);
+    }
+  }
+
+  /**
    * Mark current state as saved
    */
   markAsSaved() {
+    // 🔍 PHASE 1 INSTRUMENTATION: Track when markAsSaved is called
+    const stackTrace = new Error().stack?.split('\n').slice(1, 4).join(' | ') || 'unknown';
+    console.log(`🔍 TRACE: markAsSaved called from: ${stackTrace}`);
+
     const currentState = this.invoiceState.getState();
     this.lastSavedState = JSON.parse(JSON.stringify(currentState));
     this.hasUnsavedChanges = false;
     this.currentChangeHash = this.calculateStateHash(currentState);
+
+    // 🔍 PHASE 1 INSTRUMENTATION: Log state snapshot
+    console.log('🔍 PHASE 1 BASELINE: State marked as saved');
+    console.log(`  - Invoice ID: ${this.invoiceState.getCurrentInvoiceId()}`);
+    console.log(`  - Baseline hash: ${this.currentChangeHash}`);
+    console.log(`  - Vessel name: "${currentState.vessel?.name || ''}"`);
+    console.log(`  - Customer name: "${currentState.customer?.customerName || ''}"`);
+    console.log(`  - Line items count: ${currentState.scope?.lineItems?.length || 0}`);
 
     // Clear session persistence
     this.clearUnsavedState();
 
     // Notify listeners
     this.notifyListeners();
-
-    console.log('✅ State marked as saved');
   }
 
   /**

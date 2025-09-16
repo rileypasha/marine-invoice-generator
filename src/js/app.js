@@ -963,10 +963,17 @@ InvoiceApp.prototype.restoreEditSession = async function() {
           this.scopeForm.populate(invoice.data.scope);
         }
 
-        // Set the saved state to prevent false "unsaved changes" warnings
+        // 🔧 PHASE 2 FIX: Set the saved state to prevent false "unsaved changes" warnings
         setTimeout(() => {
           const finalState = this.state.getState();
           this.invoiceStorage.setSavedState(finalState);
+
+          // CRITICAL: Mark as saved in UnsavedChangesManager AFTER invoice data is loaded
+          if (this.unsavedChangesManager) {
+            this.unsavedChangesManager.markAsSaved();
+            console.log('🔧 PHASE 2 FIX: markAsSaved called AFTER invoice load completion');
+          }
+
           console.log('✅ Edit session restored successfully');
         }, 100);
       } else {
@@ -979,6 +986,14 @@ InvoiceApp.prototype.restoreEditSession = async function() {
     }
   } else {
     console.log('ℹ️ No previous edit session found, starting in create mode');
+
+    // 🔧 PHASE 2 FIX: For new invoices, set baseline after a short delay to ensure components are ready
+    setTimeout(() => {
+      if (this.unsavedChangesManager) {
+        this.unsavedChangesManager.markAsSaved();
+        console.log('🔧 PHASE 2 FIX: markAsSaved called for new invoice baseline');
+      }
+    }, 100);
   }
 };
 

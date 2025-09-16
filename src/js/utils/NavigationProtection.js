@@ -235,10 +235,28 @@ export class NavigationProtection {
 
     const tabButton = e.target.closest('.tab-button');
     if (tabButton && !tabButton.classList.contains('active')) {
+      // 🔍 PHASE 1 INSTRUMENTATION: Analyze tab navigation context
+      const targetTab = tabButton.getAttribute('data-tab');
+      const currentInvoiceId = this.getCurrentInvoiceId();
+      const isSameInvoice = this.isSameInvoiceNavigation(targetTab, currentInvoiceId);
+
+      console.log('🔍 PHASE 2 TAB ANALYSIS:');
+      console.log(`  - Target tab: "${targetTab}"`);
+      console.log(`  - Current invoice ID: "${currentInvoiceId}"`);
+      console.log(`  - Is same invoice navigation: ${isSameInvoice}`);
+
+      // 🔧 PHASE 2 FIX: Allow tab switches within same invoice without warnings
+      if (isSameInvoice) {
+        console.log('✅ PHASE 2 FIX: Allowing intra-invoice tab switch without warning');
+        // Don't prevent the event - allow normal tab switching
+        return;
+      }
+
+      // Only block navigation for different invoice/external navigation
       e.preventDefault();
       e.stopImmediatePropagation();
 
-      console.log('🔄 Tab navigation blocked due to unsaved changes');
+      console.log('🔄 Tab navigation blocked - navigating away from current invoice');
 
       this.showNavigationWarning({
         type: 'navigation',
@@ -525,6 +543,40 @@ export class NavigationProtection {
       if (wasActive) {
         this.enableProtection();
       }
+    }
+  }
+
+  /**
+   * 🔍 PHASE 1 INSTRUMENTATION: Get current invoice ID for navigation analysis
+   * @returns {string|null} Current invoice ID
+   */
+  getCurrentInvoiceId() {
+    try {
+      if (window.app && window.app.state && window.app.state.getCurrentInvoiceId) {
+        return window.app.state.getCurrentInvoiceId();
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Error getting current invoice ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 🔍 PHASE 1 INSTRUMENTATION: Check if navigation is within same invoice
+   * @param {string} targetTab - Target tab name
+   * @param {string} currentInvoiceId - Current invoice ID
+   * @returns {boolean} True if navigation is within same invoice
+   */
+  isSameInvoiceNavigation(targetTab, currentInvoiceId) {
+    try {
+      // Tab navigation within the same invoice is always same-invoice navigation
+      // Tab names are like 'details', 'services', 'preview' - they don't change invoice
+      const intraInvoiceTabs = ['details', 'services', 'preview', 'notes'];
+      return intraInvoiceTabs.includes(targetTab);
+    } catch (error) {
+      console.error('❌ Error checking same invoice navigation:', error);
+      return false;
     }
   }
 
