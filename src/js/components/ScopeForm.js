@@ -2,6 +2,7 @@ import { CONSTANTS } from '../utils/constants.js';
 import { validateNumber } from '../state/validators.js';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/formatters.js';
 import { MarkupValidator } from '../utils/markupValidator.js';
+import { safeString, isEmpty } from '../utils/safeString.js';
 
 // Debounce utility to prevent excessive function calls
 function debounce(func, wait) {
@@ -77,7 +78,7 @@ export class ScopeForm {
 
     // Service Type is always required
     console.log('🔍 jobType value:', `"${lineItem.jobType}"`, 'Type:', typeof lineItem.jobType, 'Length:', lineItem.jobType ? lineItem.jobType.length : 'N/A');
-    if (!lineItem.jobType || lineItem.jobType.trim() === '') {
+    if (isEmpty(lineItem.jobType)) {
       console.log('❌ No jobType found - adding error');
       errors.push('Service Type is required');
     } else {
@@ -695,7 +696,7 @@ export class ScopeForm {
           // Update the item header with the description
           const itemDescriptionSpan = card.querySelector('.item-description');
           if (itemDescriptionSpan) {
-            if (e.target.value.trim()) {
+            if (!isEmpty(e.target.value)) {
               itemDescriptionSpan.textContent = `: ${e.target.value}`;
             } else {
               itemDescriptionSpan.textContent = '';
@@ -813,7 +814,7 @@ export class ScopeForm {
 
           // Real-time validation feedback (but don't update state yet)
           const validation = MarkupValidator.validateCustomMarkup(value);
-          if (!validation.isValid && value.trim() !== '') {
+          if (!validation.isValid && !isEmpty(value)) {
             this.showMarkupError(id, validation.errors[0]);
           } else {
             this.clearMarkupError(id);
@@ -828,7 +829,7 @@ export class ScopeForm {
           const value = e.target.value;
           console.log(`📈 Custom markup blur for item ${id}:`, value);
 
-          if (value.trim() === '') {
+          if (isEmpty(value)) {
             // Empty value, set to 0
             e.target.value = '0.00';
             this.state.updateLineItem(id, { markupRate: '0' });
@@ -1046,8 +1047,12 @@ export class ScopeForm {
   }
 
   populate(scopeData) {
-    this.markupRate.value = scopeData.markupRate || '2.5';
-    this.taxableSelect.value = scopeData.isTaxable ? 'yes' : 'no';
+    // 🔧 PHASE 2 FIX: Normalize scope data to prevent type errors during session restore
+    const normalizedMarkupRate = safeString(scopeData.markupRate, '2.5');
+    const normalizedIsTaxable = Boolean(scopeData.isTaxable);
+
+    this.markupRate.value = normalizedMarkupRate;
+    this.taxableSelect.value = normalizedIsTaxable ? 'yes' : 'no';
 
     this.clearLineItems();
     scopeData.lineItems.forEach(item => {
@@ -1056,32 +1061,42 @@ export class ScopeForm {
       setTimeout(() => {
         const row = document.querySelector(`[data-row="${item.id}"]`);
         if (row) {
+          // 🔧 PHASE 2 FIX: Normalize line item data to prevent type errors
+          const normalizedItem = {
+            jobType: safeString(item.jobType),
+            itemType: safeString(item.itemType),
+            manualCost: safeString(item.manualCost),
+            laborHours: safeString(item.laborHours),
+            otHours: safeString(item.otHours),
+            description: safeString(item.description)
+          };
+
           // Set values first, then trigger change events to ensure proper field visibility
-          row.querySelector('.job-type-select').value = item.jobType || '';
-          row.querySelector('.item-type-select').value = item.itemType || '';
+          row.querySelector('.job-type-select').value = normalizedItem.jobType;
+          row.querySelector('.item-type-select').value = normalizedItem.itemType;
 
           // Now trigger change events to set up field visibility - but only if we have values
-          if (item.jobType) {
+          if (normalizedItem.jobType) {
             row.querySelector('.job-type-select').dispatchEvent(new Event('change'));
           }
-          if (item.itemType) {
+          if (normalizedItem.itemType) {
             row.querySelector('.item-type-select').dispatchEvent(new Event('change'));
           }
 
           const costInput = row.querySelector('.manual-cost-input');
-          if (item.manualCost) {
-            costInput.value = formatCurrencyInput(item.manualCost);
+          if (normalizedItem.manualCost) {
+            costInput.value = formatCurrencyInput(normalizedItem.manualCost);
           } else {
             costInput.value = '';
           }
-          row.querySelector('.labor-hours-input').value = item.laborHours || '';
-          row.querySelector('.ot-hours-input').value = item.otHours || '';
-          row.querySelector('.description-input').value = item.description || '';
+          row.querySelector('.labor-hours-input').value = normalizedItem.laborHours;
+          row.querySelector('.ot-hours-input').value = normalizedItem.otHours;
+          row.querySelector('.description-input').value = normalizedItem.description;
 
           // Update the item header with the description
           const itemDescriptionSpan = row.querySelector('.item-description');
-          if (itemDescriptionSpan && item.description) {
-            itemDescriptionSpan.textContent = `: ${item.description}`;
+          if (itemDescriptionSpan && normalizedItem.description) {
+            itemDescriptionSpan.textContent = `: ${normalizedItem.description}`;
           }
         }
       }, 0);

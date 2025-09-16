@@ -9,6 +9,8 @@
  * - Session persistence for browser refresh scenarios
  */
 
+import { safeString, normalizeSessionData } from './safeString.js';
+
 export class UnsavedChangesManager {
   constructor(invoiceState, invoiceStorage) {
     this.invoiceState = invoiceState;
@@ -82,9 +84,10 @@ export class UnsavedChangesManager {
    */
   detectChanges(currentState) {
     try {
-      // Skip if no saved state yet (initial load)
+      // 🔧 PHASE 3 FIX: Establish baseline if none exists yet
       if (!this.lastSavedState) {
-        console.log('🔍 No saved state yet, skipping change detection');
+        console.log('🔧 PHASE 3 FIX: No baseline yet, establishing from current state');
+        this.establishBaseline(currentState);
         return;
       }
 
@@ -269,6 +272,78 @@ export class UnsavedChangesManager {
   }
 
   /**
+   * 🔧 PHASE 3 FIX: Establish baseline from current state without triggering unsaved changes
+   * @param {Object} currentState - State to use as baseline
+   */
+  establishBaseline(currentState) {
+    console.log('🔧 PHASE 3 BASELINE: Establishing baseline from current state');
+    this.lastSavedState = this.normalizeStateForComparison(currentState);
+    this.hasUnsavedChanges = false;
+    this.currentChangeHash = this.calculateStateHash(currentState);
+
+    console.log(`  - Baseline hash: ${this.currentChangeHash}`);
+    console.log(`  - Vessel name: "${currentState.vessel?.name || ''}"`);
+    console.log(`  - Customer name: "${currentState.customer?.customerName || ''}"`);
+    console.log(`  - Line items count: ${currentState.scope?.lineItems?.length || 0}`);
+
+    // Clear session persistence since we have a fresh baseline
+    this.clearUnsavedState();
+
+    // Notify listeners of clean state
+    this.notifyListeners();
+  }
+
+  /**
+   * Normalize state for consistent comparison (handles type safety)
+   * @param {Object} state - Raw state data
+   * @returns {Object} Normalized state data
+   */
+  normalizeStateForComparison(state) {
+    try {
+      // 🔧 PHASE 2 FIX: Use safe string utilities to prevent .trim() errors
+      return {
+        vessel: {
+          name: safeString(state.vessel?.name),
+          weight: safeString(state.vessel?.weight),
+          beam: safeString(state.vessel?.beam)
+        },
+        customer: {
+          customerName: safeString(state.customer?.customerName),
+          customerEmail: safeString(state.customer?.customerEmail),
+          customerPhone: safeString(state.customer?.customerPhone)
+        },
+        scope: {
+          markupRate: safeString(state.scope?.markupRate, '2.5'),
+          isTaxable: Boolean(state.scope?.isTaxable),
+          lineItems: (state.scope?.lineItems || []).map(item => ({
+            id: item.id,
+            jobType: safeString(item.jobType),
+            itemType: safeString(item.itemType),
+            manualCost: safeString(item.manualCost),
+            laborHours: safeString(item.laborHours),
+            otHours: safeString(item.otHours),
+            description: safeString(item.description),
+            taxStatus: safeString(item.taxStatus, 'taxable'),
+            markupType: safeString(item.markupType, 'preset'),
+            markupRate: safeString(item.markupRate, '2.5')
+          }))
+        },
+        notes: {
+          comments: (state.notes?.comments || []).map(comment => ({
+            id: comment.id,
+            text: safeString(comment.text),
+            author: safeString(comment.author),
+            timestamp: comment.timestamp
+          }))
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error normalizing state:', error);
+      return JSON.parse(JSON.stringify(state)); // Fallback to deep clone
+    }
+  }
+
+  /**
    * Mark current state as saved
    */
   markAsSaved() {
@@ -277,7 +352,7 @@ export class UnsavedChangesManager {
     console.log(`🔍 TRACE: markAsSaved called from: ${stackTrace}`);
 
     const currentState = this.invoiceState.getState();
-    this.lastSavedState = JSON.parse(JSON.stringify(currentState));
+    this.lastSavedState = this.normalizeStateForComparison(currentState);
     this.hasUnsavedChanges = false;
     this.currentChangeHash = this.calculateStateHash(currentState);
 

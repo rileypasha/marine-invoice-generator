@@ -1,5 +1,6 @@
 import { validateNumber } from '../state/validators.js';
 import { CONSTANTS } from '../utils/constants.js';
+import { safeString, normalizeSessionData } from '../utils/safeString.js';
 
 export class VesselForm {
   constructor(state) {
@@ -85,9 +86,11 @@ export class VesselForm {
     this.vesselWeight.addEventListener('input', (e) => {
       const value = e.target.value;
       this.state.updateVessel({ weight: value });
-      
+
       // Show/hide suffix based on whether there's a value
-      if (value && value.trim() !== '') {
+      // 🔧 PHASE 2 FIX: Type-safe string coercion before .trim()
+      const safeValue = String(value || '');
+      if (safeValue.trim() !== '') {
         this.weightWrapper.classList.add('has-value');
       } else {
         this.weightWrapper.classList.remove('has-value');
@@ -142,9 +145,11 @@ export class VesselForm {
     this.vesselBeam.addEventListener('input', (e) => {
       const value = e.target.value;
       this.state.updateVessel({ beam: value });
-      
+
       // Show/hide suffix based on whether there's a value
-      if (value && value.trim() !== '') {
+      // 🔧 PHASE 2 FIX: Type-safe string coercion before .trim()
+      const safeValue = String(value || '');
+      if (safeValue.trim() !== '') {
         this.beamWrapper.classList.add('has-value');
       } else {
         this.beamWrapper.classList.remove('has-value');
@@ -154,23 +159,30 @@ export class VesselForm {
   
   populate(vesselData) {
     console.log('🔄 VesselForm: Populating data...', vesselData);
-    
+
     if (!this.vesselName || !this.vesselWeight || !this.vesselBeam) {
       console.error('❌ VesselForm: Cannot populate, some elements are missing');
       return;
     }
-    
-    this.vesselName.value = vesselData.name || '';
-    this.vesselWeight.value = vesselData.weight || '';
-    this.vesselBeam.value = vesselData.beam || '';
-    
+
+    // 🔧 PHASE 2 FIX: Normalize vessel data to prevent type errors during session restore
+    const normalizedData = {
+      name: safeString(vesselData.name),
+      weight: safeString(vesselData.weight),
+      beam: safeString(vesselData.beam)
+    };
+
+    this.vesselName.value = normalizedData.name;
+    this.vesselWeight.value = normalizedData.weight;
+    this.vesselBeam.value = normalizedData.beam;
+
     // Update suffix visibility for populated values
-    if (vesselData.weight && vesselData.weight.trim() !== '') {
+    if (normalizedData.weight !== '') {
       if (this.weightWrapper) {
         this.weightWrapper.classList.add('has-value');
       }
       // Also manage clearance fee when populating from saved data
-      this.manageClearanceFee(vesselData.weight);
+      this.manageClearanceFee(normalizedData.weight);
     } else {
       if (this.weightWrapper) {
         this.weightWrapper.classList.remove('has-value');
@@ -178,8 +190,8 @@ export class VesselForm {
       // Remove clearance fee if no weight
       this.manageClearanceFee('');
     }
-    
-    if (vesselData.beam && vesselData.beam.trim() !== '') {
+
+    if (normalizedData.beam !== '') {
       if (this.beamWrapper) {
         this.beamWrapper.classList.add('has-value');
       }

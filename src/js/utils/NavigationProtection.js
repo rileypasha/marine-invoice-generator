@@ -570,9 +570,10 @@ export class NavigationProtection {
    */
   isSameInvoiceNavigation(targetTab, currentInvoiceId) {
     try {
+      // 🔧 PHASE 4 FIX: Update tab names to match actual HTML structure
       // Tab navigation within the same invoice is always same-invoice navigation
-      // Tab names are like 'details', 'services', 'preview' - they don't change invoice
-      const intraInvoiceTabs = ['details', 'services', 'preview', 'notes'];
+      // Tab names are like 'vessel', 'customer', 'scope', 'notes' - they don't change invoice
+      const intraInvoiceTabs = ['vessel', 'customer', 'scope', 'notes', 'details', 'services', 'preview'];
       return intraInvoiceTabs.includes(targetTab);
     } catch (error) {
       console.error('❌ Error checking same invoice navigation:', error);

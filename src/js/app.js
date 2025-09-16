@@ -963,19 +963,27 @@ InvoiceApp.prototype.restoreEditSession = async function() {
           this.scopeForm.populate(invoice.data.scope);
         }
 
-        // 🔧 PHASE 2 FIX: Set the saved state to prevent false "unsaved changes" warnings
+        // 🔧 PHASE 3 FIX: Set the saved state to prevent false "unsaved changes" warnings
+        // Increased delay to ensure all components are fully populated
         setTimeout(() => {
           const finalState = this.state.getState();
+
+          console.log('🔧 PHASE 3 BASELINE: Setting baseline after invoice restore');
+          console.log(`  - Invoice ID: ${restoredInvoiceId}`);
+          console.log(`  - Vessel name: "${finalState.vessel?.name || ''}"`);
+          console.log(`  - Customer name: "${finalState.customer?.customerName || ''}"`);
+          console.log(`  - Line items count: ${finalState.scope?.lineItems?.length || 0}`);
+
           this.invoiceStorage.setSavedState(finalState);
 
           // CRITICAL: Mark as saved in UnsavedChangesManager AFTER invoice data is loaded
           if (this.unsavedChangesManager) {
             this.unsavedChangesManager.markAsSaved();
-            console.log('🔧 PHASE 2 FIX: markAsSaved called AFTER invoice load completion');
+            console.log('🔧 PHASE 3 FIX: markAsSaved called AFTER invoice load completion');
           }
 
           console.log('✅ Edit session restored successfully');
-        }, 100);
+        }, 300); // Increased from 100ms to 300ms for better timing
       } else {
         console.warn('⚠️ Could not load invoice for restored session, clearing edit state');
         this.state.clearEditMode();
@@ -987,13 +995,14 @@ InvoiceApp.prototype.restoreEditSession = async function() {
   } else {
     console.log('ℹ️ No previous edit session found, starting in create mode');
 
-    // 🔧 PHASE 2 FIX: For new invoices, set baseline after a short delay to ensure components are ready
+    // 🔧 PHASE 3 FIX: For new invoices, set baseline after a short delay to ensure components are ready
     setTimeout(() => {
       if (this.unsavedChangesManager) {
+        console.log('🔧 PHASE 3 BASELINE: Setting baseline for new invoice');
         this.unsavedChangesManager.markAsSaved();
-        console.log('🔧 PHASE 2 FIX: markAsSaved called for new invoice baseline');
+        console.log('🔧 PHASE 3 FIX: markAsSaved called for new invoice baseline');
       }
-    }, 100);
+    }, 300); // Increased from 100ms to 300ms for consistency
   }
 };
 

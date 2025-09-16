@@ -1,5 +1,6 @@
 import { validateEmail, validatePhone } from '../state/validators.js';
 import { formatPhoneNumber } from '../utils/formatters.js';
+import { safeString } from '../utils/safeString.js';
 
 export class CustomerForm {
   constructor(state) {
@@ -66,15 +67,23 @@ export class CustomerForm {
   
   populate(customerData) {
     console.log('🔄 CustomerForm: Populating data...', customerData);
-    
+
     if (!this.customerName || !this.customerEmail || !this.customerPhone || !this.customerAddress) {
       console.error('❌ CustomerForm: Cannot populate, some elements are missing');
       return;
     }
-    
-    this.customerName.value = customerData.customerName || '';
-    this.customerEmail.value = customerData.customerEmail || '';
-    this.customerPhone.value = customerData.customerPhone || '';
-    this.customerAddress.value = customerData.customerAddress || '';
+
+    // 🔧 PHASE 2 FIX: Normalize customer data to prevent type errors during session restore
+    const normalizedData = {
+      customerName: safeString(customerData.customerName),
+      customerEmail: safeString(customerData.customerEmail),
+      customerPhone: safeString(customerData.customerPhone),
+      customerAddress: safeString(customerData.customerAddress)
+    };
+
+    this.customerName.value = normalizedData.customerName;
+    this.customerEmail.value = normalizedData.customerEmail;
+    this.customerPhone.value = normalizedData.customerPhone;
+    this.customerAddress.value = normalizedData.customerAddress;
   }
 }
