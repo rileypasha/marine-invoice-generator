@@ -398,10 +398,7 @@
 
     <!-- IMMEDIATE FIX FOR UNSAVED CHANGES ISSUE -->
     <script>
-        console.log('🔥 SIMPLE FIX: Completely disable change detection during invoice load');
-
-        // Global flag to control change detection
-        window.DISABLE_CHANGE_DETECTION = false;
+        console.log('🎯 CORRECT FIX: Establish baseline AFTER invoice loads, not before');
 
         // Wait for app to be available
         function waitForApp() {
@@ -421,15 +418,12 @@
             setTimeout(async () => {
                 await waitForApp();
 
-                // SIMPLE FIX: Override sidebar loadInvoice to disable change detection
+                // CORRECT FIX: Override sidebar loadInvoice to establish baseline AFTER load
                 if (window.app.sidebar && window.app.sidebar.loadInvoice) {
                     const originalLoadInvoice = window.app.sidebar.loadInvoice;
 
                     window.app.sidebar.loadInvoice = async function(id) {
-                        console.log('🔥 SIMPLE FIX: Disabling ALL change detection during load');
-
-                        // DISABLE all change detection
-                        window.DISABLE_CHANGE_DETECTION = true;
+                        console.log('🎯 CORRECT FIX: Loading invoice - will establish baseline AFTER load');
 
                         // Force save button to normal immediately
                         const saveBtn = document.getElementById('save-invoice');
@@ -443,12 +437,27 @@
                             // Load the invoice normally
                             await originalLoadInvoice.call(this, id);
 
-                            // Wait for everything to settle, then re-enable change detection
+                            // CRITICAL: Establish NEW baseline from the LOADED invoice data
                             setTimeout(() => {
-                                console.log('🔥 SIMPLE FIX: Re-enabling change detection AFTER load complete');
-                                window.DISABLE_CHANGE_DETECTION = false;
+                                console.log('🎯 CORRECT FIX: Invoice loaded - now establishing baseline from loaded data');
 
-                                // Force final clean state
+                                if (window.app.unsavedChangesManager) {
+                                    // Get the current state AFTER loading
+                                    const loadedState = window.app.state.getState();
+
+                                    // Set this as the clean baseline
+                                    console.log('🎯 CORRECT FIX: Setting loaded state as NEW baseline');
+                                    window.app.unsavedChangesManager.lastSavedState = window.app.unsavedChangesManager.normalizeStateForComparison(loadedState);
+                                    window.app.unsavedChangesManager.hasUnsavedChanges = false;
+
+                                    // Force UI to clean state
+                                    window.app.unsavedChangesManager.notifyListeners({
+                                        hasUnsavedChanges: false,
+                                        changeData: null
+                                    });
+                                }
+
+                                // Force save button to clean state
                                 const saveBtn = document.getElementById('save-invoice');
                                 if (saveBtn) {
                                     saveBtn.classList.remove('has-unsaved-changes');
@@ -456,33 +465,16 @@
                                     saveBtn.style.color = '';
                                 }
 
-                                console.log('✅ SIMPLE FIX: Invoice loaded, change detection now enabled for user edits');
-                            }, 3000); // Extended wait to ensure everything is done
+                                console.log('✅ CORRECT FIX: Baseline established from loaded data - ready for user edits');
+                            }, 2000); // Wait for UI to fully settle
 
                         } catch (error) {
                             console.error('Error loading invoice:', error);
-                            window.DISABLE_CHANGE_DETECTION = false;
                         }
                     };
                 }
 
-                // SIMPLE FIX: Override UnsavedChangesManager to respect the global flag
-                if (window.app.unsavedChangesManager) {
-                    const manager = window.app.unsavedChangesManager;
-                    const originalHandleStateChange = manager.handleStateChange;
-
-                    manager.handleStateChange = function(state) {
-                        if (window.DISABLE_CHANGE_DETECTION) {
-                            console.log('🔥 SIMPLE FIX: Change detection DISABLED - ignoring state change');
-                            return;
-                        }
-
-                        console.log('🔥 SIMPLE FIX: Change detection ENABLED - processing state change');
-                        return originalHandleStateChange.call(this, state);
-                    };
-                }
-
-                console.log('🎉 SIMPLE FIX: Applied - No change detection during load, enabled after load');
+                console.log('🎉 CORRECT FIX: Applied - Baseline will be set from loaded invoice data');
 
             }, 1000);
         });
