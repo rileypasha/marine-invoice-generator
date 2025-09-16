@@ -423,7 +423,22 @@
                     const originalLoadInvoice = window.app.sidebar.loadInvoice;
 
                     window.app.sidebar.loadInvoice = async function(id) {
-                        console.log('🎯 CORRECT FIX: Loading invoice - will establish baseline AFTER load');
+                        console.log('🎯 IMMEDIATE FIX: Start invoice load with instant baseline protection');
+
+                        // CRITICAL: Disable change detection IMMEDIATELY
+                        let changeDetectionDisabled = true;
+
+                        // Override the change detection temporarily
+                        const manager = window.app.unsavedChangesManager;
+                        const originalHandleStateChange = manager.handleStateChange;
+
+                        manager.handleStateChange = function(state) {
+                            if (changeDetectionDisabled) {
+                                console.log('🛡️ IMMEDIATE FIX: Blocking change detection during load');
+                                return; // Block all change detection
+                            }
+                            return originalHandleStateChange.call(this, state);
+                        };
 
                         // Force save button to normal immediately
                         const saveBtn = document.getElementById('save-invoice');
@@ -434,24 +449,23 @@
                         }
 
                         try {
-                            // Load the invoice normally
+                            // Load the invoice normally (change detection is blocked)
+                            console.log('🎯 IMMEDIATE FIX: Loading invoice with change detection disabled');
                             await originalLoadInvoice.call(this, id);
 
                         } catch (error) {
                             console.error('Error loading invoice:', error);
                         }
 
-                        // CRITICAL: ALWAYS establish baseline regardless of errors
-                        // Wait for DOM to settle then force baseline from current state
+                        // Wait a short time for DOM to settle, then establish baseline and re-enable detection
                         setTimeout(() => {
-                            console.log('🎯 CORRECT FIX: Establishing baseline from current state (after load attempt)');
+                            console.log('🎯 IMMEDIATE FIX: Establishing baseline and re-enabling change detection');
 
                             if (window.app.unsavedChangesManager && window.app.state) {
-                                // Get whatever state we have now (loaded or partial)
+                                // Get the current loaded state
                                 const currentState = window.app.state.getState();
 
-                                // Set this as the clean baseline - whatever loaded is "saved"
-                                console.log('🎯 CORRECT FIX: Setting current state as NEW baseline');
+                                // Set this as the clean baseline
                                 console.log('🎯 BASELINE DATA:', {
                                     vessel: currentState.vessel?.name || 'empty',
                                     customer: currentState.customer?.customerName || 'empty',
@@ -460,20 +474,11 @@
 
                                 window.app.unsavedChangesManager.lastSavedState = window.app.unsavedChangesManager.normalizeStateForComparison(currentState);
                                 window.app.unsavedChangesManager.hasUnsavedChanges = false;
-
-                                // Force UI to clean state
-                                if (window.app.unsavedChangesManager.notifyListeners) {
-                                    window.app.unsavedChangesManager.notifyListeners({
-                                        hasUnsavedChanges: false,
-                                        changeData: null
-                                    });
-                                }
-
-                                // Also try the publishChanges method if available
-                                if (window.app.unsavedChangesManager.publishChanges) {
-                                    window.app.unsavedChangesManager.publishChanges();
-                                }
                             }
+
+                            // Re-enable change detection
+                            changeDetectionDisabled = false;
+                            manager.handleStateChange = originalHandleStateChange;
 
                             // Force save button to clean state
                             const saveBtn = document.getElementById('save-invoice');
@@ -483,8 +488,8 @@
                                 saveBtn.style.color = '';
                             }
 
-                            console.log('✅ CORRECT FIX: Baseline established from loaded data - ready for user edits');
-                        }, 3000); // Extended wait for full DOM settlement
+                            console.log('✅ IMMEDIATE FIX: Baseline set, change detection re-enabled, ready for user edits');
+                        }, 500); // Much shorter wait - just for DOM stability
                     };
                 }
 
