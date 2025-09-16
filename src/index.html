@@ -398,75 +398,57 @@
 
     <!-- IMMEDIATE FIX FOR UNSAVED CHANGES ISSUE -->
     <script>
-        console.log('🛡️ BULLETPROOF FIX: Starting comprehensive dirty state elimination...');
+        console.log('🔥 SIMPLE FIX: Completely disable change detection during invoice load');
 
-        let isInvoiceLoading = false;
-        let forceCleanStateInterval = null;
+        // Global flag to control change detection
+        window.DISABLE_CHANGE_DETECTION = false;
 
-        // Ultimate fix: Force the save button to stay normal during invoice loading
-        function forceSaveButtonNormal() {
-            const saveBtn = document.getElementById('save-invoice');
-            if (saveBtn && isInvoiceLoading) {
-                saveBtn.classList.remove('has-unsaved-changes');
-                saveBtn.style.backgroundColor = '';
-                saveBtn.style.color = '';
-                if (saveBtn.textContent.includes('Update')) {
-                    saveBtn.style.backgroundColor = '#007bff';
-                    saveBtn.style.color = 'white';
-                }
-            }
-        }
-
-        // Wait for app with timeout safety
-        function waitForApp(maxWaitMs = 10000) {
+        // Wait for app to be available
+        function waitForApp() {
             return new Promise((resolve) => {
-                const startTime = Date.now();
-                function checkApp() {
+                function check() {
                     if (window.app) {
-                        console.log('✅ BULLETPROOF FIX: App found, applying patches...');
-                        resolve(true);
-                    } else if (Date.now() - startTime > maxWaitMs) {
-                        console.log('⚠️ BULLETPROOF FIX: App timeout, applying basic fixes...');
-                        resolve(false);
+                        resolve();
                     } else {
-                        setTimeout(checkApp, 100);
+                        setTimeout(check, 100);
                     }
                 }
-                checkApp();
+                check();
             });
         }
 
-        // Apply fixes when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(async () => {
-                const appFound = await waitForApp();
+                await waitForApp();
 
-                // CRITICAL FIX 1: Override sidebar invoice loading completely
-                if (appFound && window.app.sidebar && window.app.sidebar.loadInvoice) {
-                    console.log('🔧 BULLETPROOF FIX: Patching sidebar loadInvoice');
-
-                    const originalLoad = window.app.sidebar.loadInvoice;
+                // SIMPLE FIX: Override sidebar loadInvoice to disable change detection
+                if (window.app.sidebar && window.app.sidebar.loadInvoice) {
+                    const originalLoadInvoice = window.app.sidebar.loadInvoice;
 
                     window.app.sidebar.loadInvoice = async function(id) {
-                        console.log('🔧 BULLETPROOF FIX: Invoice loading started - blocking dirty state');
+                        console.log('🔥 SIMPLE FIX: Disabling ALL change detection during load');
 
-                        isInvoiceLoading = true;
+                        // DISABLE all change detection
+                        window.DISABLE_CHANGE_DETECTION = true;
 
-                        // Force save button to normal immediately and continuously
-                        forceCleanStateInterval = setInterval(forceSaveButtonNormal, 50);
+                        // Force save button to normal immediately
+                        const saveBtn = document.getElementById('save-invoice');
+                        if (saveBtn) {
+                            saveBtn.classList.remove('has-unsaved-changes');
+                            saveBtn.style.backgroundColor = '';
+                            saveBtn.style.color = '';
+                        }
 
                         try {
-                            // Load the invoice
-                            await originalLoad.call(this, id);
+                            // Load the invoice normally
+                            await originalLoadInvoice.call(this, id);
 
-                            // Extended delay to ensure everything settles
+                            // Wait for everything to settle, then re-enable change detection
                             setTimeout(() => {
-                                console.log('🔧 BULLETPROOF FIX: Finalizing clean state');
+                                console.log('🔥 SIMPLE FIX: Re-enabling change detection AFTER load complete');
+                                window.DISABLE_CHANGE_DETECTION = false;
 
-                                isInvoiceLoading = false;
-                                clearInterval(forceCleanStateInterval);
-
-                                // Final force of clean state
+                                // Force final clean state
                                 const saveBtn = document.getElementById('save-invoice');
                                 if (saveBtn) {
                                     saveBtn.classList.remove('has-unsaved-changes');
@@ -474,49 +456,33 @@
                                     saveBtn.style.color = '';
                                 }
 
-                                // Force manager clean if available
-                                if (window.app.unsavedChangesManager) {
-                                    window.app.unsavedChangesManager.hasUnsavedChanges = false;
-                                    if (window.app.unsavedChangesManager.publishChanges) {
-                                        window.app.unsavedChangesManager.publishChanges();
-                                    }
-                                }
-
-                                console.log('✅ BULLETPROOF FIX: Invoice loaded with guaranteed clean state');
-                            }, 2000);
+                                console.log('✅ SIMPLE FIX: Invoice loaded, change detection now enabled for user edits');
+                            }, 3000); // Extended wait to ensure everything is done
 
                         } catch (error) {
-                            console.error('❌ BULLETPROOF FIX: Error loading invoice:', error);
-                            isInvoiceLoading = false;
-                            clearInterval(forceCleanStateInterval);
+                            console.error('Error loading invoice:', error);
+                            window.DISABLE_CHANGE_DETECTION = false;
                         }
                     };
                 }
 
-                // CRITICAL FIX 2: Block all change events during loading
-                ['change', 'input', 'keyup'].forEach(eventType => {
-                    document.addEventListener(eventType, function(e) {
-                        if (isInvoiceLoading) {
-                            console.log(`🔧 BULLETPROOF FIX: Blocked ${eventType} event during loading`);
-                            e.stopImmediatePropagation();
-                            e.preventDefault();
-                            return false;
+                // SIMPLE FIX: Override UnsavedChangesManager to respect the global flag
+                if (window.app.unsavedChangesManager) {
+                    const manager = window.app.unsavedChangesManager;
+                    const originalHandleStateChange = manager.handleStateChange;
+
+                    manager.handleStateChange = function(state) {
+                        if (window.DISABLE_CHANGE_DETECTION) {
+                            console.log('🔥 SIMPLE FIX: Change detection DISABLED - ignoring state change');
+                            return;
                         }
-                    }, true);
-                });
 
-                // CRITICAL FIX 3: Monitor and correct save button continuously
-                setInterval(() => {
-                    const saveBtn = document.getElementById('save-invoice');
-                    if (saveBtn && isInvoiceLoading && saveBtn.classList.contains('has-unsaved-changes')) {
-                        console.log('🔧 BULLETPROOF FIX: Correcting false dirty state');
-                        saveBtn.classList.remove('has-unsaved-changes');
-                        saveBtn.style.backgroundColor = '';
-                        saveBtn.style.color = '';
-                    }
-                }, 100);
+                        console.log('🔥 SIMPLE FIX: Change detection ENABLED - processing state change');
+                        return originalHandleStateChange.call(this, state);
+                    };
+                }
 
-                console.log('🎉 BULLETPROOF FIX: All critical fixes applied!');
+                console.log('🎉 SIMPLE FIX: Applied - No change detection during load, enabled after load');
 
             }, 1000);
         });
