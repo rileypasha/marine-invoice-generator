@@ -28,22 +28,63 @@ export class InvoiceState {
     this.lineItemIdCounter = 0;
     this.currentInvoiceId = null; // Track invoice ID for edit mode
     this.isEditMode = false; // Track whether we're editing existing invoice
+
+    // Batched notification system to prevent UI freezes
+    this.notificationQueue = new Set();
+    this.isNotificationScheduled = false;
   }
   
   subscribe(listener) {
+    if (typeof listener !== 'function') {
+      console.warn('⚠️ Invalid listener: must be a function');
+      return () => {};
+    }
+
     this.listeners.push(listener);
+    console.log(`📈 Subscribed listener. Total listeners: ${this.listeners.length}`);
+
     return () => {
       this.listeners = this.listeners.filter(l => l !== listener);
+      console.log(`📉 Unsubscribed listener. Total listeners: ${this.listeners.length}`);
     };
   }
   
   notify() {
-    console.log('🔔 Notifying listeners of state change. Current state:', this.state);
+    // Add this notification to the queue
+    this.notificationQueue.add(this.state);
+
+    // Schedule batch processing if not already scheduled
+    if (!this.isNotificationScheduled) {
+      this.isNotificationScheduled = true;
+
+      // Use requestAnimationFrame for optimal DOM update timing
+      requestAnimationFrame(() => {
+        this.flushNotifications();
+      });
+    }
+  }
+
+  flushNotifications() {
+    if (this.notificationQueue.size === 0) {
+      this.isNotificationScheduled = false;
+      return;
+    }
+
+    console.log(`🔔 Batched notification: ${this.notificationQueue.size} state changes queued`);
     console.log(`📊 Listeners count: ${this.listeners.length}`);
+
+    // Get the latest state from the queue (most recent)
+    const latestState = Array.from(this.notificationQueue).pop();
+
+    // Notify all listeners with the latest state
     this.listeners.forEach((listener, index) => {
-      console.log(`  - Calling listener ${index}`);
-      listener(this.state);
+      console.log(`  - Calling listener ${index} with batched update`);
+      listener(latestState);
     });
+
+    // Clear the queue and reset scheduling flag
+    this.notificationQueue.clear();
+    this.isNotificationScheduled = false;
   }
   
   updateVessel(updates) {
@@ -510,5 +551,30 @@ export class InvoiceState {
     this.lineItemIdCounter = 0;
     this.clearEditMode(); // Clear edit mode when resetting
     this.notify();
+  }
+
+  /**
+   * Clean up all listeners and pending notifications to prevent memory leaks
+   * Call this when the InvoiceState instance is no longer needed
+   */
+  cleanup() {
+    console.log('🧹 Cleaning up InvoiceState: removing all listeners and clearing queue');
+
+    // Clear all listeners
+    const listenerCount = this.listeners.length;
+    this.listeners = [];
+    console.log(`📉 Removed ${listenerCount} listeners`);
+
+    // Clear notification queue
+    const queueSize = this.notificationQueue.size;
+    this.notificationQueue.clear();
+    this.isNotificationScheduled = false;
+    console.log(`🗑️ Cleared ${queueSize} queued notifications`);
+
+    // Clear session storage
+    sessionStorage.removeItem('marine_invoice_edit_id');
+    sessionStorage.removeItem('marine_invoice_edit_timestamp');
+
+    console.log('✅ InvoiceState cleanup complete');
   }
 }

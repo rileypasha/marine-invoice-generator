@@ -3,12 +3,38 @@ import { validateNumber } from '../state/validators.js';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/formatters.js';
 import { MarkupValidator } from '../utils/markupValidator.js';
 
+// Debounce utility to prevent excessive function calls
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
 export class ScopeForm {
   constructor(state) {
     this.state = state;
     this.initElements();
     this.attachListeners();
-    
+
+    // Performance optimization: debounced functions to prevent excessive updates
+    this.debouncedStateUpdate = debounce((id, updates) => {
+      this.state.updateLineItem(id, updates);
+    }, 300); // 300ms delay to batch rapid keystrokes
+
+    this.debouncedValidation = debounce(() => {
+      this.updateValidationState();
+    }, 250); // Slightly faster validation for better UX
+
+    // Track active typing to prevent auto-save conflicts
+    this.isActivelyTyping = false;
+    this.typingTimeout = null;
+
     // Subscribe to state changes to automatically update line items
     this.isUpdatingFromState = false; // Prevent infinite loops
     this.state.subscribe(() => {
@@ -19,7 +45,23 @@ export class ScopeForm {
       }
     });
   }
-  
+
+  // Helper method to track active typing and prevent auto-save conflicts
+  markActiveTyping() {
+    this.isActivelyTyping = true;
+    clearTimeout(this.typingTimeout);
+
+    // Clear typing flag after 2 seconds of inactivity
+    this.typingTimeout = setTimeout(() => {
+      this.isActivelyTyping = false;
+    }, 2000);
+  }
+
+  // Expose typing status for auto-save collision prevention
+  getIsActivelyTyping() {
+    return this.isActivelyTyping;
+  }
+
   // Validation functions
   validateLineItem(lineItem) {
     console.log('🔍 Validating line item:', lineItem);
@@ -359,14 +401,20 @@ export class ScopeForm {
     
     laborHoursInput.addEventListener('input', (e) => {
       const value = e.target.value;
+
+      // Mark active typing to prevent auto-save conflicts
+      this.markActiveTyping();
+
       if (value === '' || validateNumber(value, 0)) {
-        this.state.updateLineItem(id, { laborHours: value });
-        
+        // Use debounced state update to prevent excessive calls
+        this.debouncedStateUpdate(id, { laborHours: value });
+
         // Auto-calculate labor cost: $80/hour regular + $120/hour OT
-        // Use setTimeout to ensure state is updated first
-        setTimeout(() => this.calculateLaborCost(id), 0);
+        // Debounce this calculation as well to prevent excessive calls
+        debounce(() => this.calculateLaborCost(id), 400)();
       }
-      // Add "hrs" suffix functionality
+
+      // Add "hrs" suffix functionality (immediate for UX)
       const wrapper = e.target.closest('.input-with-suffix') || e.target.parentElement;
       if (e.target.value && !wrapper.classList.contains('has-value')) {
         wrapper.classList.add('input-with-suffix');
@@ -375,19 +423,27 @@ export class ScopeForm {
       } else if (!e.target.value) {
         wrapper.classList.remove('has-value');
       }
-      this.updateValidationState();
+
+      // Use debounced validation to prevent excessive DOM manipulation
+      this.debouncedValidation();
     });
     
     otHoursInput.addEventListener('input', (e) => {
       const value = e.target.value;
+
+      // Mark active typing to prevent auto-save conflicts
+      this.markActiveTyping();
+
       if (value === '' || validateNumber(value, 0)) {
-        this.state.updateLineItem(id, { otHours: value });
-        
+        // Use debounced state update to prevent excessive calls
+        this.debouncedStateUpdate(id, { otHours: value });
+
         // Auto-calculate labor cost: $80/hour regular + $120/hour OT
-        // Use setTimeout to ensure state is updated first
-        setTimeout(() => this.calculateLaborCost(id), 0);
+        // Debounce this calculation as well to prevent excessive calls
+        debounce(() => this.calculateLaborCost(id), 400)();
       }
-      // Add "hrs" suffix functionality
+
+      // Add "hrs" suffix functionality (immediate for UX)
       const wrapper = e.target.closest('.input-with-suffix') || e.target.parentElement;
       if (e.target.value && !wrapper.classList.contains('has-value')) {
         wrapper.classList.add('input-with-suffix');
@@ -396,7 +452,9 @@ export class ScopeForm {
       } else if (!e.target.value) {
         wrapper.classList.remove('has-value');
       }
-      this.updateValidationState();
+
+      // Use debounced validation to prevent excessive DOM manipulation
+      this.debouncedValidation();
     });
     
     descriptionInput.addEventListener('input', (e) => {

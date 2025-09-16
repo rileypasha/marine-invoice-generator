@@ -1071,10 +1071,16 @@ export class InvoiceStorage {
   performAutoSave() {
     // Prevent concurrent auto-save operations
     if (this.isPerformingAutoSave) return;
-    
+
     const currentUser = this.userManager.getCurrentUser();
     if (!currentUser || !currentUser.preferences?.autoSave) return;
-    
+
+    // CRITICAL FIX: Prevent auto-save during active typing to avoid UI freezes
+    if (this.isActivelyTyping()) {
+      console.log('⏰ Auto-save skipped: User is actively typing');
+      return;
+    }
+
     this.isPerformingAutoSave = true;
     
     // Get current invoice state from app
@@ -1391,6 +1397,24 @@ export class InvoiceStorage {
     console.log('🔓 Auth failure cleared - enabling server saves');
     // Try to process any queued saves
     this.retryFailedSaves();
+  }
+
+  // CRITICAL FIX: Check if user is actively typing to prevent auto-save conflicts
+  isActivelyTyping() {
+    // Check if any input/textarea has focus (DOM-based detection)
+    const activeElement = document.activeElement;
+    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+      return true;
+    }
+
+    // Check ScopeForm typing status if available (component-based detection)
+    if (window.app && window.app.scopeForm && typeof window.app.scopeForm.getIsActivelyTyping === 'function') {
+      return window.app.scopeForm.getIsActivelyTyping();
+    }
+
+    // Additional safety check: look for focused inputs in invoice forms
+    const focusedInputs = document.querySelectorAll('input:focus, textarea:focus, [contenteditable="true"]:focus');
+    return focusedInputs.length > 0;
   }
   
   /**
