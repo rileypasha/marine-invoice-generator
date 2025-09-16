@@ -19,13 +19,6 @@ function debounce(func, wait) {
 export class ScopeForm {
   constructor(state) {
     this.state = state;
-
-    // ✅ FIX: Prevent duplicate handler attachments with flag
-    this.listenersAttached = false;
-
-    // ✅ FIX: Single-flight operation protection
-    this.isAddingLineItem = false;
-
     this.initElements();
     this.attachListeners();
 
@@ -226,84 +219,26 @@ export class ScopeForm {
   attachListeners() {
     console.log('🔗 ScopeForm: Attaching event listeners...');
 
-    // ✅ FIX: Prevent duplicate listener attachment
-    if (this.listenersAttached) {
-      console.log('⚠️ Listeners already attached, skipping to prevent duplicates');
-      return;
-    }
-
     // Skip markup rate and taxable select - these elements don't exist in current HTML
     // The markup and tax logic is now handled per line item in the line item template
 
     if (this.addLineItemBtn) {
-      // ✅ FIX: Remove any existing listeners first (defensive programming)
-      const clonedButton = this.addLineItemBtn.cloneNode(true);
-      this.addLineItemBtn.parentNode.replaceChild(clonedButton, this.addLineItemBtn);
-      this.addLineItemBtn = clonedButton;
-
-      this.addLineItemBtn.addEventListener('click', async (event) => {
-        // ✅ FIX: Prevent duplicate clicks and event bubbling
-        event.preventDefault();
-        event.stopPropagation();
-
-        // ✅ FIX: Single-flight operation protection
-        if (this.isAddingLineItem) {
-          console.log('⚠️ Add operation already in progress, ignoring click');
+      this.addLineItemBtn.addEventListener('click', () => {
+        // Check if existing line items are complete
+        const incompleteItems = this.validateAllLineItems();
+        console.log('Incomplete items found:', incompleteItems);
+        if (incompleteItems.length > 0) {
+          alert(`Please complete Item ${incompleteItems[0].index} before adding a new line item.`);
           return;
         }
 
-        this.isAddingLineItem = true;
-
-        try {
-          // ✅ FIX: Temporarily disable button to prevent rapid-fire clicks
-          this.addLineItemBtn.disabled = true;
-          this.addLineItemBtn.textContent = 'Adding...';
-
-          // Check if existing line items are complete
-          const incompleteItems = this.validateAllLineItems();
-          console.log('Incomplete items found:', incompleteItems);
-          if (incompleteItems.length > 0) {
-            alert(`Please complete Item ${incompleteItems[0].index} before adding a new line item.`);
-            return;
-          }
-
-          // Track line items before adding
-          const beforeCount = this.state.scope.lineItems.length;
-          console.log(`🔍 Adding line item - current count: ${beforeCount}`);
-
-          // Just add to state - the subscription will handle rendering automatically
-          const newItemId = this.state.addLineItem();
-          console.log(`✅ Line item added with ID: ${newItemId}`);
-
-          // Verify the addition was successful
-          const afterCount = this.state.scope.lineItems.length;
-          console.log(`🔍 After adding - count: ${afterCount} (expected: ${beforeCount + 1})`);
-
-          if (afterCount !== beforeCount + 1) {
-            console.error(`❌ Unexpected line item count change: ${beforeCount} → ${afterCount}`);
-          }
-
-          // updateValidationState will be called by the state subscription
-
-        } catch (error) {
-          console.error('❌ Error adding line item:', error);
-        } finally {
-          // ✅ FIX: Re-enable button with delay to prevent accidental rapid clicks
-          setTimeout(() => {
-            this.addLineItemBtn.disabled = false;
-            this.addLineItemBtn.textContent = 'Add Line Item';
-            this.isAddingLineItem = false;
-          }, 300); // 300ms delay to prevent accidental rapid clicks
-        }
+        // Just add to state - the subscription will handle rendering automatically
+        this.state.addLineItem();
+        // updateValidationState will be called by the state subscription
       });
-
-      console.log('✅ Add line item button listener attached with duplicate protection');
     } else {
       console.warn('⚠️ Add line item button not found');
     }
-
-    // ✅ FIX: Mark listeners as attached
-    this.listenersAttached = true;
   }
 
   /**

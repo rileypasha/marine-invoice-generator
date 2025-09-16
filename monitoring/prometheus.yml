@@ -1,0 +1,112 @@
+# Prometheus Configuration for Marine Invoice Generator
+# Comprehensive monitoring of application, infrastructure, and business metrics
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'marine-invoice-monitor'
+    environment: '${ENVIRONMENT:-development}'
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Application metrics
+  - job_name: 'marine-invoice-app'
+    static_configs:
+      - targets: ['app:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    params:
+      format: ['prometheus']
+
+  # Node.js application metrics
+  - job_name: 'node-app-metrics'
+    static_configs:
+      - targets: ['app:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # System metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+
+  # Database metrics
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+
+  # Redis metrics
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+
+  # Container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+
+  # Business logic metrics
+  - job_name: 'invoice-business-metrics'
+    static_configs:
+      - targets: ['app:3000']
+    metrics_path: '/metrics/business'
+    scrape_interval: 60s
+    params:
+      type: ['business']
+
+  # Health check monitoring
+  - job_name: 'health-checks'
+    static_configs:
+      - targets: ['app:3000']
+    metrics_path: '/health'
+    scrape_interval: 30s
+
+  # Performance metrics
+  - job_name: 'performance-metrics'
+    static_configs:
+      - targets: ['app:3000']
+    metrics_path: '/metrics/performance'
+    scrape_interval: 30s
+
+# Recording rules for common queries
+recording_rules:
+  - name: marine_invoice_rules
+    rules:
+    # Invoice creation rate
+    - record: marine_invoice:creation_rate_5m
+      expr: rate(invoice_created_total[5m])
+
+    # Invoice edit failure rate
+    - record: marine_invoice:edit_failure_rate_5m
+      expr: rate(invoice_edit_failures_total[5m]) / rate(invoice_edit_attempts_total[5m])
+
+    # Response time percentiles
+    - record: marine_invoice:response_time_p95
+      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+
+    - record: marine_invoice:response_time_p99
+      expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))
+
+    # Database connection usage
+    - record: marine_invoice:db_connections_utilization
+      expr: pg_stat_activity_count / pg_settings_max_connections
+
+    # Error rate by endpoint
+    - record: marine_invoice:error_rate_by_endpoint
+      expr: rate(http_requests_total{status=~"5.."}[5m]) by (endpoint)
+
+# Alerting rules would be defined in alert_rules.yml

@@ -29,9 +29,6 @@ export class InvoiceState {
     this.currentInvoiceId = null; // Track invoice ID for edit mode
     this.isEditMode = false; // Track whether we're editing existing invoice
 
-    // ✅ FIX: Prevent concurrent addLineItem operations
-    this.isAddingLineItem = false;
-
     // Batched notification system to prevent UI freezes
     this.notificationQueue = new Set();
     this.isNotificationScheduled = false;
@@ -146,81 +143,39 @@ export class InvoiceState {
   }
 
   addLineItem(lineItem = {}) {
-    // ✅ FIX: Prevent concurrent addLineItem operations
-    if (this.isAddingLineItem) {
-      console.warn('⚠️ addLineItem operation already in progress, ignoring duplicate call');
-      return null;
+    const defaultTaxConfig = TaxCalculator.getDefaultTaxConfig(lineItem.jobType);
+    const defaultMarkupConfig = this.getDefaultMarkupConfig(lineItem.jobType);
+
+    // ✅ FIX: Enhanced ID generation to prevent conflicts
+    const newItemId = this.lineItemIdCounter++;
+
+    const newItem = {
+      id: newItemId,
+      jobType: '',
+      itemType: '',
+      manualCost: '',
+      laborHours: '',
+      otHours: '',
+      description: '',
+      ...defaultTaxConfig,
+      ...defaultMarkupConfig,
+      ...lineItem
+    };
+
+    // Calculate initial tax amount using per-line markup
+    newItem.taxAmount = TaxCalculator.calculateLineTax(newItem, newItem.markupRate);
+
+    // ✅ FIX: Validate state integrity before adding
+    if (!Array.isArray(this.state.scope.lineItems)) {
+      console.warn('⚠️ LineItems array corrupted, reinitializing');
+      this.state.scope.lineItems = [];
     }
 
-    this.isAddingLineItem = true;
+    this.state.scope.lineItems.push(newItem);
 
-    try {
-      console.log('🔍 Starting addLineItem operation...');
-
-      const defaultTaxConfig = TaxCalculator.getDefaultTaxConfig(lineItem.jobType);
-      const defaultMarkupConfig = this.getDefaultMarkupConfig(lineItem.jobType);
-
-      // ✅ FIX: Enhanced atomic ID generation to prevent conflicts
-      const currentTimestamp = Date.now();
-      let newItemId = this.lineItemIdCounter++;
-
-      // ✅ FIX: Add uniqueness validation
-      const existingIds = this.state.scope.lineItems ? this.state.scope.lineItems.map(item => item.id) : [];
-      if (existingIds.includes(newItemId)) {
-        console.error(`❌ ID collision detected: ${newItemId} already exists`);
-        // Recovery: find the next safe ID
-        while (existingIds.includes(this.lineItemIdCounter)) {
-          this.lineItemIdCounter++;
-        }
-        newItemId = this.lineItemIdCounter++;
-        console.log(`🔧 Using safe ID: ${newItemId}`);
-      }
-
-      const newItem = {
-        id: newItemId,
-        jobType: '',
-        itemType: '',
-        manualCost: '',
-        laborHours: '',
-        otHours: '',
-        description: '',
-        createdAt: currentTimestamp, // Add timestamp for debugging
-        ...defaultTaxConfig,
-        ...defaultMarkupConfig,
-        ...lineItem
-      };
-
-      // Calculate initial tax amount using per-line markup
-      newItem.taxAmount = TaxCalculator.calculateLineTax(newItem, newItem.markupRate);
-
-      // ✅ FIX: Validate state integrity before adding
-      if (!Array.isArray(this.state.scope.lineItems)) {
-        console.warn('⚠️ LineItems array corrupted, reinitializing');
-        this.state.scope.lineItems = [];
-      }
-
-      // ✅ FIX: Atomic state update with validation
-      const beforeCount = this.state.scope.lineItems.length;
-      this.state.scope.lineItems.push(newItem);
-      const afterCount = this.state.scope.lineItems.length;
-
-      // Verify the addition was successful
-      if (afterCount !== beforeCount + 1) {
-        console.error(`❌ State corruption detected: expected ${beforeCount + 1}, got ${afterCount}`);
-        throw new Error('Line item addition failed: state corruption');
-      }
-
-      console.log(`✅ Added line item with ID: ${newItemId} (${beforeCount} → ${afterCount})`, newItem);
-      this.notify();
-      return newItemId;
-
-    } catch (error) {
-      console.error('❌ Error in addLineItem:', error);
-      throw error;
-    } finally {
-      // ✅ FIX: Always release the lock
-      this.isAddingLineItem = false;
-    }
+    console.log(`✅ Added line item with ID: ${newItemId}`, newItem);
+    this.notify();
+    return newItemId;
   }
 
   /**

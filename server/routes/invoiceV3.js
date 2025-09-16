@@ -12,6 +12,7 @@ const { validateAndTransformInvoice } = require('../utils/validateInvoice');
 const { invoiceCalculator } = require('../services/invoiceCalculator');
 const { AppError, ErrorCode } = require('../middleware/errorHandler');
 const { requireAuth } = require('../middleware/auth');
+const { idempotencyMiddleware } = require('../middleware/idempotency');
 
 // Custom auth middleware that allows test user through
 const requireAuthOrTestUser = (req, res, next) => {
@@ -43,12 +44,18 @@ const logger = pino({
 
 const invoiceRepository = new InvoiceRepository();
 
+// Apply idempotency middleware to modification endpoints
+const idempotency = idempotencyMiddleware({
+  keyHeader: 'idempotency-key',
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+});
+
 /**
  * POST /api/v3/invoices/smart-save
  * Smart save endpoint - intelligently creates new or updates existing invoice
  * This is the main endpoint that solves the UX problem
  */
-router.post('/smart-save', requireAuthOrTestUser, async (req, res, next) => {
+router.post('/smart-save', requireAuthOrTestUser, idempotency, async (req, res, next) => {
   const requestId = req.headers['x-request-id'] ||
                    `smart_save_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const startTime = Date.now();
@@ -284,7 +291,7 @@ router.get('/:id', requireAuthOrTestUser, async (req, res, next) => {
  * POST /api/v3/invoices
  * Create new invoice (explicit create endpoint)
  */
-router.post('/', requireAuthOrTestUser, async (req, res, next) => {
+router.post('/', requireAuthOrTestUser, idempotency, async (req, res, next) => {
   const requestId = req.headers['x-request-id'] ||
                    `create_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -352,9 +359,9 @@ router.post('/', requireAuthOrTestUser, async (req, res, next) => {
 
 /**
  * PUT /api/v3/invoices/:id
- * Update existing invoice (explicit update endpoint)
+ * Full update of existing invoice (replaces entire resource)
  */
-router.put('/:id', requireAuthOrTestUser, async (req, res, next) => {
+router.put('/:id', requireAuthOrTestUser, idempotency, async (req, res, next) => {
   const requestId = req.headers['x-request-id'] ||
                    `update_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -407,9 +414,88 @@ router.put('/:id', requireAuthOrTestUser, async (req, res, next) => {
 
     const savedInvoice = await invoiceRepository.update(updatedInvoice.persistChanges());
 
-    res.json({
+    res.status(200).json({
       success: true,
       invoice: savedInvoice.toJSON(),
+      action: 'UPDATED',
+      requestId
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PATCH /api/v3/invoices/:id
+ * Partial update of existing invoice (updates only provided fields)
+ */
+router.patch('/:id', requireAuthOrTestUser, idempotency, async (req, res, next) => {
+  const requestId = req.headers['x-request-id'] ||
+                   `patch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  try {
+    // Load existing invoice
+    const existing = await invoiceRepository.findById(req.params.id, req.user.id);
+
+    if (!existing) {
+      throw new AppError(
+        ErrorCode.RESOURCE_NOT_FOUND,
+        'Invoice not found or access denied',
+        404
+      );
+    }
+
+    // For PATCH, we only update fields that are explicitly provided
+    const patches = {};
+
+    if (req.body.title !== undefined) patches.title = req.body.title;
+    if (req.body.data !== undefined) {
+      // Merge data instead of replacing it
+      patches.data = { ...existing.data, ...req.body.data };
+    }
+    if (req.body.metadata !== undefined) {
+      patches.metadata = { ...existing.metadata, ...req.body.metadata };
+    }
+
+    // Recalculate totals if line items changed
+    let totals = null;
+    if (req.body.data?.scope?.lineItems || req.body.data?.scope?.markupRate !== undefined ||
+        req.body.data?.scope?.isTaxable !== undefined || req.body.data?.laborRate !== undefined ||
+        req.body.data?.otRate !== undefined) {
+
+      const mergedData = patches.data || existing.data;
+      totals = invoiceCalculator.calculateTotals(
+        mergedData.scope?.lineItems || [],
+        mergedData.scope?.markupRate || 0,
+        mergedData.scope?.isTaxable || false,
+        mergedData.laborRate || 85,
+        mergedData.otRate || 127.5
+      );
+
+      patches.subtotal = totals.subtotalNumber;
+      patches.taxAmount = totals.taxAmountNumber;
+      patches.total = totals.totalNumber;
+      patches.grossProfit = totals.grossProfitNumber;
+      patches.profitPercent = totals.profitPercentNumber;
+    }
+
+    // Apply the partial update
+    const updatedInvoice = existing.update(patches);
+    const savedInvoice = await invoiceRepository.update(updatedInvoice.persistChanges());
+
+    logger.info({
+      event: 'INVOICE_PATCHED',
+      requestId,
+      invoiceId: req.params.id,
+      patchFields: Object.keys(patches)
+    });
+
+    res.status(200).json({
+      success: true,
+      invoice: savedInvoice.toJSON(),
+      action: 'PATCHED',
+      patchedFields: Object.keys(patches),
       requestId
     });
 
@@ -426,7 +512,7 @@ router.delete('/:id', requireAuthOrTestUser, async (req, res, next) => {
   try {
     const success = await invoiceRepository.delete(req.params.id, req.user.id);
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'Invoice deleted successfully'
     });

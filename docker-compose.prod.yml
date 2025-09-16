@@ -1,0 +1,380 @@
+# Marine Invoice Generator - Production Deployment
+# Optimized production configuration with security, monitoring, and scalability
+
+version: '3.8'
+
+services:
+  # ============================================================================
+  # Application Services
+  # ============================================================================
+  app:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-marine-invoice-generator}:${VERSION:-latest}
+    container_name: marine-invoice-app-prod
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - LOG_LEVEL=info
+      - PORT=3000
+      - ENABLE_METRICS=true
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - app_data:/app/data
+      - app_logs:/app/logs
+      - app_reports:/app/reports
+    networks:
+      - marine-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================================================
+  # Load Balancer
+  # ============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: marine-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - marine-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================================================
+  # Database Services (Production)
+  # ============================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: marine-postgres-prod
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-marine_invoice}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./scripts/init-prod-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - marine-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  postgres-backup:
+    image: postgres:15-alpine
+    container_name: marine-postgres-backup
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-marine_invoice}
+      - BACKUP_SCHEDULE=0 2 * * *  # Daily at 2 AM
+    volumes:
+      - postgres_backups:/backups
+      - ./scripts/backup-database.sh:/usr/local/bin/backup-database.sh:ro
+    depends_on:
+      - postgres
+    networks:
+      - marine-network
+    command: >
+      sh -c "
+        apk add --no-cache dcron &&
+        echo '${BACKUP_SCHEDULE} /usr/local/bin/backup-database.sh' | crontab - &&
+        crond -f
+      "
+
+  redis:
+    image: redis:7-alpine
+    container_name: marine-redis-prod
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis_prod_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - marine-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "redis-cli", "auth", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================================================
+  # Monitoring & Observability (Production)
+  # ============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: marine-prometheus-prod
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=90d'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./monitoring/prometheus-prod.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus_prod_data:/prometheus
+    networks:
+      - marine-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: marine-grafana-prod
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_ALLOW_EMBEDDING=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-polystat-panel
+    volumes:
+      - grafana_prod_data:/var/lib/grafana
+      - ./monitoring/grafana/prod-dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/prod-datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - marine-network
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: marine-alertmanager-prod
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://alertmanager:9093'
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - marine-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: marine-node-exporter-prod
+    restart: unless-stopped
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - marine-network
+
+  # ============================================================================
+  # Log Management (Production)
+  # ============================================================================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: marine-elasticsearch-prod
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+    volumes:
+      - elasticsearch_prod_data:/usr/share/elasticsearch/data
+    networks:
+      - marine-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: marine-kibana-prod
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
+    depends_on:
+      - elasticsearch
+    networks:
+      - marine-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.0
+    container_name: marine-filebeat-prod
+    restart: unless-stopped
+    user: root
+    volumes:
+      - ./monitoring/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - app_logs:/var/log/app:ro
+      - nginx_logs:/var/log/nginx:ro
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
+    depends_on:
+      - elasticsearch
+    networks:
+      - marine-network
+
+  # ============================================================================
+  # Security & Monitoring
+  # ============================================================================
+  watchtower:
+    image: containrrr/watchtower
+    container_name: marine-watchtower
+    restart: unless-stopped
+    environment:
+      - WATCHTOWER_SCHEDULE=0 0 4 * * *  # Daily at 4 AM
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_STOPPED=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - marine-network
+
+# ============================================================================
+# Networks & Volumes
+# ============================================================================
+networks:
+  marine-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: marine-br0
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+volumes:
+  postgres_prod_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH:-/opt/marine-invoice}/postgres
+  postgres_backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${BACKUP_PATH:-/opt/marine-invoice}/backups
+  redis_prod_data:
+    driver: local
+  prometheus_prod_data:
+    driver: local
+  grafana_prod_data:
+    driver: local
+  alertmanager_data:
+    driver: local
+  elasticsearch_prod_data:
+    driver: local
+  app_data:
+    driver: local
+  app_logs:
+    driver: local
+  app_reports:
+    driver: local
+  nginx_logs:
+    driver: local

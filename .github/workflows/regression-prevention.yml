@@ -1,0 +1,294 @@
+name: Invoice Save Regression Prevention
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/js/app.js'
+      - 'src/js/state/InvoiceState.js'
+      - 'src/js/storage/InvoiceStorage.js'
+      - 'server/**'
+      - 'test/e2e/invoice-save-regression.spec.js'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/js/app.js'
+      - 'src/js/state/InvoiceState.js'
+      - 'src/js/storage/InvoiceStorage.js'
+      - 'server/**'
+      - 'test/e2e/invoice-save-regression.spec.js'
+  schedule:
+    # Run nightly to catch any environmental regressions
+    - cron: '0 2 * * *'
+
+env:
+  NODE_ENV: test
+  DATABASE_URL: postgresql://test_user:test_password@localhost:5432/marine_invoice_test
+
+jobs:
+  critical-regression-tests:
+    name: Critical Invoice Save Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: marine_invoice_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup database
+      run: |
+        npm run prisma:generate
+        npm run db:migrate
+
+    - name: Build application
+      run: |
+        npm run build
+        npm run build:css
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps chromium firefox
+
+    - name: Start application server
+      run: |
+        npm run server:dev &
+        sleep 10
+        curl -f http://localhost:3000/health || exit 1
+
+    - name: Run critical regression tests
+      run: npm run test:e2e:regression
+      env:
+        CI: true
+
+    - name: Run unit tests for save logic
+      run: npm run test:unit
+      env:
+        CI: true
+
+    - name: Archive test results
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: regression-test-results
+        path: |
+          test-results/
+          playwright-report/
+        retention-days: 30
+
+    - name: Archive traces on failure
+      if: failure()
+      run: |
+        npx playwright test test/e2e/invoice-save-regression.spec.js --trace on-first-retry --reporter=html
+      continue-on-error: true
+
+    - name: Upload trace artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: regression-test-traces
+        path: test-results/
+        retention-days: 30
+
+  performance-validation:
+    name: Save Performance Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: marine_invoice_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup database
+      run: |
+        npm run prisma:generate
+        npm run db:migrate
+
+    - name: Build application
+      run: |
+        npm run build
+        npm run build:css
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps chromium
+
+    - name: Start application server
+      run: |
+        npm run server:dev &
+        sleep 10
+
+    - name: Run performance tests
+      run: npm run test:performance
+      env:
+        CI: true
+
+    - name: Archive performance results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-test-results
+        path: |
+          test-results/
+          playwright-report/
+        retention-days: 7
+
+  integration-api-tests:
+    name: API Contract Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: marine_invoice_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup database
+      run: |
+        npm run prisma:generate
+        npm run db:migrate
+
+    - name: Start application server
+      run: |
+        npm run server:dev &
+        sleep 10
+
+    - name: Run integration tests
+      run: npm run test:integration
+      env:
+        CI: true
+
+    - name: Archive integration test results
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-results
+        path: test-results/
+        retention-days: 7
+
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [critical-regression-tests, performance-validation, integration-api-tests]
+    timeout-minutes: 10
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run quality checks
+      run: npm run quality:check
+
+    - name: Create quality report
+      if: always()
+      run: |
+        echo "# Quality Gate Report" > quality-report.md
+        echo "## Test Results" >> quality-report.md
+        echo "- ✅ Critical Regression Tests: ${{ needs.critical-regression-tests.result }}" >> quality-report.md
+        echo "- ✅ Performance Validation: ${{ needs.performance-validation.result }}" >> quality-report.md
+        echo "- ✅ API Contract Tests: ${{ needs.integration-api-tests.result }}" >> quality-report.md
+        echo "## Quality Checks" >> quality-report.md
+        echo "- Linting: $(npm run ci:lint > /dev/null 2>&1 && echo "✅ Passed" || echo "❌ Failed")" >> quality-report.md
+        echo "- Security: $(npm run ci:security > /dev/null 2>&1 && echo "✅ Passed" || echo "❌ Failed")" >> quality-report.md
+        echo "- Coverage: $(npm run ci:coverage > /dev/null 2>&1 && echo "✅ Passed" || echo "❌ Failed")" >> quality-report.md
+        cat quality-report.md
+
+    - name: Upload quality report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: quality-report
+        path: quality-report.md
+        retention-days: 30
+
+  notification:
+    name: Notification
+    runs-on: ubuntu-latest
+    needs: [critical-regression-tests, performance-validation, integration-api-tests, quality-gate]
+    if: failure()
+
+    steps:
+    - name: Notify on failure
+      run: |
+        echo "🚨 Invoice Save Regression Tests Failed!"
+        echo "Critical regression prevention tests have failed."
+        echo "This indicates a potential issue with invoice save/update functionality."
+        echo "Please review the test results and fix any issues before merging."
+        exit 1

@@ -1,0 +1,258 @@
+# Marine Invoice Generator - Development Environment
+# Complete development stack with database, monitoring, and observability
+
+version: '3.8'
+
+services:
+  # ============================================================================
+  # Application Services
+  # ============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: marine-invoice-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://marine:invoice123@postgres:5432/marine_invoice_dev
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=debug
+      - SESSION_SECRET=dev-secret-change-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    networks:
+      - marine-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "/app/healthcheck.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ============================================================================
+  # Database Services
+  # ============================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: marine-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=marine_invoice_dev
+      - POSTGRES_USER=marine
+      - POSTGRES_PASSWORD=invoice123
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - marine-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marine -d marine_invoice_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: marine-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass redis123
+    volumes:
+      - redis_data:/data
+    networks:
+      - marine-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ============================================================================
+  # Monitoring & Observability
+  # ============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: marine-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - marine-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: marine-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - marine-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: marine-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - marine-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # Log Management
+  # ============================================================================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: marine-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - marine-network
+    restart: unless-stopped
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: marine-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - marine-network
+    restart: unless-stopped
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: marine-logstash
+    volumes:
+      - ./monitoring/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logs:/usr/share/logstash/logs:ro
+    ports:
+      - "5000:5000"
+    environment:
+      - "LS_JAVA_OPTS=-Xmx256m -Xms256m"
+    depends_on:
+      - elasticsearch
+    networks:
+      - marine-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # Testing Services
+  # ============================================================================
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: marine-postgres-test
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=marine_invoice_test
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    networks:
+      - marine-network
+    restart: unless-stopped
+    profiles:
+      - testing
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d marine_invoice_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  playwright:
+    build:
+      context: .
+      dockerfile: Dockerfile.playwright
+    container_name: marine-playwright
+    volumes:
+      - ./test:/app/test:ro
+      - ./test-results:/app/test-results
+      - ./playwright-report:/app/playwright-report
+    environment:
+      - APP_URL=http://app:3000
+      - CI=true
+    depends_on:
+      - app
+      - postgres-test
+    networks:
+      - marine-network
+    profiles:
+      - testing
+    command: npx playwright test
+
+# ============================================================================
+# Networks & Volumes
+# ============================================================================
+networks:
+  marine-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_data:
+    driver: local
+  postgres_test_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  elasticsearch_data:
+    driver: local

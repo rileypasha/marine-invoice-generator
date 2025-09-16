@@ -58,16 +58,23 @@ class InvoiceRepository {
   }
 
   /**
-   * Update an existing invoice
+   * Update an existing invoice with optimistic locking
    * @param {Invoice} invoice - Invoice aggregate with changes
+   * @param {string} expectedVersion - Expected version for optimistic locking
    * @returns {Promise<Invoice>} Updated invoice
    */
-  async update(invoice) {
+  async update(invoice, expectedVersion = null) {
     try {
       const data = this._mapToDatabase(invoice);
 
+      // Optimistic locking: check version if provided
+      const where = { id: invoice.id };
+      if (expectedVersion !== null) {
+        where.version = expectedVersion;
+      }
+
       const dbRecord = await this.prisma.invoice.update({
-        where: { id: invoice.id },
+        where,
         data,
         include: {
           user: {
@@ -83,6 +90,9 @@ class InvoiceRepository {
       return Invoice.fromDatabase(dbRecord);
     } catch (error) {
       if (error.code === 'P2025') {
+        if (expectedVersion !== null) {
+          throw new Error(`Conflict: Invoice was modified by another user. Expected version ${expectedVersion}`);
+        }
         throw new Error(`Invoice not found: ${invoice.id}`);
       }
       throw new Error(`Failed to update invoice: ${error.message}`);
