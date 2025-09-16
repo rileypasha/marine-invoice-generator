@@ -60,10 +60,9 @@ router.post('/login', async (req, res) => {
             sessionId: req.sessionID
           });
         });
-      } catch (dbError) {
-        console.error('Database error:', dbError);
-        return res.status(500).json({ success: false, error: 'Authentication service unavailable' });
-      }
+    } catch (dbError) {
+      console.error('Database error:', dbError);
+      return res.status(500).json({ success: false, error: 'Authentication service unavailable' });
     }
   } catch (error) {
     console.error('Login error:', error);
