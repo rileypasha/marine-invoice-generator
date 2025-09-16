@@ -1,0 +1,366 @@
+# Invoice Edit Workflow Quality Assurance
+#
+# Automated testing pipeline to ensure invoice editing functionality
+# never creates duplicates and maintains data integrity.
+
+name: Invoice Edit Quality Gates
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/js/storage/**'
+      - 'src/js/components/Sidebar.js'
+      - 'src/js/app.js'
+      - 'server/routes/**'
+      - 'tests/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/js/storage/**'
+      - 'src/js/components/Sidebar.js'
+      - 'src/js/app.js'
+      - 'server/routes/**'
+      - 'tests/**'
+
+jobs:
+  unit-tests:
+    name: Unit Tests - Storage Layer
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run Invoice Storage Unit Tests
+      run: |
+        npm test -- --testPathPattern=invoice-storage-edit.test.js --verbose
+
+    - name: Upload Unit Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: unit-test-results
+        path: coverage/
+
+  integration-tests:
+    name: Integration Tests - Edit Workflow
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: marine_invoice_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup test database
+      run: |
+        npx prisma migrate deploy
+        npx prisma db seed
+      env:
+        DATABASE_URL: postgresql://test:test@localhost:5432/marine_invoice_test
+
+    - name: Build application
+      run: npm run build
+
+    - name: Start test server
+      run: |
+        npm run server:dev &
+        npx wait-on http://localhost:3000
+      env:
+        DATABASE_URL: postgresql://test:test@localhost:5432/marine_invoice_test
+        NODE_ENV: test
+
+    - name: Install Playwright
+      run: npx playwright install --with-deps chromium
+
+    - name: Run Edit Workflow Integration Tests
+      run: |
+        npx playwright test tests/integration/invoice-edit-workflow.test.js --reporter=html
+      env:
+        APP_URL: http://localhost:3000
+
+    - name: Upload Integration Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: integration-test-results
+        path: |
+          playwright-report/
+          test-results/
+
+  quality-gates:
+    name: Critical Quality Gates
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: marine_invoice_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup test database
+      run: |
+        npx prisma migrate deploy
+        npx prisma db seed
+      env:
+        DATABASE_URL: postgresql://test:test@localhost:5432/marine_invoice_test
+
+    - name: Start application
+      run: |
+        npm run build
+        npm run server:dev &
+        npx wait-on http://localhost:3000
+      env:
+        DATABASE_URL: postgresql://test:test@localhost:5432/marine_invoice_test
+        NODE_ENV: test
+
+    - name: Install Playwright
+      run: npx playwright install --with-deps chromium
+
+    - name: Run Critical Quality Gates
+      id: quality_gates
+      run: |
+        node tests/quality-gates/edit-workflow-validation.js
+      env:
+        APP_URL: http://localhost:3000
+        DATABASE_URL: postgresql://test:test@localhost:5432/marine_invoice_test
+
+    - name: Upload Quality Gate Report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: quality-gate-report
+        path: tests/reports/
+
+    - name: Fail if Quality Gates Failed
+      if: failure()
+      run: |
+        echo "❌ Quality gates failed! Invoice edit workflow has critical issues."
+        echo "This prevents deployment until issues are resolved."
+        exit 1
+
+  performance-tests:
+    name: Performance Validation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: marine_invoice_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup test database
+      run: |
+        npx prisma migrate deploy
+        # Create test data for performance testing
+        node scripts/create-test-data.js
+      env:
+        DATABASE_URL: postgresql://test:test@localhost:5432/marine_invoice_test
+
+    - name: Start application
+      run: |
+        npm run build
+        npm run server:prod &
+        npx wait-on http://localhost:3000
+      env:
+        DATABASE_URL: postgresql://test:test@localhost:5432/marine_invoice_test
+        NODE_ENV: production
+
+    - name: Run Performance Tests
+      run: |
+        npm run test:performance -- --config=tests/performance/edit-workflow.config.js
+      env:
+        APP_URL: http://localhost:3000
+
+    - name: Upload Performance Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: performance-results
+        path: tests/performance/reports/
+
+  security-analysis:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run Security Audit
+      run: npm audit --audit-level moderate
+
+    - name: Check for Invoice Access Control Issues
+      run: |
+        node scripts/security-check-invoice-access.js
+
+    - name: SAST Scan
+      uses: github/super-linter@v4
+      env:
+        DEFAULT_BRANCH: main
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VALIDATE_JAVASCRIPT_ES: true
+        VALIDATE_TYPESCRIPT_ES: true
+
+  deployment-ready:
+    name: Deployment Readiness Check
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, quality-gates]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Verify All Quality Gates Passed
+      run: |
+        echo "✅ All quality gates passed!"
+        echo "🚀 Invoice edit workflow is ready for deployment"
+
+    - name: Create Deployment Artifact
+      run: |
+        echo "Creating deployment artifact with quality validation..."
+        mkdir -p deployment
+        echo "$(date): Quality gates passed for commit ${{ github.sha }}" > deployment/quality-approval.txt
+
+    - name: Upload Deployment Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployment-ready
+        path: deployment/
+
+  notify-quality-status:
+    name: Notify Quality Status
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, quality-gates]
+    if: always()
+
+    steps:
+    - name: Notify Slack on Success
+      if: ${{ needs.quality-gates.result == 'success' }}
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        text: |
+          ✅ Invoice edit quality gates PASSED
+          🔗 Commit: ${{ github.sha }}
+          👤 Author: ${{ github.actor }}
+          📝 Message: ${{ github.event.head_commit.message }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Notify Slack on Failure
+      if: ${{ needs.quality-gates.result == 'failure' }}
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        text: |
+          ❌ Invoice edit quality gates FAILED
+          🚨 CRITICAL: Edit workflow has issues that prevent deployment
+          🔗 Commit: ${{ github.sha }}
+          👤 Author: ${{ github.actor }}
+          📝 Details: Check workflow logs for specific failures
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Comment on PR with Quality Results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const qualityPassed = '${{ needs.quality-gates.result }}' === 'success';
+          const body = qualityPassed
+            ? '✅ **Invoice Edit Quality Gates PASSED**\n\nAll critical tests passed. This PR is safe to merge.'
+            : '❌ **Invoice Edit Quality Gates FAILED**\n\n⚠️ Critical issues detected in invoice editing workflow. Please review test results before merging.';
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });
+
+# Environment variables needed for this workflow:
+# SLACK_WEBHOOK_URL - For notifications (optional)
+# DATABASE_URL - Will be set automatically for test database
