@@ -19,6 +19,10 @@ export class InvoiceState {
         isTaxable: false,
         lineItems: []
       },
+      // ✅ FIX: Add compatibility layer for legacy code that expects services.lineItems
+      services: {
+        lineItems: []
+      },
       notes: {
         comments: []
       }
@@ -35,6 +39,48 @@ export class InvoiceState {
     // Batched notification system to prevent UI freezes
     this.notificationQueue = new Set();
     this.isNotificationScheduled = false;
+
+    // ✅ FIX: Initialize state normalization
+    this.normalizeState();
+  }
+
+  /**
+   * ✅ FIX: Normalize state to ensure both services.lineItems and scope.lineItems exist
+   * This provides backward compatibility for any legacy code that expects services.lineItems
+   */
+  normalizeState() {
+    try {
+      // Ensure services object exists
+      if (!this.state.services) {
+        this.state.services = { lineItems: [] };
+      }
+
+      // Ensure services.lineItems is an array
+      if (!Array.isArray(this.state.services.lineItems)) {
+        this.state.services.lineItems = [];
+      }
+
+      // Ensure scope object exists
+      if (!this.state.scope) {
+        this.state.scope = { markupRate: '2.5', isTaxable: false, lineItems: [] };
+      }
+
+      // Ensure scope.lineItems is an array
+      if (!Array.isArray(this.state.scope.lineItems)) {
+        this.state.scope.lineItems = [];
+      }
+
+      // ✅ CRITICAL: Keep services.lineItems synchronized with scope.lineItems
+      // The primary source of truth remains scope.lineItems
+      this.state.services.lineItems = this.state.scope.lineItems;
+
+      console.log('✅ State normalized - services.lineItems synchronized with scope.lineItems');
+    } catch (error) {
+      console.error('❌ State normalization error:', error);
+      // Fallback initialization
+      this.state.services = { lineItems: [] };
+      this.state.scope = { markupRate: '2.5', isTaxable: false, lineItems: [] };
+    }
   }
 
   subscribe(listener) {
@@ -53,6 +99,9 @@ export class InvoiceState {
   }
 
   notify() {
+    // ✅ FIX: Ensure state is normalized before notification
+    this.normalizeState();
+
     // ✅ CRITICAL FIX: Deep clone state to prevent reference corruption
     try {
       const stateSnapshot = JSON.parse(JSON.stringify(this.state));
@@ -211,6 +260,10 @@ export class InvoiceState {
       }
 
       console.log(`✅ Added line item with ID: ${newItemId} (${beforeCount} → ${afterCount})`, newItem);
+
+      // ✅ FIX: Synchronize services.lineItems after adding to scope.lineItems
+      this.normalizeState();
+
       this.notify();
       return newItemId;
 
@@ -309,6 +362,9 @@ export class InvoiceState {
           this.recalculateLineTax(id);
         }
 
+        // ✅ FIX: Synchronize services.lineItems after updating scope.lineItems
+        this.normalizeState();
+
         this.notify();
       } catch (error) {
         console.error('Error updating line item:', error);
@@ -331,6 +387,10 @@ export class InvoiceState {
           ...updates
         };
         this.recalculateLineTax(id);
+
+        // ✅ FIX: Synchronize services.lineItems after error recovery
+        this.normalizeState();
+
         this.notify();
 
         // Re-throw for UI error handling
@@ -349,6 +409,9 @@ export class InvoiceState {
 
     const removedCount = initialLength - this.state.scope.lineItems.length;
     console.log(`🗑️ Removed ${removedCount} line item(s) with ID: ${id}`);
+
+    // ✅ FIX: Synchronize services.lineItems after removing from scope.lineItems
+    this.normalizeState();
 
     this.notify();
   }
@@ -479,6 +542,9 @@ export class InvoiceState {
     // Migrate legacy tax data if needed
     this.migrateLegacyTaxData();
 
+    // ✅ FIX: Normalize state after loading invoice (ensures services.lineItems exists)
+    this.normalizeState();
+
     console.log('✅ Invoice loaded for editing. Current state:', this.state);
     this.notify();
   }
@@ -602,12 +668,20 @@ export class InvoiceState {
         isTaxable: false,
         lineItems: []
       },
+      // ✅ FIX: Include services object in reset
+      services: {
+        lineItems: []
+      },
       notes: {
         comments: []
       }
     };
     this.lineItemIdCounter = 0;
     this.clearEditMode(); // Clear edit mode when resetting
+
+    // ✅ FIX: Normalize state after reset
+    this.normalizeState();
+
     this.notify();
   }
 

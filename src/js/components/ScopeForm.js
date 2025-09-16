@@ -129,7 +129,10 @@ export class ScopeForm {
 
   validateAllLineItems() {
     const incompleteItems = [];
-    const lineItems = this.state.scope ? this.state.scope.lineItems : [];
+
+    // ✅ FIX: Defensive state access for validation
+    const stateObj = this.state.getState ? this.state.getState() : this.state;
+    const lineItems = stateObj.scope?.lineItems || stateObj.services?.lineItems || [];
 
     lineItems.forEach((item, index) => {
       const errors = this.validateLineItem(item);
@@ -153,7 +156,9 @@ export class ScopeForm {
     });
 
     // Apply validation states to incomplete items
-    const lineItems = this.state.scope ? this.state.scope.lineItems : [];
+    // ✅ FIX: Defensive state access for validation state updates
+    const stateObj = this.state.getState ? this.state.getState() : this.state;
+    const lineItems = stateObj.scope?.lineItems || stateObj.services?.lineItems || [];
     lineItems.forEach((item, index) => {
       const errors = this.validateLineItem(item);
       const card = document.querySelector(`[data-row="${item.id}"]`);
@@ -267,16 +272,30 @@ export class ScopeForm {
             return;
           }
 
+          // ✅ FIX: Defensive state access with normalization check
+          const stateObj = this.state.getState ? this.state.getState() : this.state;
+
+          // Ensure state structure exists before accessing
+          if (!stateObj.scope) {
+            console.warn('⚠️ State scope missing, initializing...');
+            stateObj.scope = { lineItems: [] };
+          }
+          if (!Array.isArray(stateObj.scope.lineItems)) {
+            console.warn('⚠️ State scope.lineItems missing, initializing...');
+            stateObj.scope.lineItems = [];
+          }
+
           // Track line items before adding
-          const beforeCount = this.state.scope.lineItems.length;
+          const beforeCount = stateObj.scope.lineItems.length;
           console.log(`🔍 Adding line item - current count: ${beforeCount}`);
 
           // Just add to state - the subscription will handle rendering automatically
           const newItemId = this.state.addLineItem();
           console.log(`✅ Line item added with ID: ${newItemId}`);
 
-          // Verify the addition was successful
-          const afterCount = this.state.scope.lineItems.length;
+          // Verify the addition was successful with defensive access
+          const updatedStateObj = this.state.getState ? this.state.getState() : this.state;
+          const afterCount = updatedStateObj.scope?.lineItems?.length || 0;
           console.log(`🔍 After adding - count: ${afterCount} (expected: ${beforeCount + 1})`);
 
           if (afterCount !== beforeCount + 1) {
@@ -893,8 +912,9 @@ export class ScopeForm {
   updateLineItemsFromState() {
     this.isUpdatingFromState = true; // Prevent recursive calls
 
+    // ✅ FIX: Defensive state access with fallback to services.lineItems
     const currentState = this.state.getState();
-    const stateLineItems = currentState.scope.lineItems || [];
+    const stateLineItems = currentState.scope?.lineItems || currentState.services?.lineItems || [];
 
     // Get currently displayed line items
     const displayedCards = Array.from(document.querySelectorAll('.line-item-card[data-row]'));
