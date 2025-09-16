@@ -80,7 +80,8 @@ export class Preview {
     
     // Add regular line items
     scope.lineItems.forEach(item => {
-      if (!item.jobType || !item.description) return;
+      // Show line items with at least a service type selected (more permissive than before)
+      if (!item.jobType) return;
       
       const row = document.createElement('tr');
       row.className = 'line-item-row';
@@ -123,7 +124,7 @@ export class Preview {
       const finalTotal = totalWithMarkup + lineTax;
       
       row.innerHTML = `
-        <td>${item.description}${laborInfo}</td>
+        <td>${item.description || 'Description needed'}${laborInfo}</td>
         <td>${serviceTypeDisplay}</td>
         <td class="cost-cell">${formatCurrency(cost)}</td>
         <td class="markup-cell">${formatCurrency(markupAmount)}</td>

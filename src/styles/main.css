@@ -56,23 +56,31 @@
   position: relative;
 }
 
-/* Hide scrollbar for tab-content */
+/* Styled scrollbar for tab-content (was previously hidden causing scroll issues) */
 .tab-content::-webkit-scrollbar {
-  width: 0px;
-  background: transparent;
+  width: 8px;
+  background: var(--color-background);
 }
 
 .tab-content::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--color-background);
+  border-radius: 4px;
 }
 
 .tab-content::-webkit-scrollbar-thumb {
-  background: transparent;
+  background: var(--color-border);
+  border-radius: 4px;
+  transition: background 0.2s ease;
 }
 
-/* For Firefox */
+.tab-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* For Firefox - use thin scrollbar instead of none */
 .tab-content {
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) var(--color-background);
 }
 
 .tab-panel {
@@ -146,6 +154,29 @@
 
 #line-items-list {
   margin-top: var(--space-2);
+  /* Ensure smooth scrolling for line items within Services tab */
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar styling for line items list */
+#line-items-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#line-items-list::-webkit-scrollbar-track {
+  background: var(--color-background);
+  border-radius: 3px;
+}
+
+#line-items-list::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+#line-items-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
 }
 
 /* Add Line Item */
