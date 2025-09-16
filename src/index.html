@@ -437,40 +437,54 @@
                             // Load the invoice normally
                             await originalLoadInvoice.call(this, id);
 
-                            // CRITICAL: Establish NEW baseline from the LOADED invoice data
-                            setTimeout(() => {
-                                console.log('🎯 CORRECT FIX: Invoice loaded - now establishing baseline from loaded data');
+                        } catch (error) {
+                            console.error('Error loading invoice:', error);
+                        }
 
-                                if (window.app.unsavedChangesManager) {
-                                    // Get the current state AFTER loading
-                                    const loadedState = window.app.state.getState();
+                        // CRITICAL: ALWAYS establish baseline regardless of errors
+                        // Wait for DOM to settle then force baseline from current state
+                        setTimeout(() => {
+                            console.log('🎯 CORRECT FIX: Establishing baseline from current state (after load attempt)');
 
-                                    // Set this as the clean baseline
-                                    console.log('🎯 CORRECT FIX: Setting loaded state as NEW baseline');
-                                    window.app.unsavedChangesManager.lastSavedState = window.app.unsavedChangesManager.normalizeStateForComparison(loadedState);
-                                    window.app.unsavedChangesManager.hasUnsavedChanges = false;
+                            if (window.app.unsavedChangesManager && window.app.state) {
+                                // Get whatever state we have now (loaded or partial)
+                                const currentState = window.app.state.getState();
 
-                                    // Force UI to clean state
+                                // Set this as the clean baseline - whatever loaded is "saved"
+                                console.log('🎯 CORRECT FIX: Setting current state as NEW baseline');
+                                console.log('🎯 BASELINE DATA:', {
+                                    vessel: currentState.vessel?.name || 'empty',
+                                    customer: currentState.customer?.customerName || 'empty',
+                                    lineItems: currentState.scope?.lineItems?.length || 0
+                                });
+
+                                window.app.unsavedChangesManager.lastSavedState = window.app.unsavedChangesManager.normalizeStateForComparison(currentState);
+                                window.app.unsavedChangesManager.hasUnsavedChanges = false;
+
+                                // Force UI to clean state
+                                if (window.app.unsavedChangesManager.notifyListeners) {
                                     window.app.unsavedChangesManager.notifyListeners({
                                         hasUnsavedChanges: false,
                                         changeData: null
                                     });
                                 }
 
-                                // Force save button to clean state
-                                const saveBtn = document.getElementById('save-invoice');
-                                if (saveBtn) {
-                                    saveBtn.classList.remove('has-unsaved-changes');
-                                    saveBtn.style.backgroundColor = '';
-                                    saveBtn.style.color = '';
+                                // Also try the publishChanges method if available
+                                if (window.app.unsavedChangesManager.publishChanges) {
+                                    window.app.unsavedChangesManager.publishChanges();
                                 }
+                            }
 
-                                console.log('✅ CORRECT FIX: Baseline established from loaded data - ready for user edits');
-                            }, 2000); // Wait for UI to fully settle
+                            // Force save button to clean state
+                            const saveBtn = document.getElementById('save-invoice');
+                            if (saveBtn) {
+                                saveBtn.classList.remove('has-unsaved-changes');
+                                saveBtn.style.backgroundColor = '';
+                                saveBtn.style.color = '';
+                            }
 
-                        } catch (error) {
-                            console.error('Error loading invoice:', error);
-                        }
+                            console.log('✅ CORRECT FIX: Baseline established from loaded data - ready for user edits');
+                        }, 3000); // Extended wait for full DOM settlement
                     };
                 }
 
