@@ -1,0 +1,197 @@
+/* SaveButton Component Styles */
+
+.save-button {
+  @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200;
+}
+
+.save-button--primary {
+  @apply text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500;
+}
+
+.save-button--update {
+  @apply text-white bg-orange-600 hover:bg-orange-700 focus:ring-orange-500;
+}
+
+.save-button--saved {
+  @apply text-green-700 bg-green-100 cursor-default;
+}
+
+.save-button--disabled {
+  @apply text-gray-400 bg-gray-100 cursor-not-allowed;
+}
+
+.save-button--loading {
+  @apply text-blue-700 bg-blue-100 cursor-wait;
+}
+
+.save-button--finalized {
+  @apply text-gray-500 bg-gray-200 cursor-not-allowed;
+}
+
+/* Animation for spinner */
+.save-button__spinner {
+  @apply animate-spin -ml-1 mr-3 h-4 w-4;
+}
+
+/* Success indicator tooltip */
+.save-button__success-tooltip {
+  @apply absolute -top-8 left-1/2 transform -translate-x-1/2 bg-green-600 text-white text-xs rounded px-2 py-1 whitespace-nowrap;
+  animation: fadeInOut 3s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, -10px); }
+  10% { opacity: 1; transform: translate(-50%, 0); }
+  90% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
+}
+
+/* State indicators */
+.save-button__state-indicator {
+  @apply mt-1 text-xs text-center;
+}
+
+.save-button__state-indicator--modified {
+  @apply text-orange-600;
+}
+
+.save-button__state-indicator--saved {
+  @apply text-green-600;
+}
+
+.save-button__state-indicator--finalized {
+  @apply text-gray-600;
+}
+
+/* Pulse effect for unsaved changes */
+.save-button--has-changes {
+  animation: pulse-orange 2s infinite;
+}
+
+@keyframes pulse-orange {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(251, 146, 60, 0);
+  }
+}
+
+/* Icon styles */
+.save-button__icon {
+  @apply mr-2 h-4 w-4;
+}
+
+.save-button__check-icon {
+  @apply mr-2 h-4 w-4 text-green-600;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .save-button {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  .save-button__icon {
+    @apply mr-1 h-3 w-3;
+  }
+
+  .save-button__success-tooltip {
+    @apply text-xs px-1.5 py-0.5;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .save-button--primary {
+    @apply border-2 border-blue-800;
+  }
+
+  .save-button--update {
+    @apply border-2 border-orange-800;
+  }
+
+  .save-button--saved {
+    @apply border-2 border-green-800;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .save-button {
+    @apply transition-none;
+  }
+
+  .save-button__spinner {
+    @apply animate-none;
+  }
+
+  .save-button--has-changes {
+    animation: none;
+    @apply ring-2 ring-orange-300;
+  }
+
+  .save-button__success-tooltip {
+    animation: none;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .save-button--saved {
+    @apply text-green-300 bg-green-900;
+  }
+
+  .save-button--disabled {
+    @apply text-gray-500 bg-gray-800;
+  }
+
+  .save-button--finalized {
+    @apply text-gray-400 bg-gray-700;
+  }
+
+  .save-button__success-tooltip {
+    @apply bg-green-700;
+  }
+
+  .save-button__state-indicator--modified {
+    @apply text-orange-400;
+  }
+
+  .save-button__state-indicator--saved {
+    @apply text-green-400;
+  }
+
+  .save-button__state-indicator--finalized {
+    @apply text-gray-400;
+  }
+}
+
+/* Focus visible for accessibility */
+.save-button:focus-visible {
+  @apply ring-2 ring-offset-2;
+}
+
+/* Loading state with specific styling */
+.save-button--loading .save-button__spinner path {
+  opacity: 0.75;
+}
+
+.save-button--loading .save-button__spinner circle {
+  opacity: 0.25;
+}
+
+/* Button group support */
+.save-button-group {
+  @apply flex gap-2;
+}
+
+.save-button-group .save-button {
+  @apply flex-1;
+}
+
+@media (max-width: 640px) {
+  .save-button-group {
+    @apply flex-col;
+  }
+}

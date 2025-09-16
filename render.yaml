@@ -1,0 +1,64 @@
+services:
+  # Web Service for the Node.js backend
+  - type: web
+    name: invoice-api
+    env: node
+    region: oregon
+    plan: standard
+    buildCommand: npm install && npm run build:server
+    startCommand: npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: invoice-redis
+          property: connectionString
+      - key: CORS_ORIGINS
+        value: https://mginvoices.com
+      - key: COOKIE_DOMAIN
+        value: .mginvoices.com
+      - key: TRUST_PROXY
+        value: true
+      - key: LOG_LEVEL
+        value: info
+    autoDeploy: true
+
+  # Static Site for the React frontend
+  - type: static
+    name: invoice-frontend
+    env: static
+    buildCommand: npm install && npm run build:client
+    staticPublishPath: ./dist/client
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # Redis for session storage
+  - type: redis
+    name: invoice-redis
+    region: oregon
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+
+# Database (if needed in future)
+databases:
+  - name: invoice-db
+    databaseName: invoices
+    user: invoice_user
+    region: oregon
+    plan: starter

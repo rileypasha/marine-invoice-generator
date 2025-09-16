@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist/server",
+    "rootDir": "./server",
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "types": ["node", "express"]
+  },
+  "include": [
+    "server/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src",
+    "tests"
+  ]
+}
