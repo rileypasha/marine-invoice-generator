@@ -1449,20 +1449,58 @@ export class InvoiceStorage {
         const localInvoices = this.getAllInvoices();
         console.log(`📦 Current localStorage has ${localInvoices.length} invoices`);
         
-        // Merge server invoices with local (server takes precedence)
+        // Merge server invoices with local using sophisticated deduplication
         const invoiceMap = new Map();
-        
+
+        // Helper function to create a content signature for deduplication
+        const getInvoiceSignature = (inv) => {
+          // Create a signature based on title, creation time, and content structure
+          const titlePart = (inv.title || '').trim().toLowerCase();
+          const timePart = new Date(inv.createdAt).getTime();
+          const contentPart = JSON.stringify(inv.data).length; // Content size as rough signature
+          return `${titlePart}_${Math.floor(timePart/60000)}_${contentPart}`; // Group by minute to handle small timing differences
+        };
+
+        // Create signature map to detect content duplicates
+        const signatureMap = new Map();
+
         // Add local invoices first
         localInvoices.forEach(inv => {
+          const signature = getInvoiceSignature(inv);
           invoiceMap.set(inv.id, inv);
+          signatureMap.set(signature, inv.id);
         });
-        
-        // Override with server invoices (they're more authoritative)
+
+        // Process server invoices with duplicate detection
         serverInvoices.forEach(inv => {
           // Ensure the invoice has the user's email for future filtering
           inv.userEmail = currentUser.email;
           inv.userId = inv.userId || currentUser.id;
-          invoiceMap.set(inv.id, inv);
+
+          const signature = getInvoiceSignature(inv);
+
+          // Check if this content already exists locally
+          if (signatureMap.has(signature)) {
+            const existingId = signatureMap.get(signature);
+            const existingInvoice = invoiceMap.get(existingId);
+
+            console.log(`🔍 Detected duplicate invoice: "${inv.title}" (server) matches "${existingInvoice.title}" (local)`);
+
+            // Server version is more authoritative, but preserve local ID if no server ID
+            if (inv.serverId || new Date(inv.updatedAt) > new Date(existingInvoice.updatedAt)) {
+              console.log(`📥 Using server version (more recent or has serverId)`);
+              invoiceMap.delete(existingId); // Remove old local version
+              invoiceMap.set(inv.id, inv);   // Add server version
+              signatureMap.set(signature, inv.id); // Update signature map
+            } else {
+              console.log(`📦 Keeping local version (more recent or server has no ID)`);
+              // Keep local version, don't add server duplicate
+            }
+          } else {
+            // No duplicate found, add server invoice
+            invoiceMap.set(inv.id, inv);
+            signatureMap.set(signature, inv.id);
+          }
         });
         
         // Convert back to array

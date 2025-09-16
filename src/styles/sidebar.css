@@ -280,7 +280,7 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   position: relative;
-  cursor: help;
+  cursor: pointer;
 }
 
 /* Tooltip for long titles */

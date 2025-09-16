@@ -325,6 +325,26 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* Fix dropdown option styling for dark theme */
+.form-select option {
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  border: none;
+}
+
+/* Ensure proper contrast for dropdown options in all browsers */
+select option {
+  background-color: var(--color-input-bg) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* Fix Service Type dropdown specifically */
+.job-type-select option {
+  background: var(--color-input-bg) !important;
+  color: var(--color-text-primary) !important;
+  padding: 4px 8px;
+}
+
 /* Dark Preview Panel Background */
 .preview-panel {
   background: var(--color-background);
