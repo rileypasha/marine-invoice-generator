@@ -778,14 +778,18 @@ InvoiceApp.prototype.saveInvoice = async function() {
   }
   
   try {
-    const title = await this.promptModal.show('Save Invoice', 'Enter a name for this invoice:', 'Untitled Invoice');
-    if (title === null) return; // User cancelled
-
-    const finalTitle = title.trim() || 'Untitled Invoice';
-
-    // Check if we're in edit mode
+    // Check if we're in edit mode FIRST
     const currentInvoiceId = this.state.getCurrentInvoiceId();
     const isEditMode = this.state.getIsEditMode();
+
+    let title = null;
+    if (!isEditMode) {
+      // Only prompt for name when creating NEW invoices
+      title = await this.promptModal.show('Save Invoice', 'Enter a name for this invoice:', 'Untitled Invoice');
+      if (title === null) return; // User cancelled
+    }
+
+    const finalTitle = title ? title.trim() || 'Untitled Invoice' : null;
 
     let id;
     let actionMessage;
