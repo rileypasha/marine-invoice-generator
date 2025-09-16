@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 const pino = require('pino');
 
 const prisma = new PrismaClient();
@@ -10,14 +11,18 @@ const logger = pino({
 
 /**
  * POST /api/auth/login
- * Login endpoint to create session
+ * Login endpoint to create session with proper password validation
  */
 router.post('/login', async (req, res) => {
   try {
-    const { email, name } = req.body;
+    const { email, password, name } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
+    }
+
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required' });
     }
 
     // Security validation: ensure name doesn't contain password-like patterns
@@ -48,38 +53,47 @@ router.post('/login', async (req, res) => {
       return nameStr;
     })();
 
-    // Find or create user
+    // Find existing user (no auto-creation without proper password)
     let user = await prisma.user.findUnique({
       where: { email }
     });
 
     if (!user) {
-      // Determine role based on master emails config
-      const masterEmails = (process.env.MASTER_EMAILS || '')
-        .split(',')
-        .map(e => e.trim())
-        .filter(e => e);
-      
-      const isMaster = masterEmails.includes(email);
-      
-      // Create new user with sanitized name
-      // Use the sanitized name if provided, otherwise use email prefix
-      const finalName = sanitizedName || email.split('@')[0];
-      
-      user = await prisma.user.create({
-        data: {
-          email,
-          name: finalName,
-          role: isMaster ? 'master' : 'standard'
-        }
-      });
-      
-      logger.info({
-        event: 'USER_CREATED',
+      logger.warn({
+        event: 'LOGIN_FAILED_USER_NOT_FOUND',
         email,
-        role: user.role
+        ip: req.ip
       });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
+
+    // Validate password
+    if (!user.password) {
+      logger.warn({
+        event: 'LOGIN_FAILED_NO_PASSWORD_SET',
+        email,
+        userId: user.id
+      });
+      return res.status(401).json({ error: 'Account not properly configured. Contact administrator.' });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      logger.warn({
+        event: 'LOGIN_FAILED_INVALID_PASSWORD',
+        email,
+        userId: user.id,
+        ip: req.ip
+      });
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    logger.info({
+      event: 'LOGIN_SUCCESS',
+      email,
+      userId: user.id,
+      role: user.role
+    });
 
     // Create session
     req.session.user = {

@@ -28,16 +28,8 @@ export class UserManager {
     // First try to load from storage
     await this.loadUserFromStorage();
     
-    // Only auto-sign in test user in development (localhost)
-    const isProduction = window.location.hostname !== 'localhost' && 
-                        window.location.hostname !== '127.0.0.1';
-    
-    // If still not authenticated, auto-sign in test user (for development ONLY)
-    // But only if they didn't explicitly log out and we're not in production
-    if (!this.isAuthenticated() && explicitLogout !== 'true' && !isProduction) {
-      console.log('🧪 Development mode - attempting auto-login');
-      await this.autoSignInTestUser();
-    }
+    // Auto-login has been disabled for security reasons
+    // Users must manually sign in with proper credentials
   }
   
   // Initialize a test user for development
@@ -103,31 +95,12 @@ export class UserManager {
               // No server session exists
               // This is expected on initial page load if user hasn't logged in
               
-              // Only try to recreate session for test user in development
-              const isProduction = window.location.hostname !== 'localhost' && 
-                                  window.location.hostname !== '127.0.0.1';
-              
-              if (userData.email === 'test@marinegroup.com' && !isProduction) {
-                console.log('📌 No server session found for test user, attempting to recreate...');
-                const serverAuth = await this.serverSignIn(userData.email, 'password123');
-                if (serverAuth.success) {
-                  console.log('✅ Server session recreated for test user');
-                } else {
-                  // Even test user failed - clear everything
-                  console.warn('⚠️ Could not recreate server session for test user - clearing local session');
-                  this.clearLocalSession();
-                  this.currentUser = null;
-                  this.notify();
-                  return;
-                }
-              } else {
-                // Not test user or in production - clear local session silently
-                // This is expected behavior when session expires
-                this.clearLocalSession();
-                this.currentUser = null;
-                this.notify();
-                return;
-              }
+              // No server session exists - clear local session
+              // This is expected behavior when session expires
+              this.clearLocalSession();
+              this.currentUser = null;
+              this.notify();
+              return;
             } else {
               console.log('✅ Valid server session exists');
             }
@@ -231,12 +204,10 @@ export class UserManager {
     }
   }
   
-  // Server authentication
+  // Server authentication with proper password validation
   async serverSignIn(email, password) {
     try {
-      // Call server auth endpoint
-      // The server uses email-only authentication for this system
-      // Password field is kept for compatibility but not used server-side
+      // Call server auth endpoint with proper password validation
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -245,7 +216,7 @@ export class UserManager {
         credentials: 'include',
         body: JSON.stringify({
           email: email,
-          password: password // Include password even though server may not use it
+          password: password
         })
       });
       

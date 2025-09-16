@@ -5,58 +5,37 @@ const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
-// Simple login that ACTUALLY WORKS
+// Secure login with proper password validation
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     console.log('LOGIN ATTEMPT:', email);
-    
-    // For test account, just check email
-    if (email === 'test@marinegroupbw.com') {
-      // Create session
-      req.session.user = {
-        id: 'test-user-1',
-        email: email,
-        name: 'Test User',
-        role: 'user'
-      };
-      
-      // Save session
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error:', err);
-          return res.status(500).json({ success: false, error: 'Session save failed' });
-        }
-        
-        console.log('SESSION SAVED:', req.sessionID);
-        console.log('Session user:', req.session.user);
-        
-        return res.json({
-          success: true,
-          user: req.session.user,
-          sessionId: req.sessionID
-        });
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'Email and password are required' });
+    }
+
+    // Try to find user in database
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email }
       });
-    } else {
-      // Try to find user in database
-      try {
-        const user = await prisma.user.findUnique({
-          where: { email }
-        });
-        
-        if (!user) {
-          return res.status(401).json({ success: false, error: 'User not found' });
-        }
-        
-        // Check password
-        const validPassword = password ? 
-          await bcrypt.compare(password, user.password) : 
-          false;
-        
-        if (!validPassword && password !== 'test123') {
-          return res.status(401).json({ success: false, error: 'Invalid password' });
-        }
+
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Invalid email or password' });
+      }
+
+      if (!user.password) {
+        return res.status(401).json({ success: false, error: 'Account not properly configured' });
+      }
+
+      // Check password with bcrypt
+      const validPassword = await bcrypt.compare(password, user.password);
+
+      if (!validPassword) {
+        return res.status(401).json({ success: false, error: 'Invalid email or password' });
+      }
         
         // Create session
         req.session.user = {
@@ -83,24 +62,7 @@ router.post('/login', async (req, res) => {
         });
       } catch (dbError) {
         console.error('Database error:', dbError);
-        // If database fails, still allow test user
-        if (email === 'test@marinegroupbw.com') {
-          req.session.user = {
-            id: 'test-user-1',
-            email: email,
-            name: 'Test User',
-            role: 'user'
-          };
-          
-          req.session.save();
-          
-          return res.json({
-            success: true,
-            user: req.session.user,
-            sessionId: req.sessionID
-          });
-        }
-        return res.status(500).json({ success: false, error: 'Database error' });
+        return res.status(500).json({ success: false, error: 'Authentication service unavailable' });
       }
     }
   } catch (error) {
