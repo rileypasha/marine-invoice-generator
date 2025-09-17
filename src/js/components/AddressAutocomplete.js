@@ -475,7 +475,8 @@ export class AddressAutocomplete {
   }
 
   selectResult(result) {
-    this.input.value = result.line1;
+    // Use the full formatted address instead of just line1
+    this.input.value = result.label;
     this.hideSuggestions();
     this.updateStatus(`Selected: ${result.label}`);
 

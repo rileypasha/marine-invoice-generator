@@ -43,11 +43,9 @@ export class CustomerForm {
   handleAddressSelection(result) {
     console.log('🏠 CustomerForm: Address selected:', result);
 
-    // Address autocomplete now only fills the single address field
-
-    // Update state with single address field
+    // Update state with the full formatted address
     this.state.updateCustomer({
-      customerAddress: result.line1 || ''
+      customerAddress: result.label || result.line1 || ''
     });
 
     // Focus customer name for better UX
