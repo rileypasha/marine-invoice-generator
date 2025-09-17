@@ -36,6 +36,30 @@ async function migrateProductionDatabase() {
       console.log('✅ Password column added successfully');
     }
 
+    // Clean up duplicate/unwanted email accounts first
+    const duplicateEmails = [
+      'rpasha@maringroupbw.com', // Missing 'e' in marine - typo
+      'test@marinegroup.com'     // Duplicate test account
+    ];
+
+    for (const email of duplicateEmails) {
+      try {
+        const duplicateAccount = await prisma.user.findUnique({
+          where: { email }
+        });
+
+        if (duplicateAccount) {
+          console.log(`🧹 Removing duplicate account: ${email}`);
+          await prisma.user.delete({
+            where: { id: duplicateAccount.id }
+          });
+          console.log(`✅ Duplicate account ${email} removed successfully`);
+        }
+      } catch (error) {
+        console.log(`⚠️ Cleanup failed for ${email} (may not exist):`, error.message);
+      }
+    }
+
     // Check existing users and set up passwords
     const users = await prisma.user.findMany();
     console.log(`👥 Found ${users.length} existing users`);
