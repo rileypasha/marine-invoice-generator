@@ -423,6 +423,7 @@ const HOST = '0.0.0.0'; // Important for Render
 runStartupMigration().then(() => {
   const server = app.listen(PORT, HOST, () => {
     logger.info(`Server running on http://${HOST}:${PORT}`);
+    logger.info(`Build timestamp: ${new Date().toISOString()} - Prisma client regenerated`);
   });
 
   // Graceful shutdown
