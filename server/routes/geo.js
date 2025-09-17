@@ -148,31 +148,46 @@ function normalizeResponse(geoapifyFeatures) {
     const geometry = feature.geometry || {};
     const coordinates = geometry.coordinates || [];
 
-    // Extract address components
-    const houseNumber = props.house_number || '';
+    // Extract address components - Geoapify uses 'housenumber' not 'house_number'
+    const houseNumber = props.housenumber || props.house_number || '';
     const street = props.street || '';
     const line1 = houseNumber && street ? `${houseNumber} ${street}` : (street || houseNumber || '');
+
+    // Use the formatted address from Geoapify but clean it up
+    const originalFormatted = props.formatted || '';
+    const addressLine1 = props.address_line1 || line1;
 
     // Format US address without country
     const city = props.city || props.municipality || '';
     const state = props.state || props.region || '';
     const postal = props.postcode || '';
 
-    // Create a clean US-formatted address without country
-    let formattedAddress = line1;
-    if (city && state) {
-      if (postal) {
-        formattedAddress = `${line1}, ${city}, ${state} ${postal}`;
-      } else {
-        formattedAddress = `${line1}, ${city}, ${state}`;
+    // Use Geoapify's formatted address but clean it up to remove country
+    let formattedAddress = originalFormatted;
+
+    // Remove country suffix (", United States of America" or ", United States")
+    formattedAddress = formattedAddress
+      .replace(/, United States of America$/, '')
+      .replace(/, United States$/, '')
+      .replace(/, USA$/, '');
+
+    // If the cleaned address is empty, fall back to manual formatting
+    if (!formattedAddress || formattedAddress === '') {
+      formattedAddress = addressLine1;
+      if (city && state) {
+        if (postal) {
+          formattedAddress = `${addressLine1}, ${city}, ${state} ${postal}`;
+        } else {
+          formattedAddress = `${addressLine1}, ${city}, ${state}`;
+        }
+      } else if (city) {
+        formattedAddress = `${addressLine1}, ${city}`;
       }
-    } else if (city) {
-      formattedAddress = `${line1}, ${city}`;
     }
 
     return {
       label: formattedAddress,
-      line1: line1,
+      line1: addressLine1,
       city: city,
       state: state,
       postal_code: postal,
