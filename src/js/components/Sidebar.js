@@ -358,14 +358,23 @@ export class Sidebar {
       window.app.state.loadInvoiceForEditing(invoice.data, id);
 
       // Update form components to reflect the loaded data
-      if (window.app.vesselForm) {
-        window.app.vesselForm.populate(invoice.data.vessel);
+      // Add safety check to ensure forms are fully initialized
+      if (window.app.vesselForm && window.app.vesselForm.vesselName) {
+        window.app.vesselForm.populate(invoice.data.vessel || {});
+      } else {
+        console.warn('VesselForm not fully initialized, skipping populate');
       }
-      if (window.app.customerForm) {
-        window.app.customerForm.populate(invoice.data.customer);
+
+      if (window.app.customerForm && window.app.customerForm.customerName) {
+        window.app.customerForm.populate(invoice.data.customer || {});
+      } else {
+        console.warn('CustomerForm not fully initialized, skipping populate');
       }
-      if (window.app.scopeForm) {
-        window.app.scopeForm.populate(invoice.data.scope);
+
+      if (window.app.scopeForm && window.app.scopeForm.lineItemsContainer) {
+        window.app.scopeForm.populate(invoice.data.scope || {});
+      } else {
+        console.warn('ScopeForm not fully initialized, skipping populate');
       }
 
       // 🔧 PHASE 3 FIX: Enhanced baseline establishment with proper timing
