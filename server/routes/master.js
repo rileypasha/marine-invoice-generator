@@ -4,6 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 const { requireMaster } = require('../middleware/auth');
 const pino = require('pino');
 const InvoiceIdValidator = require('../utils/invoiceIdValidator');
+const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 const logger = pino({
@@ -1400,6 +1401,251 @@ router.get('/stats', requireMaster, async (req, res) => {
       email: req.user.email
     });
     res.status(500).json({ error: 'Failed to fetch statistics' });
+  }
+});
+
+/**
+ * GET /api/master/users
+ * Get all users for management
+ */
+router.get('/users', requireMaster, async (req, res) => {
+  try {
+    console.log('👥 MASTER: Fetching all users for management');
+
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        // Don't include password field for security
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    logger.info({
+      event: 'MASTER_USERS_LIST',
+      email: req.user?.email,
+      userCount: users.length
+    });
+
+    res.json({
+      users,
+      total: users.length
+    });
+  } catch (error) {
+    logger.error({
+      event: 'MASTER_USERS_ERROR',
+      error: error.message,
+      email: req.user?.email
+    });
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+/**
+ * POST /api/master/users
+ * Create a new user
+ */
+router.post('/users', requireMaster, async (req, res) => {
+  try {
+    const { email, name, password, role = 'standard' } = req.body;
+
+    console.log('👤 MASTER: Creating new user:', email);
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return res.status(409).json({ error: 'User with this email already exists' });
+    }
+
+    // Hash password
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Create user
+    const newUser = await prisma.user.create({
+      data: {
+        email,
+        name: name || email,
+        password: hashedPassword,
+        role
+      }
+    });
+
+    logger.info({
+      event: 'MASTER_USER_CREATED',
+      createdBy: req.user?.email,
+      newUserEmail: email,
+      role
+    });
+
+    // Return user without password
+    const { password: _, ...userResponse } = newUser;
+    res.json({
+      success: true,
+      user: userResponse,
+      message: 'User created successfully'
+    });
+  } catch (error) {
+    logger.error({
+      event: 'MASTER_USER_CREATE_ERROR',
+      error: error.message,
+      email: req.user?.email
+    });
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+/**
+ * PUT /api/master/users/:id
+ * Update an existing user
+ */
+router.put('/users/:id', requireMaster, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, name, role, password } = req.body;
+
+    console.log('📝 MASTER: Updating user:', id);
+
+    const updateData = {};
+    if (email) updateData.email = email;
+    if (name) updateData.name = name;
+    if (role) updateData.role = role;
+
+    // Only hash and update password if provided
+    if (password) {
+      const saltRounds = 12;
+      updateData.password = await bcrypt.hash(password, saltRounds);
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: updateData
+    });
+
+    logger.info({
+      event: 'MASTER_USER_UPDATED',
+      updatedBy: req.user?.email,
+      targetUserId: id,
+      updatedFields: Object.keys(updateData)
+    });
+
+    // Return user without password
+    const { password: _, ...userResponse } = updatedUser;
+    res.json({
+      success: true,
+      user: userResponse,
+      message: 'User updated successfully'
+    });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    logger.error({
+      event: 'MASTER_USER_UPDATE_ERROR',
+      error: error.message,
+      email: req.user?.email
+    });
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+/**
+ * DELETE /api/master/users/:id
+ * Delete a user
+ */
+router.delete('/users/:id', requireMaster, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    console.log('🗑️ MASTER: Deleting user:', id);
+
+    // Prevent deleting yourself
+    if (id === req.user?.id) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+
+    const deletedUser = await prisma.user.delete({
+      where: { id }
+    });
+
+    logger.info({
+      event: 'MASTER_USER_DELETED',
+      deletedBy: req.user?.email,
+      deletedUserEmail: deletedUser.email
+    });
+
+    res.json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    logger.error({
+      event: 'MASTER_USER_DELETE_ERROR',
+      error: error.message,
+      email: req.user?.email
+    });
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+/**
+ * POST /api/master/users/:id/reset-password
+ * Reset a user's password
+ */
+router.post('/users/:id/reset-password', requireMaster, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    console.log('🔑 MASTER: Resetting password for user:', id);
+
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+
+    // Hash password
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    await prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword }
+    });
+
+    logger.info({
+      event: 'MASTER_PASSWORD_RESET',
+      resetBy: req.user?.email,
+      targetUserId: id
+    });
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully'
+    });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    logger.error({
+      event: 'MASTER_PASSWORD_RESET_ERROR',
+      error: error.message,
+      email: req.user?.email
+    });
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 

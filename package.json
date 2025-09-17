@@ -12,6 +12,7 @@
     "build": "webpack --mode production && npm run prisma:force-reset",
     "db:check": "node scripts/ensure-db-ready.js",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:prod": "node scripts/migrate-production-db.js",
     "db:reset": "prisma db push --force-reset",
     "test": "jest",
     "test:unit": "jest test/unit",

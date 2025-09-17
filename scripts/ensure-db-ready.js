@@ -6,12 +6,35 @@
  */
 
 const { PrismaClient } = require('@prisma/client');
+const { migrateProductionDatabase } = require('./migrate-production-db');
 const prisma = new PrismaClient();
 
 async function ensureDatabaseReady() {
   console.log('🔍 Checking database schema...\n');
-  
+
   try {
+    // Check if we're in production and need to run password migration
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    if (isProduction) {
+      console.log('🚀 Production environment detected - checking for password migration...');
+
+      // Check if password column exists
+      const tableInfo = await prisma.$queryRaw`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'User' AND column_name = 'password';
+      `;
+
+      if (tableInfo.length === 0) {
+        console.log('🔧 Password column missing - running production migration...');
+        await migrateProductionDatabase();
+        console.log('✅ Production migration completed!\n');
+      } else {
+        console.log('✅ Password column exists - no migration needed\n');
+      }
+    }
+
     // Try to query with all fields
     const testQuery = await prisma.invoice.findFirst({
       select: {
@@ -26,7 +49,7 @@ async function ensureDatabaseReady() {
         savedAt: true
       }
     });
-    
+
     console.log('✅ Database schema is up to date!');
     console.log('   All required columns exist.\n');
     
