@@ -29,14 +29,6 @@ model Invoice {
   customerName    String?
   customerEmail   String?
   customerPhone   String?
-  customerLine1   String?  // Customer address line 1
-  customerLine2   String?  // Customer address line 2
-  customerCity    String?  // Customer city
-  customerState   String?  // Customer state/region
-  customerPostal  String?  // Customer postal/zip code
-  customerCountry String?  // Customer country
-  customerLat     Float?   // Customer latitude (optional)
-  customerLon     Float?   // Customer longitude (optional)
   
   // Financial (extracted from data for dashboard display)
   subtotal      Float    @default(0)
