@@ -163,41 +163,9 @@ export class UserManager {
         return { success: true, user: this.currentUser };
       }
       
-      // Fallback to local authentication if server fails
-      console.log('⚠️ Server auth failed, trying local auth');
-      
-      const existingUsers = this.getAllUsers();
-      console.log('👥 Found', existingUsers.length, 'existing users');
-      
-      const user = existingUsers.find(u => u.email === email);
-      
-      if (!user) {
-        console.log('❌ No user found with email:', email);
-        throw new Error('No account found with this email');
-      }
-      
-      console.log('👤 User found:', user.name);
-      
-      if (!this.verifyPassword(password, user.hashedPassword)) {
-        console.log('❌ Password verification failed');
-        throw new Error('Incorrect password');
-      }
-      
-      console.log('✅ Password verified');
-      
-      // Log them in
-      this.currentUser = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        preferences: user.preferences
-      };
-      
-      this.saveSession(rememberMe);
-      this.notify();
-      
-      console.log('✅ Sign-in successful, user:', this.currentUser.name);
-      return { success: true, user: this.currentUser };
+      // No fallback to local authentication - server must be working
+      console.log('❌ Server authentication failed - no fallback available');
+      throw new Error('Server authentication failed. Please check your connection and try again.');
     } catch (error) {
       console.log('❌ Sign-in error:', error.message);
       return { success: false, error: error.message };
