@@ -60,9 +60,9 @@ function requireAuth(req, res, next) {
       
       // Check for test user marker in cookies
       if (cookies['test_js'] === 'value' || req.headers.cookie.includes('test@marinegroupbw.com')) {
-        // Create test user session
+        // Create test user session with CORRECT user ID from database
         req.session.user = {
-          id: 'test-user-1',
+          id: 'f1d69663-63cb-475f-9625-6655dfd56f73',
           email: 'test@marinegroupbw.com',
           name: 'Test User',
           role: 'user'
