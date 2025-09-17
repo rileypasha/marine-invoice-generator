@@ -153,12 +153,29 @@ function normalizeResponse(geoapifyFeatures) {
     const street = props.street || '';
     const line1 = houseNumber && street ? `${houseNumber} ${street}` : (street || houseNumber || '');
 
+    // Format US address without country
+    const city = props.city || props.municipality || '';
+    const state = props.state || props.region || '';
+    const postal = props.postcode || '';
+
+    // Create a clean US-formatted address without country
+    let formattedAddress = line1;
+    if (city && state) {
+      if (postal) {
+        formattedAddress = `${line1}, ${city}, ${state} ${postal}`;
+      } else {
+        formattedAddress = `${line1}, ${city}, ${state}`;
+      }
+    } else if (city) {
+      formattedAddress = `${line1}, ${city}`;
+    }
+
     return {
-      label: props.formatted || props.name || line1,
+      label: formattedAddress,
       line1: line1,
-      city: props.city || props.municipality || '',
-      state: props.state || props.region || '',
-      postal_code: props.postcode || '',
+      city: city,
+      state: state,
+      postal_code: postal,
       country: props.country || '',
       lat: coordinates.length >= 2 ? coordinates[1] : null,
       lon: coordinates.length >= 2 ? coordinates[0] : null
@@ -196,11 +213,12 @@ router.get('/address-autocomplete', rateLimit, validateInput, async (req, res) =
       return res.json(cached.data);
     }
 
-    // Make request to Geoapify
+    // Make request to Geoapify - restrict to US only
     const url = new URL('https://api.geoapify.com/v1/geocode/autocomplete');
     url.searchParams.set('text', cleanQuery);
     url.searchParams.set('limit', limit.toString());
     url.searchParams.set('lang', lang);
+    url.searchParams.set('filter', 'countrycode:us'); // Restrict to US only
     url.searchParams.set('apiKey', apiKey);
 
     logger.info({ query: cleanQuery, clientIP, limit, lang }, 'Making Geoapify API request');
