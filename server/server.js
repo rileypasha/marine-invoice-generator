@@ -347,26 +347,81 @@ if (process.env.NODE_ENV === 'production') {
 const { errorHandler } = require('./middleware/errorHandler');
 app.use(errorHandler);
 
+// Run database migration on startup
+async function runStartupMigration() {
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      console.log('🔄 Running production database migration...');
+
+      // Check if password column exists
+      const tableInfo = await prisma.$queryRaw`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'User' AND column_name = 'password';
+      `;
+
+      if (tableInfo.length === 0) {
+        console.log('📝 Adding password column to User table...');
+
+        // Add password column
+        await prisma.$executeRaw`
+          ALTER TABLE "User"
+          ADD COLUMN "password" TEXT;
+        `;
+
+        console.log('✅ Password column added successfully');
+
+        // Set default passwords for existing users
+        const bcrypt = require('bcryptjs');
+        const users = await prisma.user.findMany();
+        const defaultPassword = 'TempPassword123!';
+        const saltRounds = 12;
+
+        for (const user of users) {
+          if (!user.password) {
+            const hashedPassword = await bcrypt.hash(defaultPassword, saltRounds);
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { password: hashedPassword }
+            });
+            console.log(`🔑 Password set for ${user.email}`);
+          }
+        }
+
+        console.log('🎯 Migration completed - all users have password: TempPassword123!');
+      } else {
+        console.log('✅ Password column already exists');
+      }
+    } catch (error) {
+      console.error('❌ Migration failed:', error);
+    }
+  }
+}
+
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0'; // Important for Render
 
-const server = app.listen(PORT, HOST, () => {
-  logger.info(`Server running on http://${HOST}:${PORT}`);
-});
-
-// Graceful shutdown
-const gracefulShutdown = async () => {
-  logger.info('Received shutdown signal, closing server gracefully...');
-  
-  server.close(() => {
-    logger.info('HTTP server closed');
+// Run migration then start server
+runStartupMigration().then(() => {
+  const server = app.listen(PORT, HOST, () => {
+    logger.info(`Server running on http://${HOST}:${PORT}`);
   });
-  
-  await prisma.$disconnect();
-  logger.info('Database connection closed');
-  
-  process.exit(0);
-};
+
+  // Graceful shutdown
+  const gracefulShutdown = async () => {
+    logger.info('Received shutdown signal, closing server gracefully...');
+
+    server.close(() => {
+      logger.info('HTTP server closed');
+    });
+  };
+
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
+}).catch(error => {
+  console.error('❌ Failed to start server:', error);
+  process.exit(1);
+});
 
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
