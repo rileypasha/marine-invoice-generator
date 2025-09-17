@@ -459,12 +459,26 @@ export class Sidebar {
 
   loadItems() {
     if (this.isUpdating || !this.invoiceStorage) {
+      console.warn('⚠️ Sidebar loadItems: Storage not available or already updating');
       return;
     }
 
     this.isUpdating = true;
 
     try {
+      // Add validation for required methods
+      if (typeof this.invoiceStorage.getSavedItems !== 'function') {
+        console.error('❌ invoiceStorage.getSavedItems is not a function. Available methods:', Object.getOwnPropertyNames(this.invoiceStorage));
+        this.showError('Storage methods not available');
+        return;
+      }
+
+      if (typeof this.invoiceStorage.getAllDrafts !== 'function') {
+        console.error('❌ invoiceStorage.getAllDrafts is not a function. Available methods:', Object.getOwnPropertyNames(this.invoiceStorage));
+        this.showError('Storage methods not available');
+        return;
+      }
+
       const invoices = this.invoiceStorage.getSavedItems();
       const drafts = this.invoiceStorage.getAllDrafts();
 
@@ -475,6 +489,9 @@ export class Sidebar {
       this.renderItems();
     } catch (error) {
       console.error('Error loading sidebar items:', error);
+      console.error('invoiceStorage object:', this.invoiceStorage);
+      console.error('invoiceStorage type:', typeof this.invoiceStorage);
+      console.error('invoiceStorage methods:', this.invoiceStorage ? Object.getOwnPropertyNames(this.invoiceStorage) : 'null');
       this.showError('Failed to load invoices');
     } finally {
       this.isUpdating = false;
