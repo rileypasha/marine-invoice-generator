@@ -1,421 +1,187 @@
-export class Sidebar {
-  constructor(userManager, invoiceStorage, authModal, settingsModal) {
-    console.log('🏗️ SIDEBAR CONSTRUCTOR CALLED');
-    this.userManager = userManager;
+import { EventEmitter } from '../utils/events.js';
+
+export class Sidebar extends EventEmitter {
+  constructor(invoiceStorage) {
+    super();
     this.invoiceStorage = invoiceStorage;
-    this.authModal = authModal;
-    this.settingsModal = settingsModal;
-    this.isCollapsed = false;
-    
-    try {
-      console.log('🏗️ Creating sidebar...');
-      this.createSidebar();
-      console.log('🔗 Attaching listeners...');
-      this.attachListeners();
-      console.log('📡 Setting up subscriptions...');
-      this.setupSubscriptions();
-      console.log('✅ SIDEBAR FULLY INITIALIZED');
-    } catch (error) {
-      console.error('💀 SIDEBAR CONSTRUCTOR FAILED:', error);
-      throw error;
-    }
+    this.filters = {
+      search: '',
+      status: 'all',
+      date: 'all'
+    };
+    this.element = null;
+    this.isUpdating = false; // Prevent recursive updates
+    this.isRendering = false;
+    this.isSorting = false;
+    this.init();
   }
-  
+
+  init() {
+    this.createSidebar();
+    this.bindEvents();
+    this.loadItems();
+  }
+
   createSidebar() {
-    // Check if sidebar already exists in the DOM
-    const existingSidebar = document.querySelector('.app-sidebar');
-    
-    if (existingSidebar) {
-      console.log('🔍 Sidebar already exists in DOM, using existing one');
-      this.sidebar = existingSidebar;
-      
-      // Ensure app container has the with-sidebar class
-      const appContainer = document.querySelector('.app-container');
-      if (appContainer) {
-        appContainer.classList.add('with-sidebar');
-      }
-      return;
-    }
-    
-    // Create sidebar if it doesn't exist
-    this.sidebar = document.createElement('div');
-    this.sidebar.className = 'app-sidebar';
-    this.sidebar.innerHTML = `
-      <div class="sidebar-header">
-        <div class="sidebar-toggle">
-          <button class="sidebar-toggle-btn" title="Toggle sidebar">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="m9 18 6-6-6-6"/>
-            </svg>
-          </button>
-        </div>
-        <button class="new-invoice-btn" title="New invoice">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14m-7-7h14"/>
-          </svg>
-          <span class="btn-text">New Invoice</span>
-        </button>
-      </div>
-      
-      <div class="sidebar-content">
-        <div class="sidebar-section">
-          <div class="section-header">
-            <h3>Saved</h3>
-          </div>
-          <div class="invoice-list" id="recent-list">
-            <div class="empty-state">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14,2 14,8 20,8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10,9 9,9 8,9"/>
-              </svg>
-              <p>No recent invoices</p>
-              <span>Create your first invoice to get started</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="sidebar-footer">
-        <button class="user-section" id="user-section" style="display: none;" title="Settings">
-          <div class="user-info">
-            <div class="user-avatar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-            </div>
-            <div class="user-details">
-              <div class="user-name" id="user-name">User Name</div>
-              <div class="user-email" id="user-email">user@example.com</div>
-            </div>
-          </div>
-        </button>
-        
-        <div class="auth-section" id="auth-section">
-          <button class="auth-btn primary" id="sign-in-btn">Sign In</button>
-        </div>
-      </div>
-    `;
-    
-    // Insert sidebar as first child of app container
-    const appContainer = document.querySelector('.app-container');
-    if (appContainer) {
-      appContainer.insertBefore(this.sidebar, appContainer.firstChild);
-      appContainer.classList.add('with-sidebar');
-    }
-  }
-  
-  attachListeners() {
-    console.log('🔗 Attaching sidebar listeners...');
-    console.log('🔍 AuthModal available:', !!this.authModal);
-    
-    if (!this.sidebar) {
-      console.error('❌ Sidebar element is null, cannot attach listeners');
-      return;
-    }
-    
-    // Sidebar toggle
-    const toggleBtn = this.sidebar.querySelector('.sidebar-toggle-btn');
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', () => {
-        this.toggleSidebar();
-      });
-    } else {
-      console.warn('⚠️ Sidebar toggle button not found');
-    }
-    
-    // New invoice
-    const newInvoiceBtn = this.sidebar.querySelector('.new-invoice-btn');
-    console.log('🔍 Looking for new invoice button...');
-    console.log('🔍 Button element:', newInvoiceBtn);
-    console.log('🔍 Button classes:', newInvoiceBtn ? newInvoiceBtn.className : 'N/A');
-    console.log('🔍 Button text:', newInvoiceBtn ? newInvoiceBtn.textContent : 'N/A');
-    
-    if (newInvoiceBtn) {
-      console.log('🎯 NEW INVOICE BUTTON FOUND!');
-      
-      // Multiple event listeners for maximum coverage
-      ['click', 'mousedown', 'mouseup', 'touchstart', 'touchend'].forEach(eventType => {
-        newInvoiceBtn.addEventListener(eventType, (e) => {
-          if (eventType === 'click') {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('🔥🔥🔥 BUTTON CLICKED - FIRING NUCLEAR CLEAR 🔥🔥🔥');
-            this.createNewInvoice();
-          }
-        });
-      });
-      
-      // Global test function 
-      window.testNewInvoiceButton = () => {
-        console.log('🧪 GLOBAL TEST FUNCTION CALLED');
-        this.createNewInvoice();
-      };
-      
-      // Reset button to normal styling
-      newInvoiceBtn.style.backgroundColor = '';
-      newInvoiceBtn.style.border = '';
-      newInvoiceBtn.title = 'New invoice';
-      
-      console.log('✅ BUTTON FULLY ARMED AND READY');
-      console.log('💡 Test with: window.testNewInvoiceButton()');
-    } else {
-      console.error('❌❌❌ NEW INVOICE BUTTON NOT FOUND ❌❌❌');
-      console.log('🔍 Available buttons:', Array.from(this.sidebar.querySelectorAll('button')).map(btn => btn.className));
-    }
-    
-    // Auth buttons
-    const signInBtn = this.sidebar.querySelector('#sign-in-btn');
-    console.log('🔍 Sign-in button found:', !!signInBtn);
-    
-    if (signInBtn) {
-      console.log('✅ Sign-in button found, adding click listener');
-      signInBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('🔐 Sign-in button clicked');
-        console.log('🔍 AuthModal available:', !!this.authModal);
-        
-        try {
-          if (!this.authModal) {
-            console.error('❌ AuthModal not available');
-            alert('Authentication system not available');
-            return;
-          }
-          
-          console.log('📺 Calling authModal.show(signin)...');
-          this.authModal.show('signin');
-          console.log('✅ AuthModal.show() called successfully');
-        } catch (error) {
-          console.error('❌ Error showing auth modal:', error);
-          alert(`Error: ${error.message}`);
-        }
-      });
-    } else {
-      console.error('❌ Sign-in button not found!');
-      console.log('🔍 Available buttons:', this.sidebar.querySelectorAll('button'));
-    }
-    
-    // Sign up button has been removed
-    
-    // User section click - opens settings
-    const userSection = this.sidebar.querySelector('#user-section');
-    if (userSection) {
-      userSection.addEventListener('click', () => {
-        this.settingsModal.show();
-      });
-    }
-  }
-  
-  setupSubscriptions() {
-    // Listen for user changes
-    this.userManager.subscribe((user) => {
-      console.log('🔔 UserManager notification received in Sidebar:', user);
-      this.updateUserSection(user);
-      this.refreshInvoiceList();
-    });
-    
-    // Listen for invoice storage changes
-    this.invoiceStorage.subscribe(() => {
-      this.refreshInvoiceList();
-    });
-    
-    // CRITICAL: Force immediate initial update with current user
-    const currentUser = this.userManager.getCurrentUser();
-    console.log('🚀 Sidebar setupSubscriptions - current user:', currentUser);
-    if (currentUser) {
-      console.log('✅ User found during sidebar init, updating immediately');
-      this.updateUserSection(currentUser);
-      
-      // Update again after a short delay to ensure DOM is ready
-      setTimeout(() => {
-        console.log('🔄 Secondary update after DOM ready');
-        this.updateUserSection(currentUser);
-      }, 50);
-    } else {
-      console.log('⚠️ No user found during sidebar init');
-    }
-  }
-  
-  updateUserSection(user) {
-    console.log('🔄 Updating user section with:', user);
-    
-    if (!this.sidebar) {
-      console.error('❌ Cannot update user section: sidebar is null');
-      return;
-    }
-    
-    const userSection = this.sidebar.querySelector('#user-section');
-    const authSection = this.sidebar.querySelector('#auth-section');
-    
-    if (!userSection || !authSection) {
-      console.error('❌ Cannot find user or auth sections');
-      console.log('Available elements:', {
-        userSection: !!userSection,
-        authSection: !!authSection
-      });
-      return;
-    }
-    
-    if (user) {
-      console.log('✅ User authenticated, showing user section');
-      // Show user section
-      userSection.style.display = 'flex';
-      authSection.style.display = 'none';
-      
-      // Update user info
-      const userNameEl = this.sidebar.querySelector('#user-name');
-      const userEmailEl = this.sidebar.querySelector('#user-email');
-      
-      if (userNameEl) userNameEl.textContent = user.name || user.email || 'User';
-      if (userEmailEl) userEmailEl.textContent = user.email || '';
-    } else {
-      console.log('⚠️ No user, showing auth section');
-      // Show auth section
-      userSection.style.display = 'none';
-      authSection.style.display = 'flex';
-    }
-  }
-  
-  refreshInvoiceList() {
-    this.updateSavedList();
-  }
-  
-  updateSavedList() {
-    if (!this.sidebar) {
-      console.error('❌ Cannot update saved list: sidebar is null');
-      return;
-    }
-    
-    const container = this.sidebar.querySelector('#recent-list');
+    const container = document.getElementById('sidebar-container');
     if (!container) {
-      console.error('❌ Cannot find #recent-list container');
+      console.error('Sidebar container not found');
       return;
     }
-    
-    // Force migration check when updating sidebar
-    const currentUser = this.userManager.getCurrentUser();
-    if (currentUser && currentUser.email) {
-      console.log('🔄 Sidebar update for user:', currentUser.email);
-      
-      // For test user, ensure they can see invoices
-      if (currentUser.email === 'test@marinegroup.com') {
-        console.log('🧪 Test user detected - claiming orphaned invoices');
-        // Directly modify localStorage to ensure test user owns invoices
-        const allInvoices = this.invoiceStorage.getAllInvoices();
-        let modified = false;
-        allInvoices.forEach(inv => {
-          if (!inv.userEmail) {
-            inv.userEmail = 'test@marinegroup.com';
-            modified = true;
-          }
-        });
-        if (modified) {
-          localStorage.setItem('marine_invoices', JSON.stringify(allInvoices));
-          console.log('✅ Updated invoice ownership for test user');
-        }
-      }
-    }
-    
-    const saved = this.invoiceStorage.getSavedItems(5);
-    console.log(`📊 Sidebar: Found ${saved.length} saved items to display`);
-    
-    // Debug: Show what we got
-    if (saved.length === 0 && currentUser) {
-      console.warn('⚠️ No invoices showing for user:', currentUser.email);
-      console.log('Debug info:');
-      console.log('- Current user ID:', currentUser.id);
-      console.log('- Current user email:', currentUser.email);
-      const all = this.invoiceStorage.getAllInvoices();
-      console.log('- Total invoices in storage:', all.length);
-      if (all.length > 0) {
-        console.log('- First invoice:', { 
-          userId: all[0].userId, 
-          userEmail: all[0].userEmail,
-          title: all[0].title 
-        });
-      }
-    }
-    
-    if (saved.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14,2 14,8 20,8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10,9 9,9 8,9"/>
-          </svg>
-          <p>No saved invoices</p>
-          <span>Create your first invoice to get started</span>
+
+    this.element = document.createElement('div');
+    this.element.className = 'sidebar';
+    this.element.innerHTML = `
+      <div class="sidebar-header">
+        <h3>Saved Invoices</h3>
+        <button id="sidebar-new-invoice" class="new-invoice-btn">
+          <span class="icon">+</span>
+          New Invoice
+        </button>
+      </div>
+
+      <div class="sidebar-filters">
+        <div class="filter-group">
+          <input
+            type="text"
+            id="sidebar-search"
+            placeholder="Search invoices..."
+            class="search-input"
+          >
         </div>
-      `;
-    } else {
-      container.innerHTML = saved.map(item => this.createInvoiceItem(item)).join('');
-    }
-  }
-  
-  // Alias for updateSavedList
-  updateSavedItems() {
-    this.updateSavedList();
-  }
-  
-  
-  createInvoiceItem(item) {
-    const isCompleted = item.status === 'completed';
-    const relativeTime = this.getRelativeTime(item.updatedAt);
-    const isAutoSave = item.title.includes('Auto-Save');
-    
-    return `
-      <div class="invoice-item ${item.status}" data-id="${item.id}">
-        <div class="invoice-item-content" data-action="load">
-          <div class="invoice-item-header">
-            <div class="invoice-title" title="${item.title}">${item.title}</div>
-            <div class="invoice-status ${item.status}">
-              ${isCompleted ? 
-                '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>' :
-                '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>'
-              }
-            </div>
-          </div>
-          <div class="invoice-item-meta">
-            <span class="invoice-vessel">${item.metadata.vesselName || 'No vessel'}</span>
-            ${!isAutoSave ? `<span class="invoice-time">${relativeTime}</span>` : ''}
-          </div>
+
+        <div class="filter-group">
+          <label for="sidebar-status-filter">Status:</label>
+          <select id="sidebar-status-filter" class="filter-select">
+            <option value="all">All Status</option>
+            <option value="saved">Saved</option>
+            <option value="submitted">Submitted</option>
+            <option value="draft">Draft</option>
+          </select>
         </div>
-        <div class="invoice-item-actions">
-          <button class="action-btn danger" data-action="delete" title="Delete">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3,6 5,6 21,6"/>
-              <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
-            </svg>
-          </button>
+
+        <div class="filter-group">
+          <label for="sidebar-date-filter">Date:</label>
+          <select id="sidebar-date-filter" class="filter-select">
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sidebar-controls">
+        <button id="sidebar-sort-date" class="sort-btn active" data-sort="date">
+          Sort by Date
+          <span class="sort-indicator">↓</span>
+        </button>
+        <button id="sidebar-sort-name" class="sort-btn" data-sort="name">
+          Sort by Name
+          <span class="sort-indicator"></span>
+        </button>
+        <button id="sidebar-refresh" class="refresh-btn" title="Refresh list">
+          ↻
+        </button>
+      </div>
+
+      <div class="sidebar-content">
+        <div id="sidebar-loading" class="loading-state">
+          <div class="spinner"></div>
+          <span>Loading invoices...</span>
+        </div>
+        <div id="sidebar-items" class="sidebar-items"></div>
+        <div id="sidebar-empty" class="empty-state" style="display: none;">
+          <p>No invoices found</p>
+          <p class="empty-subtitle">Create your first invoice to get started</p>
         </div>
       </div>
     `;
+
+    container.appendChild(this.element);
   }
-  
-  // Event delegation for invoice items
-  setupInvoiceItemListeners() {
-    if (!this.sidebar) {
-      console.error('❌ Cannot setup invoice item listeners: sidebar is null');
-      return;
+
+  bindEvents() {
+    // Search
+    const searchInput = document.getElementById('sidebar-search');
+    if (searchInput) {
+      let searchTimeout;
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          this.filters.search = e.target.value.toLowerCase();
+          this.renderItems();
+        }, 300);
+      });
     }
-    
-    this.sidebar.addEventListener('click', (e) => {
-      const invoiceItem = e.target.closest('.invoice-item');
-      if (!invoiceItem) return;
-      
-      const id = invoiceItem.dataset.id;
-      const action = e.target.closest('[data-action]')?.dataset.action;
-      
+
+    // Filters
+    const statusFilter = document.getElementById('sidebar-status-filter');
+    if (statusFilter) {
+      statusFilter.addEventListener('change', (e) => {
+        this.filters.status = e.target.value;
+        this.renderItems();
+      });
+    }
+
+    const dateFilter = document.getElementById('sidebar-date-filter');
+    if (dateFilter) {
+      dateFilter.addEventListener('change', (e) => {
+        this.filters.date = e.target.value;
+        this.renderItems();
+      });
+    }
+
+    // Sort buttons
+    const sortBtns = this.element.querySelectorAll('.sort-btn');
+    sortBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        if (this.isSorting) return;
+        this.toggleSort(e.target.closest('.sort-btn'));
+      });
+    });
+
+    // Refresh button
+    const refreshBtn = document.getElementById('sidebar-refresh');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        this.loadItems();
+      });
+    }
+
+    // New invoice button
+    const newBtn = document.getElementById('sidebar-new-invoice');
+    if (newBtn) {
+      newBtn.addEventListener('click', () => {
+        this.createNewInvoice();
+      });
+    }
+
+    // Listen for storage updates
+    if (this.invoiceStorage) {
+      this.invoiceStorage.subscribe(() => {
+        if (!this.isUpdating) {
+          this.loadItems();
+        }
+      });
+    }
+
+    // Item actions (using event delegation)
+    this.element.addEventListener('click', (e) => {
+      const action = e.target.dataset.action;
+      const id = e.target.dataset.id;
+
+      if (!action || !id) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
       switch (action) {
         case 'load':
           this.loadInvoice(id);
+          break;
+        case 'duplicate':
+          this.duplicateInvoice(id);
           break;
         case 'delete':
           this.deleteInvoice(id);
@@ -423,26 +189,38 @@ export class Sidebar {
       }
     });
   }
-  
+
   async loadInvoice(id) {
-    // Check for unsaved changes first
-    if (window.app && window.app.invoiceStorage) {
-      const currentState = window.app.state.getState();
-      const hasUnsavedChanges = window.app.invoiceStorage.hasUnsavedChanges(currentState);
-      
+    console.log('🔧 PHASE 3 FIX: Starting enhanced invoice loading for:', id);
+
+    // 🔧 PHASE 3 FIX: Reset unsaved changes manager for new invoice
+    if (window.app && window.app.unsavedChangesManager) {
+      window.app.unsavedChangesManager.resetForNewInvoice();
+      console.log('🔧 PHASE 3 FIX: Reset unsaved changes manager');
+    }
+
+    // Check for unsaved changes using the enhanced manager
+    if (window.app && window.app.unsavedChangesManager) {
+      const hasUnsavedChanges = window.app.unsavedChangesManager.getHasUnsavedChanges();
+
       if (hasUnsavedChanges) {
+        const changesSummary = window.app.unsavedChangesManager.getChangesSummary();
+        const changesText = changesSummary.changes.length > 0
+          ? `\n\nChanges: ${changesSummary.changes.join(', ')}`
+          : '';
+
         const confirmed = await window.app.promptModal.showConfirm(
           'Warning',
-          'You have unsaved changes. Continue without saving?'
+          `You have unsaved changes. Continue without saving?${changesText}`
         );
-        
+
         if (!confirmed) {
           return; // User cancelled
         }
       }
     }
-    
-    const invoice = await this.invoiceStorage.loadInvoice(id);
+
+    const invoice = await this.invoiceStorage.getInvoice(id);
     if (invoice && window.app) {
       console.log('📂 Loading invoice for editing:', { id, title: invoice.title });
 
@@ -460,147 +238,337 @@ export class Sidebar {
         window.app.scopeForm.populate(invoice.data.scope);
       }
 
-      // Set the saved state AFTER all forms have been populated and change events have fired
-      // This ensures we capture the final state after any form-triggered updates
+      // 🔧 PHASE 3 FIX: Enhanced baseline establishment with proper timing
       setTimeout(() => {
         const finalState = window.app.state.getState();
-        this.invoiceStorage.setSavedState(finalState);
+
+        // Set saved state in storage for backward compatibility
+        this.invoiceStorage.lastSavedState = JSON.parse(JSON.stringify(finalState));
+
+        // 🔧 PHASE 3 FIX: Signal that invoice loading is complete
+        if (window.app.unsavedChangesManager) {
+          window.app.unsavedChangesManager.onInvoiceLoaded();
+          console.log('🔧 PHASE 3 FIX: Signaled invoice loading complete');
+
+          // Now establish the baseline with the loaded data
+          window.app.unsavedChangesManager.markAsSaved();
+          console.log('🔧 PHASE 3 FIX: Baseline established after load complete');
+        }
+
         console.log('✅ Set saved state AFTER form population complete');
         console.log(`✅ Edit mode active for invoice: ${id}`);
-      }, 50); // Give time for all form updates to complete
+      }, 100); // Increased timeout to ensure all form updates complete
 
       console.log('✅ Loaded invoice for editing:', invoice.title);
+    } else {
+      console.error('❌ Failed to load invoice:', id);
     }
   }
-  
+
   duplicateInvoice(id) {
     const newId = this.invoiceStorage.duplicateInvoice(id);
     if (newId) {
       console.log('Duplicated invoice with ID:', newId);
     }
   }
-  
+
   deleteInvoice(id) {
     if (confirm('Are you sure you want to delete this invoice?')) {
       this.invoiceStorage.deleteInvoice(id);
     }
   }
-  
+
   async createNewInvoice() {
     console.log('🔘 Sidebar createNewInvoice called');
-    
-    // Check for unsaved changes first
-    if (window.app && window.app.invoiceStorage) {
-      const currentState = window.app.state.getState();
-      const hasUnsavedChanges = window.app.invoiceStorage.hasUnsavedChanges(currentState);
-      
+
+    // 🔧 PHASE 3 FIX: Reset unsaved changes manager for new invoice
+    if (window.app && window.app.unsavedChangesManager) {
+      window.app.unsavedChangesManager.resetForNewInvoice();
+      console.log('🔧 PHASE 3 FIX: Reset unsaved changes manager for new invoice');
+    }
+
+    // Check for unsaved changes using the enhanced manager
+    if (window.app && window.app.unsavedChangesManager) {
+      const hasUnsavedChanges = window.app.unsavedChangesManager.getHasUnsavedChanges();
+
       if (hasUnsavedChanges) {
+        const changesSummary = window.app.unsavedChangesManager.getChangesSummary();
+        const changesText = changesSummary.changes.length > 0
+          ? `\n\nChanges: ${changesSummary.changes.join(', ')}`
+          : '';
+
         const confirmed = await window.app.promptModal.showConfirm(
           'Warning',
-          'You have unsaved changes. Continue without saving?'
+          `You have unsaved changes. Continue without saving?${changesText}`
         );
-        
+
         if (!confirmed) {
           return; // User cancelled
         }
       }
     }
-    
-    // NUCLEAR OPTION: Direct DOM manipulation
-    console.log('💥 NUCLEAR OPTION: Direct DOM clearing');
-    
-    try {
-      // Clear ALL input fields directly - no fancy methods
-      const inputs = document.querySelectorAll('input');
-      console.log(`🔍 Found ${inputs.length} input elements`);
-      
-      inputs.forEach((input, index) => {
-        const oldValue = input.value;
-        input.value = '';
-        console.log(`  ${index}: ${input.id || input.className} - was "${oldValue}" now "${input.value}"`);
-        
-        // Force trigger input event
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-      
-      // Clear all suffix displays by removing has-value class
-      const wrappers = document.querySelectorAll('.input-with-suffix');
-      console.log(`🎯 Found ${wrappers.length} suffix wrappers`);
-      wrappers.forEach((wrapper, index) => {
-        const hadValue = wrapper.classList.contains('has-value');
-        wrapper.classList.remove('has-value');
-        console.log(`  ${index}: ${hadValue ? 'removed' : 'already clear'} has-value`);
-      });
-      
-      // Clear line items
-      const lineItemsList = document.getElementById('line-items-list');
-      if (lineItemsList) {
-        console.log(`🧹 Clearing ${lineItemsList.children.length} line items`);
-        lineItemsList.innerHTML = '';
-      }
-      
-      // Force switch to vessel tab
-      const vesselTab = document.querySelector('.tab-button[data-tab="vessel"]');
-      if (vesselTab) {
-        console.log('🎯 Force switching to vessel tab');
-        vesselTab.click();
-      }
-      
-      // Force update state if available
-      if (window.app && window.app.state && typeof window.app.state.reset === 'function') {
-        console.log('🔄 Force resetting state');
-        window.app.state.reset();
 
-        // Ensure edit mode is cleared when creating new invoice
-        if (typeof window.app.state.clearEditMode === 'function') {
-          window.app.state.clearEditMode();
-          console.log('✅ Edit mode cleared for new invoice');
-        }
-      }
-      
-      console.log('💥 NUCLEAR CLEAR COMPLETED');
-      return true;
-      
-    } catch (error) {
-      console.error('💀 EVEN NUCLEAR OPTION FAILED:', error);
-      return false;
+    // Clear current state
+    if (window.app && window.app.state) {
+      window.app.state.reset();
+      console.log('✅ State reset for new invoice');
     }
+
+    // Clear all forms
+    if (window.app.vesselForm) {
+      window.app.vesselForm.reset();
+    }
+    if (window.app.customerForm) {
+      window.app.customerForm.reset();
+    }
+    if (window.app.scopeForm) {
+      window.app.scopeForm.reset();
+    }
+    if (window.app.notesForm) {
+      window.app.notesForm.reset();
+    }
+
+    // 🔧 PHASE 3 FIX: Allow baseline to be established when user starts entering data
+    // Don't call markAsSaved here - let it happen naturally when user starts typing
+    console.log('🔧 PHASE 3 FIX: New invoice ready - baseline will be established when user enters data');
+
+    console.log('✅ New invoice ready');
   }
-  
-  toggleSidebar() {
-    if (!this.sidebar) {
-      console.error('❌ Cannot toggle sidebar: sidebar is null');
+
+  loadItems() {
+    if (this.isUpdating || !this.invoiceStorage) {
       return;
     }
-    
-    this.isCollapsed = !this.isCollapsed;
-    this.sidebar.classList.toggle('collapsed', this.isCollapsed);
-    
-    const appContainer = document.querySelector('.app-container');
-    if (appContainer) {
-      appContainer.classList.toggle('sidebar-collapsed', this.isCollapsed);
+
+    this.isUpdating = true;
+
+    try {
+      const invoices = this.invoiceStorage.getSavedItems();
+      const drafts = this.invoiceStorage.getAllDrafts();
+
+      this.items = [...invoices, ...drafts].sort((a, b) => {
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
+      });
+
+      this.renderItems();
+    } catch (error) {
+      console.error('Error loading sidebar items:', error);
+      this.showError('Failed to load invoices');
+    } finally {
+      this.isUpdating = false;
     }
   }
-  
-  // Utility methods
-  truncateText(text, maxLength) {
-    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+
+  filterItems() {
+    if (!this.items) return [];
+
+    return this.items.filter(item => {
+      // Search filter
+      if (this.filters.search) {
+        const searchTerm = this.filters.search.toLowerCase();
+        const matchesTitle = item.title.toLowerCase().includes(searchTerm);
+        const matchesCustomer = item.data?.customer?.customerName?.toLowerCase().includes(searchTerm);
+        const matchesVessel = item.data?.vessel?.name?.toLowerCase().includes(searchTerm) ||
+                            item.data?.vessel?.vesselName?.toLowerCase().includes(searchTerm);
+
+        if (!matchesTitle && !matchesCustomer && !matchesVessel) {
+          return false;
+        }
+      }
+
+      // Status filter
+      if (this.filters.status !== 'all' && item.status !== this.filters.status) {
+        return false;
+      }
+
+      // Date filter
+      if (this.filters.date !== 'all') {
+        const itemDate = new Date(item.updatedAt);
+        const now = new Date();
+
+        switch (this.filters.date) {
+          case 'today':
+            if (itemDate.toDateString() !== now.toDateString()) return false;
+            break;
+          case 'week':
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            if (itemDate < weekAgo) return false;
+            break;
+          case 'month':
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            if (itemDate < monthAgo) return false;
+            break;
+        }
+      }
+
+      return true;
+    });
   }
-  
-  getRelativeTime(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return date.toLocaleDateString();
+
+  renderItems() {
+    if (this.isRendering) return;
+    this.isRendering = true;
+
+    try {
+      const loadingEl = document.getElementById('sidebar-loading');
+      const itemsEl = document.getElementById('sidebar-items');
+      const emptyEl = document.getElementById('sidebar-empty');
+
+      if (!itemsEl) return;
+
+      // Hide loading
+      if (loadingEl) loadingEl.style.display = 'none';
+
+      const filteredItems = this.filterItems();
+
+      if (filteredItems.length === 0) {
+        itemsEl.style.display = 'none';
+        if (emptyEl) emptyEl.style.display = 'block';
+        return;
+      }
+
+      if (emptyEl) emptyEl.style.display = 'none';
+      itemsEl.style.display = 'block';
+
+      itemsEl.innerHTML = filteredItems.map(item => this.createItemHTML(item)).join('');
+    } catch (error) {
+      console.error('Error rendering sidebar items:', error);
+      this.showError('Failed to display invoices');
+    } finally {
+      this.isRendering = false;
+    }
+  }
+
+  createItemHTML(item) {
+    const date = new Date(item.updatedAt).toLocaleDateString();
+    const time = new Date(item.updatedAt).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const statusClass = this.getStatusClass(item.status);
+    const customerName = item.data?.customer?.customerName || 'No customer';
+    const vesselName = item.data?.vessel?.name || item.data?.vessel?.vesselName || 'No vessel';
+
+    const total = item.total ? `$${item.total.toFixed(2)}` : '$0.00';
+
+    return `
+      <div class="sidebar-item" data-id="${item.id}">
+        <div class="item-main" data-action="load" data-id="${item.id}">
+          <div class="item-header">
+            <h4 class="item-title">${this.escapeHtml(item.title)}</h4>
+            <span class="item-status ${statusClass}">${item.status}</span>
+          </div>
+          <div class="item-details">
+            <div class="item-info">
+              <span class="item-customer">${this.escapeHtml(customerName)}</span>
+              <span class="item-vessel">${this.escapeHtml(vesselName)}</span>
+            </div>
+            <div class="item-total">${total}</div>
+          </div>
+          <div class="item-meta">
+            <span class="item-date">${date} ${time}</span>
+          </div>
+        </div>
+        <div class="item-actions">
+          <button class="action-btn" data-action="duplicate" data-id="${item.id}" title="Duplicate">
+            📋
+          </button>
+          <button class="action-btn delete" data-action="delete" data-id="${item.id}" title="Delete">
+            🗑️
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  getStatusClass(status) {
+    switch (status) {
+      case 'saved':
+        return 'status-saved';
+      case 'submitted':
+        return 'status-submitted';
+      case 'draft':
+        return 'status-draft';
+      default:
+        return 'status-unknown';
+    }
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  toggleSort(button) {
+    this.isSorting = true;
+
+    try {
+      const sortType = button.dataset.sort;
+      const indicator = button.querySelector('.sort-indicator');
+      const wasActive = button.classList.contains('active');
+
+      // Reset all sort buttons
+      this.element.querySelectorAll('.sort-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.querySelector('.sort-indicator').textContent = '';
+      });
+
+      // Toggle sort direction if same button, otherwise default to descending
+      let isAscending = false;
+      if (wasActive && indicator.textContent === '↓') {
+        isAscending = true;
+        indicator.textContent = '↑';
+      } else {
+        indicator.textContent = '↓';
+      }
+
+      button.classList.add('active');
+
+      // Sort items
+      if (this.items) {
+        this.items.sort((a, b) => {
+          let comparison = 0;
+
+          if (sortType === 'date') {
+            const dateA = new Date(a.updatedAt);
+            const dateB = new Date(b.updatedAt);
+            comparison = dateB - dateA; // Default: newest first
+          } else if (sortType === 'name') {
+            comparison = a.title.localeCompare(b.title);
+          }
+
+          return isAscending ? -comparison : comparison;
+        });
+
+        this.renderItems();
+      }
+    } catch (error) {
+      console.error('Error sorting items:', error);
+    } finally {
+      this.isSorting = false;
+    }
+  }
+
+  showError(message) {
+    const itemsEl = document.getElementById('sidebar-items');
+    if (itemsEl) {
+      itemsEl.innerHTML = `
+        <div class="error-state">
+          <p class="error-message">${message}</p>
+          <button onclick="window.location.reload()" class="retry-btn">
+            Retry
+          </button>
+        </div>
+      `;
+    }
+  }
+
+  destroy() {
+    if (this.element && this.element.parentNode) {
+      this.element.parentNode.removeChild(this.element);
+    }
+    this.removeAllListeners();
   }
 }
