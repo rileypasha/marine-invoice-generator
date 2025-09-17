@@ -16,7 +16,7 @@ Please find below the invoice request details for ${invoiceState.vessel.name || 
 VESSEL DETAILS:
 - Vessel Name: ${invoiceState.vessel.name || 'N/A'}
 - Weight: ${invoiceState.vessel.weight || '0'} tons
-- Beam: ${invoiceState.vessel.beam || '0'} ft
+- Length: ${invoiceState.vessel.beam || '0'} ft
 - Customer Type: ${invoiceState.vessel.customerType || 'N/A'}
 
 CUSTOMER INFORMATION:

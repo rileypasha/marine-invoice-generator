@@ -7,7 +7,7 @@ export function initializeFormatters() {
     formatWithSuffix(weightInput, ' tons');
   }
 
-  // Beam field - add "ft" suffix
+  // Length field - add "ft" suffix
   const beamInput = document.getElementById('vessel-beam');
   if (beamInput) {
     formatWithSuffix(beamInput, ' ft');

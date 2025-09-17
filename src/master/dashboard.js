@@ -415,7 +415,7 @@ class MasterDashboard {
                                         <div class="detail-value">${vessel.weight || invoice.vesselWeight || 'N/A'} tons</div>
                                     </div>
                                     <div class="detail-item">
-                                        <div class="detail-label">BEAM</div>
+                                        <div class="detail-label">LENGTH</div>
                                         <div class="detail-value">${vessel.beam || invoice.vesselBeam || 'N/A'} ft</div>
                                     </div>
                                 </div>
@@ -851,7 +851,7 @@ class MasterDashboard {
                             <span class="detail-value">${vessel.weight ? this.formatNumber(vessel.weight) + ' tons' : (invoice.vesselWeight ? this.formatNumber(invoice.vesselWeight) + ' tons' : 'N/A')}</span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">Beam</span>
+                            <span class="detail-label">Length</span>
                             <span class="detail-value">${vessel.beam ? this.formatNumber(vessel.beam) + ' ft' : (invoice.vesselBeam ? this.formatNumber(invoice.vesselBeam) + ' ft' : 'N/A')}</span>
                         </div>
                     </div>
