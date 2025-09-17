@@ -422,6 +422,3 @@ runStartupMigration().then(() => {
   console.error('❌ Failed to start server:', error);
   process.exit(1);
 });
-
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
