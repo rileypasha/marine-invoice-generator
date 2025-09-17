@@ -95,6 +95,27 @@ export class Sidebar {
           <p class="empty-subtitle">Create your first invoice to get started</p>
         </div>
       </div>
+
+      <div class="sidebar-footer">
+        <button class="user-section" id="user-section" style="display: none;" title="Settings">
+          <div class="user-info">
+            <div class="user-avatar">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <div class="user-details">
+              <div class="user-name" id="user-name">User Name</div>
+              <div class="user-email" id="user-email">user@example.com</div>
+            </div>
+          </div>
+        </button>
+
+        <div class="auth-section" id="auth-section">
+          <button class="auth-btn primary" id="sign-in-btn">Sign In</button>
+        </div>
+      </div>
     `;
 
     container.appendChild(this.element);
@@ -565,6 +586,46 @@ export class Sidebar {
           </button>
         </div>
       `;
+    }
+  }
+
+  updateUserSection(user) {
+    console.log('🔄 Updating user section with:', user);
+
+    if (!this.element) {
+      console.error('❌ Cannot update user section: sidebar element is null');
+      return;
+    }
+
+    const userSection = this.element.querySelector('#user-section');
+    const authSection = this.element.querySelector('#auth-section');
+
+    if (!userSection || !authSection) {
+      console.error('❌ Cannot find user or auth sections');
+      console.log('Available elements:', {
+        userSection: !!userSection,
+        authSection: !!authSection
+      });
+      return;
+    }
+
+    if (user) {
+      console.log('✅ User authenticated, showing user section');
+      // Show user section
+      userSection.style.display = 'flex';
+      authSection.style.display = 'none';
+
+      // Update user info
+      const userNameEl = this.element.querySelector('#user-name');
+      const userEmailEl = this.element.querySelector('#user-email');
+
+      if (userNameEl) userNameEl.textContent = user.name || user.email || 'User';
+      if (userEmailEl) userEmailEl.textContent = user.email || '';
+    } else {
+      console.log('⚠️ No user, showing auth section');
+      // Show auth section
+      userSection.style.display = 'none';
+      authSection.style.display = 'flex';
     }
   }
 
