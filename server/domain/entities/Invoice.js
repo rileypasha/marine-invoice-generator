@@ -291,12 +291,28 @@ class Invoice {
    * Create from database record
    */
   static fromDatabase(dbRecord) {
+    // Map database status back to domain state
+    let state = InvoiceState.SAVED; // Default fallback
+    switch (dbRecord.status) {
+      case 'draft':
+        state = InvoiceState.DRAFT;
+        break;
+      case 'saved':
+        state = InvoiceState.SAVED;
+        break;
+      case 'archived':
+        state = InvoiceState.FINALIZED;
+        break;
+      default:
+        state = InvoiceState.SAVED;
+    }
+
     return new Invoice({
       id: dbRecord.id,
       title: dbRecord.title,
       data: typeof dbRecord.data === 'string' ? JSON.parse(dbRecord.data) : dbRecord.data,
       metadata: typeof dbRecord.metadata === 'string' ? JSON.parse(dbRecord.metadata) : dbRecord.metadata,
-      state: dbRecord.state || InvoiceState.SAVED, // Default legacy records to SAVED
+      state: state, // Map database status to domain state
       version: dbRecord.version || 1,
       userId: dbRecord.userId,
       userName: dbRecord.userName,

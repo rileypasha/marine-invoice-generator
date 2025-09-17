@@ -369,12 +369,31 @@ class InvoiceRepository {
    * @returns {object} Database record format
    */
   _mapToDatabase(invoice) {
+    // Map domain state to database status for compatibility
+    let status = 'saved'; // Default fallback
+    switch (invoice.state) {
+      case InvoiceState.DRAFT:
+        status = 'draft';
+        break;
+      case InvoiceState.SAVED:
+        status = 'saved';
+        break;
+      case InvoiceState.MODIFIED:
+        status = 'saved'; // Modified invoices are saved to database
+        break;
+      case InvoiceState.FINALIZED:
+        status = 'archived';
+        break;
+      default:
+        status = 'saved';
+    }
+
     return {
       id: invoice.id,
       title: invoice.title,
       data: JSON.stringify(invoice.data),
       metadata: JSON.stringify(invoice.metadata),
-      state: invoice.state,
+      status: status, // Map state to status for database compatibility
       version: invoice.version,
       userName: invoice.userName,
       userEmail: invoice.userEmail,
