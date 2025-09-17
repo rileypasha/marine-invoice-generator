@@ -1,5 +1,37 @@
 // Auto-formatting functions for input fields
 
+/**
+ * PHASE 2: Centralized formatters for consistent data-presentation separation
+ * Ensures data model stores numeric values, presentation adds formatting
+ */
+
+// Centralized formatters for converting numeric values to display strings
+export function formatWeight(value) {
+  const num = parseFloat(value);
+  return isNaN(num) || num === 0 ? '' : `${num} tons`;
+}
+
+export function formatBeam(value) {
+  const num = parseFloat(value);
+  return isNaN(num) || num === 0 ? '' : `${num} ft`;
+}
+
+// Centralized parsers for extracting numeric values from user input
+export function parseNumber(input) {
+  const str = String(input || '').trim();
+  const cleaned = str.replace(/[^\d.-]/g, ''); // Remove all non-numeric except decimal and minus
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? '' : cleaned; // Return string for data model consistency
+}
+
+// Get the raw numeric value without units for calculations
+export function getRawValue(input) {
+  if (input.dataset && input.dataset.rawValue !== undefined) {
+    return input.dataset.rawValue;
+  }
+  return parseNumber(input.value);
+}
+
 export function initializeFormatters() {
   // Weight field - add "tons" suffix
   const weightInput = document.getElementById('vessel-weight');
@@ -49,41 +81,92 @@ export function initializeFormatters() {
 }
 
 function formatWithSuffix(input, suffix) {
+  if (!input) return;
+
+  // PHASE 3: Enhanced input component hardening for session restore
+
   // Store the raw value as a data attribute
   input.addEventListener('input', function() {
     // Ensure value is always a string
     const val = this.value != null ? String(this.value) : '';
     const rawValue = val.replace(suffix, '').trim();
     this.dataset.rawValue = rawValue;
-    
+
+    // Update wrapper class for CSS suffix display
+    const wrapper = this.closest('.input-with-suffix');
+    if (wrapper) {
+      if (rawValue !== '') {
+        wrapper.classList.add('has-value');
+      } else {
+        wrapper.classList.remove('has-value');
+      }
+    }
+
     // Trigger input event for other listeners
     const event = new Event('change', { bubbles: true });
     this.dispatchEvent(event);
   });
 
   input.addEventListener('focus', function() {
-    // Remove suffix when editing
+    // Remove suffix when editing - show numeric only
     const val = this.value != null ? String(this.value) : '';
     const value = val.replace(suffix, '').trim();
     this.value = value;
+
+    // Remove wrapper class during editing
+    const wrapper = this.closest('.input-with-suffix');
+    if (wrapper) {
+      wrapper.classList.remove('has-value');
+    }
   });
 
   input.addEventListener('blur', function() {
     const val = this.value != null ? String(this.value) : '';
     const value = val.replace(suffix, '').trim();
     this.dataset.rawValue = value;
-    if (value && !val.endsWith(suffix)) {
-      this.value = value + suffix;
+
+    // Update wrapper class and display suffix
+    const wrapper = this.closest('.input-with-suffix');
+    if (wrapper && value !== '') {
+      wrapper.classList.add('has-value');
+      if (!val.endsWith(suffix)) {
+        this.value = value + suffix;
+      }
+    } else if (wrapper) {
+      wrapper.classList.remove('has-value');
     }
   });
 
-  // Initial format if there's a value
-  if (input.value != null && input.value !== '') {
-    const val = String(input.value);
-    if (!val.endsWith(suffix)) {
-      const rawValue = val.replace(suffix, '').trim();
-      input.dataset.rawValue = rawValue;
-      input.value = rawValue + suffix;
+  // CRITICAL: Initial format for session restore and mount
+  applyInitialFormat(input, suffix);
+}
+
+// Separate function for applying initial format - used for session restore
+function applyInitialFormat(input, suffix) {
+  if (!input) return;
+
+  const val = input.value != null ? String(input.value) : '';
+  const wrapper = input.closest('.input-with-suffix');
+
+  if (val !== '') {
+    const rawValue = val.replace(suffix, '').trim();
+    input.dataset.rawValue = rawValue;
+
+    // Always ensure proper display format
+    if (rawValue !== '') {
+      // Add suffix if not already present
+      if (!val.endsWith(suffix)) {
+        input.value = rawValue + suffix;
+      }
+      // Set wrapper class for CSS display
+      if (wrapper) {
+        wrapper.classList.add('has-value');
+      }
+    }
+  } else {
+    // Remove wrapper class for empty values
+    if (wrapper) {
+      wrapper.classList.remove('has-value');
     }
   }
 }
@@ -194,5 +277,10 @@ export default {
   initializeFormatters,
   formatWithSuffix,
   formatCurrency,
-  formatPhoneNumber
+  formatPhoneNumber,
+  formatWeight,
+  formatBeam,
+  parseNumber,
+  getRawValue,
+  applyInitialFormat
 };

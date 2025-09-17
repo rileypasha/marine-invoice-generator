@@ -1,6 +1,7 @@
 import { validateNumber } from '../state/validators.js';
 import { CONSTANTS } from '../utils/constants.js';
 import { safeString, normalizeSessionData } from '../utils/safeString.js';
+import { applyInitialFormat, getRawValue } from '../formatters.js';
 
 export class VesselForm {
   constructor(state) {
@@ -84,20 +85,12 @@ export class VesselForm {
     });
 
     this.vesselWeight.addEventListener('input', (e) => {
-      const value = e.target.value;
-      this.state.updateVessel({ weight: value });
+      // PHASE 4: Use raw value for data model, let formatters handle display
+      const rawValue = getRawValue(e.target);
+      this.state.updateVessel({ weight: rawValue });
 
-      // Show/hide suffix based on whether there's a value
-      // 🔧 PHASE 2 FIX: Type-safe string coercion before .trim()
-      const safeValue = String(value || '');
-      if (safeValue.trim() !== '') {
-        this.weightWrapper.classList.add('has-value');
-      } else {
-        this.weightWrapper.classList.remove('has-value');
-      }
-      
       // Auto-manage clearance fee based on tonnage
-      this.manageClearanceFee(value);
+      this.manageClearanceFee(rawValue);
     });
     
     // Add keydown event to prevent non-numeric input
@@ -143,17 +136,9 @@ export class VesselForm {
     });
 
     this.vesselBeam.addEventListener('input', (e) => {
-      const value = e.target.value;
-      this.state.updateVessel({ beam: value });
-
-      // Show/hide suffix based on whether there's a value
-      // 🔧 PHASE 2 FIX: Type-safe string coercion before .trim()
-      const safeValue = String(value || '');
-      if (safeValue.trim() !== '') {
-        this.beamWrapper.classList.add('has-value');
-      } else {
-        this.beamWrapper.classList.remove('has-value');
-      }
+      // PHASE 4: Use raw value for data model, let formatters handle display
+      const rawValue = getRawValue(e.target);
+      this.state.updateVessel({ beam: rawValue });
     });
   }
   
@@ -165,7 +150,7 @@ export class VesselForm {
       return;
     }
 
-    // 🔧 PHASE 2 FIX: Normalize vessel data to prevent type errors during session restore
+    // 🔧 PHASE 4: Normalize vessel data and apply proper formatting after session restore
     const normalizedData = {
       name: safeString(vesselData.name),
       weight: safeString(vesselData.weight),
@@ -176,30 +161,22 @@ export class VesselForm {
     this.vesselWeight.value = normalizedData.weight;
     this.vesselBeam.value = normalizedData.beam;
 
-    // Update suffix visibility for populated values
+    // CRITICAL: Apply formatting after setting values (session restore)
+    // This ensures the suffix display is properly initialized
     if (normalizedData.weight !== '') {
-      if (this.weightWrapper) {
-        this.weightWrapper.classList.add('has-value');
-      }
+      applyInitialFormat(this.vesselWeight, ' tons');
       // Also manage clearance fee when populating from saved data
       this.manageClearanceFee(normalizedData.weight);
     } else {
-      if (this.weightWrapper) {
-        this.weightWrapper.classList.remove('has-value');
-      }
       // Remove clearance fee if no weight
       this.manageClearanceFee('');
     }
 
     if (normalizedData.beam !== '') {
-      if (this.beamWrapper) {
-        this.beamWrapper.classList.add('has-value');
-      }
-    } else {
-      if (this.beamWrapper) {
-        this.beamWrapper.classList.remove('has-value');
-      }
+      applyInitialFormat(this.vesselBeam, ' ft');
     }
+
+    console.log('✅ VesselForm: Data populated and formatting applied');
   }
   
   manageClearanceFee(weight) {
