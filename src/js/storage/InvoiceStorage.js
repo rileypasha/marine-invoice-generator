@@ -20,6 +20,8 @@ export class InvoiceStorage {
     this.serverRetryDelay = 1000; // Start with 1 second delay
     this.maxRetryDelay = 30000; // Maximum 30 second delay
     this.maxFailedSaves = 10; // Limit failed save queue to 10 items
+    this.persistentFailureStartTime = null; // Track when persistent failures started
+    this.circuitBreakerActive = false; // Circuit breaker for persistent errors
 
     this.setupAutoSave();
 
@@ -30,6 +32,8 @@ export class InvoiceStorage {
           // User logged in, reset auth failure flag and retry failed saves
           this.authFailed = false;
           this.serverFailureCount = 0; // Reset failure count on new auth
+          this.circuitBreakerActive = false; // Reset circuit breaker on new auth
+          this.persistentFailureStartTime = null; // Reset persistent failure tracking
           console.log('🔓 User authenticated - enabling server saves');
 
           // CRITICAL: Sync invoices from server when user logs in
@@ -743,6 +747,12 @@ export class InvoiceStorage {
    * This ensures users don't lose their invoices when localStorage is cleared
    */
   async syncFromServer() {
+    // 🔧 CIRCUIT BREAKER: Stop persistent failure retries
+    if (this.circuitBreakerActive) {
+      console.log('🔌 Circuit breaker active - skipping server sync to prevent console spam');
+      return;
+    }
+
     const currentUser = this.userManager.getCurrentUser();
     if (!currentUser) {
       console.log('❌ No user logged in, cannot sync from server');
@@ -835,6 +845,8 @@ export class InvoiceStorage {
         this.serverFailureCount = 0;
         this.serverRetryDelay = 1000;
         this.lastServerCheck = Date.now();
+        this.persistentFailureStartTime = null; // Reset persistent failure tracking
+        this.circuitBreakerActive = false; // Reset circuit breaker on success
 
         // Notify listeners (update sidebar)
         this.notify();
@@ -844,10 +856,29 @@ export class InvoiceStorage {
         this.serverFailureCount = 0;
         this.serverRetryDelay = 1000;
         this.lastServerCheck = Date.now();
+        this.persistentFailureStartTime = null; // Reset persistent failure tracking
+        this.circuitBreakerActive = false; // Reset circuit breaker on successful connection
       } else if (response.status >= 500) {
-        // 🔧 PHASE 2 FIX: Enhanced 500 error handling with graceful fallback
+        // 🔧 ENHANCED: Detect persistent failures and activate circuit breaker
         this.serverFailureCount++;
         this.lastServerCheck = Date.now();
+
+        // Track when persistent failures started
+        if (!this.persistentFailureStartTime) {
+          this.persistentFailureStartTime = Date.now();
+        }
+
+        // Check if failures have been persistent for >2 minutes
+        const failureDuration = Date.now() - this.persistentFailureStartTime;
+        if (failureDuration > 120000 && this.serverFailureCount >= 3) { // 2 minutes and 3+ failures
+          this.circuitBreakerActive = true;
+          console.log('🔌 CIRCUIT BREAKER ACTIVATED: Persistent server errors detected');
+          console.log('🛑 Stopping retry attempts to prevent console spam');
+          console.log('💡 Circuit breaker will reset on next user authentication');
+          this.notify(); // Update UI with local data
+          return; // Exit without scheduling retry
+        }
+
         this.serverRetryDelay = Math.min(this.serverRetryDelay * 2, this.maxRetryDelay);
 
         console.error(`❌ Failed to sync from server: ${response.status}`);
@@ -857,7 +888,7 @@ export class InvoiceStorage {
         const localInvoices = this.getAllInvoices();
         console.log(`📦 Working offline: ${localInvoices.length} invoices available locally`);
 
-        // Schedule retry with exponential backoff
+        // Schedule retry with exponential backoff (only if circuit breaker not active)
         if (this.serverFailureCount <= 5) {
           console.log(`🔄 Will retry server sync in ${this.serverRetryDelay}ms`);
           setTimeout(() => {
