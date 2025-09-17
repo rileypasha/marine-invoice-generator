@@ -34,6 +34,29 @@
 
 /* Edit Mode Indicator - REMOVED: Banner functionality removed per requirements */
 
+/* Form row layout for address fields */
+.form-row {
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+}
+
+.form-row .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .form-row .form-group {
+    margin-bottom: 1rem;
+  }
+}
+
 /* Save button edit mode styling */
 #save-invoice.edit-mode {
   background: linear-gradient(135deg, #059669, #10b981);

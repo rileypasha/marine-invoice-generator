@@ -163,6 +163,7 @@ const masterRouter = require('./routes/master');
 const authRouter = require('./routes/auth');
 const authFormRouter = require('./routes/auth-form');
 const masterChangesRouter = require('./routes/master-changes');
+const geoRouter = require('./routes/geo');
 const { loadUser, requireMaster } = require('./middleware/auth');
 const { trackRevision } = require('./middleware/revision-tracker');
 
@@ -278,6 +279,9 @@ app.use('/api/invoices', userInvoicesRouter);
 
 // Standard API routes
 app.use('/api/v1', apiRouter);
+
+// Geolocation API routes
+app.use('/api/geo', geoRouter);
 
 // Master dashboard API routes
 app.use('/api/master', masterRouter);
