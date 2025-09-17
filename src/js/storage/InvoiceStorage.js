@@ -747,12 +747,6 @@ export class InvoiceStorage {
    * This ensures users don't lose their invoices when localStorage is cleared
    */
   async syncFromServer() {
-    // 🔧 CIRCUIT BREAKER: Stop persistent failure retries
-    if (this.circuitBreakerActive) {
-      console.log('🔌 Circuit breaker active - skipping server sync to prevent console spam');
-      return;
-    }
-
     const currentUser = this.userManager.getCurrentUser();
     if (!currentUser) {
       console.log('❌ No user logged in, cannot sync from server');
@@ -859,49 +853,20 @@ export class InvoiceStorage {
         this.persistentFailureStartTime = null; // Reset persistent failure tracking
         this.circuitBreakerActive = false; // Reset circuit breaker on successful connection
       } else if (response.status >= 500) {
-        // 🔧 ENHANCED: Detect persistent failures and activate circuit breaker
-        this.serverFailureCount++;
-        this.lastServerCheck = Date.now();
-
-        // Track when persistent failures started
-        if (!this.persistentFailureStartTime) {
-          this.persistentFailureStartTime = Date.now();
-        }
-
-        // Check if failures have been persistent for >2 minutes
-        const failureDuration = Date.now() - this.persistentFailureStartTime;
-        if (failureDuration > 120000 && this.serverFailureCount >= 3) { // 2 minutes and 3+ failures
-          this.circuitBreakerActive = true;
-          console.log('🔌 CIRCUIT BREAKER ACTIVATED: Persistent server errors detected');
-          console.log('🛑 Stopping retry attempts to prevent console spam');
-          console.log('💡 Circuit breaker will reset on next user authentication');
-          this.notify(); // Update UI with local data
-          return; // Exit without scheduling retry
-        }
-
-        this.serverRetryDelay = Math.min(this.serverRetryDelay * 2, this.maxRetryDelay);
-
-        console.error(`❌ Failed to sync from server: ${response.status}`);
-        console.log(`🔄 Server failure count: ${this.serverFailureCount}, next retry delay: ${this.serverRetryDelay}ms`);
+        // FIRST PRINCIPLES FIX: DO NOT RETRY ON 500 ERRORS
+        console.error(`❌ Server error (${response.status}) - NOT retrying to prevent console spam`);
 
         // Show user-friendly message about working offline
         const localInvoices = this.getAllInvoices();
-        console.log(`📦 Working offline: ${localInvoices.length} invoices available locally`);
+        console.log(`📦 Working offline with ${localInvoices.length} local invoices`);
 
-        // Schedule retry with exponential backoff (only if circuit breaker not active)
-        if (this.serverFailureCount <= 5) {
-          console.log(`🔄 Will retry server sync in ${this.serverRetryDelay}ms`);
-          setTimeout(() => {
-            console.log('🔄 Retrying server sync after failure...');
-            this.syncFromServer();
-          }, this.serverRetryDelay);
-        } else {
-          console.log('🚫 Too many server failures, switching to offline mode');
-          // TODO: Show offline mode indicator in UI
-        }
+        // Mark that we've seen a server error but DO NOT schedule any retries
+        this.serverFailureCount++;
+        this.lastServerCheck = Date.now();
 
-        // Don't throw error - continue with local data
+        // Just use local data - no retries, no exponential backoff, no circuit breaker needed
         this.notify(); // Update UI with local data
+        return; // Exit without ANY retry logic
       } else {
         console.error('❌ Failed to sync from server:', response.status);
         // For non-500 errors, don't implement exponential backoff
