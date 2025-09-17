@@ -293,8 +293,13 @@ export class Sidebar {
 
     // Item actions (using event delegation)
     this.element.addEventListener('click', (e) => {
-      const action = e.target.dataset.action;
-      const id = e.target.dataset.id;
+      // Use closest to find the element with data attributes, not just e.target
+      const actionElement = e.target.closest('[data-action]');
+
+      if (!actionElement) return;
+
+      const action = actionElement.dataset.action;
+      const id = actionElement.dataset.id;
 
       if (!action || !id) return;
 
