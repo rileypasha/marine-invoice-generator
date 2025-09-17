@@ -206,7 +206,7 @@ router.get('/address-autocomplete', rateLimit, validateInput, async (req, res) =
     logger.info({ query: cleanQuery, clientIP, limit, lang }, 'Making Geoapify API request');
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout for better coverage
 
     const response = await fetch(url.toString(), {
       signal: controller.signal,
@@ -254,7 +254,7 @@ router.get('/address-autocomplete', rateLimit, validateInput, async (req, res) =
       logger.error({ query: cleanQuery, clientIP }, 'Geoapify API request timeout');
       return res.status(504).json({
         error: 'Request timeout',
-        message: 'Address lookup service timed out. Please try again.'
+        message: 'Address lookup service timed out after 5 seconds. Please try a more specific address.'
       });
     }
 

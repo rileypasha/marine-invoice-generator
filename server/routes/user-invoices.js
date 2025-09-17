@@ -31,9 +31,9 @@ router.get('/user', loadUser, async (req, res) => {
           // Also check for string version of ID
           { userId: userId.toString() }
         ],
-        // Only get saved/submitted invoices, not drafts
+        // Only get saved invoices, exclude drafts (match master dashboard behavior)
         status: {
-          in: ['saved', 'submitted', 'completed']
+          not: 'draft'
         }
       },
       orderBy: {
