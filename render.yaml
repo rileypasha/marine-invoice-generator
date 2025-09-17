@@ -17,8 +17,12 @@ services:
         generateValue: true
       - key: SESSION_SECRET
         generateValue: true
-      - key: CORS_ORIGIN
-        value: https://marine-invoice-generator.onrender.com
+      - key: ALLOWED_ORIGINS
+        value: https://marine-invoice-generator.onrender.com,https://mginvoices.com
+      - key: MASTER_EMAILS
+        value: rpasha@marinegroupbw.com
+      - key: GEOAPIFY_API_KEY
+        value: 6291b90c7f8c4f888dda207c2f7f349a
 
 databases:
   - name: marine-invoice-db

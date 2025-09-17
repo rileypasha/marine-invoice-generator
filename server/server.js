@@ -28,10 +28,6 @@ app.set('trust proxy', true);
 
 // Session middleware - must come before other middleware
 const sessionConfig = {
-  store: new SQLiteStore({
-    db: 'sessions.db',
-    dir: './data'
-  }),
   secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
   name: 'connect.sid',
   resave: false,
@@ -46,6 +42,20 @@ const sessionConfig = {
     // Don't set domain - let browser handle it
   }
 };
+
+// Configure session store based on environment
+if (process.env.NODE_ENV === 'production') {
+  // Use memory store in production (sessions won't persist across restarts, but that's ok for this app)
+  logger.info('Using memory store for sessions in production');
+  // Default express-session memory store will be used
+} else {
+  // Use SQLite store in development
+  sessionConfig.store = new SQLiteStore({
+    db: 'sessions.db',
+    dir: './data'
+  });
+  logger.info('Using SQLite store for sessions in development');
+}
 
 // Configure cookie domain - CRITICAL for custom domains
 // Custom domains through CloudFlare need special handling
