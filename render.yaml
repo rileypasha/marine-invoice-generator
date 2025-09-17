@@ -3,7 +3,7 @@ services:
     name: marine-invoice-generator
     runtime: node
     buildCommand: npm install && npm run build && npm run prisma:generate
-    startCommand: npm run start:prod
+    startCommand: npm run server:prod
     envVars:
       - key: NODE_ENV
         value: production
