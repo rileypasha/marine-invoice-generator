@@ -38,7 +38,7 @@
     "prisma:reset": "prisma migrate deploy",
     "prisma:force-reset": "node prisma/force-reset.js",
     "dev:server": "node server/server.js",
-    "start:prod": "npx prisma migrate deploy && npx prisma generate && node server/server.js",
+    "start:prod": "npx prisma generate && node server/server.js",
     "ci:build": "npm run build && npm run build:css",
     "ci:test": "npm run test:critical",
     "ci:test:full": "npm run test:full",
