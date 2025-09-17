@@ -853,47 +853,36 @@ export class InvoiceStorage {
         this.persistentFailureStartTime = null; // Reset persistent failure tracking
         this.circuitBreakerActive = false; // Reset circuit breaker on successful connection
       } else if (response.status >= 500) {
-        // FIRST PRINCIPLES FIX: DO NOT RETRY ON 500 ERRORS
-        console.error(`❌ Server error (${response.status}) - NOT retrying to prevent console spam`);
+        // Server error - this is critical for multi-user app
+        console.error(`❌ Server error (${response.status}) - Cannot sync invoices`);
 
-        // Show user-friendly message about working offline
-        const localInvoices = this.getAllInvoices();
-        console.log(`📦 Working offline with ${localInvoices.length} local invoices`);
+        // For multi-user application, we MUST have server connectivity
+        // Show error to user that sync failed
+        console.error('⚠️ Unable to sync invoices from server. Please refresh the page.');
 
-        // Mark that we've seen a server error but DO NOT schedule any retries
+        // Mark the failure but don't fall back to local data
         this.serverFailureCount++;
         this.lastServerCheck = Date.now();
 
-        // Just use local data - no retries, no exponential backoff, no circuit breaker needed
-        this.notify(); // Update UI with local data
-        return; // Exit without ANY retry logic
+        // Throw error to indicate sync failed
+        throw new Error(`Server sync failed with status ${response.status}`);
       } else {
         console.error('❌ Failed to sync from server:', response.status);
         // For non-500 errors, don't implement exponential backoff
         this.notify(); // Update UI with local data
       }
     } catch (error) {
-      // 🔧 PHASE 2 FIX: Network error handling
+      // Network or server error
       this.serverFailureCount++;
       this.lastServerCheck = Date.now();
-      this.serverRetryDelay = Math.min(this.serverRetryDelay * 2, this.maxRetryDelay);
 
       console.error('❌ Error syncing from server:', error);
-      console.log(`🔄 Network error, failure count: ${this.serverFailureCount}, next retry delay: ${this.serverRetryDelay}ms`);
 
-      // Continue with local data if server sync fails
-      const localInvoices = this.getAllInvoices();
-      console.log(`📦 Network error - working offline: ${localInvoices.length} invoices available locally`);
+      // For multi-user app, server connectivity is required
+      console.error('⚠️ Unable to connect to server. Please check your connection and refresh.');
 
-      // Schedule retry for network errors if not too many failures
-      if (this.serverFailureCount <= 3) {
-        setTimeout(() => {
-          console.log('🔄 Retrying server sync after network error...');
-          this.syncFromServer();
-        }, this.serverRetryDelay);
-      }
-
-      this.notify(); // Update UI with local data
+      // Throw error - do NOT fall back to local data
+      throw error;
     }
   }
 

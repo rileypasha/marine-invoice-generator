@@ -14,50 +14,51 @@ model Invoice {
   status        String   @default("saved") // saved, archived, draft
   data          String   // JSON string of invoice data
   metadata      String?
-  
+
   // User info
   userId        String?
   userName      String?
   userEmail     String?
-  
+
   // Vessel info (extracted from data for quick filtering)
   vesselName    String?
   vesselWeight  Float?
   vesselBeam    Float?
-  
+
   // Customer info (extracted from data for quick filtering)
   customerName    String?
   customerEmail   String?
   customerPhone   String?
-  
+
   // Financial (extracted from data for dashboard display)
   subtotal      Float    @default(0)
   taxAmount     Float    @default(0)
   total         Float    @default(0)
   grossProfit   Float    @default(0)
   profitPercent Float    @default(0)
-  
+
   // Additional metadata
   market        String?  // Market/City field
   notes         String?
   comments      String? // Comments from users and master
-  
+
   // Change tracking
+  hasChanges         Boolean  @default(false)  // General changes flag used by revision tracker
   hasUnreadChanges   Boolean  @default(false)  // Master unread changes flag
   lastMasterViewAt   DateTime?            // Last time master acknowledged changes
-  
+
   // Timestamps
   createdAt     DateTime @default(now())
   updatedAt     DateTime @default(now()) @updatedAt
   savedAt       DateTime @default(now())
   submittedAt   DateTime?
-  
+
   // Relations
   user          User?     @relation(fields: [userId], references: [id])
   submissions   InvoiceSubmission[]
   revisions     InvoiceRevision[]
   changeViews   MasterChangeView[]
-  
+
   @@index([status, savedAt])
   @@index([userEmail])
   @@index([customerName])
@@ -71,9 +72,9 @@ model InvoiceSubmission {
   status        String   @default("pending")
   notes         String?
   payloadJson   Json     // Normalized invoice snapshot at submission
-  
+
   invoice       Invoice  @relation(fields: [invoiceId], references: [id])
-  
+
   @@unique([invoiceId]) // Only one submission baseline per invoice
 }
 
@@ -85,10 +86,10 @@ model InvoiceRevision {
   changeSummary  String?
   payloadJson    Json     // Full normalized state at this revision
   createdAt      DateTime @default(now())
-  
+
   invoice        Invoice  @relation(fields: [invoiceId], references: [id])
   changeViews    MasterChangeView[]
-  
+
   @@index([invoiceId, createdAt(sort: Desc)])
 }
 
@@ -99,10 +100,10 @@ model MasterChangeView {
   masterEmail     String
   seenAt          DateTime
   createdAt       DateTime @default(now())
-  
+
   invoice         Invoice  @relation(fields: [invoiceId], references: [id])
   revision        InvoiceRevision @relation(fields: [latestRevisionId], references: [id])
-  
+
   @@unique([invoiceId, latestRevisionId, masterEmail])
   @@index([invoiceId])
 }
@@ -127,6 +128,6 @@ model IdempotencyRecord {
   response   Json
   createdAt  DateTime @default(now())
   expiresAt  DateTime
-  
+
   @@index([expiresAt])
 }
