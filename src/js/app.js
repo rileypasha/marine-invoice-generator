@@ -610,10 +610,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('❌ Error initializing app:', error);
     console.error(error.stack);
   }
-  // PHASE 4: Re-enable formatters with improved integration
-  console.log('🎨 Initializing formatters...');
-  initializeFormatters();
-  console.log('✅ Formatters initialized successfully');
+  // Temporarily disabled formatters due to conflicts
+  // initializeFormatters();
 });
 
 // REMOVED: Old simple save method that always created new invoices
