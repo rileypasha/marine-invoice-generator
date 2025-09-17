@@ -5,6 +5,7 @@ const { validateAndTransformInvoice } = require('../utils/validateInvoice');
 const { invoiceCalculator } = require('../services/invoiceCalculator');
 const { AppError, ErrorCode } = require('../middleware/errorHandler');
 const { requireAuth } = require('../middleware/auth');
+const { flagUnreadChanges } = require('../utils/changeTracker');
 
 // Custom auth middleware that allows test user through
 const requireAuthOrTestUser = (req, res, next) => {
@@ -343,6 +344,216 @@ router.get('/:id', requireAuth, async (req, res, next) => {
     });
     
   } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PUT /api/v2/invoice/:id
+ * Update existing invoice with change tracking
+ */
+router.put('/:id', requireAuthOrTestUser, async (req, res, next) => {
+  const requestId = req.headers['x-request-id'] ||
+                   `update_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const startTime = Date.now();
+
+  // Store requestId for error handler
+  res.locals.requestId = requestId;
+
+  try {
+    // Log incoming request
+    logger.info({
+      event: 'INVOICE_UPDATE_START',
+      requestId,
+      invoiceId: req.params.id,
+      userId: req.user?.id,
+      userEmail: req.user?.email
+    });
+
+    // Check if invoice exists and user has access
+    const existingInvoice = await prisma.invoice.findUnique({
+      where: { id: req.params.id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    if (!existingInvoice) {
+      throw new AppError(
+        ErrorCode.RESOURCE_NOT_FOUND,
+        'Invoice not found',
+        404,
+        { requestId }
+      );
+    }
+
+    // Check ownership
+    if (existingInvoice.userId !== req.user.id && existingInvoice.userEmail !== req.user.email) {
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        'Access denied',
+        403,
+        { requestId }
+      );
+    }
+
+    // Step 1: Validate and sanitize input
+    const validationResult = validateAndTransformInvoice(req.body);
+
+    if (!validationResult.success) {
+      logger.warn({
+        event: 'INVOICE_UPDATE_VALIDATION_FAILED',
+        requestId,
+        errors: validationResult.errors
+      });
+
+      const firstError = validationResult.errors[0];
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        `Invalid invoice data: ${firstError.message}`,
+        400,
+        {
+          errors: validationResult.errors,
+          requestId
+        }
+      );
+    }
+
+    const input = validationResult.data;
+
+    // Step 2: Calculate totals
+    const lineItems = input.data?.scope?.lineItems || [];
+    const markupRate = input.data?.scope?.markupRate || 0;
+    const isTaxable = input.data?.scope?.isTaxable || false;
+    const laborRate = input.data?.laborRate || 85;
+    const otRate = input.data?.otRate || 127.5;
+
+    const totals = invoiceCalculator.calculateTotals(
+      lineItems,
+      markupRate,
+      isTaxable,
+      laborRate,
+      otRate
+    );
+
+    logger.info({
+      event: 'INVOICE_UPDATE_TOTALS_CALCULATED',
+      requestId,
+      totals: {
+        subtotal: totals.subtotal.toString(),
+        tax: totals.taxAmount.toString(),
+        total: totals.total.toString()
+      }
+    });
+
+    // Step 3: Prepare update data
+    const updateData = {
+      title: input.title || existingInvoice.title,
+      data: JSON.stringify(input.data || {}),
+      metadata: JSON.stringify(input.metadata || {}),
+
+      // Denormalized vessel fields
+      vesselName: input.data?.vessel?.name || null,
+      vesselWeight: input.data?.vessel?.weight || null,
+      vesselBeam: input.data?.vessel?.beam || null,
+
+      // Denormalized customer fields
+      customerName: input.data?.customer?.customerName || null,
+      customerEmail: input.data?.customer?.customerEmail || null,
+      customerPhone: input.data?.customer?.customerPhone || null,
+
+      // Calculated totals
+      subtotal: totals.subtotalNumber,
+      taxAmount: totals.taxAmountNumber,
+      total: totals.totalNumber,
+      grossProfit: totals.grossProfitNumber,
+      profitPercent: totals.profitPercentNumber,
+
+      // Update timestamp
+      updatedAt: new Date(),
+      savedAt: new Date()
+    };
+
+    // Step 4: Update invoice in transaction
+    const updatedInvoice = await prisma.$transaction(async (tx) => {
+      // Update the invoice
+      const invoice = await tx.invoice.update({
+        where: { id: req.params.id },
+        data: updateData,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true
+            }
+          }
+        }
+      });
+
+      // Flag as having unread changes (for existing invoices)
+      try {
+        await flagUnreadChanges(req.params.id, input, req.user.email);
+        logger.info({
+          event: 'INVOICE_UPDATE_CHANGE_TRACKING',
+          requestId,
+          invoiceId: req.params.id
+        });
+      } catch (changeTrackingError) {
+        // Don't fail the update if change tracking fails
+        logger.warn({
+          event: 'INVOICE_UPDATE_CHANGE_TRACKING_FAILED',
+          requestId,
+          invoiceId: req.params.id,
+          error: changeTrackingError.message
+        });
+      }
+
+      return invoice;
+    });
+
+    // Success logging
+    logger.info({
+      event: 'INVOICE_UPDATE_SUCCESS',
+      requestId,
+      invoiceId: updatedInvoice.id,
+      duration: Date.now() - startTime
+    });
+
+    // Parse JSON strings back to objects for response
+    const responseInvoice = {
+      ...updatedInvoice,
+      data: typeof updatedInvoice.data === 'string'
+        ? JSON.parse(updatedInvoice.data)
+        : updatedInvoice.data,
+      metadata: typeof updatedInvoice.metadata === 'string'
+        ? JSON.parse(updatedInvoice.metadata)
+        : updatedInvoice.metadata
+    };
+
+    res.status(200).json({
+      success: true,
+      invoice: responseInvoice,
+      action: 'UPDATED',
+      requestId
+    });
+
+  } catch (error) {
+    logger.error({
+      event: 'INVOICE_UPDATE_ERROR',
+      requestId,
+      invoiceId: req.params.id,
+      error: error.message,
+      stack: error.stack,
+      duration: Date.now() - startTime
+    });
+
     next(error);
   }
 });

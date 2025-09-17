@@ -299,6 +299,10 @@ app.use('/api/master', masterRouter);
 // Master change tracking routes
 app.use('/api/master', masterChangesRouter);
 
+// Enhanced change tracking routes
+const changeTrackingRouter = require('./routes/changeTracking');
+app.use('/api/change-tracking', changeTrackingRouter);
+
 // Master dashboard UI routes (protected)
 app.get('/master', requireMaster, (req, res) => {
   // In production, serve from dist; in development, from src
