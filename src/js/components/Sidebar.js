@@ -1,6 +1,9 @@
 export class Sidebar {
-  constructor(invoiceStorage) {
+  constructor(userManager, invoiceStorage, authModal, settingsModal) {
+    this.userManager = userManager;
     this.invoiceStorage = invoiceStorage;
+    this.authModal = authModal;
+    this.settingsModal = settingsModal;
     this.filters = {
       search: '',
       status: 'all',
