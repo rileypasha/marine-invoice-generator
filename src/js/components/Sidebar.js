@@ -1,8 +1,5 @@
-import { EventEmitter } from '../utils/events.js';
-
-export class Sidebar extends EventEmitter {
+export class Sidebar {
   constructor(invoiceStorage) {
-    super();
     this.invoiceStorage = invoiceStorage;
     this.filters = {
       search: '',
