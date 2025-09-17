@@ -15,8 +15,10 @@ export class Sidebar {
 
   init() {
     this.createSidebar();
-    this.bindEvents();
-    this.loadItems();
+    if (this.element) {
+      this.bindEvents();
+      this.loadItems();
+    }
   }
 
   createSidebar() {
@@ -130,13 +132,15 @@ export class Sidebar {
     }
 
     // Sort buttons
-    const sortBtns = this.element.querySelectorAll('.sort-btn');
-    sortBtns.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        if (this.isSorting) return;
-        this.toggleSort(e.target.closest('.sort-btn'));
+    if (this.element) {
+      const sortBtns = this.element.querySelectorAll('.sort-btn');
+      sortBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          if (this.isSorting) return;
+          this.toggleSort(e.target.closest('.sort-btn'));
+        });
       });
-    });
+    }
 
     // Refresh button
     const refreshBtn = document.getElementById('sidebar-refresh');
@@ -507,10 +511,12 @@ export class Sidebar {
       const wasActive = button.classList.contains('active');
 
       // Reset all sort buttons
-      this.element.querySelectorAll('.sort-btn').forEach(btn => {
-        btn.classList.remove('active');
-        btn.querySelector('.sort-indicator').textContent = '';
-      });
+      if (this.element) {
+        this.element.querySelectorAll('.sort-btn').forEach(btn => {
+          btn.classList.remove('active');
+          btn.querySelector('.sort-indicator').textContent = '';
+        });
+      }
 
       // Toggle sort direction if same button, otherwise default to descending
       let isAscending = false;

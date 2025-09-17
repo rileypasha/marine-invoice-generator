@@ -511,6 +511,14 @@ export class UnsavedChangesManager {
   }
 
   /**
+   * Subscribe to changes (alias for addListener for compatibility)
+   * @param {Function} callback - Listener callback
+   */
+  subscribe(callback) {
+    this.addListener(callback);
+  }
+
+  /**
    * Remove change listener
    * @param {Function} callback - Listener callback to remove
    */
