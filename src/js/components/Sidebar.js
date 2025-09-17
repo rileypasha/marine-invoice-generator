@@ -22,7 +22,20 @@ export class Sidebar {
   }
 
   createSidebar() {
-    const container = document.getElementById('sidebar-container');
+    // Check if sidebar already exists in the DOM
+    const existingSidebar = document.querySelector('.app-sidebar');
+
+    if (existingSidebar) {
+      console.log('✅ Using existing sidebar from HTML');
+      this.element = existingSidebar;
+
+      // Update the existing sidebar to have the new structure we need
+      this.updateExistingSidebar();
+      return;
+    }
+
+    // Fallback: create new sidebar if it doesn't exist
+    const container = document.getElementById('sidebar-container') || document.querySelector('.app-container');
     if (!container) {
       console.error('Sidebar container not found');
       return;
@@ -119,6 +132,93 @@ export class Sidebar {
     `;
 
     container.appendChild(this.element);
+  }
+
+  updateExistingSidebar() {
+    // Add the necessary elements that the current Sidebar expects
+    // The existing HTML has most elements, but we need to add the new structure
+
+    // Find the existing invoice list container and update it
+    const existingList = this.element.querySelector('#recent-list');
+    if (existingList) {
+      // Clear existing content and add our structure
+      existingList.innerHTML = `
+        <div id="sidebar-loading" class="loading-state" style="display: none;">
+          <div class="spinner"></div>
+          <span>Loading invoices...</span>
+        </div>
+        <div id="sidebar-items" class="sidebar-items"></div>
+        <div id="sidebar-empty" class="empty-state" style="display: none;">
+          <p>No invoices found</p>
+          <p class="empty-subtitle">Create your first invoice to get started</p>
+        </div>
+      `;
+    }
+
+    // Update the new invoice button to match expected ID
+    const existingNewBtn = this.element.querySelector('.new-invoice-btn');
+    if (existingNewBtn && !existingNewBtn.id) {
+      existingNewBtn.id = 'sidebar-new-invoice';
+    }
+
+    // Add filters and sorting controls if missing
+    const sidebarContent = this.element.querySelector('.sidebar-content');
+    if (sidebarContent && !this.element.querySelector('.sidebar-filters')) {
+      const filtersHTML = `
+        <div class="sidebar-filters">
+          <div class="filter-group">
+            <input
+              type="text"
+              id="sidebar-search"
+              placeholder="Search invoices..."
+              class="search-input"
+            >
+          </div>
+
+          <div class="filter-group">
+            <label for="sidebar-status-filter">Status:</label>
+            <select id="sidebar-status-filter" class="filter-select">
+              <option value="all">All Status</option>
+              <option value="saved">Saved</option>
+              <option value="submitted">Submitted</option>
+              <option value="draft">Draft</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="sidebar-date-filter">Date:</label>
+            <select id="sidebar-date-filter" class="filter-select">
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sidebar-controls">
+          <button id="sidebar-sort-date" class="sort-btn active" data-sort="date">
+            Sort by Date
+            <span class="sort-indicator">↓</span>
+          </button>
+          <button id="sidebar-sort-name" class="sort-btn" data-sort="name">
+            Sort by Name
+            <span class="sort-indicator"></span>
+          </button>
+          <button id="sidebar-refresh" class="refresh-btn" title="Refresh list">
+            ↻
+          </button>
+        </div>
+      `;
+
+      // Insert filters before the existing sidebar section
+      const firstSection = sidebarContent.querySelector('.sidebar-section');
+      if (firstSection) {
+        firstSection.insertAdjacentHTML('beforebegin', filtersHTML);
+      }
+    }
+
+    console.log('✅ Updated existing sidebar structure for compatibility');
   }
 
   bindEvents() {
@@ -627,6 +727,13 @@ export class Sidebar {
       userSection.style.display = 'none';
       authSection.style.display = 'flex';
     }
+  }
+
+  setupInvoiceItemListeners() {
+    console.log('✅ setupInvoiceItemListeners called - using built-in event delegation');
+    // Note: This method is called by legacy code but the current Sidebar
+    // handles invoice item events through the event delegation in bindEvents()
+    // This is just a compatibility method to prevent errors
   }
 
   destroy() {
