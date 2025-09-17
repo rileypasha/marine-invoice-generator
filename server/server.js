@@ -369,16 +369,16 @@ app.use(errorHandler);
 async function runStartupMigration() {
   if (process.env.NODE_ENV === 'production') {
     try {
-      console.log('🔄 Running production database migration...');
+      console.log('🔄 Running production database migrations...');
 
       // Check if password column exists
-      const tableInfo = await prisma.$queryRaw`
+      const userTableInfo = await prisma.$queryRaw`
         SELECT column_name
         FROM information_schema.columns
         WHERE table_name = 'User' AND column_name = 'password';
       `;
 
-      if (tableInfo.length === 0) {
+      if (userTableInfo.length === 0) {
         console.log('📝 Adding password column to User table...');
 
         // Add password column
@@ -406,10 +406,52 @@ async function runStartupMigration() {
           }
         }
 
-        console.log('🎯 Migration completed - all users have password: TempPassword123!');
+        console.log('🎯 User migration completed - all users have password: TempPassword123!');
       } else {
         console.log('✅ Password column already exists');
       }
+
+      // Check if hasUnreadChanges column exists
+      const hasUnreadChangesInfo = await prisma.$queryRaw`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'Invoice' AND column_name = 'hasUnreadChanges';
+      `;
+
+      if (hasUnreadChangesInfo.length === 0) {
+        console.log('📝 Adding hasUnreadChanges column to Invoice table...');
+
+        await prisma.$executeRaw`
+          ALTER TABLE "Invoice"
+          ADD COLUMN "hasUnreadChanges" BOOLEAN NOT NULL DEFAULT false;
+        `;
+
+        console.log('✅ hasUnreadChanges column added successfully');
+      } else {
+        console.log('✅ hasUnreadChanges column already exists');
+      }
+
+      // Check if lastMasterViewAt column exists
+      const lastMasterViewAtInfo = await prisma.$queryRaw`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'Invoice' AND column_name = 'lastMasterViewAt';
+      `;
+
+      if (lastMasterViewAtInfo.length === 0) {
+        console.log('📝 Adding lastMasterViewAt column to Invoice table...');
+
+        await prisma.$executeRaw`
+          ALTER TABLE "Invoice"
+          ADD COLUMN "lastMasterViewAt" TIMESTAMP(3);
+        `;
+
+        console.log('✅ lastMasterViewAt column added successfully');
+      } else {
+        console.log('✅ lastMasterViewAt column already exists');
+      }
+
+      console.log('✅ All database migrations completed successfully');
     } catch (error) {
       console.error('❌ Migration failed:', error);
     }
