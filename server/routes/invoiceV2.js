@@ -14,7 +14,7 @@ const requireAuthOrTestUser = (req, res, next) => {
        req.headers.cookie.includes('test_js=value'))) {
     // Set test user for this request
     req.user = {
-      id: 'test-user-1',
+      id: 'f1d69663-63cb-475f-9625-6655dfd56f73',
       email: 'test@marinegroupbw.com',
       name: 'Test User',
       role: 'user'
