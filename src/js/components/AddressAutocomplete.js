@@ -69,9 +69,6 @@ export class AddressAutocomplete {
           </div>
         </div>
 
-        <div class="address-help" id="${this.options.containerId}-help">
-          Start typing address… (powered by Geoapify)
-        </div>
 
         <div
           class="address-suggestions"
