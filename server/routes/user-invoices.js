@@ -14,23 +14,42 @@ router.get('/user', loadUser, async (req, res) => {
   try {
     // Check if user is authenticated
     if (!req.user) {
+      console.log('❌ No user in request');
       return res.status(401).json({ error: 'Authentication required' });
     }
-    
+
     const userEmail = req.user.email;
     const userId = req.user.id;
-    
+
     console.log(`📥 Fetching invoices for user: ${userEmail} (ID: ${userId})`);
-    
-    // Fetch all invoices for this user (by email OR userId)
+    console.log(`🔍 User object:`, req.user);
+
+    // Build query conditions safely
+    const whereConditions = [];
+
+    if (userEmail) {
+      whereConditions.push({ userEmail: userEmail });
+    }
+
+    if (userId) {
+      whereConditions.push({ userId: userId });
+      // Only add string version if userId exists and is not already a string
+      if (typeof userId !== 'string') {
+        whereConditions.push({ userId: userId.toString() });
+      }
+    }
+
+    if (whereConditions.length === 0) {
+      console.log('❌ No valid user identifiers found');
+      return res.status(400).json({ error: 'Invalid user data' });
+    }
+
+    console.log(`🔍 Query conditions:`, whereConditions);
+
+    // Fetch all invoices for this user
     const invoices = await prisma.invoice.findMany({
       where: {
-        OR: [
-          { userEmail: userEmail },
-          { userId: userId },
-          // Also check for string version of ID
-          { userId: userId.toString() }
-        ],
+        OR: whereConditions,
         // Only get saved invoices, exclude drafts (match master dashboard behavior)
         status: {
           not: 'draft'
@@ -80,10 +99,17 @@ router.get('/user', loadUser, async (req, res) => {
     res.json(transformedInvoices);
     
   } catch (error) {
-    console.error('❌ Error fetching user invoices:', error);
-    res.status(500).json({ 
+    console.error('❌ Error fetching user invoices:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      userEmail: req.user?.email,
+      userId: req.user?.id
+    });
+    res.status(500).json({
       error: 'Failed to fetch invoices',
-      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
