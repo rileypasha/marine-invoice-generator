@@ -25,24 +25,33 @@ export class Sidebar {
   }
 
   createSidebar() {
-    // Check if sidebar already exists in the DOM
-    const existingSidebar = document.querySelector('.app-sidebar');
+    console.log('🔍 Looking for sidebar in DOM...');
+
+    // 🔧 PHASE 3 FIX: Look for the actual sidebar class used in HTML
+    let existingSidebar = document.querySelector('.sidebar');
+
+    if (!existingSidebar) {
+      // Fallback: try other sidebar selectors
+      existingSidebar = document.querySelector('.app-sidebar');
+    }
 
     if (existingSidebar) {
-      console.log('✅ Using existing sidebar from HTML');
+      console.log('✅ Found existing sidebar in DOM');
       this.element = existingSidebar;
 
-      // Update the existing sidebar to have the new structure we need
-      this.updateExistingSidebar();
+      // 🔧 PHASE 3 FIX: Transform the existing modern sidebar to support our functionality
+      this.transformModernSidebar();
       return;
     }
 
-    // Fallback: create new sidebar if it doesn't exist
-    const container = document.getElementById('sidebar-container') || document.querySelector('.app-container');
+    // 🔧 PHASE 3 FIX: If no sidebar found, try to find a container to inject into
+    const container = document.querySelector('.app-layout') || document.querySelector('.app-container') || document.body;
     if (!container) {
-      console.error('Sidebar container not found');
+      console.error('❌ Cannot find container for sidebar');
       return;
     }
+
+    console.log('⚠️ No existing sidebar found, creating new one');
 
     this.element = document.createElement('div');
     this.element.className = 'sidebar';
@@ -137,91 +146,84 @@ export class Sidebar {
     container.appendChild(this.element);
   }
 
-  updateExistingSidebar() {
-    // Add the necessary elements that the current Sidebar expects
-    // The existing HTML has most elements, but we need to add the new structure
+  transformModernSidebar() {
+    console.log('🔧 PHASE 3 FIX: Transforming modern sidebar to support functionality');
 
-    // Find the existing invoice list container and update it
-    const existingList = this.element.querySelector('#recent-list');
-    if (existingList) {
-      // Clear existing content and add our structure
-      existingList.innerHTML = `
-        <div id="sidebar-loading" class="loading-state" style="display: none;">
-          <div class="spinner"></div>
-          <span>Loading invoices...</span>
-        </div>
-        <div id="sidebar-items" class="sidebar-items"></div>
-        <div id="sidebar-empty" class="empty-state" style="display: none;">
-          <p>No invoices found</p>
-          <p class="empty-subtitle">Create your first invoice to get started</p>
-        </div>
-      `;
+    // 🔧 PHASE 3 FIX: The modern sidebar has a different structure
+    // We need to add our components while preserving the modern design
+
+    // Find the new button and update its ID
+    const newBtn = this.element.querySelector('.sidebar__new-button');
+    if (newBtn) {
+      newBtn.id = 'sidebar-new-invoice';
+      newBtn.classList.add('new-invoice-btn'); // Add legacy class for compatibility
+      console.log('✅ Updated new invoice button');
     }
 
-    // Update the new invoice button to match expected ID
-    const existingNewBtn = this.element.querySelector('.new-invoice-btn');
-    if (existingNewBtn && !existingNewBtn.id) {
-      existingNewBtn.id = 'sidebar-new-invoice';
-    }
-
-    // Add filters and sorting controls if missing
-    const sidebarContent = this.element.querySelector('.sidebar-content');
-    if (sidebarContent && !this.element.querySelector('.sidebar-filters')) {
-      const filtersHTML = `
-        <div class="sidebar-filters">
+    // Create a container for our invoice management features
+    const footer = this.element.querySelector('.sidebar__footer');
+    if (footer) {
+      // Add invoice management section after the new button
+      const invoiceSection = document.createElement('div');
+      invoiceSection.className = 'sidebar__invoices';
+      invoiceSection.innerHTML = `
+        <div class="sidebar-filters" style="padding: 1rem; border-top: 1px solid #e5e7eb; margin-top: 1rem;">
           <div class="filter-group">
             <input
               type="text"
               id="sidebar-search"
               placeholder="Search invoices..."
               class="search-input"
+              style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; background: #f9fafb;"
             >
-          </div>
-
-          <div class="filter-group">
-            <label for="sidebar-status-filter">Status:</label>
-            <select id="sidebar-status-filter" class="filter-select">
-              <option value="all">All Status</option>
-              <option value="saved">Saved</option>
-              <option value="submitted">Submitted</option>
-              <option value="draft">Draft</option>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <label for="sidebar-date-filter">Date:</label>
-            <select id="sidebar-date-filter" class="filter-select">
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-            </select>
           </div>
         </div>
 
-        <div class="sidebar-controls">
-          <button id="sidebar-sort-date" class="sort-btn active" data-sort="date">
-            Sort by Date
-            <span class="sort-indicator">↓</span>
-          </button>
-          <button id="sidebar-sort-name" class="sort-btn" data-sort="name">
-            Sort by Name
-            <span class="sort-indicator"></span>
-          </button>
-          <button id="sidebar-refresh" class="refresh-btn" title="Refresh list">
+        <div class="sidebar-controls" style="padding: 0 1rem; display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+          <button id="sidebar-refresh" class="refresh-btn" title="Refresh list" style="padding: 0.25rem 0.5rem; border: 1px solid #d1d5db; border-radius: 0.25rem; background: white; cursor: pointer;">
             ↻
           </button>
         </div>
+
+        <div class="sidebar-content" style="padding: 0 1rem;">
+          <div id="sidebar-loading" class="loading-state" style="display: none; text-align: center; padding: 1rem; color: #6b7280;">
+            <div class="spinner"></div>
+            <span>Loading invoices...</span>
+          </div>
+          <div id="sidebar-items" class="sidebar-items"></div>
+          <div id="sidebar-empty" class="empty-state" style="display: none; text-align: center; padding: 1rem; color: #6b7280;">
+            <p>No invoices found</p>
+            <p class="empty-subtitle">Create your first invoice to get started</p>
+          </div>
+        </div>
+
+        <div class="sidebar-footer" style="padding: 1rem; border-top: 1px solid #e5e7eb; margin-top: auto;">
+          <div class="user-section" id="user-section" style="display: none; padding: 0.75rem; background: #f3f4f6; border-radius: 0.5rem; cursor: pointer;" title="Settings">
+            <div class="user-info" style="display: flex; align-items: center; gap: 0.75rem;">
+              <div class="user-avatar" style="width: 2rem; height: 2rem; background: #6366f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              </div>
+              <div class="user-details">
+                <div class="user-name" id="user-name" style="font-weight: 500; font-size: 0.875rem;">User Name</div>
+                <div class="user-email" id="user-email" style="font-size: 0.75rem; color: #6b7280;">user@example.com</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="auth-section" id="auth-section" style="display: flex;">
+            <button class="auth-btn primary" id="sign-in-btn" style="padding: 0.5rem 1rem; background: #6366f1; color: white; border: none; border-radius: 0.375rem; cursor: pointer; width: 100%;">Sign In</button>
+          </div>
+        </div>
       `;
 
-      // Insert filters before the existing sidebar section
-      const firstSection = sidebarContent.querySelector('.sidebar-section');
-      if (firstSection) {
-        firstSection.insertAdjacentHTML('beforebegin', filtersHTML);
-      }
+      footer.appendChild(invoiceSection);
+      console.log('✅ Added invoice management section to modern sidebar');
     }
 
-    console.log('✅ Updated existing sidebar structure for compatibility');
+    console.log('✅ Modern sidebar transformation complete');
   }
 
   bindEvents() {
@@ -724,42 +726,112 @@ export class Sidebar {
   }
 
   updateUserSection(user) {
-    console.log('🔄 Updating user section with:', user);
+    console.log('🔄 PHASE 3 FIX: Updating user section with enhanced error handling:', user);
 
     if (!this.element) {
       console.error('❌ Cannot update user section: sidebar element is null');
+      console.log('🔍 Available elements in DOM:');
+      console.log('  - .sidebar:', !!document.querySelector('.sidebar'));
+      console.log('  - .app-sidebar:', !!document.querySelector('.app-sidebar'));
+      console.log('  - .sidebar__footer:', !!document.querySelector('.sidebar__footer'));
       return;
     }
 
-    const userSection = this.element.querySelector('#user-section');
-    const authSection = this.element.querySelector('#auth-section');
+    // 🔧 PHASE 3 FIX: More robust element finding with fallbacks
+    let userSection = this.element.querySelector('#user-section');
+    let authSection = this.element.querySelector('#auth-section');
+
+    // If sections don't exist, try to find them in the footer we created
+    if (!userSection || !authSection) {
+      const footer = this.element.querySelector('.sidebar-footer');
+      if (footer) {
+        userSection = footer.querySelector('#user-section');
+        authSection = footer.querySelector('#auth-section');
+      }
+    }
 
     if (!userSection || !authSection) {
-      console.error('❌ Cannot find user or auth sections');
-      console.log('Available elements:', {
+      console.error('❌ PHASE 3: Cannot find user or auth sections even after transformation');
+      console.log('🔍 Debug info:', {
+        element: !!this.element,
         userSection: !!userSection,
-        authSection: !!authSection
+        authSection: !!authSection,
+        sidebarFooter: !!this.element.querySelector('.sidebar-footer'),
+        allUserSections: document.querySelectorAll('#user-section').length,
+        allAuthSections: document.querySelectorAll('#auth-section').length
       });
-      return;
+
+      // 🔧 PHASE 3 FIX: Try to add missing sections if we have a footer
+      const footer = this.element.querySelector('.sidebar__footer') || this.element.querySelector('.sidebar-footer');
+      if (footer && !userSection) {
+        console.log('🔧 PHASE 3 FIX: Adding missing user/auth sections');
+        const sectionsHTML = `
+          <div class="user-section" id="user-section" style="display: none; padding: 0.75rem; background: #f3f4f6; border-radius: 0.5rem; cursor: pointer; margin-top: 1rem;" title="Settings">
+            <div class="user-info" style="display: flex; align-items: center; gap: 0.75rem;">
+              <div class="user-avatar" style="width: 2rem; height: 2rem; background: #6366f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              </div>
+              <div class="user-details">
+                <div class="user-name" id="user-name" style="font-weight: 500; font-size: 0.875rem;">User Name</div>
+                <div class="user-email" id="user-email" style="font-size: 0.75rem; color: #6b7280;">user@example.com</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="auth-section" id="auth-section" style="display: flex; margin-top: 1rem;">
+            <button class="auth-btn primary" id="sign-in-btn" style="padding: 0.5rem 1rem; background: #6366f1; color: white; border: none; border-radius: 0.375rem; cursor: pointer; width: 100%;">Sign In</button>
+          </div>
+        `;
+        footer.insertAdjacentHTML('beforeend', sectionsHTML);
+
+        // Re-query the elements
+        userSection = this.element.querySelector('#user-section');
+        authSection = this.element.querySelector('#auth-section');
+        console.log('✅ PHASE 3 FIX: Added missing sections');
+      }
+
+      if (!userSection || !authSection) {
+        console.error('❌ PHASE 3: Still cannot find sections, giving up');
+        return;
+      }
     }
 
-    if (user) {
-      console.log('✅ User authenticated, showing user section');
-      // Show user section
-      userSection.style.display = 'flex';
-      authSection.style.display = 'none';
+    // 🔧 PHASE 3 FIX: Robust user update with error handling
+    try {
+      if (user) {
+        console.log('✅ PHASE 3: User authenticated, showing user section');
+        userSection.style.display = 'flex';
+        authSection.style.display = 'none';
 
-      // Update user info
-      const userNameEl = this.element.querySelector('#user-name');
-      const userEmailEl = this.element.querySelector('#user-email');
+        // Update user info with null checks
+        const userNameEl = this.element.querySelector('#user-name');
+        const userEmailEl = this.element.querySelector('#user-email');
 
-      if (userNameEl) userNameEl.textContent = user.name || user.email || 'User';
-      if (userEmailEl) userEmailEl.textContent = user.email || '';
-    } else {
-      console.log('⚠️ No user, showing auth section');
-      // Show auth section
-      userSection.style.display = 'none';
-      authSection.style.display = 'flex';
+        if (userNameEl) {
+          userNameEl.textContent = user.name || user.email || 'User';
+          console.log('✅ PHASE 3: Updated user name:', userNameEl.textContent);
+        } else {
+          console.warn('⚠️ PHASE 3: user-name element not found');
+        }
+
+        if (userEmailEl) {
+          userEmailEl.textContent = user.email || '';
+          console.log('✅ PHASE 3: Updated user email:', userEmailEl.textContent);
+        } else {
+          console.warn('⚠️ PHASE 3: user-email element not found');
+        }
+      } else {
+        console.log('⚠️ PHASE 3: No user, showing auth section');
+        userSection.style.display = 'none';
+        authSection.style.display = 'flex';
+      }
+
+      console.log('✅ PHASE 3: User section update completed successfully');
+    } catch (error) {
+      console.error('❌ PHASE 3: Error updating user section:', error);
     }
   }
 

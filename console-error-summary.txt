@@ -1,0 +1,30 @@
+
+CONSOLE ERROR ANALYSIS REPORT
+============================
+Generated: 2025-09-19T13:51:45.411Z
+
+SUMMARY STATISTICS:
+- Total Console Messages: 8
+- Total Errors: 1
+- Total Warnings: 0
+- Failed Network Requests: 1
+
+SPECIFIC ISSUES FOUND:
+
+1. SIDEBAR CONTAINER ISSUES:
+   No sidebar container issues detected
+
+2. INVOICES API ERRORS:
+   No invoices API errors detected
+
+3. BUTTON ELEMENT ERRORS:
+   No button element errors detected
+
+4. MARK AS SAVED ISSUES:
+   No markAsSaved issues detected
+
+ALL CONSOLE ERRORS:
+[2025-09-19T13:51:19.871Z] ERROR: Failed to load resource: the server responded with a status of 401 () (https://mginvoices.com/api/auth/me:?)
+
+ALL NETWORK ERRORS:
+[2025-09-19T13:51:19.871Z] 401 : https://mginvoices.com/api/auth/me

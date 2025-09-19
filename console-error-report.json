@@ -1,0 +1,571 @@
+{
+  "timestamp": "2025-09-19T13:51:45.411Z",
+  "summary": {
+    "totalConsoleMessages": 8,
+    "totalErrors": 1,
+    "totalWarnings": 0,
+    "failedNetworkRequests": 1
+  },
+  "phases": {
+    "initialLoad": {
+      "consoleMessages": [],
+      "networkErrors": []
+    },
+    "postLogin": {
+      "consoleMessages": [
+        {
+          "timestamp": "2025-09-19T13:51:19.780Z",
+          "type": "log",
+          "text": "🔥 Landing Page DOM loaded, initializing...",
+          "location": {
+            "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+            "lineNumber": 1,
+            "columnNumber": 71735
+          }
+        },
+        {
+          "timestamp": "2025-09-19T13:51:19.780Z",
+          "type": "log",
+          "text": "🚀 Initializing Landing Page...",
+          "location": {
+            "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+            "lineNumber": 1,
+            "columnNumber": 69899
+          }
+        },
+        {
+          "timestamp": "2025-09-19T13:51:19.782Z",
+          "type": "log",
+          "text": "🧪 Test user created: test@marinegroup.com / password123",
+          "location": {
+            "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+            "lineNumber": 1,
+            "columnNumber": 43207
+          }
+        },
+        {
+          "timestamp": "2025-09-19T13:51:19.788Z",
+          "type": "log",
+          "text": "✅ Landing Page initialized",
+          "location": {
+            "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+            "lineNumber": 1,
+            "columnNumber": 70061
+          }
+        },
+        {
+          "timestamp": "2025-09-19T13:51:19.836Z",
+          "type": "verbose",
+          "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"new-password\"): (More info: https://goo.gl/9p2vKq) %o",
+          "location": {
+            "url": "https://mginvoices.com/",
+            "lineNumber": 0,
+            "columnNumber": 0
+          }
+        },
+        {
+          "timestamp": "2025-09-19T13:51:19.836Z",
+          "type": "verbose",
+          "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"new-password\"): (More info: https://goo.gl/9p2vKq) %o",
+          "location": {
+            "url": "https://mginvoices.com/",
+            "lineNumber": 0,
+            "columnNumber": 0
+          }
+        },
+        {
+          "timestamp": "2025-09-19T13:51:19.871Z",
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": {
+            "url": "https://mginvoices.com/api/auth/me",
+            "lineNumber": 0,
+            "columnNumber": 0
+          }
+        },
+        {
+          "timestamp": "2025-09-19T13:51:19.871Z",
+          "type": "log",
+          "text": "No server authentication found, showing landing page",
+          "location": {
+            "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+            "lineNumber": 1,
+            "columnNumber": 70568
+          }
+        }
+      ],
+      "networkErrors": [
+        {
+          "timestamp": "2025-09-19T13:51:19.871Z",
+          "url": "https://mginvoices.com/api/auth/me",
+          "status": 401,
+          "statusText": "",
+          "headers": {
+            "content-encoding": "br",
+            "cf-cache-status": "DYNAMIC",
+            "etag": "W/\"1d-TthZhBRJQAzVgIhlWqxc3frMMMg\"",
+            "x-permitted-cross-domain-policies": "none",
+            "x-content-type-options": "nosniff",
+            "alt-svc": "h3=\":443\"; ma=86400",
+            "rndr-id": "353269d0-cbb0-487b",
+            "x-render-origin-server": "Render",
+            "server-timing": "cfExtPri",
+            "date": "Fri, 19 Sep 2025 13:51:21 GMT",
+            "content-type": "application/json; charset=utf-8",
+            "vary": "Origin, Accept-Encoding, Accept-Encoding",
+            "priority": "u=1,i",
+            "x-frame-options": "SAMEORIGIN",
+            "strict-transport-security": "max-age=31536000; includeSubDomains",
+            "content-security-policy": "default-src 'self';img-src 'self' https://i.imgur.com data: https:;script-src 'self' 'unsafe-inline' 'unsafe-eval';script-src-attr 'unsafe-inline';style-src 'self' 'unsafe-inline';connect-src 'self';font-src 'self' data:;base-uri 'self';form-action 'self';frame-ancestors 'self';object-src 'none';upgrade-insecure-requests",
+            "x-dns-prefetch-control": "off",
+            "cross-origin-opener-policy": "same-origin",
+            "cross-origin-resource-policy": "same-origin",
+            "access-control-allow-credentials": "true",
+            "referrer-policy": "no-referrer",
+            "x-download-options": "noopen",
+            "cf-ray": "98198eadaa9d8403-LAX",
+            "access-control-allow-origin": "https://mginvoices.com",
+            "content-length": "33",
+            "x-xss-protection": "0",
+            "origin-agent-cluster": "?1",
+            "server": "cloudflare"
+          }
+        }
+      ]
+    }
+  },
+  "specificIssues": {
+    "sidebarContainerIssues": [],
+    "invoicesApiErrors": [],
+    "buttonElementErrors": [],
+    "markAsSavedIssues": []
+  },
+  "allConsoleMessages": [
+    {
+      "timestamp": "2025-09-19T13:51:19.780Z",
+      "type": "log",
+      "text": "🔥 Landing Page DOM loaded, initializing...",
+      "location": {
+        "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+        "lineNumber": 1,
+        "columnNumber": 71735
+      }
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.780Z",
+      "type": "log",
+      "text": "🚀 Initializing Landing Page...",
+      "location": {
+        "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+        "lineNumber": 1,
+        "columnNumber": 69899
+      }
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.782Z",
+      "type": "log",
+      "text": "🧪 Test user created: test@marinegroup.com / password123",
+      "location": {
+        "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+        "lineNumber": 1,
+        "columnNumber": 43207
+      }
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.788Z",
+      "type": "log",
+      "text": "✅ Landing Page initialized",
+      "location": {
+        "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+        "lineNumber": 1,
+        "columnNumber": 70061
+      }
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.836Z",
+      "type": "verbose",
+      "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"new-password\"): (More info: https://goo.gl/9p2vKq) %o",
+      "location": {
+        "url": "https://mginvoices.com/",
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.836Z",
+      "type": "verbose",
+      "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"new-password\"): (More info: https://goo.gl/9p2vKq) %o",
+      "location": {
+        "url": "https://mginvoices.com/",
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.871Z",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "location": {
+        "url": "https://mginvoices.com/api/auth/me",
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.871Z",
+      "type": "log",
+      "text": "No server authentication found, showing landing page",
+      "location": {
+        "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+        "lineNumber": 1,
+        "columnNumber": 70568
+      }
+    }
+  ],
+  "allNetworkRequests": [
+    {
+      "timestamp": "2025-09-19T13:51:19.111Z",
+      "url": "https://mginvoices.com/",
+      "method": "GET",
+      "headers": {
+        "upgrade-insecure-requests": "1",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"Linux\""
+      },
+      "resourceType": "document"
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.660Z",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "method": "GET",
+      "headers": {
+        "sec-ch-ua-platform": "\"Linux\"",
+        "referer": "",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resourceType": "script"
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.661Z",
+      "url": "https://i.imgur.com/A9K1ByZ.png",
+      "method": "GET",
+      "headers": {
+        "sec-ch-ua-platform": "\"Linux\"",
+        "referer": "",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resourceType": "image"
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.788Z",
+      "url": "https://mginvoices.com/api/auth/me",
+      "method": "GET",
+      "headers": {
+        "sec-ch-ua-platform": "\"Linux\"",
+        "referer": "",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resourceType": "fetch"
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.838Z",
+      "url": "https://mginvoices.com/favicon.png",
+      "method": "GET",
+      "headers": {
+        "sec-ch-ua-platform": "\"Linux\"",
+        "referer": "",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resourceType": "other"
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.962Z",
+      "url": "https://mginvoices.com/assets/favicon.png",
+      "method": "GET",
+      "headers": {
+        "sec-ch-ua-platform": "\"Linux\"",
+        "referer": "",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resourceType": "other"
+    },
+    {
+      "timestamp": "2025-09-19T13:51:20.058Z",
+      "url": "https://mginvoices.com/assets/favicon.png",
+      "method": "GET",
+      "headers": {
+        "sec-ch-ua-platform": "\"Linux\"",
+        "referer": "",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resourceType": "other"
+    }
+  ],
+  "allNetworkResponses": [
+    {
+      "timestamp": "2025-09-19T13:51:19.643Z",
+      "url": "https://mginvoices.com/",
+      "status": 200,
+      "statusText": "",
+      "headers": {
+        "accept-ranges": "bytes",
+        "access-control-allow-credentials": "true",
+        "access-control-allow-origin": "https://mginvoices.com",
+        "alt-svc": "h3=\":443\"; ma=86400",
+        "cache-control": "public, max-age=0",
+        "cf-cache-status": "DYNAMIC",
+        "cf-ray": "98198eac0b202b65-LAX",
+        "content-encoding": "br",
+        "content-security-policy": "default-src 'self';img-src 'self' https://i.imgur.com data: https:;script-src 'self' 'unsafe-inline' 'unsafe-eval';script-src-attr 'unsafe-inline';style-src 'self' 'unsafe-inline';connect-src 'self';font-src 'self' data:;base-uri 'self';form-action 'self';frame-ancestors 'self';object-src 'none';upgrade-insecure-requests",
+        "content-type": "text/html; charset=UTF-8",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-resource-policy": "same-origin",
+        "date": "Fri, 19 Sep 2025 13:51:21 GMT",
+        "etag": "W/\"159f-199603db1c0\"",
+        "last-modified": "Fri, 19 Sep 2025 04:31:20 GMT",
+        "origin-agent-cluster": "?1",
+        "referrer-policy": "no-referrer",
+        "rndr-id": "0d44a678-b55b-4430",
+        "server": "cloudflare",
+        "strict-transport-security": "max-age=31536000; includeSubDomains",
+        "vary": "Origin, Accept-Encoding",
+        "x-content-type-options": "nosniff",
+        "x-dns-prefetch-control": "off",
+        "x-download-options": "noopen",
+        "x-frame-options": "SAMEORIGIN",
+        "x-permitted-cross-domain-policies": "none",
+        "x-render-origin-server": "Render",
+        "x-xss-protection": "0"
+      }
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.754Z",
+      "url": "https://i.imgur.com/A9K1ByZ.png",
+      "status": 200,
+      "statusText": "",
+      "headers": {
+        "etag": "\"60952a839a00393961768e1f59f8fa00\"",
+        "age": "2181442",
+        "access-control-allow-methods": "GET, OPTIONS",
+        "x-content-type-options": "nosniff",
+        "x-cache": "Miss from cloudfront, HIT, HIT",
+        "x-amz-cf-id": "9gEYhec69WyZd20DFxzEqXMrd04KtY1Rj1wtRP9eqpFr3H65NjftPw==",
+        "date": "Fri, 19 Sep 2025 13:51:21 GMT",
+        "content-type": "image/png",
+        "last-modified": "Thu, 14 Aug 2025 17:57:07 GMT",
+        "x-cache-hits": "19, 0",
+        "x-served-by": "cache-iad-kcgs7200177-IAD, cache-lax-kwhp1940055-LAX",
+        "strict-transport-security": "max-age=300",
+        "cache-control": "public, max-age=31536000",
+        "x-timer": "S1758289881.169753,VS0,VE1",
+        "accept-ranges": "bytes",
+        "access-control-allow-origin": "*",
+        "content-length": "13186",
+        "x-amz-cf-pop": "IAD89-P1",
+        "server": "cat factory 1.0",
+        "x-amz-server-side-encryption": "AES256"
+      }
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.770Z",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "status": 200,
+      "statusText": "",
+      "headers": {
+        "content-encoding": "br",
+        "cf-cache-status": "DYNAMIC",
+        "etag": "W/\"11986-199603db1c0\"",
+        "x-permitted-cross-domain-policies": "none",
+        "x-content-type-options": "nosniff",
+        "alt-svc": "h3=\":443\"; ma=86400",
+        "rndr-id": "6b32d63f-7d72-454d",
+        "x-render-origin-server": "Render",
+        "date": "Fri, 19 Sep 2025 13:51:21 GMT",
+        "content-type": "application/javascript; charset=UTF-8",
+        "last-modified": "Fri, 19 Sep 2025 04:31:20 GMT",
+        "vary": "Origin, Accept-Encoding",
+        "x-frame-options": "SAMEORIGIN",
+        "strict-transport-security": "max-age=31536000; includeSubDomains",
+        "content-security-policy": "default-src 'self';img-src 'self' https://i.imgur.com data: https:;script-src 'self' 'unsafe-inline' 'unsafe-eval';script-src-attr 'unsafe-inline';style-src 'self' 'unsafe-inline';connect-src 'self';font-src 'self' data:;base-uri 'self';form-action 'self';frame-ancestors 'self';object-src 'none';upgrade-insecure-requests",
+        "cache-control": "public, max-age=0",
+        "x-dns-prefetch-control": "off",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-resource-policy": "same-origin",
+        "access-control-allow-credentials": "true",
+        "referrer-policy": "no-referrer",
+        "x-download-options": "noopen",
+        "cf-ray": "98198eaccba92b65-LAX",
+        "accept-ranges": "bytes",
+        "access-control-allow-origin": "https://mginvoices.com",
+        "x-xss-protection": "0",
+        "origin-agent-cluster": "?1",
+        "server": "cloudflare"
+      }
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.871Z",
+      "url": "https://mginvoices.com/api/auth/me",
+      "status": 401,
+      "statusText": "",
+      "headers": {
+        "content-encoding": "br",
+        "cf-cache-status": "DYNAMIC",
+        "etag": "W/\"1d-TthZhBRJQAzVgIhlWqxc3frMMMg\"",
+        "x-permitted-cross-domain-policies": "none",
+        "x-content-type-options": "nosniff",
+        "alt-svc": "h3=\":443\"; ma=86400",
+        "rndr-id": "353269d0-cbb0-487b",
+        "x-render-origin-server": "Render",
+        "server-timing": "cfExtPri",
+        "date": "Fri, 19 Sep 2025 13:51:21 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "vary": "Origin, Accept-Encoding, Accept-Encoding",
+        "priority": "u=1,i",
+        "x-frame-options": "SAMEORIGIN",
+        "strict-transport-security": "max-age=31536000; includeSubDomains",
+        "content-security-policy": "default-src 'self';img-src 'self' https://i.imgur.com data: https:;script-src 'self' 'unsafe-inline' 'unsafe-eval';script-src-attr 'unsafe-inline';style-src 'self' 'unsafe-inline';connect-src 'self';font-src 'self' data:;base-uri 'self';form-action 'self';frame-ancestors 'self';object-src 'none';upgrade-insecure-requests",
+        "x-dns-prefetch-control": "off",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-resource-policy": "same-origin",
+        "access-control-allow-credentials": "true",
+        "referrer-policy": "no-referrer",
+        "x-download-options": "noopen",
+        "cf-ray": "98198eadaa9d8403-LAX",
+        "access-control-allow-origin": "https://mginvoices.com",
+        "content-length": "33",
+        "x-xss-protection": "0",
+        "origin-agent-cluster": "?1",
+        "server": "cloudflare"
+      }
+    },
+    {
+      "timestamp": "2025-09-19T13:51:19.916Z",
+      "url": "https://mginvoices.com/favicon.png",
+      "status": 200,
+      "statusText": "",
+      "headers": {
+        "cf-cache-status": "DYNAMIC",
+        "etag": "W/\"15696-199603db1c0\"",
+        "x-permitted-cross-domain-policies": "none",
+        "x-content-type-options": "nosniff",
+        "alt-svc": "h3=\":443\"; ma=86400",
+        "rndr-id": "575e169a-ae5c-45b5",
+        "x-render-origin-server": "Render",
+        "server-timing": "cfExtPri",
+        "date": "Fri, 19 Sep 2025 13:51:21 GMT",
+        "content-type": "image/png",
+        "last-modified": "Fri, 19 Sep 2025 04:31:20 GMT",
+        "vary": "Origin",
+        "priority": "u=1,i",
+        "x-frame-options": "SAMEORIGIN",
+        "strict-transport-security": "max-age=31536000; includeSubDomains",
+        "content-security-policy": "default-src 'self';img-src 'self' https://i.imgur.com data: https:;script-src 'self' 'unsafe-inline' 'unsafe-eval';script-src-attr 'unsafe-inline';style-src 'self' 'unsafe-inline';connect-src 'self';font-src 'self' data:;base-uri 'self';form-action 'self';frame-ancestors 'self';object-src 'none';upgrade-insecure-requests",
+        "cache-control": "public, max-age=0",
+        "x-dns-prefetch-control": "off",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-resource-policy": "same-origin",
+        "access-control-allow-credentials": "true",
+        "referrer-policy": "no-referrer",
+        "x-download-options": "noopen",
+        "cf-ray": "98198eadfadc8403-LAX",
+        "accept-ranges": "bytes",
+        "access-control-allow-origin": "https://mginvoices.com",
+        "content-length": "87702",
+        "x-xss-protection": "0",
+        "origin-agent-cluster": "?1",
+        "server": "cloudflare"
+      }
+    },
+    {
+      "timestamp": "2025-09-19T13:51:20.038Z",
+      "url": "https://mginvoices.com/assets/favicon.png",
+      "status": 200,
+      "statusText": "",
+      "headers": {
+        "cf-cache-status": "DYNAMIC",
+        "etag": "W/\"15696-199603db1c0\"",
+        "x-permitted-cross-domain-policies": "none",
+        "x-content-type-options": "nosniff",
+        "alt-svc": "h3=\":443\"; ma=86400",
+        "rndr-id": "ff118321-a2d0-4573",
+        "x-render-origin-server": "Render",
+        "server-timing": "cfExtPri",
+        "date": "Fri, 19 Sep 2025 13:51:21 GMT",
+        "content-type": "image/png",
+        "last-modified": "Fri, 19 Sep 2025 04:31:20 GMT",
+        "vary": "Origin",
+        "priority": "u=1,i",
+        "x-frame-options": "SAMEORIGIN",
+        "strict-transport-security": "max-age=31536000; includeSubDomains",
+        "content-security-policy": "default-src 'self';img-src 'self' https://i.imgur.com data: https:;script-src 'self' 'unsafe-inline' 'unsafe-eval';script-src-attr 'unsafe-inline';style-src 'self' 'unsafe-inline';connect-src 'self';font-src 'self' data:;base-uri 'self';form-action 'self';frame-ancestors 'self';object-src 'none';upgrade-insecure-requests",
+        "cache-control": "public, max-age=0",
+        "x-dns-prefetch-control": "off",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-resource-policy": "same-origin",
+        "access-control-allow-credentials": "true",
+        "referrer-policy": "no-referrer",
+        "x-download-options": "noopen",
+        "cf-ray": "98198eaecb418403-LAX",
+        "accept-ranges": "bytes",
+        "access-control-allow-origin": "https://mginvoices.com",
+        "content-length": "87702",
+        "x-xss-protection": "0",
+        "origin-agent-cluster": "?1",
+        "server": "cloudflare"
+      }
+    },
+    {
+      "timestamp": "2025-09-19T13:51:20.127Z",
+      "url": "https://mginvoices.com/assets/favicon.png",
+      "status": 200,
+      "statusText": "",
+      "headers": {
+        "cf-cache-status": "DYNAMIC",
+        "etag": "W/\"15696-199603db1c0\"",
+        "x-permitted-cross-domain-policies": "none",
+        "x-content-type-options": "nosniff",
+        "alt-svc": "h3=\":443\"; ma=86400",
+        "rndr-id": "956f6b36-adde-4d0d",
+        "x-render-origin-server": "Render",
+        "server-timing": "cfExtPri",
+        "date": "Fri, 19 Sep 2025 13:51:21 GMT",
+        "last-modified": "Fri, 19 Sep 2025 04:31:20 GMT",
+        "vary": "Origin",
+        "priority": "u=1,i",
+        "x-frame-options": "SAMEORIGIN",
+        "strict-transport-security": "max-age=31536000; includeSubDomains",
+        "content-security-policy": "default-src 'self';img-src 'self' https://i.imgur.com data: https:;script-src 'self' 'unsafe-inline' 'unsafe-eval';script-src-attr 'unsafe-inline';style-src 'self' 'unsafe-inline';connect-src 'self';font-src 'self' data:;base-uri 'self';form-action 'self';frame-ancestors 'self';object-src 'none';upgrade-insecure-requests",
+        "cache-control": "public, max-age=0",
+        "x-dns-prefetch-control": "off",
+        "cross-origin-opener-policy": "same-origin",
+        "content-type": "image/png",
+        "cross-origin-resource-policy": "same-origin",
+        "access-control-allow-credentials": "true",
+        "referrer-policy": "no-referrer",
+        "x-download-options": "noopen",
+        "cf-ray": "98198eaf6b988403-LAX",
+        "accept-ranges": "bytes",
+        "access-control-allow-origin": "https://mginvoices.com",
+        "content-length": "87702",
+        "x-xss-protection": "0",
+        "origin-agent-cluster": "?1",
+        "server": "cloudflare"
+      }
+    }
+  ],
+  "allErrors": []
+}

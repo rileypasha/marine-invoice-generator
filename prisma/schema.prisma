@@ -8,60 +8,42 @@ datasource db {
 }
 
 model Invoice {
-  id            String   @id @default(uuid())
-  invoiceNumber String?
-  title         String
-  status        String   @default("saved") // saved, archived, draft
-  data          String   // JSON string of invoice data
-  metadata      String?
-
-  // User info
-  userId        String?
-  userName      String?
-  userEmail     String?
-
-  // Vessel info (extracted from data for quick filtering)
-  vesselName    String?
-  vesselWeight  Float?
-  vesselBeam    Float?
-
-  // Customer info (extracted from data for quick filtering)
-  customerName    String?
-  customerEmail   String?
-  customerPhone   String?
-
-  // Customer relation (normalized)
-  customerId      String?
-
-  // Financial (extracted from data for dashboard display)
-  subtotal      Float    @default(0)
-  taxAmount     Float    @default(0)
-  total         Float    @default(0)
-  grossProfit   Float    @default(0)
-  profitPercent Float    @default(0)
-
-  // Additional metadata
-  market        String?  // Market/City field
-  notes         String?
-  comments      String? // Comments from users and master
-
-  // Change tracking
-  hasChanges         Boolean  @default(false)  // General changes flag used by revision tracker
-  hasUnreadChanges   Boolean  @default(false)  // Master unread changes flag
-  lastMasterViewAt   DateTime?            // Last time master acknowledged changes
-
-  // Timestamps
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @default(now()) @updatedAt
-  savedAt       DateTime @default(now())
-  submittedAt   DateTime?
-
-  // Relations
-  user          User?     @relation(fields: [userId], references: [id])
-  customer      Customer? @relation(fields: [customerId], references: [id])
-  submissions   InvoiceSubmission[]
-  revisions     InvoiceRevision[]
-  changeViews   MasterChangeView[]
+  id               String             @id @default(uuid())
+  invoiceNumber    String?
+  title            String
+  status           String             @default("saved")
+  data             String
+  metadata         String?
+  userId           String?
+  userName         String?
+  userEmail        String?
+  vesselName       String?
+  vesselWeight     Float?
+  vesselBeam       Float?
+  customerName     String?
+  customerEmail    String?
+  customerPhone    String?
+  customerId       String?
+  subtotal         Float              @default(0)
+  taxAmount        Float              @default(0)
+  total            Float              @default(0)
+  grossProfit      Float              @default(0)
+  profitPercent    Float              @default(0)
+  market           String?
+  notes            String?
+  comments         String?
+  hasChanges       Boolean            @default(false)
+  hasUnreadChanges Boolean            @default(false)
+  lastMasterViewAt DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @default(now()) @updatedAt
+  savedAt          DateTime           @default(now())
+  submittedAt      DateTime?
+  customer         Customer?          @relation(fields: [customerId], references: [id])
+  user             User?              @relation(fields: [userId], references: [id])
+  revisions        InvoiceRevision[]
+  submissions      InvoiceSubmission?
+  changeViews      MasterChangeView[]
 
   @@index([status, savedAt])
   @@index([userEmail])
@@ -69,108 +51,88 @@ model Invoice {
 }
 
 model InvoiceSubmission {
-  id            String   @id @default(uuid())
-  invoiceId     String
-  submittedBy   String
-  submittedAt   DateTime @default(now())
-  status        String   @default("pending")
-  notes         String?
-  payloadJson   Json     // Normalized invoice snapshot at submission
-
-  invoice       Invoice  @relation(fields: [invoiceId], references: [id])
-
-  @@unique([invoiceId]) // Only one submission baseline per invoice
+  id          String   @id @default(uuid())
+  invoiceId   String   @unique
+  submittedBy String
+  submittedAt DateTime @default(now())
+  status      String   @default("pending")
+  notes       String?
+  payloadJson Json
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
 }
 
 model InvoiceRevision {
-  id             String   @id @default(uuid())
+  id             String             @id @default(uuid())
   invoiceId      String
   revisionNumber Int
   actorEmail     String
   changeSummary  String?
-  payloadJson    Json     // Full normalized state at this revision
-  createdAt      DateTime @default(now())
-
-  invoice        Invoice  @relation(fields: [invoiceId], references: [id])
+  payloadJson    Json
+  createdAt      DateTime           @default(now())
+  invoice        Invoice            @relation(fields: [invoiceId], references: [id])
   changeViews    MasterChangeView[]
 
   @@index([invoiceId, createdAt(sort: Desc)])
 }
 
 model MasterChangeView {
-  id              String   @id @default(uuid())
-  invoiceId       String
+  id               String          @id @default(uuid())
+  invoiceId        String
   latestRevisionId String
-  masterEmail     String
-  seenAt          DateTime
-  createdAt       DateTime @default(now())
-
-  invoice         Invoice  @relation(fields: [invoiceId], references: [id])
-  revision        InvoiceRevision @relation(fields: [latestRevisionId], references: [id])
+  masterEmail      String
+  seenAt           DateTime
+  createdAt        DateTime        @default(now())
+  invoice          Invoice         @relation(fields: [invoiceId], references: [id])
+  revision         InvoiceRevision @relation(fields: [latestRevisionId], references: [id])
 
   @@unique([invoiceId, latestRevisionId, masterEmail])
   @@index([invoiceId])
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id        String    @id @default(uuid())
+  email     String    @unique
   name      String?
-  password  String?  // Hashed password for authentication
-  role      String   @default("standard") // standard, master
-  apiKey    String?  @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-
+  password  String?
+  role      String    @default("standard")
+  apiKey    String?   @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
   invoices  Invoice[]
 }
 
 model Customer {
-  id             String   @id @default(uuid())
+  id            String    @id @default(uuid())
+  display_name  String    @unique
+  legal_name    String?
+  email         String?
+  phone         String?
+  tax_id        String?
+  address_line1 String?
+  address_line2 String?
+  city          String?
+  state         String?
+  postal_code   String?
+  country       String?   @default("US")
+  notes         String?
+  is_active     Boolean   @default(true)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  invoices      Invoice[]
 
-  // Primary identification
-  display_name   String
-  legal_name     String?
-
-  // Contact information
-  email          String?
-  phone          String?
-  tax_id         String?  // Tax/VAT ID for business customers
-
-  // Address information
-  address_line1  String?
-  address_line2  String?
-  city           String?
-  state          String?
-  postal_code    String?
-  country        String?  @default("US")
-
-  // Metadata
-  notes          String?
-  is_active      Boolean  @default(true)
-
-  // Timestamps
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
-
-  // Relations
-  invoices       Invoice[]
-
-  // Indexes for performance and uniqueness
-  @@unique([display_name])
   @@index([email])
   @@index([tax_id])
-  @@index([display_name]) // For typeahead search
-  @@index([is_active, display_name]) // For active customer searches
+  @@index([display_name])
+  @@index([is_active, display_name])
 }
 
 model IdempotencyRecord {
-  id         String   @id @default(uuid())
-  key        String   @unique
-  requestId  String
-  response   Json
-  createdAt  DateTime @default(now())
-  expiresAt  DateTime
+  id        String   @id @default(uuid())
+  key       String   @unique
+  requestId String
+  response  Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
 
   @@index([expiresAt])
 }
