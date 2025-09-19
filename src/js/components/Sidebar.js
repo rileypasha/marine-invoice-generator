@@ -64,77 +64,14 @@ export class Sidebar {
         </button>
       </div>
 
-      <div class="sidebar-filters">
-        <div class="filter-group">
-          <input
-            type="text"
-            id="sidebar-search"
-            placeholder="Search invoices..."
-            class="search-input"
-          >
-        </div>
 
-        <div class="filter-group">
-          <label for="sidebar-status-filter">Status:</label>
-          <select id="sidebar-status-filter" class="filter-select">
-            <option value="all">All Status</option>
-            <option value="saved">Saved</option>
-            <option value="submitted">Submitted</option>
-            <option value="draft">Draft</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label for="sidebar-date-filter">Date:</label>
-          <select id="sidebar-date-filter" class="filter-select">
-            <option value="all">All Time</option>
-            <option value="today">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="sidebar-controls">
-        <button id="sidebar-sort-date" class="sort-btn active" data-sort="date">
-          Sort by Date
-          <span class="sort-indicator">↓</span>
-        </button>
-        <button id="sidebar-sort-name" class="sort-btn" data-sort="name">
-          Sort by Name
-          <span class="sort-indicator"></span>
-        </button>
-        <button id="sidebar-refresh" class="refresh-btn" title="Refresh list">
-          ↻
-        </button>
-      </div>
-
-      <div class="sidebar-content">
-        <div id="sidebar-loading" class="loading-state">
-          <div class="spinner"></div>
-          <span>Loading invoices...</span>
-        </div>
-        <div id="sidebar-items" class="sidebar-items"></div>
-        <div id="sidebar-empty" class="empty-state" style="display: none;">
-          <p>No invoices found</p>
-          <p class="empty-subtitle">Create your first invoice to get started</p>
-        </div>
-      </div>
 
       <div class="sidebar-footer">
-        <button class="user-section" id="user-section" style="display: none;" title="Settings">
-          <div class="user-info">
-            <div class="user-avatar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-            </div>
-            <div class="user-details">
-              <div class="user-name" id="user-name">User Name</div>
-              <div class="user-email" id="user-email">user@example.com</div>
-            </div>
-          </div>
+        <button class="user-section" id="user-section" style="display: none; width: 2rem; height: 2rem; border-radius: 50%; background: #6366f1; color: white; border: none; cursor: pointer; transition: all 0.2s ease-in-out; justify-content: center; align-items: center;" title="Profile">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
         </button>
 
         <div class="auth-section" id="auth-section">
@@ -167,50 +104,12 @@ export class Sidebar {
       const invoiceSection = document.createElement('div');
       invoiceSection.className = 'sidebar__invoices';
       invoiceSection.innerHTML = `
-        <div class="sidebar-filters" style="padding: 1rem; border-top: 1px solid #e5e7eb; margin-top: 1rem;">
-          <div class="filter-group">
-            <input
-              type="text"
-              id="sidebar-search"
-              placeholder="Search invoices..."
-              class="search-input"
-              style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; background: #f9fafb;"
-            >
-          </div>
-        </div>
-
-        <div class="sidebar-controls" style="padding: 0 1rem; display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-          <button id="sidebar-refresh" class="refresh-btn" title="Refresh list" style="padding: 0.25rem 0.5rem; border: 1px solid #d1d5db; border-radius: 0.25rem; background: white; cursor: pointer;">
-            ↻
-          </button>
-        </div>
-
-        <div class="sidebar-content" style="padding: 0 1rem;">
-          <div id="sidebar-loading" class="loading-state" style="display: none; text-align: center; padding: 1rem; color: #6b7280;">
-            <div class="spinner"></div>
-            <span>Loading invoices...</span>
-          </div>
-          <div id="sidebar-items" class="sidebar-items"></div>
-          <div id="sidebar-empty" class="empty-state" style="display: none; text-align: center; padding: 1rem; color: #6b7280;">
-            <p>No invoices found</p>
-            <p class="empty-subtitle">Create your first invoice to get started</p>
-          </div>
-        </div>
-
         <div class="sidebar-footer" style="padding: 1rem; border-top: 1px solid #e5e7eb; margin-top: auto;">
-          <div class="user-section" id="user-section" style="display: none; padding: 0.75rem; background: #f3f4f6; border-radius: 0.5rem; cursor: pointer;" title="Settings">
-            <div class="user-info" style="display: flex; align-items: center; gap: 0.75rem;">
-              <div class="user-avatar" style="width: 2rem; height: 2rem; background: #6366f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
-              </div>
-              <div class="user-details">
-                <div class="user-name" id="user-name" style="font-weight: 500; font-size: 0.875rem;">User Name</div>
-                <div class="user-email" id="user-email" style="font-size: 0.75rem; color: #6b7280;">user@example.com</div>
-              </div>
-            </div>
+          <div class="user-section" id="user-section" style="display: none; cursor: pointer; width: 2rem; height: 2rem; border-radius: 50%; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease-in-out;" title="Profile">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
           </div>
 
           <div class="auth-section" id="auth-section" style="display: flex;">
@@ -227,99 +126,8 @@ export class Sidebar {
   }
 
   bindEvents() {
-    // Search
-    const searchInput = document.getElementById('sidebar-search');
-    if (searchInput) {
-      let searchTimeout;
-      searchInput.addEventListener('input', (e) => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-          this.filters.search = e.target.value.toLowerCase();
-          this.renderItems();
-        }, 300);
-      });
-    }
-
-    // Filters
-    const statusFilter = document.getElementById('sidebar-status-filter');
-    if (statusFilter) {
-      statusFilter.addEventListener('change', (e) => {
-        this.filters.status = e.target.value;
-        this.renderItems();
-      });
-    }
-
-    const dateFilter = document.getElementById('sidebar-date-filter');
-    if (dateFilter) {
-      dateFilter.addEventListener('change', (e) => {
-        this.filters.date = e.target.value;
-        this.renderItems();
-      });
-    }
-
-    // Sort buttons
-    if (this.element) {
-      const sortBtns = this.element.querySelectorAll('.sort-btn');
-      sortBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          if (this.isSorting) return;
-          this.toggleSort(e.target.closest('.sort-btn'));
-        });
-      });
-    }
-
-    // Refresh button
-    const refreshBtn = document.getElementById('sidebar-refresh');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', () => {
-        this.loadItems();
-      });
-    }
-
-    // New invoice button
-    const newBtn = document.getElementById('sidebar-new-invoice');
-    if (newBtn) {
-      newBtn.addEventListener('click', () => {
-        this.createNewInvoice();
-      });
-    }
-
-    // Listen for storage updates
-    if (this.invoiceStorage) {
-      this.invoiceStorage.subscribe(() => {
-        if (!this.isUpdating) {
-          this.loadItems();
-        }
-      });
-    }
-
-    // Item actions (using event delegation)
-    this.element.addEventListener('click', (e) => {
-      // Use closest to find the element with data attributes, not just e.target
-      const actionElement = e.target.closest('[data-action]');
-
-      if (!actionElement) return;
-
-      const action = actionElement.dataset.action;
-      const id = actionElement.dataset.id;
-
-      if (!action || !id) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      switch (action) {
-        case 'load':
-          this.loadInvoice(id);
-          break;
-        case 'duplicate':
-          this.duplicateInvoice(id);
-          break;
-        case 'delete':
-          this.deleteInvoice(id);
-          break;
-      }
-    });
+    // Simplified event binding - only essential events remain
+    console.log('🧹 Sidebar events bound (cleaned up)');
   }
 
   async loadInvoice(id) {
