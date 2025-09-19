@@ -3,6 +3,7 @@
  * 🔧 PHASE 3 STABILIZATION: Enhanced initialization with comprehensive error handling
  */
 import { CustomersPage } from './components/CustomersPage.js';
+import { configureSidebar } from './components/sharedSidebar.js';
 
 // 🔧 PHASE 3 STABILIZATION: Enhanced state management
 const CustomerManager = {
@@ -35,6 +36,8 @@ const CustomerManager = {
       }
 
       console.log('✅ Environment validated');
+
+      configureSidebar('customers');
 
       // 🔧 STABILIZATION: Initialize with enhanced error handling
       await this.createCustomersPage();

@@ -99,21 +99,23 @@ export class Sidebar {
 
     // Create a container for our invoice management features
     const footer = this.element.querySelector('.sidebar__footer');
-    if (footer) {
+    if (footer && !footer.querySelector('#user-section') && !footer.querySelector('#auth-section')) {
       // Add invoice management section after the new button
       const invoiceSection = document.createElement('div');
       invoiceSection.className = 'sidebar__invoices';
       invoiceSection.innerHTML = `
-        <div class="sidebar-footer" style="padding: 1rem; border-top: 1px solid #e5e7eb; margin-top: auto;">
-          <div class="user-section" id="user-section" style="display: none; cursor: pointer; width: 2rem; height: 2rem; border-radius: 50%; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease-in-out;" title="Profile">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
-            </svg>
+        <div class="sidebar-footer" style="padding: 1rem; border-top: 1px solid #27272a; margin-top: auto;">
+          <div class="user-section" id="user-section" style="display: none; cursor: pointer; border-radius: 0.75rem; background: #1f1f23; padding: 0.75rem; color: #e5e7eb; align-items: center; gap: 0.75rem;">
+            <div class="user-avatar" style="width: 2rem; height: 2rem; background: #6366f1; border-radius: 9999px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.875rem;">U</div>
+            <div class="user-details" style="display: flex; flex-direction: column;">
+              <span id="user-name" style="font-size: 0.875rem; font-weight: 500;">User Name</span>
+              <span id="user-email" style="font-size: 0.75rem; color: #9ca3af;">user@example.com</span>
+            </div>
+            <button id="logout-btn" style="margin-left: auto; background: transparent; border: none; color: #f87171; font-size: 0.75rem; cursor: pointer;">Logout</button>
           </div>
 
           <div class="auth-section" id="auth-section" style="display: flex;">
-            <button class="auth-btn primary" id="sign-in-btn" style="padding: 0.5rem 1rem; background: #6366f1; color: white; border: none; border-radius: 0.375rem; cursor: pointer; width: 100%;">Sign In</button>
+            <button class="auth-btn primary" id="sign-in-btn" style="padding: 0.5rem 1rem; background: #6366f1; color: white; border: none; border-radius: 0.5rem; cursor: pointer; width: 100%;">Sign In</button>
           </div>
         </div>
       `;

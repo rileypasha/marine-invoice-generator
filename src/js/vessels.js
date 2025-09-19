@@ -1,5 +1,6 @@
 import { VesselsPage } from './components/VesselsPage.js';
 import { UserManager } from './auth/UserManager.js';
+import { configureSidebar } from './components/sharedSidebar.js';
 
 class VesselsApp {
   constructor() {
@@ -21,6 +22,7 @@ class VesselsApp {
       this.initVesselsPage();
       this.initAuth(authResult.user);
       this.setupLogoutHandler();
+      configureSidebar('vessels');
 
     } catch (error) {
       console.error('❌ Failed to initialize VesselsApp:', error);

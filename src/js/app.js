@@ -24,6 +24,7 @@ import { initializeFormatters } from './formatters.js';
 import { UnsavedChangesManager } from './utils/UnsavedChangesManager.js';
 import { UnsavedChangesDialog } from './components/UnsavedChangesDialog.js';
 import { NavigationProtection } from './utils/NavigationProtection.js';
+import { configureSidebar } from './components/sharedSidebar.js';
 
 // Make addLineItem available globally for testing
 window.addLineItem = function(lineItem) {
@@ -66,6 +67,7 @@ class InvoiceApp {
       this.initComponents();
       this.initTabNavigation();
       this.initActionButtons();
+      configureSidebar('invoices', { manageAuth: false });
       this.initSidebarNavigation();
       this.initKeyboardShortcuts();
 

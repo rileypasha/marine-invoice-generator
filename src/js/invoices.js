@@ -4,10 +4,13 @@
 
 import '../styles/invoices-page.css';
 import { InvoicesIndex } from './components/InvoicesIndex.js';
+import { configureSidebar } from './components/sharedSidebar.js';
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Initializing Invoices Directory...');
+
+  configureSidebar('invoices');
 
   try {
     // Check authentication
