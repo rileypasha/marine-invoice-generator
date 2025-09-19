@@ -1,0 +1,470 @@
+{
+  "timestamp": "2025-09-19T14:19:05.170Z",
+  "testResults": {
+    "loginFlow": {
+      "passed": true,
+      "errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 ()",
+          "url": "https://mginvoices.com/api/auth/me",
+          "timestamp": "2025-09-19T14:18:20.684Z"
+        }
+      ]
+    },
+    "invoiceLoad": {
+      "passed": false,
+      "errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 ()",
+          "url": "https://mginvoices.com/api/simple-auth/check",
+          "timestamp": "2025-09-19T14:18:24.295Z"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 ()",
+          "url": "https://mginvoices.com/api/auth/me",
+          "timestamp": "2025-09-19T14:18:24.370Z"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 ()",
+          "url": "https://mginvoices.com/api/auth/me",
+          "timestamp": "2025-09-19T14:18:24.632Z"
+        }
+      ]
+    },
+    "customersTab": {
+      "passed": false,
+      "errors": []
+    },
+    "sidebarFunctionality": {
+      "passed": false,
+      "errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 ()",
+          "url": "https://mginvoices.com/api/simple-auth/check",
+          "timestamp": "2025-09-19T14:18:30.640Z"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 ()",
+          "url": "https://mginvoices.com/api/auth/me",
+          "timestamp": "2025-09-19T14:18:30.777Z"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 ()",
+          "url": "https://mginvoices.com/api/auth/me",
+          "timestamp": "2025-09-19T14:18:30.994Z"
+        }
+      ]
+    },
+    "baseline": {
+      "passed": false,
+      "errors": [
+        {
+          "text": "page.fill: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vessel-name')\u001b[22m\n",
+          "type": "test-error"
+        }
+      ]
+    },
+    "summary": {
+      "totalErrors": 7,
+      "criticalErrors": 7,
+      "passed": false,
+      "acceptableErrors": 0
+    }
+  },
+  "allMessages": [
+    {
+      "type": "log",
+      "text": "🔥 Landing Page DOM loaded, initializing...",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:20.605Z"
+    },
+    {
+      "type": "log",
+      "text": "🚀 Initializing Landing Page...",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:20.605Z"
+    },
+    {
+      "type": "log",
+      "text": "🧪 Test user created: test@marinegroup.com / password123",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:20.606Z"
+    },
+    {
+      "type": "log",
+      "text": "✅ Landing Page initialized",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:20.607Z"
+    },
+    {
+      "type": "verbose",
+      "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"new-password\"): (More info: https://goo.gl/9p2vKq) %o",
+      "url": "https://mginvoices.com/",
+      "timestamp": "2025-09-19T14:18:20.652Z"
+    },
+    {
+      "type": "verbose",
+      "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"new-password\"): (More info: https://goo.gl/9p2vKq) %o",
+      "url": "https://mginvoices.com/",
+      "timestamp": "2025-09-19T14:18:20.652Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/auth/me",
+      "timestamp": "2025-09-19T14:18:20.684Z"
+    },
+    {
+      "type": "log",
+      "text": "No server authentication found, showing landing page",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:20.684Z"
+    },
+    {
+      "type": "log",
+      "text": "🔐 AuthModal.show() called with mode: signin",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:21.877Z"
+    },
+    {
+      "type": "log",
+      "text": "✅ Modal display and classes set",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:21.877Z"
+    },
+    {
+      "type": "log",
+      "text": "✅ Input focused",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:21.979Z"
+    },
+    {
+      "type": "log",
+      "text": "🎯 CORRECT FIX: Establish baseline AFTER invoice loads, not before",
+      "url": "https://mginvoices.com/app",
+      "timestamp": "2025-09-19T14:18:24.024Z"
+    },
+    {
+      "type": "log",
+      "text": "🔥 APP.JS FILE LOADED",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:24.224Z"
+    },
+    {
+      "type": "log",
+      "text": "🔥 APP.JS FILE LOADED",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:24.225Z"
+    },
+    {
+      "type": "log",
+      "text": "🚀 DOM CONTENT LOADED - STARTING APP INITIALIZATION",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:24.225Z"
+    },
+    {
+      "type": "log",
+      "text": "🏗️ Creating InvoiceApp instance...",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:24.225Z"
+    },
+    {
+      "type": "log",
+      "text": "🔍 APP.JS: Checking authentication...",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:24.226Z"
+    },
+    {
+      "type": "log",
+      "text": "✅ App initialized successfully",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:24.226Z"
+    },
+    {
+      "type": "log",
+      "text": "💡 Debug functions available: window.debugApp.forceRefresh(), window.debugApp.showInvoices(), window.debugApp.currentUser()",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:24.226Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/simple-auth/check",
+      "timestamp": "2025-09-19T14:18:24.295Z"
+    },
+    {
+      "type": "log",
+      "text": "📡 Session check response: 401",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:24.296Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/auth/me",
+      "timestamp": "2025-09-19T14:18:24.370Z"
+    },
+    {
+      "type": "log",
+      "text": "📡 Cookie auth response: 401",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:24.371Z"
+    },
+    {
+      "type": "log",
+      "text": "🔄 Cookie auth failed, trying token authentication...",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:24.371Z"
+    },
+    {
+      "type": "log",
+      "text": "🚫 No valid authentication found",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:24.371Z"
+    },
+    {
+      "type": "log",
+      "text": "🎯 Authentication check result: false",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:24.371Z"
+    },
+    {
+      "type": "log",
+      "text": "🚫 User not authenticated, redirecting to landing page...",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:24.371Z"
+    },
+    {
+      "type": "log",
+      "text": "🔥 Landing Page DOM loaded, initializing...",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:24.557Z"
+    },
+    {
+      "type": "log",
+      "text": "🚀 Initializing Landing Page...",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:24.557Z"
+    },
+    {
+      "type": "log",
+      "text": "✅ Landing Page initialized",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:24.559Z"
+    },
+    {
+      "type": "verbose",
+      "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"new-password\"): (More info: https://goo.gl/9p2vKq) %o",
+      "url": "https://mginvoices.com/",
+      "timestamp": "2025-09-19T14:18:24.586Z"
+    },
+    {
+      "type": "verbose",
+      "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"new-password\"): (More info: https://goo.gl/9p2vKq) %o",
+      "url": "https://mginvoices.com/",
+      "timestamp": "2025-09-19T14:18:24.586Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/auth/me",
+      "timestamp": "2025-09-19T14:18:24.632Z"
+    },
+    {
+      "type": "log",
+      "text": "No server authentication found, showing landing page",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:24.632Z"
+    },
+    {
+      "type": "log",
+      "text": "🎯 CORRECT FIX: Establish baseline AFTER invoice loads, not before",
+      "url": "https://mginvoices.com/app",
+      "timestamp": "2025-09-19T14:18:30.456Z"
+    },
+    {
+      "type": "log",
+      "text": "🔥 APP.JS FILE LOADED",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:30.553Z"
+    },
+    {
+      "type": "log",
+      "text": "🔥 APP.JS FILE LOADED",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:30.553Z"
+    },
+    {
+      "type": "log",
+      "text": "🚀 DOM CONTENT LOADED - STARTING APP INITIALIZATION",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:30.562Z"
+    },
+    {
+      "type": "log",
+      "text": "🏗️ Creating InvoiceApp instance...",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:30.562Z"
+    },
+    {
+      "type": "log",
+      "text": "🔍 APP.JS: Checking authentication...",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:30.563Z"
+    },
+    {
+      "type": "log",
+      "text": "✅ App initialized successfully",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:30.563Z"
+    },
+    {
+      "type": "log",
+      "text": "💡 Debug functions available: window.debugApp.forceRefresh(), window.debugApp.showInvoices(), window.debugApp.currentUser()",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:30.564Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/simple-auth/check",
+      "timestamp": "2025-09-19T14:18:30.640Z"
+    },
+    {
+      "type": "log",
+      "text": "📡 Session check response: 401",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:30.641Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/auth/me",
+      "timestamp": "2025-09-19T14:18:30.777Z"
+    },
+    {
+      "type": "log",
+      "text": "📡 Cookie auth response: 401",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:30.778Z"
+    },
+    {
+      "type": "log",
+      "text": "🔄 Cookie auth failed, trying token authentication...",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:30.778Z"
+    },
+    {
+      "type": "log",
+      "text": "🚫 No valid authentication found",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:30.778Z"
+    },
+    {
+      "type": "log",
+      "text": "🎯 Authentication check result: false",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:30.778Z"
+    },
+    {
+      "type": "log",
+      "text": "🚫 User not authenticated, redirecting to landing page...",
+      "url": "https://mginvoices.com/main.bundle.aaa59f64.js",
+      "timestamp": "2025-09-19T14:18:30.778Z"
+    },
+    {
+      "type": "log",
+      "text": "🔥 Landing Page DOM loaded, initializing...",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:30.930Z"
+    },
+    {
+      "type": "log",
+      "text": "🚀 Initializing Landing Page...",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:30.930Z"
+    },
+    {
+      "type": "log",
+      "text": "✅ Landing Page initialized",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:30.931Z"
+    },
+    {
+      "type": "verbose",
+      "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"new-password\"): (More info: https://goo.gl/9p2vKq) %o",
+      "url": "https://mginvoices.com/",
+      "timestamp": "2025-09-19T14:18:30.962Z"
+    },
+    {
+      "type": "verbose",
+      "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"new-password\"): (More info: https://goo.gl/9p2vKq) %o",
+      "url": "https://mginvoices.com/",
+      "timestamp": "2025-09-19T14:18:30.962Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/auth/me",
+      "timestamp": "2025-09-19T14:18:30.994Z"
+    },
+    {
+      "type": "log",
+      "text": "No server authentication found, showing landing page",
+      "url": "https://mginvoices.com/landing.bundle.f6a0e251.js",
+      "timestamp": "2025-09-19T14:18:30.994Z"
+    }
+  ],
+  "allErrors": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/auth/me",
+      "timestamp": "2025-09-19T14:18:20.684Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/simple-auth/check",
+      "timestamp": "2025-09-19T14:18:24.295Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/auth/me",
+      "timestamp": "2025-09-19T14:18:24.370Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/auth/me",
+      "timestamp": "2025-09-19T14:18:24.632Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/simple-auth/check",
+      "timestamp": "2025-09-19T14:18:30.640Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/auth/me",
+      "timestamp": "2025-09-19T14:18:30.777Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://mginvoices.com/api/auth/me",
+      "timestamp": "2025-09-19T14:18:30.994Z"
+    }
+  ],
+  "url": "https://mginvoices.com/"
+}

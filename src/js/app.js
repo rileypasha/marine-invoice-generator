@@ -66,6 +66,7 @@ class InvoiceApp {
       this.initComponents();
       this.initTabNavigation();
       this.initActionButtons();
+      this.initSidebarNavigation();
       this.initKeyboardShortcuts();
 
       // Initialize unsaved changes system
@@ -519,6 +520,190 @@ class InvoiceApp {
         generatePDF();
       });
     }
+  }
+
+  initSidebarNavigation() {
+    console.log('🔍 Initializing sidebar navigation...');
+
+    // Find all sidebar navigation items
+    const sidebarNavItems = document.querySelectorAll('.sidebar__nav-item');
+    console.log('📊 Navigation items found:', sidebarNavItems.length);
+
+    if (sidebarNavItems.length === 0) {
+      console.error('❌ No sidebar navigation items found');
+      return;
+    }
+
+    sidebarNavItems.forEach((navItem, index) => {
+      const title = navItem.getAttribute('title');
+      console.log(`  - Nav item ${index}: title="${title}"`);
+
+      // Add click handler to each navigation item
+      navItem.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log(`🔄 Navigation clicked: "${title}"`);
+        this.handleSidebarNavigation(title, navItem);
+      });
+    });
+
+    console.log('✅ Sidebar navigation initialization complete');
+  }
+
+  handleSidebarNavigation(title, navItem) {
+    console.log(`🧭 Handling navigation to: ${title}`);
+
+    // Handle different navigation destinations
+    switch (title) {
+      case 'Customers':
+        this.navigateToCustomers();
+        break;
+      case 'Invoices':
+        this.navigateToInvoices();
+        break;
+      case 'Vessels':
+        this.navigateToVessels();
+        break;
+      case 'Reports':
+        this.navigateToReports();
+        break;
+      case 'Settings':
+        this.navigateToSettings();
+        break;
+      default:
+        console.warn(`⚠️ Unknown navigation target: ${title}`);
+    }
+  }
+
+  async navigateToCustomers() {
+    console.log('👥 Navigating to Customers page...');
+
+    try {
+      // Check for unsaved changes before navigation
+      if (this.unsavedChangesManager && this.unsavedChangesManager.hasUnsavedChanges) {
+        console.log('⚠️ Unsaved changes detected, showing dialog...');
+
+        // Use navigation protection to handle unsaved changes
+        const shouldProceed = await this.handleUnsavedChangesBeforeNavigation();
+        if (!shouldProceed) {
+          console.log('❌ Navigation cancelled due to unsaved changes');
+          return;
+        }
+      }
+
+      // Add loading state
+      const navItem = document.querySelector('a[title="Customers"]');
+      if (navItem) {
+        navItem.style.opacity = '0.6';
+        navItem.style.pointerEvents = 'none';
+      }
+
+      // Navigate to customers page
+      console.log('🚀 Navigating to /customers...');
+      window.location.href = '/customers';
+
+    } catch (error) {
+      console.error('❌ Error navigating to customers:', error);
+
+      // Reset navigation item state
+      const navItem = document.querySelector('a[title="Customers"]');
+      if (navItem) {
+        navItem.style.opacity = '';
+        navItem.style.pointerEvents = '';
+      }
+
+      // Show error message
+      this.showNotification('Failed to navigate to customers page', 'error');
+    }
+  }
+
+  navigateToInvoices() {
+    console.log('📄 Already on invoices page');
+    // Could refresh or reset form if needed
+  }
+
+  navigateToVessels() {
+    console.log('⚠️ Vessels page not implemented yet');
+    this.showNotification('Vessels page coming soon', 'info');
+  }
+
+  navigateToReports() {
+    console.log('⚠️ Reports page not implemented yet');
+    this.showNotification('Reports page coming soon', 'info');
+  }
+
+  navigateToSettings() {
+    console.log('⚙️ Opening settings modal');
+    if (this.settingsModal) {
+      this.settingsModal.open();
+    }
+  }
+
+  async handleUnsavedChangesBeforeNavigation() {
+    return new Promise((resolve) => {
+      if (this.unsavedChangesDialog) {
+        this.unsavedChangesDialog.showNavigationDialog(
+          (action) => {
+            if (action === 'save') {
+              // Try to save, then navigate
+              this.saveInvoice().then(() => {
+                resolve(true);
+              }).catch(() => {
+                resolve(false);
+              });
+            } else if (action === 'discard') {
+              // Discard changes and navigate
+              resolve(true);
+            } else {
+              // Cancel navigation
+              resolve(false);
+            }
+          }
+        );
+      } else {
+        // No dialog available, proceed
+        resolve(true);
+      }
+    });
+  }
+
+  showNotification(message, type = 'info') {
+    // Simple notification implementation
+    console.log(`📢 ${type.toUpperCase()}: ${message}`);
+
+    // Create and show a simple toast notification
+    const notification = document.createElement('div');
+    notification.className = `notification notification--${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      background: ${type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
+      color: white;
+      border-radius: 6px;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-size: 14px;
+      font-weight: 500;
+      max-width: 300px;
+      transition: all 0.3s ease;
+    `;
+
+    document.body.appendChild(notification);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateX(100%)';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, 5000);
   }
 }
 

@@ -7,6 +7,8 @@ export class CustomersPage {
     this.options = {
       containerId: 'customers-page',
       pageSize: 25,
+      maxRetries: 3,
+      retryDelay: 1000,
       ...options
     };
 
@@ -22,19 +24,174 @@ export class CustomersPage {
     this.container = null;
     this.editingCustomer = null;
 
-    this.init();
+    // 🔧 PHASE 3 STABILIZATION: Enhanced state management
+    this.isMounted = false;
+    this.isDestroyed = false;
+    this.eventListeners = new Map();
+    this.timers = new Set();
+    this.retryCount = 0;
+    this.lastError = null;
+
+    // 🛡️ DEFENSIVE: Validate environment before initialization
+    this.validateEnvironment().then(isValid => {
+      if (isValid && !this.isDestroyed) {
+        this.init();
+      }
+    }).catch(error => {
+      console.error('❌ Environment validation failed:', error);
+      this.handleCriticalError(error);
+    });
+  }
+
+  /**
+   * 🔧 PHASE 3 STABILIZATION: Validate environment before initialization
+   */
+  async validateEnvironment() {
+    try {
+      // Check DOM readiness
+      if (document.readyState === 'loading') {
+        await new Promise(resolve => {
+          document.addEventListener('DOMContentLoaded', resolve, { once: true });
+        });
+      }
+
+      // Check authentication state
+      const authState = this.validateAuthenticationState();
+      if (!authState.valid) {
+        console.warn('⚠️ Authentication state invalid:', authState.reason);
+        // Don't fail initialization - let auth system handle it
+      }
+
+      // Check required APIs
+      const apiCheck = await this.validateApiAvailability();
+      if (!apiCheck.available) {
+        console.warn('⚠️ API availability limited:', apiCheck.reason);
+        // Continue with degraded functionality
+      }
+
+      return true;
+    } catch (error) {
+      console.error('❌ Environment validation error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 🛡️ DEFENSIVE: Validate authentication state
+   */
+  validateAuthenticationState() {
+    const storedUser = localStorage.getItem('marine_invoice_user');
+    const storedSession = localStorage.getItem('marine_invoice_session');
+
+    if (!storedUser || !storedSession) {
+      return { valid: false, reason: 'No stored authentication' };
+    }
+
+    try {
+      const user = JSON.parse(storedUser);
+      const session = JSON.parse(storedSession);
+
+      // Check session expiry
+      const now = Date.now();
+      const sessionAge = now - session.timestamp;
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+
+      if (sessionAge > maxAge) {
+        return { valid: false, reason: 'Session expired' };
+      }
+
+      if (!user.id || !user.email) {
+        return { valid: false, reason: 'Invalid user data' };
+      }
+
+      return { valid: true, user, session };
+    } catch (error) {
+      return { valid: false, reason: 'Invalid stored data' };
+    }
+  }
+
+  /**
+   * 🛡️ DEFENSIVE: Check API availability
+   */
+  async validateApiAvailability() {
+    try {
+      const response = await fetch('/api/customers?limit=1', {
+        method: 'HEAD',
+        credentials: 'include'
+      });
+
+      return {
+        available: response.ok,
+        status: response.status,
+        reason: response.ok ? 'API available' : `API returned ${response.status}`
+      };
+    } catch (error) {
+      return {
+        available: false,
+        reason: `Network error: ${error.message}`
+      };
+    }
   }
 
   init() {
-    this.container = document.getElementById(this.options.containerId);
-    if (!this.container) {
-      console.error(`CustomersPage: Container '${this.options.containerId}' not found`);
+    if (this.isDestroyed) {
+      console.warn('⚠️ Attempted to initialize destroyed CustomersPage');
       return;
     }
 
-    this.render();
-    this.bindEvents();
-    this.loadCustomers();
+    // 🛡️ DEFENSIVE: Multiple container resolution attempts
+    this.container = this.findContainer();
+    if (!this.container) {
+      console.error(`❌ CustomersPage: Container '${this.options.containerId}' not found`);
+      this.handleContainerError();
+      return;
+    }
+
+    try {
+      console.log('🔧 PHASE 3: Initializing CustomersPage...');
+
+      this.render();
+      this.bindEvents();
+      this.isMounted = true;
+
+      // 🔧 STABILIZATION: Load data with retry logic
+      this.loadCustomersWithRetry();
+
+      console.log('✅ CustomersPage initialized successfully');
+    } catch (error) {
+      console.error('❌ Error during CustomersPage initialization:', error);
+      this.handleInitializationError(error);
+    }
+  }
+
+  /**
+   * 🛡️ DEFENSIVE: Multiple container resolution strategies
+   */
+  findContainer() {
+    // Try primary ID
+    let container = document.getElementById(this.options.containerId);
+    if (container) return container;
+
+    // Try with small delay in case DOM is still loading
+    return new Promise(resolve => {
+      const maxAttempts = 10;
+      let attempts = 0;
+
+      const tryFind = () => {
+        attempts++;
+        container = document.getElementById(this.options.containerId);
+
+        if (container) {
+          resolve(container);
+        } else if (attempts < maxAttempts) {
+          setTimeout(tryFind, 100);
+        } else {
+          resolve(null);
+        }
+      };
+
+      tryFind();
+    });
   }
 
   render() {
@@ -343,54 +500,104 @@ export class CustomersPage {
     `;
   }
 
+  /**
+   * 🔧 PHASE 3 STABILIZATION: Enhanced event binding with cleanup tracking
+   */
   bindEvents() {
-    // Add customer button
-    document.getElementById('add-customer-btn').addEventListener('click', () => {
-      this.showCustomerModal();
-    });
-
-    // Import customers button
-    document.getElementById('import-customers-btn').addEventListener('click', () => {
-      this.showImportModal();
-    });
-
-    // Search input
-    const searchInput = document.getElementById('customers-search');
-    let searchTimeout;
-    searchInput.addEventListener('input', (e) => {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => {
-        this.searchQuery = e.target.value;
-        this.currentPage = 1;
-        this.loadCustomers();
-      }, 300);
-    });
-
-    // Clear search
-    document.getElementById('clear-search-btn').addEventListener('click', () => {
-      searchInput.value = '';
-      this.searchQuery = '';
-      this.currentPage = 1;
-      this.loadCustomers();
-    });
-
-    // Sort buttons
-    this.container.querySelectorAll('.sort-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const field = e.currentTarget.dataset.field;
-        if (this.sortField === field) {
-          this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-          this.sortField = field;
-          this.sortDirection = 'asc';
-        }
-        this.updateSortUI();
-        this.loadCustomers();
+    try {
+      // 🛡️ DEFENSIVE: Bind events with error handling and cleanup tracking
+      this.bindEventSafely('add-customer-btn', 'click', () => {
+        this.showCustomerModal();
       });
-    });
 
-    // Modal events
-    this.bindModalEvents();
+      this.bindEventSafely('import-customers-btn', 'click', () => {
+        this.showImportModal();
+      });
+
+      // Search input with enhanced debouncing
+      const searchInput = document.getElementById('customers-search');
+      if (searchInput) {
+        let searchTimeout;
+        const searchHandler = (e) => {
+          clearTimeout(searchTimeout);
+          searchTimeout = setTimeout(() => {
+            if (!this.isDestroyed) {
+              this.searchQuery = e.target.value;
+              this.currentPage = 1;
+              this.loadCustomersWithRetry();
+            }
+          }, 300);
+
+          // Track timeout for cleanup
+          this.timers.add(searchTimeout);
+        };
+
+        searchInput.addEventListener('input', searchHandler);
+        this.eventListeners.set('customers-search', { element: searchInput, event: 'input', handler: searchHandler });
+      }
+
+      this.bindEventSafely('clear-search-btn', 'click', () => {
+        const searchInput = document.getElementById('customers-search');
+        if (searchInput) {
+          searchInput.value = '';
+          this.searchQuery = '';
+          this.currentPage = 1;
+          this.loadCustomersWithRetry();
+        }
+      });
+
+      // Sort buttons with defensive checks
+      const sortButtons = this.container?.querySelectorAll('.sort-btn') || [];
+      sortButtons.forEach((btn, index) => {
+        const sortHandler = (e) => {
+          if (this.isDestroyed) return;
+
+          const field = e.currentTarget.dataset.field;
+          if (this.sortField === field) {
+            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+          } else {
+            this.sortField = field;
+            this.sortDirection = 'asc';
+          }
+          this.updateSortUI();
+          this.loadCustomersWithRetry();
+        };
+
+        btn.addEventListener('click', sortHandler);
+        this.eventListeners.set(`sort-btn-${index}`, { element: btn, event: 'click', handler: sortHandler });
+      });
+
+      // Modal events
+      this.bindModalEvents();
+
+      console.log('✅ Events bound successfully');
+    } catch (error) {
+      console.error('❌ Error binding events:', error);
+      this.handleEventBindingError(error);
+    }
+  }
+
+  /**
+   * 🛡️ DEFENSIVE: Safe event binding with automatic cleanup tracking
+   */
+  bindEventSafely(elementId, eventType, handler) {
+    const element = document.getElementById(elementId);
+    if (!element) {
+      console.warn(`⚠️ Element '${elementId}' not found for event binding`);
+      return;
+    }
+
+    const safeHandler = (...args) => {
+      if (this.isDestroyed) return;
+      try {
+        handler(...args);
+      } catch (error) {
+        console.error(`❌ Error in event handler for ${elementId}:`, error);
+      }
+    };
+
+    element.addEventListener(eventType, safeHandler);
+    this.eventListeners.set(elementId, { element, event: eventType, handler: safeHandler });
   }
 
   bindModalEvents() {
@@ -429,13 +636,43 @@ export class CustomersPage {
     });
   }
 
+  /**
+   * 🔧 PHASE 3 STABILIZATION: Load customers with retry logic
+   */
+  async loadCustomersWithRetry() {
+    for (let attempt = 1; attempt <= this.options.maxRetries; attempt++) {
+      try {
+        await this.loadCustomers();
+        this.retryCount = 0; // Reset on success
+        return;
+      } catch (error) {
+        console.error(`❌ Attempt ${attempt} failed:`, error);
+
+        if (attempt === this.options.maxRetries) {
+          this.handleLoadFailure(error);
+          break;
+        }
+
+        // Exponential backoff
+        const delay = this.options.retryDelay * Math.pow(2, attempt - 1);
+        await this.delay(delay);
+      }
+    }
+  }
+
   async loadCustomers() {
-    if (this.isLoading) return;
+    if (this.isLoading || this.isDestroyed) return;
 
     this.isLoading = true;
     this.showLoading(true);
+    this.lastError = null;
 
     try {
+      // 🛡️ DEFENSIVE: Validate state before API call
+      if (!this.validateLoadConditions()) {
+        throw new Error('Invalid load conditions');
+      }
+
       const params = new URLSearchParams({
         page: this.currentPage,
         limit: this.options.pageSize,
@@ -446,30 +683,93 @@ export class CustomersPage {
         params.set('search', this.searchQuery);
       }
 
+      // 🔧 STABILIZATION: Enhanced fetch with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
       const response = await fetch(`/api/customers?${params}`, {
-        credentials: 'include'
+        credentials: 'include',
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error(`Failed to load customers: ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+
+      // 🛡️ DEFENSIVE: Validate response data
+      this.validateResponseData(data);
 
       this.customers = data.customers || [];
       this.totalCustomers = data.pagination?.total || 0;
       this.totalPages = data.pagination?.pages || 1;
 
-      this.renderTable();
-      this.renderPagination();
-      this.updateStats();
+      // 🔧 STABILIZATION: Idempotent rendering
+      if (!this.isDestroyed) {
+        this.renderTable();
+        this.renderPagination();
+        this.updateStats();
+      }
 
     } catch (error) {
-      console.error('Failed to load customers:', error);
-      this.showError('Failed to load customers. Please try again.');
+      this.lastError = error;
+      console.error('❌ Failed to load customers:', error);
+
+      if (error.name === 'AbortError') {
+        this.showError('Request timed out. Please try again.');
+      } else if (error.message.includes('401')) {
+        this.handleAuthenticationError();
+      } else {
+        this.showError(`Failed to load customers: ${error.message}`);
+      }
     } finally {
       this.isLoading = false;
-      this.showLoading(false);
+      if (!this.isDestroyed) {
+        this.showLoading(false);
+      }
+    }
+  }
+
+  /**
+   * 🛡️ DEFENSIVE: Validate conditions before loading
+   */
+  validateLoadConditions() {
+    if (!this.container) {
+      console.error('❌ No container available for loading');
+      return false;
+    }
+
+    if (!this.isMounted) {
+      console.warn('⚠️ Component not mounted, skipping load');
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * 🛡️ DEFENSIVE: Validate API response data
+   */
+  validateResponseData(data) {
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid response data format');
+    }
+
+    if (!Array.isArray(data.customers)) {
+      console.warn('⚠️ customers array missing or invalid, using empty array');
+      data.customers = [];
+    }
+
+    if (!data.pagination || typeof data.pagination !== 'object') {
+      console.warn('⚠️ pagination data missing, using defaults');
+      data.pagination = { total: 0, pages: 1 };
     }
   }
 
@@ -969,6 +1269,8 @@ export class CustomersPage {
   }
 
   showMessage(message, type = 'info') {
+    if (this.isDestroyed) return;
+
     // Simple toast notification
     const toast = document.createElement('div');
     toast.className = `toast toast--${type}`;
@@ -976,20 +1278,198 @@ export class CustomersPage {
 
     document.body.appendChild(toast);
 
-    setTimeout(() => {
-      toast.classList.add('toast--show');
+    const showTimer = setTimeout(() => {
+      if (!this.isDestroyed) {
+        toast.classList.add('toast--show');
+      }
     }, 10);
 
-    setTimeout(() => {
-      toast.classList.remove('toast--show');
-      setTimeout(() => {
-        if (toast.parentNode) {
-          toast.parentNode.removeChild(toast);
-        }
-      }, 300);
+    const hideTimer = setTimeout(() => {
+      if (!this.isDestroyed) {
+        toast.classList.remove('toast--show');
+        const removeTimer = setTimeout(() => {
+          if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+          }
+        }, 300);
+        this.timers.add(removeTimer);
+      }
     }, 3000);
+
+    this.timers.add(showTimer);
+    this.timers.add(hideTimer);
+  }
+
+  /**
+   * 🔧 PHASE 3 STABILIZATION: Error handling and recovery methods
+   */
+  handleContainerError() {
+    console.error('🔧 CONTAINER ERROR: CustomersPage container not found');
+
+    // Try to recover by creating a minimal container
+    const fallbackContainer = document.createElement('div');
+    fallbackContainer.id = this.options.containerId;
+    fallbackContainer.innerHTML = `
+      <div class="error-state">
+        <h2>Error Loading Customers</h2>
+        <p>The customers page container could not be found.</p>
+        <button onclick="window.location.reload()">Reload Page</button>
+      </div>
+    `;
+
+    document.body.appendChild(fallbackContainer);
+    this.container = fallbackContainer;
+  }
+
+  handleInitializationError(error) {
+    console.error('🔧 INIT ERROR:', error);
+    this.lastError = error;
+
+    if (this.container) {
+      this.container.innerHTML = `
+        <div class="error-state">
+          <h2>Initialization Error</h2>
+          <p>Failed to initialize the customers page: ${error.message}</p>
+          <button onclick="window.location.reload()">Reload Page</button>
+        </div>
+      `;
+    }
+  }
+
+  handleLoadFailure(error) {
+    console.error('🔧 LOAD FAILURE:', error);
+    this.lastError = error;
+
+    // Show error state with retry option
+    if (this.container) {
+      const errorContainer = this.container.querySelector('.customers-page') || this.container;
+      errorContainer.innerHTML = `
+        <div class="error-state">
+          <h2>Failed to Load Customers</h2>
+          <p>Could not load customer data after ${this.options.maxRetries} attempts.</p>
+          <p>Error: ${error.message}</p>
+          <button onclick="customersPage?.retryLoad()" class="btn btn--primary">Try Again</button>
+          <button onclick="window.location.reload()" class="btn btn--outline">Reload Page</button>
+        </div>
+      `;
+    }
+  }
+
+  handleAuthenticationError() {
+    console.error('🔧 AUTH ERROR: Authentication required');
+
+    // Redirect to login or show auth modal
+    if (typeof window !== 'undefined' && window.location) {
+      window.location.href = '/?auth=required';
+    }
+  }
+
+  handleEventBindingError(error) {
+    console.error('🔧 EVENT ERROR:', error);
+    // Continue with limited functionality
+    this.showError('Some interactive features may not work properly.');
+  }
+
+  handleCriticalError(error) {
+    console.error('🔧 CRITICAL ERROR:', error);
+
+    // Show minimal error page
+    const errorHTML = `
+      <div class="critical-error">
+        <h1>System Error</h1>
+        <p>A critical error occurred while loading the customers page.</p>
+        <p>Please refresh the page or contact support if the problem persists.</p>
+        <button onclick="window.location.reload()">Reload Page</button>
+      </div>
+    `;
+
+    if (this.container) {
+      this.container.innerHTML = errorHTML;
+    } else {
+      document.body.innerHTML = errorHTML;
+    }
+  }
+
+  /**
+   * 🔧 PHASE 3 STABILIZATION: Recovery and utility methods
+   */
+  async retryLoad() {
+    console.log('🔄 Manual retry requested');
+    this.retryCount = 0;
+    await this.loadCustomersWithRetry();
+  }
+
+  async delay(ms) {
+    return new Promise(resolve => {
+      const timer = setTimeout(resolve, ms);
+      this.timers.add(timer);
+    });
+  }
+
+  /**
+   * 🔧 PHASE 3 STABILIZATION: Enhanced cleanup and memory management
+   */
+  destroy() {
+    console.log('🧹 Destroying CustomersPage...');
+
+    this.isDestroyed = true;
+    this.isMounted = false;
+
+    // Clear all timers
+    this.timers.forEach(timer => clearTimeout(timer));
+    this.timers.clear();
+
+    // Remove all event listeners
+    this.eventListeners.forEach(({ element, event, handler }) => {
+      if (element && element.removeEventListener) {
+        element.removeEventListener(event, handler);
+      }
+    });
+    this.eventListeners.clear();
+
+    // Clear references
+    this.container = null;
+    this.customers = [];
+    this.editingCustomer = null;
+    this.lastError = null;
+
+    console.log('✅ CustomersPage destroyed');
+  }
+
+  /**
+   * 🔧 PHASE 3 STABILIZATION: Health check and diagnostics
+   */
+  getHealthStatus() {
+    return {
+      isHealthy: !this.isDestroyed && this.isMounted && !!this.container,
+      isMounted: this.isMounted,
+      isDestroyed: this.isDestroyed,
+      hasContainer: !!this.container,
+      isLoading: this.isLoading,
+      lastError: this.lastError?.message || null,
+      retryCount: this.retryCount,
+      customersCount: this.customers.length,
+      eventListenersCount: this.eventListeners.size,
+      timersCount: this.timers.size
+    };
   }
 }
 
 // Make it globally available for onclick handlers
 window.customersPage = null;
+
+// 🔧 PHASE 3 STABILIZATION: Enhanced global error handling
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => {
+    if (window.customersPage && typeof window.customersPage.handleCriticalError === 'function') {
+      window.customersPage.handleCriticalError(event.error);
+    }
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    console.error('🔧 Unhandled promise rejection in CustomersPage:', event.reason);
+    if (window.customersPage && typeof window.customersPage.handleCriticalError === 'function') {
+      window.customersPage.handleCriticalError(new Error(event.reason));
+    }
+  });
+}
