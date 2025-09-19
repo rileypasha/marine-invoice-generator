@@ -1,8 +1,11 @@
-@import './chatgpt-dark.css';
-@import './light-theme.css';
+/* Modern UI Design System */
+@import './modern-foundation.css';
+@import './modern-components.css';
+@import './modern-layout.css';
+
+/* Legacy Styles */
 @import './auth.css';
 @import './settings.css';
-@import './sidebar.css';
 @import './print.css';
 
 /* Notifications */
