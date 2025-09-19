@@ -618,9 +618,45 @@ class InvoiceApp {
     }
   }
 
-  navigateToInvoices() {
-    console.log('📄 Already on invoices page');
-    // Could refresh or reset form if needed
+  async navigateToInvoices() {
+    console.log('📄 Navigating to Invoices page...');
+
+    try {
+      // Check for unsaved changes before navigation
+      if (this.unsavedChangesManager && this.unsavedChangesManager.hasUnsavedChanges) {
+        console.log('⚠️ Unsaved changes detected, showing dialog...');
+
+        const shouldProceed = await this.handleUnsavedChangesBeforeNavigation();
+        if (!shouldProceed) {
+          console.log('❌ Navigation cancelled due to unsaved changes');
+          return;
+        }
+      }
+
+      // Add loading state
+      const navItem = document.querySelector('a[title="Invoices"]');
+      if (navItem) {
+        navItem.style.opacity = '0.6';
+        navItem.style.pointerEvents = 'none';
+      }
+
+      // Navigate to invoices page
+      console.log('🚀 Navigating to /invoices...');
+      window.location.href = '/invoices';
+
+    } catch (error) {
+      console.error('❌ Error navigating to invoices:', error);
+
+      // Reset navigation item state
+      const navItem = document.querySelector('a[title="Invoices"]');
+      if (navItem) {
+        navItem.style.opacity = '';
+        navItem.style.pointerEvents = '';
+      }
+
+      // Show error message
+      this.showNotification('Failed to navigate to invoices page', 'error');
+    }
   }
 
   navigateToVessels() {

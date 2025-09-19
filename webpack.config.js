@@ -6,7 +6,8 @@ module.exports = {
   entry: {
     main: path.resolve(__dirname, 'src/js/app.js'),
     landing: path.resolve(__dirname, 'src/js/landing.js'),
-    customers: path.resolve(__dirname, 'src/js/customers.js')
+    customers: path.resolve(__dirname, 'src/js/customers.js'),
+    invoices: path.resolve(__dirname, 'src/js/invoices.js')
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -54,6 +55,13 @@ module.exports = {
       template: path.resolve(__dirname, 'src/customers.html'),
       filename: 'customers.html',
       chunks: ['customers'],
+      favicon: path.resolve(__dirname, 'src/assets/favicon.png')
+    }),
+    // Invoices page (auth required)
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, 'src/invoices.html'),
+      filename: 'invoices.html',
+      chunks: ['invoices'],
       favicon: path.resolve(__dirname, 'src/assets/favicon.png')
     }),
     new CopyWebpackPlugin({

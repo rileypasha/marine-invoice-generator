@@ -354,7 +354,16 @@ if (process.env.NODE_ENV === 'production') {
       : path.join(__dirname, '../src/customers.html');
     res.sendFile(customersPath);
   });
-  
+
+  // Serve invoices.html for /invoices route
+  app.get('/invoices', (req, res) => {
+    console.log('Serving invoices.html for /invoices route');
+    const invoicesPath = process.env.NODE_ENV === 'production'
+      ? path.join(__dirname, '../dist/invoices.html')
+      : path.join(__dirname, '../src/invoices.html');
+    res.sendFile(invoicesPath);
+  });
+
   // Serve static files (CSS, JS, images, etc.)
   // But NOT HTML files - we handle those with specific routes
   app.use(express.static('dist', {
