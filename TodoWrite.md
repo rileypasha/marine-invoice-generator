@@ -1,61 +1,84 @@
-# Vessel Directory Implementation Todo
+# Sidebar Redesign + Invoices Index Page Implementation
 
-## PHASE 1: Database Schema & Migration ✅ COMPLETED
-- [x] Design Vessel model with comprehensive fields (name, registration, dimensions, owner info)
-- [x] Create Prisma migration for vessels table with proper indexes
-- [x] Add vesselId field to Invoice model for foreign key relationship
-- [x] Create migration script to handle existing vessel data gracefully
-- [x] Implement tenant isolation constraints and validation
+## Overview
+Complete sidebar redesign with invoices index page, route cleanup, and removal of unused sidebar items.
 
-## PHASE 2: Backend API Development ✅ COMPLETED
-- [x] Create vessel CRUD endpoints (/api/vessels)
-- [x] Implement typeahead search endpoint with fuzzy matching
-- [x] Add vessel validation middleware with security checks
-- [x] Create vessel-invoice linking logic in invoice save/update
-- [x] Add authorization middleware for vessel operations
-- [x] Implement audit logging for vessel changes
+## Phase 1: Route Setup & Index Page ✅ COMPLETED
+- [x] Create InvoicesIndex.js component for listing saved invoices
+- [x] Set up routing for `/invoices` and `/invoices/new`
+- [x] Implement invoice fetching and display logic in table/grid format
+- [x] Add prominent "New Invoice" button above the table
+- [x] Handle empty state when no invoices exist
+- [x] Test responsive design across breakpoints
 
-## PHASE 3: Frontend Vessel Directory ✅ COMPLETED
-- [x] Create VesselDirectory page with table view and CRUD operations
-- [x] Implement vessel add/edit modal with comprehensive form
-- [x] Add vessel search/filter functionality with pagination
-- [x] Create vessel deactivation/activation controls
-- [x] Implement role-based permission controls for vessel management
+## Phase 2: Sidebar Navigation Changes ✅ COMPLETED
+- [x] Modify `handleSidebarNavigation()` to route Invoices button to `/invoices` page
+- [x] Remove "Reports" nav item from HTML
+- [x] Remove "+" (new invoice) button from sidebar footer
+- [x] Update button click handlers to navigate instead of direct form opening
+- [x] Test navigation flow: Sidebar → Invoices → Index page → New Invoice → back to Index
 
-## PHASE 4: Invoice Integration ✅ COMPLETED
-- [x] Create VesselSelector component with typeahead functionality
-- [x] Integrate vessel selection into invoice vessel tab
-- [x] Implement autofill behavior for selected vessels
-- [x] Add vessel link/unlink functionality in invoice form
-- [x] Create vessel badge display showing linked status
-- [x] Ensure vessel field changes don't mutate master vessel data
+## Phase 3: Sidebar Cleanup - Remove Legacy Items ✅ COMPLETED
+- [x] Remove search input from Sidebar.js (`sidebar-search`)
+- [x] Remove saved invoices list display (`sidebar-items`, `sidebar-content`)
+- [x] Remove "No invoices found" empty state message
+- [x] Remove "Create your first invoice to get started" onboarding text
+- [x] Remove filter controls and sort buttons
+- [x] Adjust spacing and layout after removals
 
-## PHASE 5: Testing & Validation
-- [ ] Unit tests for vessel API endpoints and validation
-- [ ] Integration tests for vessel-invoice linking functionality
-- [ ] UI component tests for vessel selector and directory
-- [ ] End-to-end tests for complete vessel workflow
-- [ ] Security testing for tenant isolation and authorization
-- [ ] Performance testing for search and large datasets
+## Phase 4: Profile Section Redesign ✅ COMPLETED
+- [x] Remove white background container from user section
+- [x] Hide user name and email display
+- [x] Keep only profile icon with transparent background
+- [x] Maintain accessibility states (focus, hover)
+- [x] Update CSS to remove background styling
+- [x] Test keyboard navigation and screen reader compatibility
 
-## PHASE 6: Documentation & Deployment
-- [ ] Update API documentation with vessel endpoints
-- [ ] Add vessel functionality to README with user guide
-- [ ] Create database migration documentation
-- [ ] Performance optimization and caching setup
-- [ ] Production deployment validation and rollback plan
+## Phase 5: Styling & Polish
+- [ ] Apply consistent design tokens and spacing
+- [ ] Verify responsive behavior across breakpoints (1920px, 1366px, 1024px, mobile)
+- [ ] Test keyboard navigation for all interactive elements
+- [ ] Ensure no visual regressions or layout glitches
+- [ ] Validate color contrast and accessibility compliance
+- [ ] Add smooth transitions for state changes
 
-## ACCEPTANCE CRITERIA VALIDATION
-- [ ] Typeahead search works with 2+ characters, 200ms debounce
-- [ ] Vessel selection populates all invoice fields + sets vesselId
-- [ ] Vessel directory supports full CRUD with proper permissions
-- [ ] Data integrity maintained between vessels and invoices
-- [ ] Backward compatibility with existing vessel data preserved
-- [ ] Security: tenant isolation, authorization, input validation
-- [ ] Performance: search < 200ms, proper indexing, caching
-- [ ] WCAG compliance for accessibility requirements
+## Phase 6: Quality Assurance & Testing
+- [ ] Manual testing: Navigation flow end-to-end
+- [ ] Keyboard-only navigation testing
+- [ ] Screen reader compatibility verification
+- [ ] Empty states testing (no invoices, loading states)
+- [ ] Error handling and edge cases
+- [ ] Performance testing (no layout shift, smooth transitions)
 
-## CURRENT PROGRESS
-Started: Analysis and planning phase
-Current: Understanding existing codebase structure and invoice system
-Next: Begin database schema design and migration planning
+## Phase 7: Git & Deployment
+- [ ] Create atomic commits for each phase
+- [ ] Test all changes in development environment
+- [ ] Push all changes to GitHub following existing branch strategy
+- [ ] Verify deployment success and functionality
+
+## Acceptance Criteria Checklist
+- [ ] Clicking "Invoices" opens Invoices Index page (not new invoice form)
+- [ ] "New Invoice" button present above index table and navigates to form
+- [ ] Sidebar contains NONE of: "+", "Reports", search input, saved-invoices list, empty state messages
+- [ ] Profile section shows only profile icon (transparent background; no name/email)
+- [ ] No UI regressions at common desktop widths
+- [ ] Accessible focus states preserved throughout
+- [ ] All changes pushed to GitHub successfully
+
+## Current Status: PHASES 1-4 COMPLETE - WORKING ON PHASE 5
+
+**Completed:**
+- ✅ Created `/invoices` route and HTML page with InvoicesIndex component
+- ✅ Built responsive table interface with search, sorting, pagination
+- ✅ Updated app.js navigation to route to `/invoices` page
+- ✅ Removed "Reports" nav item and "+" button from sidebar
+- ✅ Cleaned up sidebar search, filters, and saved invoices list
+- ✅ Redesigned profile section to icon-only with transparent background
+- ✅ Maintained accessibility states and keyboard navigation
+
+**Next Steps:**
+- 🔄 Apply consistent design tokens and spacing
+- 🔄 Verify responsive behavior across breakpoints
+- 🔄 Test complete navigation flow and accessibility
+- 🔄 Create webpack bundle for invoices.js
+- 🔄 Final testing and deployment validation

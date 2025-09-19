@@ -11,7 +11,7 @@ test.describe('Phase 4: Production Navigation Verification', () => {
   const productionConfig = {
     baseUrl: 'https://mginvoices.com',
     credentials: {
-      email: 'test-user@mginvoices.com',
+      email: 'riley@mgmarinegroup.com',
       password: 'TempPassword123!'
     },
     timeouts: {
