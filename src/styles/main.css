@@ -3,6 +3,10 @@
 @import './modern-components.css';
 @import './modern-layout.css';
 
+/* Customer Directory System */
+@import './typeahead-combobox.css';
+@import './customers-page.css';
+
 /* Legacy Styles */
 @import './auth.css';
 @import './settings.css';

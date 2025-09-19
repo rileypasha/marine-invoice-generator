@@ -5,7 +5,8 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 module.exports = {
   entry: {
     main: path.resolve(__dirname, 'src/js/app.js'),
-    landing: path.resolve(__dirname, 'src/js/landing.js')
+    landing: path.resolve(__dirname, 'src/js/landing.js'),
+    customers: path.resolve(__dirname, 'src/js/components/CustomersPage.js')
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -46,6 +47,13 @@ module.exports = {
       template: path.resolve(__dirname, 'src/index.html'),
       filename: 'app.html',
       chunks: ['main'],
+      favicon: path.resolve(__dirname, 'src/assets/favicon.png')
+    }),
+    // Customers page (auth required)
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, 'src/customers.html'),
+      filename: 'customers.html',
+      chunks: ['customers'],
       favicon: path.resolve(__dirname, 'src/assets/favicon.png')
     }),
     new CopyWebpackPlugin({

@@ -30,6 +30,9 @@ model Invoice {
   customerEmail   String?
   customerPhone   String?
 
+  // Customer relation (normalized)
+  customerId      String?
+
   // Financial (extracted from data for dashboard display)
   subtotal      Float    @default(0)
   taxAmount     Float    @default(0)
@@ -55,6 +58,7 @@ model Invoice {
 
   // Relations
   user          User?     @relation(fields: [userId], references: [id])
+  customer      Customer? @relation(fields: [customerId], references: [id])
   submissions   InvoiceSubmission[]
   revisions     InvoiceRevision[]
   changeViews   MasterChangeView[]
@@ -119,6 +123,45 @@ model User {
   updatedAt DateTime @default(now()) @updatedAt
 
   invoices  Invoice[]
+}
+
+model Customer {
+  id             String   @id @default(uuid())
+
+  // Primary identification
+  display_name   String
+  legal_name     String?
+
+  // Contact information
+  email          String?
+  phone          String?
+  tax_id         String?  // Tax/VAT ID for business customers
+
+  // Address information
+  address_line1  String?
+  address_line2  String?
+  city           String?
+  state          String?
+  postal_code    String?
+  country        String?  @default("US")
+
+  // Metadata
+  notes          String?
+  is_active      Boolean  @default(true)
+
+  // Timestamps
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  // Relations
+  invoices       Invoice[]
+
+  // Indexes for performance and uniqueness
+  @@unique([display_name])
+  @@index([email])
+  @@index([tax_id])
+  @@index([display_name]) // For typeahead search
+  @@index([is_active, display_name]) // For active customer searches
 }
 
 model IdempotencyRecord {

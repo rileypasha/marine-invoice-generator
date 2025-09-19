@@ -174,6 +174,7 @@ const authRouter = require('./routes/auth');
 const authFormRouter = require('./routes/auth-form');
 const masterChangesRouter = require('./routes/master-changes');
 const geoRouter = require('./routes/geo');
+const customersRouter = require('./routes/customers');
 const { loadUser, requireMaster } = require('./middleware/auth');
 const { trackRevision } = require('./middleware/revision-tracker');
 
@@ -293,6 +294,9 @@ app.use('/api/v1', apiRouter);
 // Geolocation API routes
 app.use('/api/geo', geoRouter);
 
+// Customer directory API routes
+app.use('/api/customers', customersRouter);
+
 // Master dashboard API routes
 app.use('/api/master', masterRouter);
 
@@ -336,6 +340,15 @@ if (process.env.NODE_ENV === 'production') {
   app.get('/app', (req, res) => {
     console.log('Serving app.html for /app route');
     res.sendFile(path.join(__dirname, '../dist/app.html'));
+  });
+
+  // Serve customers.html for /customers route
+  app.get('/customers', (req, res) => {
+    console.log('Serving customers.html for /customers route');
+    const customersPath = process.env.NODE_ENV === 'production'
+      ? path.join(__dirname, '../dist/customers.html')
+      : path.join(__dirname, '../src/customers.html');
+    res.sendFile(customersPath);
   });
   
   // Serve static files (CSS, JS, images, etc.)
