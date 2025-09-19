@@ -174,6 +174,25 @@
                         <span class="nav-item-text">Settings</span>
                     </a>
                 </div>
+
+                <!-- Profile Section (Icon Only) -->
+                <div style="margin-top: auto; padding: 1rem 0.5rem;">
+                    <div id="user-section" class="nav-item" style="display: none; justify-content: center; margin-bottom: 0.5rem;" title="Profile">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                    <div id="auth-section" style="display: flex; justify-content: center;">
+                        <button id="sign-in-btn" class="nav-item" style="background: none; border: none; color: inherit; cursor: pointer;" title="Sign In">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                                <polyline points="10,17 15,12 10,7"/>
+                                <line x1="15" y1="12" x2="3" y2="12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
             </div>
         </nav>
 
@@ -184,5 +203,29 @@
     </div>
 
     <!-- JavaScript bundle will be injected by webpack -->
+
+    <!-- Profile Auth Management Script -->
+    <script>
+        // Immediate authentication check to fix profile display
+        (function() {
+            const storedUser = localStorage.getItem('marine_invoice_user');
+            if (storedUser) {
+                try {
+                    const user = JSON.parse(storedUser);
+                    // Add class to body to indicate authenticated state
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const authSection = document.getElementById('auth-section');
+                        const userSection = document.getElementById('user-section');
+                        if (authSection && userSection && user) {
+                            authSection.style.display = 'none';
+                            userSection.style.display = 'flex';
+                        }
+                    });
+                } catch(e) {
+                    console.warn('Error parsing user data:', e);
+                }
+            }
+        })();
+    </script>
 </body>
 </html>

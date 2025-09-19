@@ -225,19 +225,20 @@
             </div>
 
             <nav class="nav-menu">
-                <a href="/" class="nav-item" data-tooltip="Home">
+                <a href="/app" class="nav-item" data-tooltip="Invoices">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14,2 14,8 20,8"></polyline>
                     </svg>
                 </a>
 
-                <a href="/customers.html" class="nav-item" data-tooltip="Customers">
+                <a href="/customers" class="nav-item" data-tooltip="Customers">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
                 </a>
 
-                <a href="/vessels.html" class="nav-item active" data-tooltip="Vessels">
+                <a href="/vessels" class="nav-item active" data-tooltip="Vessels">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                     </svg>
@@ -301,127 +302,6 @@
         </div>
     </div>
 
-    <!-- JavaScript -->
-    <script type="module">
-        import { VesselsPage } from './js/components/VesselsPage.js';
-        import { UserManager } from './js/auth/UserManager.js';
-
-        class VesselsApp {
-            constructor() {
-                this.userManager = new UserManager();
-                this.vesselsPage = null;
-                this.init();
-            }
-
-            async init() {
-                try {
-                    // Check authentication
-                    const isAuthenticated = await this.userManager.checkAuth();
-
-                    if (!isAuthenticated) {
-                        this.showAuthModal();
-                        return;
-                    }
-
-                    // Initialize vessels page
-                    this.initVesselsPage();
-                    this.initNavigation();
-                    this.initAuth();
-
-                } catch (error) {
-                    console.error('❌ App initialization failed:', error);
-                    this.showError('Failed to initialize application');
-                }
-            }
-
-            initVesselsPage() {
-                this.vesselsPage = new VesselsPage();
-                window.vesselsPage = this.vesselsPage; // Global reference for inline handlers
-            }
-
-            initNavigation() {
-                // Mobile menu toggle (if needed)
-                // Navigation is mostly handled by the sidebar links
-            }
-
-            initAuth() {
-                // Update user avatar
-                const userAvatar = document.getElementById('user-avatar');
-                const user = this.userManager.getCurrentUser();
-
-                if (user && userAvatar) {
-                    userAvatar.textContent = user.name ? user.name.charAt(0).toUpperCase() : 'U';
-                }
-
-                // Logout handler
-                const logoutBtn = document.getElementById('logout-btn');
-                if (logoutBtn) {
-                    logoutBtn.addEventListener('click', () => this.handleLogout());
-                }
-            }
-
-            async handleLogout() {
-                try {
-                    await this.userManager.logout();
-                    window.location.href = '/';
-                } catch (error) {
-                    console.error('❌ Logout failed:', error);
-                    this.showError('Failed to logout');
-                }
-            }
-
-            showAuthModal() {
-                const modal = document.getElementById('auth-modal');
-                if (!modal) return;
-
-                modal.classList.remove('hidden');
-
-                // Handle auth actions
-                const cancelBtn = document.getElementById('auth-cancel');
-                const loginBtn = document.getElementById('auth-login');
-
-                if (cancelBtn) {
-                    cancelBtn.addEventListener('click', () => {
-                        window.location.href = '/';
-                    });
-                }
-
-                if (loginBtn) {
-                    loginBtn.addEventListener('click', () => {
-                        window.location.href = '/';
-                    });
-                }
-            }
-
-            showError(message) {
-                const container = document.getElementById('error-container');
-                const messageEl = document.getElementById('error-message');
-                const closeBtn = document.getElementById('error-close');
-
-                if (!container || !messageEl) return;
-
-                messageEl.textContent = message;
-                container.classList.remove('hidden');
-
-                if (closeBtn) {
-                    closeBtn.addEventListener('click', () => {
-                        container.classList.add('hidden');
-                    });
-                }
-
-                // Auto-hide after 5 seconds
-                setTimeout(() => {
-                    container.classList.add('hidden');
-                }, 5000);
-            }
-        }
-
-        // Initialize the app when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => new VesselsApp());
-        } else {
-            new VesselsApp();
-        }
-    </script>
+    <!-- JavaScript bundle injected by webpack -->
 </body>
 </html>

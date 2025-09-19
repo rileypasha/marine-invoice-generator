@@ -659,9 +659,45 @@ class InvoiceApp {
     }
   }
 
-  navigateToVessels() {
-    console.log('⚠️ Vessels page not implemented yet');
-    this.showNotification('Vessels page coming soon', 'info');
+  async navigateToVessels() {
+    console.log('🚢 Navigating to Vessels page...');
+
+    try {
+      // Check for unsaved changes before navigation
+      if (this.unsavedChangesManager && this.unsavedChangesManager.hasUnsavedChanges) {
+        console.log('⚠️ Unsaved changes detected, showing dialog...');
+
+        const shouldProceed = await this.handleUnsavedChangesBeforeNavigation();
+        if (!shouldProceed) {
+          console.log('❌ Navigation cancelled due to unsaved changes');
+          return;
+        }
+      }
+
+      // Add loading state
+      const navItem = document.querySelector('a[title="Vessels"]');
+      if (navItem) {
+        navItem.style.opacity = '0.6';
+        navItem.style.pointerEvents = 'none';
+      }
+
+      // Navigate to vessels page
+      console.log('🚀 Navigating to /vessels...');
+      window.location.href = '/vessels';
+
+    } catch (error) {
+      console.error('❌ Error navigating to vessels:', error);
+
+      // Reset navigation item state
+      const navItem = document.querySelector('a[title="Vessels"]');
+      if (navItem) {
+        navItem.style.opacity = '';
+        navItem.style.pointerEvents = '';
+      }
+
+      // Show error message
+      this.showNotification('Failed to navigate to vessels page', 'error');
+    }
   }
 
   navigateToReports() {
@@ -1226,4 +1262,3 @@ InvoiceApp.prototype.restoreEditSession = async function() {
     }, 300); // Increased from 100ms to 300ms for consistency
   }
 };
-
