@@ -74,8 +74,9 @@ router.post('/invoice/save', requireAuth, async (req, res) => {
         userId: req.user.id,  // This MUST have a value now
         userName: req.user.name || data.estimatorName || data.estimator?.name,
         userEmail: req.user.email || data.estimatorEmail || data.estimator?.email,
-        
-        // Vessel info - handle both nested and flat structures
+
+        // Vessel info - handle both nested and flat structures, plus vesselId linking
+        vesselId: data.vesselId || data.vessel?.id || null,
         vesselName: data.vesselName || data.vessel?.name || null,
         vesselWeight: (data.vesselWeight || data.vessel?.weight) ? parseFloat(data.vesselWeight || data.vessel?.weight) : null,
         vesselBeam: (data.vesselBeam || data.vessel?.beam) ? parseFloat(data.vesselBeam || data.vessel?.beam) : null,
@@ -132,34 +133,35 @@ router.post('/invoice/save', requireAuth, async (req, res) => {
           INSERT INTO "Invoice" (
             id, title, data, metadata, status,
             "userId", "userName", "userEmail",
-            "vesselName", "vesselWeight", "vesselBeam",
+            "vesselId", "vesselName", "vesselWeight", "vesselBeam",
             "customerName", "customerEmail", "customerPhone",
             subtotal, "taxAmount", total, "grossProfit", "profitPercent",
             market, "invoiceNumber", "savedAt", "createdAt", "updatedAt"
           ) VALUES (
-            ${id}, 
-            ${invoiceData.title}, 
-            ${invoiceData.data}, 
-            ${invoiceData.metadata || null}, 
+            ${id},
+            ${invoiceData.title},
+            ${invoiceData.data},
+            ${invoiceData.metadata || null},
             ${invoiceData.status},
-            ${invoiceData.userId || null}, 
-            ${invoiceData.userName || null}, 
+            ${invoiceData.userId || null},
+            ${invoiceData.userName || null},
             ${invoiceData.userEmail || null},
-            ${invoiceData.vesselName || null}, 
-            ${invoiceData.vesselWeight || null}, 
+            ${invoiceData.vesselId || null},
+            ${invoiceData.vesselName || null},
+            ${invoiceData.vesselWeight || null},
             ${invoiceData.vesselBeam || null},
-            ${invoiceData.customerName || null}, 
-            ${invoiceData.customerEmail || null}, 
+            ${invoiceData.customerName || null},
+            ${invoiceData.customerEmail || null},
             ${invoiceData.customerPhone || null},
-            ${invoiceData.subtotal || 0}, 
-            ${invoiceData.taxAmount || 0}, 
-            ${invoiceData.total || 0}, 
-            ${invoiceData.grossProfit || 0}, 
+            ${invoiceData.subtotal || 0},
+            ${invoiceData.taxAmount || 0},
+            ${invoiceData.total || 0},
+            ${invoiceData.grossProfit || 0},
             ${invoiceData.profitPercent || 0},
-            ${invoiceData.market || null}, 
-            ${invoiceData.invoiceNumber || null}, 
-            ${invoiceData.savedAt || now}, 
-            ${now}, 
+            ${invoiceData.market || null},
+            ${invoiceData.invoiceNumber || null},
+            ${invoiceData.savedAt || now},
+            ${now},
             ${now}
           )
         `;
@@ -248,8 +250,9 @@ router.put('/invoice/:id', requireAuth, async (req, res) => {
         // User info from session - preserve userId on updates
         userName: req.user.name || data.estimatorName || data.estimator?.name,
         userEmail: req.user.email || data.estimatorEmail || data.estimator?.email,
-        
-        // Vessel info - handle both nested and flat structures
+
+        // Vessel info - handle both nested and flat structures, plus vesselId linking
+        vesselId: data.vesselId || data.vessel?.id || null,
         vesselName: data.vesselName || data.vessel?.name || null,
         vesselWeight: (data.vesselWeight || data.vessel?.weight) ? parseFloat(data.vesselWeight || data.vessel?.weight) : null,
         vesselBeam: (data.vesselBeam || data.vessel?.beam) ? parseFloat(data.vesselBeam || data.vessel?.beam) : null,
@@ -336,8 +339,8 @@ router.put('/invoice/:id', requireAuth, async (req, res) => {
         
         // Add extracted fields
         const fields = [
-          'userName', 'userEmail', 'vesselName', 'vesselWeight', 'vesselBeam',
-          'customerName', 'customerEmail', 'customerPhone', 
+          'userName', 'userEmail', 'vesselId', 'vesselName', 'vesselWeight', 'vesselBeam',
+          'customerName', 'customerEmail', 'customerPhone',
           'subtotal', 'taxAmount', 'total', 'grossProfit', 'profitPercent',
           'market', 'invoiceNumber', 'savedAt'
         ];

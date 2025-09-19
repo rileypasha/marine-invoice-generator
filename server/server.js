@@ -175,6 +175,7 @@ const authFormRouter = require('./routes/auth-form');
 const masterChangesRouter = require('./routes/master-changes');
 const geoRouter = require('./routes/geo');
 const customersRouter = require('./routes/customers');
+const vesselsRouter = require('./routes/vessels');
 const { loadUser, requireMaster } = require('./middleware/auth');
 const { trackRevision } = require('./middleware/revision-tracker');
 
@@ -296,6 +297,9 @@ app.use('/api/geo', geoRouter);
 
 // Customer directory API routes
 app.use('/api/customers', customersRouter);
+
+// Vessel directory API routes
+app.use('/api/vessels', vesselsRouter);
 
 // Master dashboard API routes
 app.use('/api/master', masterRouter);

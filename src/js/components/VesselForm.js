@@ -1,12 +1,16 @@
 import { validateNumber } from '../state/validators.js';
 import { CONSTANTS } from '../utils/constants.js';
 import { safeString, normalizeSessionData } from '../utils/safeString.js';
+import { VesselSelector } from './VesselSelector.js';
 
 export class VesselForm {
   constructor(state) {
     console.log('🚢 Initializing VesselForm...');
     this.state = state;
+    this.vesselSelector = null;
+    this.linkedVessel = null;
     this.initElements();
+    this.initVesselSelector();
     this.attachListeners();
     console.log('✅ VesselForm initialized successfully');
   }
@@ -27,6 +31,83 @@ export class VesselForm {
     console.log('  - vesselBeam:', this.vesselBeam ? '✅' : '❌');
     console.log('  - weightWrapper:', this.weightWrapper ? '✅' : '❌');
     console.log('  - beamWrapper:', this.beamWrapper ? '✅' : '❌');
+  }
+
+  initVesselSelector() {
+    console.log('🔍 VesselForm: Initializing vessel selector...');
+
+    // Check if vessel selector container exists
+    const selectorContainer = document.getElementById('vessel-selector-container');
+    if (!selectorContainer) {
+      console.log('⚠️ Vessel selector container not found, skipping vessel selector initialization');
+      return;
+    }
+
+    try {
+      this.vesselSelector = new VesselSelector({
+        containerId: 'vessel-selector-container',
+        onSelect: (vessel) => this.handleVesselSelect(vessel),
+        onUnlink: () => this.handleVesselUnlink()
+      });
+
+      console.log('✅ Vessel selector initialized successfully');
+    } catch (error) {
+      console.error('❌ Failed to initialize vessel selector:', error);
+    }
+  }
+
+  handleVesselSelect(vessel) {
+    console.log('🚢 Vessel selected:', vessel);
+
+    this.linkedVessel = vessel;
+
+    // Autofill vessel form fields
+    this.autofillFromVessel(vessel);
+
+    // Update state with vessel link
+    this.state.updateVessel({
+      id: vessel.id,
+      name: vessel.name,
+      weight: vessel.weight_tons || '',
+      beam: vessel.beam_ft || ''
+    });
+  }
+
+  handleVesselUnlink() {
+    console.log('🔗 Vessel unlinked');
+
+    this.linkedVessel = null;
+
+    // Clear vessel ID from state but keep the field values
+    this.state.updateVessel({
+      id: null
+    });
+  }
+
+  autofillFromVessel(vessel) {
+    console.log('🔄 Autofilling vessel data from:', vessel.name);
+
+    // Populate form fields
+    if (this.vesselName && vessel.name) {
+      this.vesselName.value = vessel.name;
+    }
+
+    if (this.vesselWeight && vessel.weight_tons) {
+      this.vesselWeight.value = vessel.weight_tons;
+      this.weightWrapper?.classList.add('has-value');
+      // Trigger weight change for clearance fee calculation
+      this.manageClearanceFee(vessel.weight_tons);
+    }
+
+    if (this.vesselBeam && vessel.beam_ft) {
+      this.vesselBeam.value = vessel.beam_ft;
+      this.beamWrapper?.classList.add('has-value');
+    }
+
+    // Trigger input events to update state
+    this.vesselName?.dispatchEvent(new Event('input', { bubbles: true }));
+    this.vesselWeight?.dispatchEvent(new Event('input', { bubbles: true }));
+    this.vesselBeam?.dispatchEvent(new Event('input', { bubbles: true }));
   }
   
   attachListeners() {
@@ -167,10 +248,17 @@ export class VesselForm {
 
     // 🔧 PHASE 2 FIX: Normalize vessel data to prevent type errors during session restore
     const normalizedData = {
+      id: vesselData.id || null,
       name: safeString(vesselData.name),
       weight: safeString(vesselData.weight),
       beam: safeString(vesselData.beam)
     };
+
+    // If there's a vessel ID, try to restore the linked vessel state
+    if (normalizedData.id && this.vesselSelector) {
+      console.log('🔗 Restoring linked vessel state for ID:', normalizedData.id);
+      this.restoreLinkedVessel(normalizedData.id, normalizedData);
+    }
 
     this.vesselName.value = normalizedData.name;
     this.vesselWeight.value = normalizedData.weight;
@@ -242,5 +330,63 @@ export class VesselForm {
       // Remove clearance fee if weight is 0 or empty
       this.state.removeLineItem(lineItems[existingClearanceIndex].id);
     }
+  }
+
+  async restoreLinkedVessel(vesselId, vesselData) {
+    try {
+      // Try to fetch the full vessel data from the API
+      const response = await fetch(`/api/vessels/${vesselId}`);
+      if (response.ok) {
+        const vessel = await response.json();
+        this.linkedVessel = vessel;
+        this.vesselSelector.setLinkedVessel(vessel);
+        console.log('✅ Linked vessel restored:', vessel.name);
+      } else {
+        console.log('⚠️ Could not fetch linked vessel, using local data');
+        // Create a minimal vessel object from available data
+        this.linkedVessel = {
+          id: vesselId,
+          name: vesselData.name,
+          weight_tons: vesselData.weight,
+          beam_ft: vesselData.beam
+        };
+        this.vesselSelector.setLinkedVessel(this.linkedVessel);
+      }
+    } catch (error) {
+      console.error('❌ Error restoring linked vessel:', error);
+      // Fallback to local data
+      this.linkedVessel = {
+        id: vesselId,
+        name: vesselData.name,
+        weight_tons: vesselData.weight,
+        beam_ft: vesselData.beam
+      };
+      this.vesselSelector.setLinkedVessel(this.linkedVessel);
+    }
+  }
+
+  getLinkedVessel() {
+    return this.linkedVessel;
+  }
+
+  getVesselData() {
+    return {
+      id: this.linkedVessel?.id || null,
+      name: this.vesselName?.value || '',
+      weight: this.vesselWeight?.value || '',
+      beam: this.vesselBeam?.value || ''
+    };
+  }
+
+  destroy() {
+    // Clean up vessel selector
+    if (this.vesselSelector) {
+      this.vesselSelector.destroy();
+      this.vesselSelector = null;
+    }
+
+    // Clear references
+    this.linkedVessel = null;
+    this.state = null;
   }
 }
