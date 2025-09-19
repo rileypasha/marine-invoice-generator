@@ -1,0 +1,73 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - img "Marine Group" [ref=e6]
+        - generic [ref=e7]:
+          - heading "Marine Group" [level=1] [ref=e8]
+          - generic [ref=e9]: Employee Portal
+      - navigation [ref=e10]:
+        - button "Sign In" [ref=e11] [cursor=pointer]:
+          - img [ref=e12] [cursor=pointer]
+          - text: Sign In
+  - main [ref=e15]:
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]: Marine Group Global Services
+        - heading "Invoice Management System" [level=1] [ref=e20]
+        - paragraph [ref=e21]: Professional marine service invoicing platform with integrated vessel data, automated calculations, and comprehensive service catalog.
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]: System Online
+          - generic [ref=e26]: v2.0
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - img [ref=e30]
+              - generic [ref=e33]: Create professional invoices
+            - generic [ref=e34]:
+              - img [ref=e35]
+              - generic [ref=e38]: Real-time collaboration
+            - generic [ref=e39]:
+              - img [ref=e40]
+              - generic [ref=e43]: Integrated pricing database
+            - generic [ref=e44]:
+              - img [ref=e45]
+              - generic [ref=e48]: Secure data protection
+          - generic [ref=e49]:
+            - button "Access Invoice System" [ref=e50] [cursor=pointer]:
+              - text: Access Invoice System
+              - img [ref=e51] [cursor=pointer]
+            - paragraph [ref=e53]: Employee credentials required
+      - generic [ref=e54]:
+        - generic [ref=e55]:
+          - img [ref=e57]
+          - heading "Secure Access" [level=3] [ref=e63]
+          - paragraph [ref=e64]: Enterprise-grade security with role-based permissions and audit trails
+          - generic [ref=e65]: SSL encrypted
+        - generic [ref=e66]:
+          - img [ref=e68]
+          - heading "Quick Access" [level=3] [ref=e70]
+          - paragraph [ref=e71]: Bookmark this page for faster access to the portal
+          - generic [ref=e72]: Ctrl+D to bookmark
+        - generic [ref=e73]:
+          - img [ref=e75]
+          - heading "System Hours" [level=3] [ref=e78]
+          - paragraph [ref=e79]: Available 24/7 with scheduled maintenance windows
+          - generic [ref=e80]: 99.9% uptime
+  - contentinfo [ref=e81]:
+    - generic [ref=e82]:
+      - generic [ref=e84]:
+        - img "Marine Group" [ref=e85]
+        - generic [ref=e86]:
+          - heading "Marine Group" [level=4] [ref=e87]
+          - paragraph [ref=e88]: Global Services
+      - generic [ref=e89]:
+        - paragraph [ref=e90]: System Information
+        - generic [ref=e91]:
+          - paragraph [ref=e92]: "Last Updated: September 2025"
+          - paragraph [ref=e93]: "Server: US-West"
+```
