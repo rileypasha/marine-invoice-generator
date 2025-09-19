@@ -6,7 +6,7 @@ module.exports = {
   entry: {
     main: path.resolve(__dirname, 'src/js/app.js'),
     landing: path.resolve(__dirname, 'src/js/landing.js'),
-    customers: path.resolve(__dirname, 'src/js/components/CustomersPage.js')
+    customers: path.resolve(__dirname, 'src/js/customers.js')
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
