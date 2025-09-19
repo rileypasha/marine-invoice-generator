@@ -196,56 +196,121 @@ export class CustomersPage {
 
   render() {
     this.container.innerHTML = `
-      <div class="mx-auto max-w-screen-2xl p-6">
-        <!-- Header matching mock structure -->
-        <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-zinc-100">Customers</h2>
-          <div class="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Search customers…"
-              id="customers-search"
-              class="w-64 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <button type="button" class="btn btn--primary" id="add-customer-btn">+ New Customer</button>
+      <div class="customers-page">
+        <!-- Header -->
+        <div class="customers-page__header">
+          <div class="customers-page__title">
+            <h1>Customer Directory</h1>
+            <p class="customers-page__subtitle">Manage your customer database</p>
+          </div>
+          <div class="customers-page__actions">
+            <button type="button" class="btn btn--outline" id="import-customers-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7,10 12,15 17,10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Import CSV
+            </button>
+            <button type="button" class="btn btn--primary" id="add-customer-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="16"/>
+                <line x1="8" y1="12" x2="16" y2="12"/>
+              </svg>
+              Add Customer
+            </button>
           </div>
         </div>
 
-        <!-- Table matching mock structure -->
-        <div class="overflow-hidden rounded-2xl border border-zinc-800">
-          <table class="w-full text-sm">
-            <thead class="bg-zinc-900/50 text-zinc-400">
-              <tr>
-                <th class="px-4 py-3 text-left font-medium">Name</th>
-                <th class="px-4 py-3 text-left font-medium">Email</th>
-                <th class="px-4 py-3 text-left font-medium">Phone</th>
-                <th class="px-4 py-3 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="customers-table-body">
-              <!-- Table rows will be inserted here -->
-            </tbody>
-          </table>
-
+        <!-- Search and Filters -->
+        <div class="customers-page__filters">
+          <div class="search-bar">
+            <div class="search-bar__input">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input
+                type="text"
+                placeholder="Search customers by name, email, or phone..."
+                id="customers-search"
+                class="search-input"
+              />
+            </div>
+            <button type="button" class="btn btn--outline btn--sm" id="clear-search-btn">
+              Clear
+            </button>
+          </div>
         </div>
 
-        <!-- Loading State -->
-        <div class="loading-state" id="customers-loading" style="display: none;">
-          <div class="loading-spinner"></div>
-          <p>Loading customers...</p>
+        <!-- Stats Bar -->
+        <div class="customers-page__stats">
+          <div class="stat">
+            <span class="stat__value" id="total-customers">-</span>
+            <span class="stat__label">Total Customers</span>
+          </div>
+          <div class="stat">
+            <span class="stat__value" id="active-customers">-</span>
+            <span class="stat__label">Active</span>
+          </div>
+          <div class="stat">
+            <span class="stat__value" id="this-month-customers">-</span>
+            <span class="stat__label">Added This Month</span>
+          </div>
         </div>
 
-        <!-- Empty State -->
-        <div class="empty-state" id="customers-empty" style="display: none;">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-          <h3>No customers found</h3>
-          <p>Get started by adding your first customer.</p>
-          <button type="button" class="btn btn--primary" onclick="document.getElementById('add-customer-btn').click()">
-            Add Customer
-          </button>
+        <!-- Table -->
+        <div class="customers-page__table">
+          <div class="table-container">
+            <table class="customers-table">
+              <thead>
+                <tr>
+                  <th>
+                    <button class="sort-btn" data-field="display_name">
+                      Customer Name
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M7 14l5-5 5 5"/>
+                      </svg>
+                    </button>
+                  </th>
+                  <th>Contact Information</th>
+                  <th>Address</th>
+                  <th>
+                    <button class="sort-btn" data-field="created_at">
+                      Created
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M7 14l5-5 5 5"/>
+                      </svg>
+                    </button>
+                  </th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="customers-table-body">
+                <!-- Table rows will be inserted here -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Loading State -->
+          <div class="loading-state" id="customers-loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Loading customers...</p>
+          </div>
+
+          <!-- Empty State -->
+          <div class="empty-state" id="customers-empty" style="display: none;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <h3>No customers found</h3>
+            <p>Get started by adding your first customer or importing from CSV.</p>
+            <button type="button" class="btn btn--primary" onclick="document.getElementById('add-customer-btn').click()">
+              Add Customer
+            </button>
+          </div>
         </div>
 
         <!-- Pagination -->
@@ -471,9 +536,36 @@ export class CustomersPage {
         this.eventListeners.set('customers-search', { element: searchInput, event: 'input', handler: searchHandler });
       }
 
-      // Note: Clear search functionality removed since we now have inline search
+      this.bindEventSafely('clear-search-btn', 'click', () => {
+        const searchInput = document.getElementById('customers-search');
+        if (searchInput) {
+          searchInput.value = '';
+          this.searchQuery = '';
+          this.currentPage = 1;
+          this.loadCustomersWithRetry();
+        }
+      });
 
-      // Note: Sort buttons removed for simplified mock design
+      // Sort buttons with defensive checks
+      const sortButtons = this.container?.querySelectorAll('.sort-btn') || [];
+      sortButtons.forEach((btn, index) => {
+        const sortHandler = (e) => {
+          if (this.isDestroyed) return;
+
+          const field = e.currentTarget.dataset.field;
+          if (this.sortField === field) {
+            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+          } else {
+            this.sortField = field;
+            this.sortDirection = 'asc';
+          }
+          this.updateSortUI();
+          this.loadCustomersWithRetry();
+        };
+
+        btn.addEventListener('click', sortHandler);
+        this.eventListeners.set(`sort-btn-${index}`, { element: btn, event: 'click', handler: sortHandler });
+      });
 
       // Modal events
       this.bindModalEvents();
@@ -623,6 +715,7 @@ export class CustomersPage {
       if (!this.isDestroyed) {
         this.renderTable();
         this.renderPagination();
+        this.updateStats();
       }
 
     } catch (error) {
@@ -682,20 +775,20 @@ export class CustomersPage {
 
   showLoading(show) {
     const loadingEl = document.getElementById('customers-loading');
-    const tableEl = this.container.querySelector('.overflow-hidden');
+    const tableEl = this.container.querySelector('.table-container');
     const emptyEl = document.getElementById('customers-empty');
 
     if (show) {
       loadingEl.style.display = 'flex';
-      if (tableEl) tableEl.style.display = 'none';
+      tableEl.style.display = 'none';
       emptyEl.style.display = 'none';
     } else {
       loadingEl.style.display = 'none';
       if (this.customers.length === 0) {
-        if (tableEl) tableEl.style.display = 'none';
+        tableEl.style.display = 'none';
         emptyEl.style.display = 'flex';
       } else {
-        if (tableEl) tableEl.style.display = 'block';
+        tableEl.style.display = 'block';
         emptyEl.style.display = 'none';
       }
     }
@@ -710,13 +803,44 @@ export class CustomersPage {
     }
 
     tbody.innerHTML = this.customers.map(customer => `
-      <tr class="border-t border-zinc-800 text-zinc-200">
-        <td class="px-4 py-3">${this.escapeHtml(customer.display_name || customer.name || '')}</td>
-        <td class="px-4 py-3">${this.escapeHtml(customer.email || '')}</td>
-        <td class="px-4 py-3">${this.escapeHtml(customer.phone || '')}</td>
-        <td class="px-4 py-3 text-right">
-          <button type="button" class="btn btn--ghost btn--sm mr-2" onclick="customersPage.editCustomer('${customer.id}')" title="View">View</button>
-          <button type="button" class="btn btn--primary btn--sm" onclick="customersPage.createInvoiceForCustomer('${customer.id}')" title="Create Invoice">Create Invoice</button>
+      <tr>
+        <td>
+          <div class="customer-cell">
+            <div class="customer-name">${this.escapeHtml(customer.display_name)}</div>
+            ${customer.legal_name ? `<div class="customer-legal">${this.escapeHtml(customer.legal_name)}</div>` : ''}
+          </div>
+        </td>
+        <td>
+          <div class="contact-cell">
+            ${customer.email ? `<div class="contact-email">${this.escapeHtml(customer.email)}</div>` : ''}
+            ${customer.phone ? `<div class="contact-phone">${this.escapeHtml(customer.phone)}</div>` : ''}
+          </div>
+        </td>
+        <td>
+          <div class="address-cell">
+            ${this.formatAddress(customer)}
+          </div>
+        </td>
+        <td>
+          <div class="date-cell">
+            ${this.formatDate(customer.created_at)}
+          </div>
+        </td>
+        <td>
+          <div class="actions-cell">
+            <button type="button" class="btn btn--ghost btn--sm" onclick="customersPage.editCustomer('${customer.id}')" title="Edit">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button type="button" class="btn btn--ghost btn--sm" onclick="customersPage.deleteCustomer('${customer.id}')" title="Delete">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3,6 5,6 21,6"/>
+                <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
+              </svg>
+            </button>
+          </div>
         </td>
       </tr>
     `).join('');
@@ -772,7 +896,33 @@ export class CustomersPage {
     `;
   }
 
-  // Note: updateStats and updateSortUI methods removed for simplified mock design
+  updateStats() {
+    document.getElementById('total-customers').textContent = this.totalCustomers;
+    document.getElementById('active-customers').textContent = this.customers.filter(c => c.is_active).length;
+
+    // Calculate this month's customers
+    const thisMonth = new Date();
+    thisMonth.setDate(1);
+    const thisMonthCount = this.customers.filter(c =>
+      new Date(c.created_at) >= thisMonth
+    ).length;
+    document.getElementById('this-month-customers').textContent = thisMonthCount;
+  }
+
+  updateSortUI() {
+    this.container.querySelectorAll('.sort-btn').forEach(btn => {
+      const field = btn.dataset.field;
+      const svg = btn.querySelector('svg');
+
+      if (field === this.sortField) {
+        btn.classList.add('sort-btn--active');
+        svg.style.transform = this.sortDirection === 'desc' ? 'rotate(180deg)' : 'rotate(0deg)';
+      } else {
+        btn.classList.remove('sort-btn--active');
+        svg.style.transform = 'rotate(0deg)';
+      }
+    });
+  }
 
   goToPage(page) {
     if (page < 1 || page > this.totalPages || page === this.currentPage) return;
@@ -905,16 +1055,6 @@ export class CustomersPage {
     } catch (error) {
       console.error('Failed to delete customer:', error);
       this.showError(error.message);
-    }
-  }
-
-  createInvoiceForCustomer(customerId) {
-    // Navigate to invoice creation with pre-selected customer
-    try {
-      window.location.href = `/app?customer=${customerId}`;
-    } catch (error) {
-      console.error('Failed to navigate to invoice creation:', error);
-      this.showError('Failed to create invoice for customer');
     }
   }
 

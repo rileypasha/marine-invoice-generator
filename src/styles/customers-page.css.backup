@@ -1,48 +1,9 @@
 /* Customers Page Styles - Modern Dark Theme with Zinc Palette */
-/* Updated to match mock prototype design tokens */
 
-/* Tailwind-style utility classes for mock compatibility */
-.mx-auto { margin-left: auto; margin-right: auto; }
-.max-w-screen-2xl { max-width: 1536px; }
-.p-6 { padding: 1.5rem; }
-.mb-4 { margin-bottom: 1rem; }
-.flex { display: flex; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.gap-2 { gap: 0.5rem; }
-.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
-.font-semibold { font-weight: 600; }
-.text-zinc-100 { color: rgb(244, 244, 245); }
-.w-64 { width: 16rem; }
-.rounded-xl { border-radius: 0.75rem; }
-.border { border-width: 1px; }
-.border-zinc-800 { border-color: rgb(39, 39, 42); }
-.bg-zinc-900 { background-color: rgb(24, 24, 27); }
-.px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
-.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-.placeholder-zinc-500::placeholder { color: rgb(113, 113, 122); }
-.outline-none { outline: 2px solid transparent; outline-offset: 2px; }
-.focus\:ring-2:focus { box-shadow: 0 0 0 2px rgb(99, 102, 241); }
-.focus\:ring-indigo-500:focus { --tw-ring-color: rgb(99, 102, 241); }
-
-/* Table styling matching mock */
-.overflow-hidden { overflow: hidden; }
-.rounded-2xl { border-radius: 1rem; }
-.w-full { width: 100%; }
-.bg-zinc-900\/50 { background-color: rgb(24, 24, 27, 0.5); }
-.text-zinc-400 { color: rgb(161, 161, 170); }
-.px-4 { padding-left: 1rem; padding-right: 1rem; }
-.py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
-.text-left { text-align: left; }
-.text-right { text-align: right; }
-.font-medium { font-weight: 500; }
-.border-t { border-top-width: 1px; }
-.text-zinc-200 { color: rgb(228, 228, 231); }
-.mr-2 { margin-right: 0.5rem; }
-
-/* Base container for customers page */
-.customers-page-container {
+.customers-page {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
   color: rgb(244, 244, 245); /* zinc-100 */
 }
 
@@ -536,54 +497,38 @@
   min-height: 4rem;
 }
 
-/* Button Styles - Updated to match mock design tokens */
+/* Button Styles */
 .btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-  border-radius: 0.75rem; /* rounded-xl */
+  border-radius: 0.5rem;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
   text-decoration: none;
   outline: none;
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  justify-content: center;
 }
 
 .btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px rgb(99, 102, 241); /* focus:ring-2 focus:ring-indigo-500 */
+  box-shadow: 0 0 0 3px rgb(99, 102, 241, 0.2);
 }
 
-/* Primary button matching mock indigo-600 */
 .btn--primary {
-  background-color: rgb(79, 70, 229); /* indigo-600 */
+  background: rgb(99, 102, 241); /* indigo-500 */
   color: white;
-  border-color: rgb(79, 70, 229);
+  border-color: rgb(99, 102, 241); /* indigo-500 */
 }
 
 .btn--primary:hover {
-  background-color: rgb(99, 102, 241); /* indigo-500 */
-  border-color: rgb(99, 102, 241);
+  background: rgb(79, 70, 229); /* indigo-600 */
+  border-color: rgb(79, 70, 229); /* indigo-600 */
 }
 
-/* Ghost button matching mock design */
-.btn--ghost {
-  background: transparent;
-  color: rgb(228, 228, 231); /* zinc-200 */
-  border: 1px solid rgb(63, 63, 70); /* zinc-700 */
-}
-
-.btn--ghost:hover {
-  background-color: rgb(39, 39, 42); /* zinc-800 */
-  color: rgb(244, 244, 245); /* zinc-100 */
-}
-
-/* Outline variant kept for compatibility */
 .btn--outline {
   background: transparent;
   color: rgb(244, 244, 245); /* zinc-100 */
@@ -592,6 +537,17 @@
 
 .btn--outline:hover {
   background: rgb(63, 63, 70); /* zinc-700 */
+}
+
+.btn--ghost {
+  background: transparent;
+  color: rgb(161, 161, 170); /* zinc-400 */
+  border-color: transparent;
+}
+
+.btn--ghost:hover {
+  background: rgb(63, 63, 70); /* zinc-700 */
+  color: rgb(244, 244, 245); /* zinc-100 */
 }
 
 .btn--sm {
