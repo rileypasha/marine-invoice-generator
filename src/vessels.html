@@ -13,10 +13,7 @@
     <!-- Meta tags -->
     <meta name="description" content="Vessel directory and management for Marine Group Invoice Generator">
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="./styles/main.css">
-    <link rel="stylesheet" href="./styles/typeahead-combobox.css">
-    <link rel="stylesheet" href="./styles/customers-page.css">
+    <!-- CSS handled by webpack via JavaScript imports -->
 
     <style>
         /* Page-specific styles */
@@ -114,14 +111,7 @@
         <!-- Main Content -->
         <main class="page-main">
             <div class="page-content">
-                <!-- Vessels page content will be rendered here -->
-                <div id="vessels-page">
-                    <!-- Loading state -->
-                    <div class="text-center py-12">
-                        <div class="loading-spinner mx-auto mb-4"></div>
-                        <p class="text-gray-400">Loading vessel directory...</p>
-                    </div>
-                </div>
+                <div id="vessels-page"></div>
             </div>
         </main>
     </div>
