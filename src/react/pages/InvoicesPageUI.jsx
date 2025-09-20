@@ -1,0 +1,303 @@
+import React from 'react';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  Button,
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+  Input
+} from '../components/index.js';
+
+const InvoicesPageUI = ({
+  invoices = [],
+  onEdit,
+  onDelete,
+  onView,
+  onPrint,
+  onAddNew,
+  onSearch,
+  searchTerm = '',
+  isLoading = false,
+  stats = { total: 0, saved: 0, drafts: 0, submitted: 0 },
+  currentPage = 1,
+  totalPages = 1,
+  onPageChange
+}) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const formatCurrency = (amount) => {
+    if (!amount) return '$0.00';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      saved: {
+        className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+        label: 'Saved'
+      },
+      draft: {
+        className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+        label: 'Draft'
+      },
+      submitted: {
+        className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+        label: 'Submitted'
+      }
+    };
+
+    const config = statusConfig[status] || statusConfig.draft;
+
+    return (
+      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.className}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+
+        {/* Page Header */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Invoices</CardTitle>
+                <CardDescription>
+                  Manage and view all your saved invoices
+                </CardDescription>
+              </div>
+              <Button onClick={onAddNew}>
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v14m-7-7h14" />
+                </svg>
+                New Invoice
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="flex-1 max-w-sm">
+                <Input
+                  placeholder="Search invoices by title, customer, or vessel..."
+                  value={searchTerm}
+                  onChange={(e) => onSearch?.(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold">{stats.total}</div>
+                <div className="text-sm text-muted-foreground">Total Invoices</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{stats.saved}</div>
+                <div className="text-sm text-muted-foreground">Saved</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-600">{stats.drafts}</div>
+                <div className="text-sm text-muted-foreground">Drafts</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{stats.submitted}</div>
+                <div className="text-sm text-muted-foreground">Submitted</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Invoices Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Invoices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-muted-foreground">Loading invoices...</div>
+              </div>
+            ) : invoices.length === 0 ? (
+              <div className="text-center py-8">
+                <svg className="mx-auto h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <div className="text-muted-foreground mb-4">No invoices found</div>
+                <Button onClick={onAddNew}>Create Your First Invoice</Button>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Invoice #</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Vessel</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {invoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-medium">
+                        {invoice.invoice_number || `#${invoice.id}`}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">
+                            {invoice.customer?.company_name || invoice.customer?.display_name || '-'}
+                          </div>
+                          {invoice.customer?.contact_name && (
+                            <div className="text-sm text-muted-foreground">
+                              {invoice.customer.contact_name}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {invoice.vessel?.name || '-'}
+                      </TableCell>
+                      <TableCell>
+                        {formatCurrency(invoice.total_amount)}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div>{formatDate(invoice.invoice_date)}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Updated {formatDate(invoice.updated_at)}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(invoice.status)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onView?.(invoice)}
+                          >
+                            View
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onEdit?.(invoice)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onPrint?.(invoice)}
+                          >
+                            Print
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => onDelete?.(invoice)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Pagination */}
+        {invoices.length > 0 && totalPages > 1 && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage <= 1}
+                    onClick={() => onPageChange?.(currentPage - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const page = i + 1;
+                      return (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => onPageChange?.(page)}
+                        >
+                          {page}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => onPageChange?.(currentPage + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+      </div>
+    </div>
+  );
+};
+
+export default InvoicesPageUI;
