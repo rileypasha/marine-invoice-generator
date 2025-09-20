@@ -2,9 +2,9 @@
   "name": "marine-invoice-generator",
   "version": "1.0.2",
   "description": "Marine Group Invoice Request Generator",
-  "main": "electron.js",
+  "main": "server/server.js",
   "scripts": {
-    "start": "electron .",
+    "start": "npm run server:dev",
     "server": "node scripts/ensure-db-ready.js && node server/server.js",
     "server:dev": "NODE_ENV=development npm run server",
     "server:prod": "NODE_ENV=production npm run server",
@@ -36,12 +36,6 @@
     "test:phase4:report": "playwright show-report test-results/phase4-playwright-report",
     "build:css": "tailwindcss -i ./src/styles/main.css -o ./dist/styles/main.css --minify",
     "watch:css": "tailwindcss -i ./src/styles/main.css -o ./dist/styles/main.css --watch",
-    "dist": "electron-builder",
-    "dist:win": "electron-builder --win",
-    "dist:mac": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
-    "dist:all": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --mac --linux",
-    "dist:clean": "rm -rf release/",
-    "release": "npm run dist:clean && npm run build && npm run dist:all",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:reset": "prisma migrate deploy",
@@ -89,7 +83,7 @@
   "keywords": [
     "invoice",
     "marine",
-    "electron"
+    "react"
   ],
   "author": "Marine Group",
   "license": "MIT",
@@ -101,8 +95,6 @@
     "@types/puppeteer": "^7.0.4",
     "autoprefixer": "^10.4.21",
     "cssnano": "^7.1.0",
-    "electron": "^28.0.0",
-    "electron-builder": "^24.6.4",
     "jest": "^29.7.0",
     "jest-image-snapshot": "^6.5.1",
     "jest-puppeteer": "^9.0.0",
@@ -148,96 +140,5 @@
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4",
     "zod": "^4.1.5"
-  },
-  "build": {
-    "appId": "com.marinegroup.invoice",
-    "productName": "Marine Invoice Generator",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "assets/**/*",
-      "electron.js",
-      "package.json"
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "publisherName": "Marine Group",
-      "requestedExecutionLevel": "asInvoker",
-      "extraResources": [],
-      "extraFiles": []
-    },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": false,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Marine Invoice Generator",
-      "allowElevation": false,
-      "installerIcon": null,
-      "uninstallerIcon": null
-    },
-    "mac": {
-      "category": "public.app-category.business",
-      "hardenedRuntime": false,
-      "gatekeeperAssess": false,
-      "identity": null,
-      "target": {
-        "target": "dmg",
-        "arch": [
-          "x64"
-        ]
-      }
-    },
-    "dmg": {
-      "title": "Marine Invoice Generator",
-      "icon": null,
-      "window": {
-        "width": 540,
-        "height": 380
-      },
-      "contents": [
-        {
-          "x": 130,
-          "y": 220
-        },
-        {
-          "x": 410,
-          "y": 220,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
-    },
-    "linux": {
-      "target": {
-        "target": "AppImage",
-        "arch": [
-          "x64"
-        ]
-      },
-      "category": "Office"
-    }
   }
 }
