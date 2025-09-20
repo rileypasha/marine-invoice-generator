@@ -97,32 +97,7 @@ export class Sidebar {
       console.log('✅ Updated new invoice button');
     }
 
-    // Create a container for our invoice management features
-    const footer = this.element.querySelector('.sidebar__footer');
-    if (footer && !footer.querySelector('#user-section') && !footer.querySelector('#auth-section')) {
-      // Add invoice management section after the new button
-      const invoiceSection = document.createElement('div');
-      invoiceSection.className = 'sidebar__invoices';
-      invoiceSection.innerHTML = `
-        <div class="sidebar-footer" style="padding: 1rem; border-top: 1px solid #27272a; margin-top: auto;">
-          <div class="user-section" id="user-section" style="display: none; cursor: pointer; border-radius: 0.75rem; background: #1f1f23; padding: 0.75rem; color: #e5e7eb; align-items: center; gap: 0.75rem;">
-            <div class="user-avatar" style="width: 2rem; height: 2rem; background: #6366f1; border-radius: 9999px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.875rem;">U</div>
-            <div class="user-details" style="display: flex; flex-direction: column;">
-              <span id="user-name" style="font-size: 0.875rem; font-weight: 500;">User Name</span>
-              <span id="user-email" style="font-size: 0.75rem; color: #9ca3af;">user@example.com</span>
-            </div>
-            <button id="logout-btn" style="margin-left: auto; background: transparent; border: none; color: #f87171; font-size: 0.75rem; cursor: pointer;">Logout</button>
-          </div>
-
-          <div class="auth-section" id="auth-section" style="display: flex;">
-            <button class="auth-btn primary" id="sign-in-btn" style="padding: 0.5rem 1rem; background: #6366f1; color: white; border: none; border-radius: 0.5rem; cursor: pointer; width: 100%;">Sign In</button>
-          </div>
-        </div>
-      `;
-
-      footer.appendChild(invoiceSection);
-      console.log('✅ Added invoice management section to modern sidebar');
-    }
+    // User profile sections removed - sidebar footer remains empty
 
     console.log('✅ Modern sidebar transformation complete');
   }
@@ -536,113 +511,8 @@ export class Sidebar {
   }
 
   updateUserSection(user) {
-    console.log('🔄 PHASE 3 FIX: Updating user section with enhanced error handling:', user);
-
-    if (!this.element) {
-      console.error('❌ Cannot update user section: sidebar element is null');
-      console.log('🔍 Available elements in DOM:');
-      console.log('  - .sidebar:', !!document.querySelector('.sidebar'));
-      console.log('  - .app-sidebar:', !!document.querySelector('.app-sidebar'));
-      console.log('  - .sidebar__footer:', !!document.querySelector('.sidebar__footer'));
-      return;
-    }
-
-    // 🔧 PHASE 3 FIX: More robust element finding with fallbacks
-    let userSection = this.element.querySelector('#user-section');
-    let authSection = this.element.querySelector('#auth-section');
-
-    // If sections don't exist, try to find them in the footer we created
-    if (!userSection || !authSection) {
-      const footer = this.element.querySelector('.sidebar-footer');
-      if (footer) {
-        userSection = footer.querySelector('#user-section');
-        authSection = footer.querySelector('#auth-section');
-      }
-    }
-
-    if (!userSection || !authSection) {
-      console.error('❌ PHASE 3: Cannot find user or auth sections even after transformation');
-      console.log('🔍 Debug info:', {
-        element: !!this.element,
-        userSection: !!userSection,
-        authSection: !!authSection,
-        sidebarFooter: !!this.element.querySelector('.sidebar-footer'),
-        allUserSections: document.querySelectorAll('#user-section').length,
-        allAuthSections: document.querySelectorAll('#auth-section').length
-      });
-
-      // 🔧 PHASE 3 FIX: Try to add missing sections if we have a footer
-      const footer = this.element.querySelector('.sidebar__footer') || this.element.querySelector('.sidebar-footer');
-      if (footer && !userSection) {
-        console.log('🔧 PHASE 3 FIX: Adding missing user/auth sections');
-        const sectionsHTML = `
-          <div class="user-section" id="user-section" style="display: none; padding: 0.75rem; background: #f3f4f6; border-radius: 0.5rem; cursor: pointer; margin-top: 1rem;" title="Settings">
-            <div class="user-info" style="display: flex; align-items: center; gap: 0.75rem;">
-              <div class="user-avatar" style="width: 2rem; height: 2rem; background: #6366f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
-              </div>
-              <div class="user-details">
-                <div class="user-name" id="user-name" style="font-weight: 500; font-size: 0.875rem;">User Name</div>
-                <div class="user-email" id="user-email" style="font-size: 0.75rem; color: #6b7280;">user@example.com</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="auth-section" id="auth-section" style="display: flex; margin-top: 1rem;">
-            <button class="auth-btn primary" id="sign-in-btn" style="padding: 0.5rem 1rem; background: #6366f1; color: white; border: none; border-radius: 0.375rem; cursor: pointer; width: 100%;">Sign In</button>
-          </div>
-        `;
-        footer.insertAdjacentHTML('beforeend', sectionsHTML);
-
-        // Re-query the elements
-        userSection = this.element.querySelector('#user-section');
-        authSection = this.element.querySelector('#auth-section');
-        console.log('✅ PHASE 3 FIX: Added missing sections');
-      }
-
-      if (!userSection || !authSection) {
-        console.error('❌ PHASE 3: Still cannot find sections, giving up');
-        return;
-      }
-    }
-
-    // 🔧 PHASE 3 FIX: Robust user update with error handling
-    try {
-      if (user) {
-        console.log('✅ PHASE 3: User authenticated, showing user section');
-        userSection.style.display = 'flex';
-        authSection.style.display = 'none';
-
-        // Update user info with null checks
-        const userNameEl = this.element.querySelector('#user-name');
-        const userEmailEl = this.element.querySelector('#user-email');
-
-        if (userNameEl) {
-          userNameEl.textContent = user.name || user.email || 'User';
-          console.log('✅ PHASE 3: Updated user name:', userNameEl.textContent);
-        } else {
-          console.warn('⚠️ PHASE 3: user-name element not found');
-        }
-
-        if (userEmailEl) {
-          userEmailEl.textContent = user.email || '';
-          console.log('✅ PHASE 3: Updated user email:', userEmailEl.textContent);
-        } else {
-          console.warn('⚠️ PHASE 3: user-email element not found');
-        }
-      } else {
-        console.log('⚠️ PHASE 3: No user, showing auth section');
-        userSection.style.display = 'none';
-        authSection.style.display = 'flex';
-      }
-
-      console.log('✅ PHASE 3: User section update completed successfully');
-    } catch (error) {
-      console.error('❌ PHASE 3: Error updating user section:', error);
-    }
+    // User profile management removed - this method no longer manages user sections
+    console.log('✅ updateUserSection called but user profile management is disabled');
   }
 
   setupInvoiceItemListeners() {

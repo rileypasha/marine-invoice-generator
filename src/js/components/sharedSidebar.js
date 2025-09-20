@@ -221,48 +221,5 @@ export function configureSidebar(activeKey, options = {}) {
     activeItem.classList.remove('sidebar__nav-item--inactive');
   }
 
-  if (!manageAuth) {
-    return;
-  }
-
-  const userSection = sidebar.querySelector('#user-section');
-  const authSection = sidebar.querySelector('#auth-section');
-  const userNameEl = sidebar.querySelector('#user-name');
-  const userEmailEl = sidebar.querySelector('#user-email');
-  const logoutBtn = sidebar.querySelector('#logout-btn');
-  const signInBtn = sidebar.querySelector('#sign-in-btn');
-
-  const storedUser = getStoredUser();
-
-  if (storedUser) {
-    if (userSection) {
-      userSection.style.display = 'flex';
-    }
-    if (authSection) {
-      authSection.style.display = 'none';
-    }
-    if (userNameEl) {
-      userNameEl.textContent = normalizeName(storedUser);
-    }
-    if (userEmailEl) {
-      userEmailEl.textContent = storedUser.email || '';
-    }
-  } else {
-    if (userSection) {
-      userSection.style.display = 'none';
-    }
-    if (authSection) {
-      authSection.style.display = 'flex';
-    }
-  }
-
-  if (signInBtn) {
-    signInBtn.addEventListener('click', () => {
-      window.location.href = '/';
-    });
-  }
-
-  if (logoutBtn) {
-    logoutBtn.style.display = storedUser ? 'inline' : 'none';
-  }
+  // User profile management removed - sidebar footer is now empty
 }
