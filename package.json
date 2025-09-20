@@ -8,6 +8,7 @@
     "server": "node scripts/ensure-db-ready.js && node server/server.js",
     "server:dev": "NODE_ENV=development npm run server",
     "server:prod": "NODE_ENV=production npm run server",
+    "dev:watch": "nodemon",
     "dev": "webpack serve --mode development",
     "build": "node scripts/validate-schema.js --fix && webpack --mode production",
     "db:check": "node scripts/ensure-db-ready.js",

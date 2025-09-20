@@ -1,0 +1,17 @@
+{
+  "watch": [
+    "server/**/*",
+    "scripts/**/*",
+    ".env.local"
+  ],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules/**/*",
+    "dist/**/*",
+    "src/**/*"
+  ],
+  "exec": "NODE_ENV=development node scripts/ensure-db-ready.js && node server/server.js",
+  "env": {
+    "NODE_ENV": "development"
+  }
+}

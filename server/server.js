@@ -6,7 +6,8 @@ const compression = require('compression');
 const pino = require('pino');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
-require('dotenv').config();
+require('dotenv').config({ path: '.env.local', override: true });
+require('dotenv').config({ path: '.env' });
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -325,16 +326,18 @@ if (process.env.NODE_ENV === 'production') {
   app.use('/master', express.static(path.join(__dirname, '../src/master')));
 }
 
+// Serve app.html for /app route - works in both development and production
+app.get('/app', (req, res) => {
+  console.log('Serving app.html for /app route');
+  // Always use dist/app.html since that's where the built file exists
+  const appPath = path.join(__dirname, '../dist/app.html');
+  res.sendFile(appPath);
+});
+
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   // IMPORTANT: Define specific routes BEFORE static middleware
   // This ensures /app route is handled correctly
-  
-  // Serve app.html for /app route - must be before static
-  app.get('/app', (req, res) => {
-    console.log('Serving app.html for /app route');
-    res.sendFile(path.join(__dirname, '../dist/app.html'));
-  });
 
   // Serve customers.html for /customers route
   app.get('/customers', (req, res) => {

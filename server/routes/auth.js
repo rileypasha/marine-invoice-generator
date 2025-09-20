@@ -59,6 +59,7 @@ router.post('/login', async (req, res) => {
     })();
 
     console.log('🔍 Searching for user in database...');
+    console.log('🔗 DATABASE_URL:', process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 50) + '...' : 'NOT SET');
     // Find existing user (no auto-creation without proper password)
     let user = await prisma.user.findUnique({
       where: { email }

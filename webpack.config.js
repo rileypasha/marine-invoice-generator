@@ -92,6 +92,12 @@ module.exports = {
         target: 'http://localhost:3001',
         changeOrigin: true,
         logLevel: 'debug'
+      },
+      {
+        context: ['/app'],
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        logLevel: 'debug'
       }
     ]
   }
