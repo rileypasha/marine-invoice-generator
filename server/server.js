@@ -334,44 +334,41 @@ app.get('/app', (req, res) => {
   res.sendFile(appPath);
 });
 
-// Serve static files in production
+// Serve customers.html for /customers route - works in both development and production
+app.get('/customers', (req, res) => {
+  console.log('Serving customers.html for /customers route');
+  const customersPath = process.env.NODE_ENV === 'production'
+    ? path.join(__dirname, '../dist/customers.html')
+    : path.join(__dirname, '../dist/customers.html');
+  res.sendFile(customersPath);
+});
+
+// Serve invoices.html for /invoices route - works in both development and production
+app.get('/invoices', (req, res) => {
+  console.log('Serving invoices.html for /invoices route');
+  const invoicesPath = process.env.NODE_ENV === 'production'
+    ? path.join(__dirname, '../dist/invoices.html')
+    : path.join(__dirname, '../dist/invoices.html');
+  res.sendFile(invoicesPath);
+});
+
+// Serve vessels.html for /vessels route - works in both development and production
+app.get('/vessels', (req, res) => {
+  console.log('Serving vessels.html for /vessels route');
+  const vesselsPath = process.env.NODE_ENV === 'production'
+    ? path.join(__dirname, '../dist/vessels.html')
+    : path.join(__dirname, '../dist/vessels.html');
+  res.sendFile(vesselsPath);
+});
+
+// Serve static files (CSS, JS, images, etc.) - in both development and production
+app.use(express.static('dist', {
+  index: false
+}));
+
+// Additional production configuration
 if (process.env.NODE_ENV === 'production') {
-  // IMPORTANT: Define specific routes BEFORE static middleware
-  // This ensures /app route is handled correctly
-
-  // Serve customers.html for /customers route
-  app.get('/customers', (req, res) => {
-    console.log('Serving customers.html for /customers route');
-    const customersPath = process.env.NODE_ENV === 'production'
-      ? path.join(__dirname, '../dist/customers.html')
-      : path.join(__dirname, '../src/customers.html');
-    res.sendFile(customersPath);
-  });
-
-  // Serve invoices.html for /invoices route
-  app.get('/invoices', (req, res) => {
-    console.log('Serving invoices.html for /invoices route');
-    const invoicesPath = process.env.NODE_ENV === 'production'
-      ? path.join(__dirname, '../dist/invoices.html')
-      : path.join(__dirname, '../src/invoices.html');
-    res.sendFile(invoicesPath);
-  });
-
-  // Serve vessels.html for /vessels route
-  app.get('/vessels', (req, res) => {
-    console.log('Serving vessels.html for /vessels route');
-    const vesselsPath = process.env.NODE_ENV === 'production'
-      ? path.join(__dirname, '../dist/vessels.html')
-      : path.join(__dirname, '../src/vessels.html');
-    res.sendFile(vesselsPath);
-  });
-
-  // Serve static files (CSS, JS, images, etc.)
-  // But NOT HTML files - we handle those with specific routes
-  app.use(express.static('dist', {
-    // Don't serve index.html automatically for directories
-    index: false
-  }));
+  // IMPORTANT: HTML routes are defined above, before static middleware
   
   // Serve index.html for root and unmatched routes (must be last)
   app.get('/', (req, res) => {

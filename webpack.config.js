@@ -98,6 +98,24 @@ module.exports = {
         target: 'http://localhost:3001',
         changeOrigin: true,
         logLevel: 'debug'
+      },
+      {
+        context: ['/customers'],
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        logLevel: 'debug'
+      },
+      {
+        context: ['/invoices'],
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        logLevel: 'debug'
+      },
+      {
+        context: ['/vessels'],
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        logLevel: 'debug'
       }
     ]
   }
