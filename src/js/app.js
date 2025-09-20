@@ -27,6 +27,11 @@ import { UnsavedChangesDialog } from './components/UnsavedChangesDialog.js';
 import { NavigationProtection } from './utils/NavigationProtection.js';
 import { configureSidebar, initializeEnhancedSidebar } from './components/sharedSidebar.js';
 
+// React imports for testing
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import TestComponent from '../react/TestComponent.jsx';
+
 // Make addLineItem available globally for testing
 window.addLineItem = function(lineItem) {
   if (window.app && window.app.state) {
@@ -105,7 +110,10 @@ class InvoiceApp {
       window.app = this;
       
       console.log('✅ Full app initialized with authentication and storage');
-      
+
+      // Initialize React test component
+      this.initReactTest();
+
       // Check for failed saves on startup and retry
       if (this.invoiceStorage && this.invoiceStorage.retryFailedSaves) {
         setTimeout(async () => {
@@ -332,6 +340,28 @@ class InvoiceApp {
     this.notesForm = new NotesForm(this.state, this.userManager);
     this.preview = new Preview(this.state, this.userManager);
     this.commentsPanel = new CommentsPanel(this.state, this.userManager);
+  }
+
+  initReactTest() {
+    console.log('🚀 Initializing React test component...');
+
+    // Create a container div for the React component
+    const reactContainer = document.createElement('div');
+    reactContainer.id = 'react-test-container';
+
+    // Insert it at the top of the main content area
+    const mainContent = document.querySelector('main') || document.querySelector('.main-content') || document.body;
+    if (mainContent) {
+      mainContent.insertBefore(reactContainer, mainContent.firstChild);
+
+      // Create React root and render the test component
+      const root = createRoot(reactContainer);
+      root.render(React.createElement(TestComponent));
+
+      console.log('✅ React test component rendered successfully!');
+    } else {
+      console.error('❌ Could not find main content area to render React component');
+    }
   }
   
   initTabNavigation() {
