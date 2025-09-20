@@ -28,10 +28,15 @@ import { UnsavedChangesDialog } from './components/UnsavedChangesDialog.js';
 import { NavigationProtection } from './utils/NavigationProtection.js';
 import { configureSidebar, initializeEnhancedSidebar } from './components/sharedSidebar.js';
 
-// React imports for testing
+// React imports for Magic UI integration
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import TestComponent from '../react/TestComponent.jsx';
+import InvoiceEditorUI from '../react/pages/InvoiceEditorUI.jsx';
+import VesselFormUI from '../react/components/forms/VesselFormUI.jsx';
+import CustomerFormUI from '../react/components/forms/CustomerFormUI.jsx';
+import ServicesFormUI from '../react/components/forms/ServicesFormUI.jsx';
+import NotesFormUI from '../react/components/forms/NotesFormUI.jsx';
+import InvoicePreviewUI from '../react/components/forms/InvoicePreviewUI.jsx';
 
 // Make addLineItem available globally for testing
 window.addLineItem = function(lineItem) {
@@ -112,8 +117,8 @@ class InvoiceApp {
       
       console.log('✅ Full app initialized with authentication and storage');
 
-      // Initialize React test component
-      this.initReactTest();
+      // Initialize React-based Invoice Editor with Magic UI
+      this.initReactInvoiceEditor();
 
       // Check for failed saves on startup and retry
       if (this.invoiceStorage && this.invoiceStorage.retryFailedSaves) {
@@ -343,25 +348,291 @@ class InvoiceApp {
     this.commentsPanel = new CommentsPanel(this.state, this.userManager);
   }
 
-  initReactTest() {
-    console.log('🚀 Initializing React test component...');
+  initReactInvoiceEditor() {
+    console.log('🚀 Initializing React Invoice Editor with Magic UI...');
 
-    // Create a container div for the React component
-    const reactContainer = document.createElement('div');
-    reactContainer.id = 'react-test-container';
+    try {
+      // Create main invoice editor container
+      const editorContainer = document.createElement('div');
+      editorContainer.id = 'react-invoice-editor';
+      editorContainer.className = 'invoice-editor-container';
 
-    // Insert it at the top of the main content area
-    const mainContent = document.querySelector('main') || document.querySelector('.main-content') || document.body;
-    if (mainContent) {
-      mainContent.insertBefore(reactContainer, mainContent.firstChild);
+      // Replace the main content area with the React editor
+      const mainContent = document.querySelector('main') || document.querySelector('.main-content');
+      if (!mainContent) {
+        console.error('❌ Could not find main content area');
+        return;
+      }
 
-      // Create React root and render the test component
-      const root = createRoot(reactContainer);
-      root.render(React.createElement(TestComponent));
+      // Clear existing content and add React container
+      mainContent.innerHTML = '';
+      mainContent.appendChild(editorContainer);
 
-      console.log('✅ React test component rendered successfully!');
+      // Create React root
+      this.reactRoot = createRoot(editorContainer);
+
+      // Initialize with empty state
+      this.renderInvoiceEditor();
+
+      // Set up form containers for individual React components
+      this.initFormContainers();
+
+      console.log('✅ React Invoice Editor initialized successfully!');
+    } catch (error) {
+      console.error('❌ Failed to initialize React Invoice Editor:', error);
+    }
+  }
+
+  renderInvoiceEditor() {
+    if (!this.reactRoot) return;
+
+    const currentState = this.state.getState();
+    const currentUser = this.userManager.getCurrentUser();
+
+    this.reactRoot.render(
+      React.createElement(InvoiceEditorUI, {
+        invoiceData: {
+          vessel: currentState.vessel || {},
+          customer: currentState.customer || {},
+          services: currentState.scope?.lineItems || [],
+          notes: currentState.notes || {},
+          metadata: {
+            title: currentState.title || '',
+            invoiceDate: currentState.invoiceDate || new Date().toISOString(),
+            taxRate: 8.75
+          }
+        },
+        onVesselChange: (data) => this.handleVesselChange(data),
+        onCustomerChange: (data) => this.handleCustomerChange(data),
+        onServicesChange: (data) => this.handleServicesChange(data),
+        onNotesChange: (data) => this.handleNotesChange(data),
+        onSave: () => this.saveInvoice(),
+        onPreview: () => this.showPreview(),
+        onPrint: () => this.printInvoice(),
+        onExportPDF: () => this.exportPDF(),
+        onEmail: () => this.emailInvoice(),
+        onNewInvoice: () => this.createNewInvoice(),
+        isEditMode: this.state.getIsEditMode(),
+        hasUnsavedChanges: this.unsavedChangesManager?.hasUnsavedChanges || false,
+        isLoading: false,
+        user: currentUser
+      })
+    );
+  }
+
+  initFormContainers() {
+    // Set up individual form containers for mounting specific React components
+    setTimeout(() => {
+      this.initVesselForm();
+      this.initCustomerForm();
+      this.initServicesForm();
+      this.initNotesForm();
+      this.initPreviewComponent();
+    }, 100);
+  }
+
+  initVesselForm() {
+    const container = document.getElementById('vessel-form-container');
+    if (container) {
+      const vesselRoot = createRoot(container);
+      const currentState = this.state.getState();
+
+      vesselRoot.render(
+        React.createElement(VesselFormUI, {
+          vesselData: currentState.vessel || {},
+          onVesselChange: (data) => this.handleVesselChange(data),
+          onVesselSelect: (vessel) => this.handleVesselSelect(vessel),
+          availableVessels: [], // TODO: Fetch from API
+          isLoading: false
+        })
+      );
+    }
+  }
+
+  initCustomerForm() {
+    const container = document.getElementById('customer-form-container');
+    if (container) {
+      const customerRoot = createRoot(container);
+      const currentState = this.state.getState();
+
+      customerRoot.render(
+        React.createElement(CustomerFormUI, {
+          customerData: currentState.customer || {},
+          onCustomerChange: (data) => this.handleCustomerChange(data),
+          onCustomerSelect: (customer) => this.handleCustomerSelect(customer),
+          availableCustomers: [], // TODO: Fetch from API
+          isLoading: false
+        })
+      );
+    }
+  }
+
+  initServicesForm() {
+    const container = document.getElementById('services-form-container');
+    if (container) {
+      const servicesRoot = createRoot(container);
+      const currentState = this.state.getState();
+
+      servicesRoot.render(
+        React.createElement(ServicesFormUI, {
+          servicesData: currentState.scope?.lineItems || [],
+          onServicesChange: (data) => this.handleServicesChange(data),
+          onAddService: (service) => this.handleAddService(service),
+          onRemoveService: (serviceId) => this.handleRemoveService(serviceId),
+          isLoading: false
+        })
+      );
+    }
+  }
+
+  initNotesForm() {
+    const container = document.getElementById('notes-form-container');
+    if (container) {
+      const notesRoot = createRoot(container);
+      const currentState = this.state.getState();
+      const currentUser = this.userManager.getCurrentUser();
+
+      notesRoot.render(
+        React.createElement(NotesFormUI, {
+          notesData: currentState.notes || {},
+          onNotesChange: (data) => this.handleNotesChange(data),
+          onAddComment: (comment) => this.handleAddComment(comment),
+          currentUser: currentUser,
+          isLoading: false
+        })
+      );
+    }
+  }
+
+  initPreviewComponent() {
+    const container = document.getElementById('invoice-preview-container');
+    if (container) {
+      const previewRoot = createRoot(container);
+      const currentState = this.state.getState();
+      const currentUser = this.userManager.getCurrentUser();
+
+      previewRoot.render(
+        React.createElement(InvoicePreviewUI, {
+          invoiceData: {
+            vessel: currentState.vessel || {},
+            customer: currentState.customer || {},
+            services: currentState.scope?.lineItems || [],
+            notes: currentState.notes || {},
+            metadata: {
+              title: currentState.title || '',
+              invoiceDate: currentState.invoiceDate || new Date().toISOString(),
+              taxRate: 8.75
+            }
+          },
+          user: currentUser,
+          showFullPreview: false
+        })
+      );
+    }
+  }
+
+  // Event handlers for React components
+  handleVesselChange(data) {
+    this.state.updateVessel(data);
+    this.updateAllForms();
+  }
+
+  handleVesselSelect(vessel) {
+    if (vessel) {
+      this.state.updateVessel({
+        id: vessel.id,
+        name: vessel.name,
+        weight: vessel.weight_tons || '',
+        beam: vessel.beam_ft || ''
+      });
     } else {
-      console.error('❌ Could not find main content area to render React component');
+      this.state.updateVessel({ id: null });
+    }
+    this.updateAllForms();
+  }
+
+  handleCustomerChange(data) {
+    this.state.updateCustomer(data);
+    this.updateAllForms();
+  }
+
+  handleCustomerSelect(customer) {
+    if (customer) {
+      this.state.updateCustomer({
+        id: customer.id,
+        customerName: customer.company_name || customer.display_name,
+        customerEmail: customer.email,
+        customerPhone: customer.phone,
+        customerAddress: customer.address
+      });
+    } else {
+      this.state.updateCustomer({ id: null });
+    }
+    this.updateAllForms();
+  }
+
+  handleServicesChange(services) {
+    // Update all line items at once
+    this.state.updateScope({ lineItems: services });
+    this.updateAllForms();
+  }
+
+  handleAddService(service) {
+    this.state.addLineItem(service);
+    this.updateAllForms();
+  }
+
+  handleRemoveService(serviceId) {
+    this.state.removeLineItem(serviceId);
+    this.updateAllForms();
+  }
+
+  handleNotesChange(data) {
+    this.state.updateNotes(data);
+    this.updateAllForms();
+  }
+
+  handleAddComment(comment) {
+    const currentState = this.state.getState();
+    const updatedComments = [...(currentState.notes?.comments || []), comment];
+    this.state.updateNotes({
+      ...currentState.notes,
+      comments: updatedComments
+    });
+    this.updateAllForms();
+  }
+
+  updateAllForms() {
+    // Re-render all React components with updated state
+    this.renderInvoiceEditor();
+    setTimeout(() => {
+      this.initFormContainers();
+    }, 100);
+  }
+
+  showPreview() {
+    // TODO: Open preview modal or new tab
+    console.log('Show preview requested');
+  }
+
+  printInvoice() {
+    // Use existing print functionality
+    if (window.printInvoice) {
+      window.printInvoice();
+    }
+  }
+
+  exportPDF() {
+    // Use existing PDF functionality
+    if (window.generatePDF) {
+      window.generatePDF();
+    }
+  }
+
+  emailInvoice() {
+    // Use existing email functionality
+    if (window.composeEmail) {
+      window.composeEmail(this.state, this.userManager);
     }
   }
   
