@@ -159,8 +159,10 @@ router.post('/login', async (req, res) => {
     logger.error({
       event: 'LOGIN_ERROR',
       error: error.message,
+      stack: error.stack,
       email: req.body.email
     });
+    console.error('🚨 AUTH ERROR:', error);
     res.status(500).json({ error: 'Login failed' });
   }
 });
