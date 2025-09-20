@@ -2,6 +2,7 @@ console.log('🔥 APP.JS FILE LOADED');
 
 import '../styles/main.css';
 import '../styles/mobile-responsive.css';
+import '../styles/enhanced-sidebar.css';
 import { InvoiceState } from './state/InvoiceState.js';
 import { VesselForm } from './components/VesselForm.js';
 import { CustomerForm } from './components/CustomerForm.js';
@@ -24,7 +25,7 @@ import { initializeFormatters } from './formatters.js';
 import { UnsavedChangesManager } from './utils/UnsavedChangesManager.js';
 import { UnsavedChangesDialog } from './components/UnsavedChangesDialog.js';
 import { NavigationProtection } from './utils/NavigationProtection.js';
-import { configureSidebar } from './components/sharedSidebar.js';
+import { configureSidebar, initializeEnhancedSidebar } from './components/sharedSidebar.js';
 
 // Make addLineItem available globally for testing
 window.addLineItem = function(lineItem) {
@@ -67,7 +68,10 @@ class InvoiceApp {
       this.initComponents();
       this.initTabNavigation();
       this.initActionButtons();
-      configureSidebar('invoices', { manageAuth: false });
+      // Try enhanced sidebar first, fall back to configureSidebar
+      if (!initializeEnhancedSidebar('invoices', { manageAuth: false })) {
+        configureSidebar('invoices', { manageAuth: false });
+      }
       this.initSidebarNavigation();
       this.initKeyboardShortcuts();
 
