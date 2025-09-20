@@ -14,14 +14,19 @@ const logger = pino({
  * Login endpoint to create session with proper password validation
  */
 router.post('/login', async (req, res) => {
+  console.log('🔐 Login attempt started for:', req.body.email);
   try {
     const { email, password, name } = req.body;
 
+    console.log('📝 Request body received:', { email, hasPassword: !!password, hasName: !!name });
+
     if (!email) {
+      console.log('❌ No email provided');
       return res.status(400).json({ error: 'Email is required' });
     }
 
     if (!password) {
+      console.log('❌ No password provided');
       return res.status(400).json({ error: 'Password is required' });
     }
 
@@ -53,12 +58,16 @@ router.post('/login', async (req, res) => {
       return nameStr;
     })();
 
+    console.log('🔍 Searching for user in database...');
     // Find existing user (no auto-creation without proper password)
     let user = await prisma.user.findUnique({
       where: { email }
     });
 
+    console.log('📊 User found:', user ? `ID: ${user.id}, Email: ${user.email}` : 'No user found');
+
     if (!user) {
+      console.log('❌ User not found in database');
       logger.warn({
         event: 'LOGIN_FAILED_USER_NOT_FOUND',
         email,
@@ -68,7 +77,9 @@ router.post('/login', async (req, res) => {
     }
 
     // Validate password
+    console.log('🔑 Checking user password...');
     if (!user.password) {
+      console.log('❌ User has no password set');
       logger.warn({
         event: 'LOGIN_FAILED_NO_PASSWORD_SET',
         email,
@@ -77,8 +88,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Account not properly configured. Contact administrator.' });
     }
 
+    console.log('🔐 Comparing password with bcrypt...');
     const validPassword = await bcrypt.compare(password, user.password);
+    console.log('✅ Password validation result:', validPassword);
+
     if (!validPassword) {
+      console.log('❌ Password validation failed');
       logger.warn({
         event: 'LOGIN_FAILED_INVALID_PASSWORD',
         email,
