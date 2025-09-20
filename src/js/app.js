@@ -668,7 +668,7 @@ class InvoiceApp {
   navigateToSettings() {
     console.log('⚙️ Opening settings modal');
     if (this.settingsModal) {
-      this.settingsModal.open();
+      this.settingsModal.show();
     }
   }
 
@@ -800,25 +800,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     console.log('💡 Debug functions available: window.debugApp.forceRefresh(), window.debugApp.showInvoices(), window.debugApp.currentUser()');
     
-    // Test if sidebar was created
-    setTimeout(() => {
-      const sidebar = document.querySelector('.app-sidebar');
-      const newBtn = document.querySelector('.new-invoice-btn');
-      console.log('🔍 POST-INIT CHECK:');
-      console.log('  - Sidebar exists:', !!sidebar);
-      console.log('  - New button exists:', !!newBtn);
-      console.log('  - Window.app exists:', !!window.app);
-      
-      if (newBtn) {
-        console.log('🎯 BUTTON FOUND - READY TO TEST');
-        // Add extra debugging
-        newBtn.addEventListener('click', () => {
-          console.log('🔥🔥🔥 BUTTON CLICK DETECTED 🔥🔥🔥');
-        });
-      } else {
-        console.error('❌❌❌ BUTTON NOT FOUND ❌❌❌');
-      }
-    }, 1000);
+    // App initialization completed successfully
     
     
     // Debug tools will be added after successful authentication

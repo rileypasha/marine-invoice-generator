@@ -283,4 +283,9 @@ export class SettingsModal {
     this.modal.style.display = 'none';
     this.isVisible = false;
   }
+
+  // Backward compatibility method
+  open() {
+    this.show();
+  }
 }
