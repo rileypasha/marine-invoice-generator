@@ -34,14 +34,14 @@ Professional invoice generator for Marine Group services with advanced address a
 
 3. **Set up environment variables**
    ```bash
-   cp .env.example .env
+   cp .env.example .env.local
    ```
 
 4. **Configure your environment**
-   Edit `.env` with your settings:
+   Edit `.env.local` with your settings:
    ```env
-   # Database
-   DATABASE_URL="postgresql://marine:invoice123@localhost:5432/marine_invoice_dev"
+   # Database - Use your PostgreSQL connection string
+   DATABASE_URL="postgresql://username:password@host:5432/database?sslmode=require"
 
    # Geoapify API Key (REQUIRED for address autocomplete)
    GEOAPIFY_API_KEY=your-geoapify-api-key-here
@@ -101,6 +101,40 @@ The application will be available at `http://localhost:3001`
 - **Free Tier**: 3,000 requests/day
 - **Paid Plans**: Higher limits available
 - **Rate Limiting**: Application enforces 30 requests/minute per IP
+
+## Local vs Production Environment
+
+### Database Configuration Rules
+
+**🚨 CRITICAL: Never commit SQLite or localhost database URLs**
+
+- **Local Development**: Use `.env.local` with your PostgreSQL connection string
+- **Production**: Uses Render's internal DATABASE_URL environment variable
+- **NO SQLite**: This project only supports PostgreSQL in all environments
+- **NO localhost**: Never hardcode localhost URLs in committed code
+
+### Environment Files
+
+- `.env.example` - Template with placeholder values (committed)
+- `.env.local` - Your actual local settings (NOT committed, in .gitignore)
+- Production uses Render environment variables (no .env file)
+
+### Pre-commit Guardrails
+
+This repository has guardrails to prevent database configuration mistakes:
+
+```bash
+# Manual pre-commit check
+npm run precommit
+
+# This will fail if you try to commit:
+# - sqlite: URLs
+# - file: URLs
+# - postgresql://localhost URLs
+# - postgresql://127.0.0.1 URLs
+```
+
+**Rule**: Always use `process.env.DATABASE_URL` and never hardcode database connections.
 
 ## Development
 

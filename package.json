@@ -82,7 +82,8 @@
     "deploy:check": "npm run quality:gate && npm run test:e2e:regression",
     "logs:app": "tail -f logs/app.log",
     "logs:error": "tail -f logs/error.log",
-    "health:check": "node scripts/health-check.js"
+    "health:check": "node scripts/health-check.js",
+    "precommit": "bash scripts/check-db-url.sh"
   },
   "keywords": [
     "invoice",

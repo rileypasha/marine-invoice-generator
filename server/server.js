@@ -1,6 +1,5 @@
 const express = require('express');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -44,18 +43,9 @@ const sessionConfig = {
 };
 
 // Configure session store based on environment
-if (process.env.NODE_ENV === 'production') {
-  // Use memory store in production (sessions won't persist across restarts, but that's ok for this app)
-  logger.info('Using memory store for sessions in production');
-  // Default express-session memory store will be used
-} else {
-  // Use SQLite store in development
-  sessionConfig.store = new SQLiteStore({
-    db: 'sessions.db',
-    dir: './data'
-  });
-  logger.info('Using SQLite store for sessions in development');
-}
+// Use memory store for both development and production
+// Sessions won't persist across restarts, but that's acceptable for this app
+logger.info('Using memory store for sessions');
 
 // Configure cookie domain - CRITICAL for custom domains
 // Custom domains through CloudFlare need special handling
