@@ -6,8 +6,8 @@
   "scripts": {
     "start": "electron .",
     "server": "node scripts/ensure-db-ready.js && node server/server.js",
-    "server:dev": "cross-env NODE_ENV=development npm run server",
-    "server:prod": "cross-env NODE_ENV=production npm run server",
+    "server:dev": "npm run server",
+    "server:prod": "npm run server",
     "dev": "webpack serve --mode development",
     "build": "node scripts/validate-schema.js --fix && webpack --mode production",
     "db:check": "node scripts/ensure-db-ready.js",
