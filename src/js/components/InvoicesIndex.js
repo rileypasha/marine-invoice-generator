@@ -262,18 +262,51 @@ export class InvoicesIndex {
   }
 
   async fetchInvoices() {
-    // Try to get invoices from local storage first
-    const stored = localStorage.getItem('marine_invoices');
-    if (stored) {
-      try {
-        return JSON.parse(stored) || [];
-      } catch (error) {
-        console.warn('Failed to parse stored invoices:', error);
+    try {
+      // Fetch from server API first
+      console.log('🔄 Fetching invoices from server...');
+      const response = await fetch('/api/invoices/user', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const serverInvoices = await response.json();
+        console.log(`✅ Fetched ${serverInvoices.length} invoices from server`);
+
+        // Store in localStorage for offline access
+        try {
+          localStorage.setItem('marine_invoices', JSON.stringify(serverInvoices));
+        } catch (storageError) {
+          console.warn('Failed to save invoices to localStorage:', storageError);
+        }
+
+        return serverInvoices;
+      } else {
+        console.warn('Server request failed, trying localStorage...');
       }
+    } catch (error) {
+      console.warn('Failed to fetch from server, trying localStorage:', error);
     }
 
-    // TODO: Fetch from server API if local storage is empty
-    // For now, return empty array
+    // Fallback to local storage if server request fails
+    try {
+      const stored = localStorage.getItem('marine_invoices');
+      if (stored) {
+        const localInvoices = JSON.parse(stored) || [];
+        console.log(`📱 Using ${localInvoices.length} invoices from localStorage`);
+        return localInvoices;
+      }
+    } catch (error) {
+      console.warn('Failed to parse stored invoices:', error);
+    }
+
+    // Return empty array if everything fails
+    console.log('📭 No invoices found');
     return [];
   }
 
