@@ -3,6 +3,7 @@ console.log('🔥 APP.JS FILE LOADED');
 import '../styles/main.css';
 import '../styles/mobile-responsive.css';
 import '../styles/enhanced-sidebar.css';
+import '../styles/globals.css';
 import { InvoiceState } from './state/InvoiceState.js';
 import { VesselForm } from './components/VesselForm.js';
 import { CustomerForm } from './components/CustomerForm.js';

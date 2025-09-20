@@ -8,7 +8,8 @@ module.exports = {
     landing: path.resolve(__dirname, 'src/js/landing.js'),
     customers: path.resolve(__dirname, 'src/js/customers.js'),
     invoices: path.resolve(__dirname, 'src/js/invoices.js'),
-    vessels: path.resolve(__dirname, 'src/js/vessels.js')
+    vessels: path.resolve(__dirname, 'src/js/vessels.js'),
+    'react-test': path.resolve(__dirname, 'src/js/react-test.js')
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -25,7 +26,18 @@ module.exports = {
       },
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader']
+        use: [
+          'style-loader',
+          'css-loader',
+          {
+            loader: 'postcss-loader',
+            options: {
+              postcssOptions: {
+                config: path.resolve(__dirname, 'postcss.config.js'),
+              },
+            },
+          },
+        ]
       },
       {
         test: /\.(png|svg|jpg|jpeg|gif)$/i,
@@ -70,6 +82,13 @@ module.exports = {
       template: path.resolve(__dirname, 'src/vessels.html'),
       filename: 'vessels.html',
       chunks: ['vessels'],
+      favicon: path.resolve(__dirname, 'src/assets/favicon.png')
+    }),
+    // React test page (development only)
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, 'src/react-test.html'),
+      filename: 'react-test.html',
+      chunks: ['react-test'],
       favicon: path.resolve(__dirname, 'src/assets/favicon.png')
     }),
     new CopyWebpackPlugin({

@@ -1,0 +1,93 @@
+/* Magic UI Theme Variables */
+/* CSS variables from 21st.dev Magic UI design system */
+
+:root {
+  /* Primary Colors */
+  --primary: 220 90% 56%;
+  --primary-foreground: 0 0% 100%;
+
+  /* Secondary Colors */
+  --secondary: 240 5% 96%;
+  --secondary-foreground: 240 6% 10%;
+
+  /* Destructive/Error Colors */
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+
+  /* Muted Colors */
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 4% 46%;
+
+  /* Accent Colors */
+  --accent: 240 5% 96%;
+  --accent-foreground: 240 6% 10%;
+
+  /* Card Colors */
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 4%;
+
+  /* Popover Colors */
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 4%;
+
+  /* Border and Input */
+  --border: 240 6% 90%;
+  --input: 240 6% 90%;
+  --ring: 217 91% 60%;
+
+  /* Background and Foreground */
+  --background: 0 0% 100%;
+  --foreground: 240 10% 4%;
+
+  /* Chart Colors */
+  --chart-1: 12 76% 61%;
+  --chart-2: 173 58% 39%;
+  --chart-3: 197 37% 24%;
+  --chart-4: 43 74% 66%;
+  --chart-5: 27 87% 67%;
+
+  /* Border Radius */
+  --radius: 0.5rem;
+}
+
+/* Dark Mode Theme Variables */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
+
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 240 4% 16%;
+    --accent-foreground: 0 0% 98%;
+
+    --card: 240 10% 4%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 4%;
+    --popover-foreground: 0 0% 98%;
+
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 217 91% 60%;
+
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+/* Tailwind v4 will automatically generate utility classes from these CSS variables.
+   No need for manual utility class definitions as they will conflict with Tailwind. */

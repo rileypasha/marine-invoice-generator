@@ -3,6 +3,7 @@
  */
 
 import '../styles/invoices-page.css';
+import '../styles/globals.css';
 import { InvoicesIndex } from './components/InvoicesIndex.js';
 import { configureSidebar } from './components/sharedSidebar.js';
 

@@ -1,13 +1,24 @@
 /**
  * Customers Entry Point - Initialize customer directory page
  * 🔧 PHASE 3 STABILIZATION: Enhanced initialization with comprehensive error handling
+ * ✨ MAGIC UI INTEGRATION: React components with Magic UI styling
  */
+import '../styles/globals.css';
 import { CustomersPage } from './components/CustomersPage.js';
 import { configureSidebar } from './components/sharedSidebar.js';
+
+// React imports for Magic UI integration
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import CustomersPageUI from '../react/pages/CustomersPageUI.jsx';
 
 // 🔧 PHASE 3 STABILIZATION: Enhanced state management
 const CustomerManager = {
   instance: null,
+  reactRoot: null,
+  customers: [],
+  searchQuery: '',
+  isLoading: false,
   initialized: false,
   initializationAttempts: 0,
   maxAttempts: 3,
@@ -39,8 +50,8 @@ const CustomerManager = {
 
       configureSidebar('customers');
 
-      // 🔧 STABILIZATION: Initialize with enhanced error handling
-      await this.createCustomersPage();
+      // ✨ MAGIC UI: Initialize React-based UI with Magic UI components
+      await this.createReactCustomersPage();
 
       this.initialized = true;
       console.log('🎉 Customer Directory initialization complete');
@@ -135,33 +146,111 @@ const CustomerManager = {
     }
   },
 
-  async createCustomersPage() {
+  async createReactCustomersPage() {
     try {
-      // Clean up any existing instance
-      if (this.instance && typeof this.instance.destroy === 'function') {
-        console.log('🧹 Cleaning up existing instance');
-        this.instance.destroy();
+      // Clean up any existing React root
+      if (this.reactRoot) {
+        console.log('🧹 Cleaning up existing React root');
+        this.reactRoot.unmount();
+        this.reactRoot = null;
       }
 
-      // Create new instance
-      this.instance = new CustomersPage({
-        containerId: 'customers-page',
-        maxRetries: 3,
-        retryDelay: 1000
-      });
+      // Create React root
+      const container = document.getElementById('customers-page');
+      if (!container) {
+        throw new Error('Container #customers-page not found');
+      }
 
-      // Make globally available for onclick handlers
-      window.customersPage = this.instance;
+      this.reactRoot = createRoot(container);
+
+      // Load initial customer data
+      await this.loadCustomers();
+
+      // Render React component with Magic UI
+      this.renderReactUI();
 
       // Add health monitoring
       this.setupHealthMonitoring();
 
-      console.log('✅ CustomersPage instance created');
+      console.log('✅ React CustomersPage with Magic UI created');
 
     } catch (error) {
-      console.error('❌ Failed to create CustomersPage:', error);
+      console.error('❌ Failed to create React CustomersPage:', error);
       throw error;
     }
+  },
+
+  renderReactUI() {
+    if (!this.reactRoot) return;
+
+    this.reactRoot.render(
+      React.createElement(CustomersPageUI, {
+        customers: this.customers,
+        searchQuery: this.searchQuery,
+        isLoading: this.isLoading,
+        onSearch: (query) => this.handleSearch(query),
+        onEdit: (customer) => this.handleEdit(customer),
+        onDelete: (customer) => this.handleDelete(customer),
+        onAddNew: () => this.handleAddNew(),
+        onImport: () => this.handleImport()
+      })
+    );
+  },
+
+  async loadCustomers() {
+    this.isLoading = true;
+    this.renderReactUI();
+
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // API returns { customers: [...], pagination: {...} }
+        this.customers = Array.isArray(data.customers) ? data.customers : [];
+        console.log(`✅ Loaded ${this.customers.length} customers`);
+      } else {
+        console.warn('⚠️ Failed to load customers, using empty array');
+        this.customers = [];
+      }
+    } catch (error) {
+      console.warn('⚠️ Error loading customers:', error);
+      this.customers = [];
+    }
+
+    this.isLoading = false;
+    this.renderReactUI();
+  },
+
+  handleSearch(query) {
+    this.searchQuery = query;
+    // Filter customers based on search query
+    // For now, just re-render. In production, you'd implement proper filtering
+    this.renderReactUI();
+  },
+
+  handleEdit(customer) {
+    console.log('Edit customer:', customer);
+    // TODO: Implement edit modal/form
+  },
+
+  handleDelete(customer) {
+    console.log('Delete customer:', customer);
+    // TODO: Implement delete confirmation
+  },
+
+  handleAddNew() {
+    console.log('Add new customer');
+    // TODO: Implement add customer modal/form
+  },
+
+  handleImport() {
+    console.log('Import customers');
+    // TODO: Implement CSV import functionality
   },
 
   setupHealthMonitoring() {

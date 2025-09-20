@@ -1,3 +1,4 @@
+import '../styles/globals.css';
 import { VesselsPage } from './components/VesselsPage.js';
 import { UserManager } from './auth/UserManager.js';
 import { configureSidebar } from './components/sharedSidebar.js';

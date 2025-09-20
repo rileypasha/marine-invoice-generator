@@ -1,3 +1,11 @@
+/* Tailwind CSS Directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Magic UI Theme Variables */
+@import './magic-ui-theme.css';
+
 /* Modern UI Design System */
 @import './modern-foundation.css';
 @import './modern-components.css';

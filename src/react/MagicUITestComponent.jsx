@@ -5,12 +5,12 @@ const SimpleButton = forwardRef(({ className, variant = 'default', size = 'defau
   const baseStyles = 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
 
   const variants = {
-    default: 'bg-blue-600 text-white hover:bg-blue-700',
-    destructive: 'bg-red-600 text-white hover:bg-red-700',
-    outline: 'border border-gray-300 bg-white hover:bg-gray-50 text-gray-900',
-    secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
-    ghost: 'hover:bg-gray-100 text-gray-900',
-    link: 'text-blue-600 underline-offset-4 hover:underline',
+    default: 'bg-primary text-primary-foreground hover:opacity-90',
+    destructive: 'bg-destructive text-destructive-foreground hover:opacity-90',
+    outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+    secondary: 'bg-secondary text-secondary-foreground hover:opacity-80',
+    ghost: 'hover:bg-accent hover:text-accent-foreground',
+    link: 'text-primary underline-offset-4 hover:underline',
   };
 
   const sizes = {
@@ -46,16 +46,16 @@ const MagicUITestComponent = () => {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 m-4 shadow-sm">
+    <div className="bg-card border border-border rounded-lg p-6 m-4 shadow-sm">
       <div className="text-center space-y-2 mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">🎨 Magic UI Integration Test</h2>
-        <p className="text-gray-600">Testing 21st.dev components in Marine Invoice Generator</p>
+        <h2 className="text-2xl font-bold text-foreground">🎨 Magic UI Integration Test</h2>
+        <p className="text-muted-foreground">Testing 21st.dev components in Marine Invoice Generator</p>
       </div>
 
       <div className="space-y-6">
         {/* Button Variants */}
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-900">Button Variants</h3>
+          <h3 className="text-lg font-semibold text-foreground">Button Variants</h3>
           <div className="flex flex-wrap gap-3">
             <SimpleButton
               variant="default"
@@ -96,7 +96,7 @@ const MagicUITestComponent = () => {
 
         {/* Button Sizes */}
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-900">Button Sizes</h3>
+          <h3 className="text-lg font-semibold text-foreground">Button Sizes</h3>
           <div className="flex gap-3 items-center">
             <SimpleButton
               size="sm"
@@ -126,14 +126,14 @@ const MagicUITestComponent = () => {
 
         {/* Action Log */}
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-900">Action Log</h3>
-          <div className="bg-gray-50 border border-gray-200 rounded-md p-3 min-h-[120px]">
+          <h3 className="text-lg font-semibold text-foreground">Action Log</h3>
+          <div className="bg-muted border border-border rounded-md p-3 min-h-[120px]">
             {actionLog.length === 0 ? (
-              <p className="text-gray-500 italic">Click buttons above to see actions logged here...</p>
+              <p className="text-muted-foreground italic">Click buttons above to see actions logged here...</p>
             ) : (
               <div className="space-y-1">
                 {actionLog.map((log, index) => (
-                  <div key={index} className="text-sm text-gray-700 font-mono">
+                  <div key={index} className="text-sm text-foreground font-mono">
                     {log}
                   </div>
                 ))}
@@ -143,12 +143,12 @@ const MagicUITestComponent = () => {
         </div>
 
         {/* Status */}
-        <div className="bg-green-50 border border-green-200 rounded-md p-4">
+        <div className="bg-accent border border-border rounded-md p-4">
           <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span className="text-green-800 font-medium">Magic UI Integration Status:</span>
+            <div className="w-2 h-2 bg-primary rounded-full"></div>
+            <span className="text-accent-foreground font-medium">Magic UI Integration Status:</span>
           </div>
-          <ul className="mt-2 text-sm text-green-700 space-y-1">
+          <ul className="mt-2 text-sm text-accent-foreground space-y-1">
             <li>✅ 21st.dev Magic UI components loading</li>
             <li>✅ Tailwind CSS styling working</li>
             <li>✅ React hooks (useState) working</li>
