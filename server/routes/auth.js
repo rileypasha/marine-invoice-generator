@@ -248,17 +248,20 @@ router.get('/me', (req, res) => {
  * Check if current user is a master user
  */
 router.get('/check-master', (req, res) => {
-  logger.info({ 
+  logger.info({
     event: 'CHECK_MASTER_REQUEST',
     sessionId: req.sessionID,
     hasSession: !!req.session,
     sessionUser: req.session?.user,
     headers: req.headers
   });
-  
+
   if (!req.session || !req.session.user) {
     logger.info({ event: 'CHECK_MASTER_NO_SESSION' });
-    return res.json({ isMaster: false });
+    return res.json({
+      authenticated: false,
+      isMaster: false
+    });
   }
 
   const masterEmails = (process.env.MASTER_EMAILS || '')
@@ -267,17 +270,20 @@ router.get('/check-master', (req, res) => {
     .filter(email => email);
 
   const isMaster = masterEmails.includes(req.session.user.email);
-  
-  logger.info({ 
+
+  logger.info({
     event: 'CHECK_MASTER',
     email: req.session.user.email,
     isMaster,
     masterEmails: masterEmails.length > 0 ? 'configured' : 'not configured'
   });
 
-  res.json({ 
+  // Return format that matches client expectations
+  res.json({
+    authenticated: isMaster,
     isMaster,
-    email: req.session.user.email 
+    user: isMaster ? req.session.user : null,
+    email: req.session.user.email
   });
 });
 
