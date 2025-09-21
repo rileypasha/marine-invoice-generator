@@ -3,8 +3,8 @@
  * Replaces the vanilla InvoiceApp class with modern React architecture
  */
 import React, { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useInvoice } from '../context/InvoiceContext';
+import { useAuth } from '../context/AuthContext.jsx';
+import { useInvoice } from '../context/InvoiceContext.jsx';
 import useUnsavedChanges from '../hooks/useUnsavedChanges';
 import useNavigationProtection from '../hooks/useNavigationProtection';
 import useInvoiceStorage from '../hooks/useInvoiceStorage';
@@ -12,9 +12,9 @@ import useTheme from '../hooks/useTheme';
 
 // Import existing React components
 import InvoiceEditorUI from './InvoiceEditorUI.jsx';
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Alert, AlertDescription } from '../components/ui/alert';
+import { Button } from '../components/ui/button.jsx';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.jsx';
+import { Alert, AlertDescription } from '../components/ui/alert.jsx';
 import { motion } from 'framer-motion';
 
 const InvoiceEditorApp = ({

@@ -131,6 +131,7 @@
     "express": "^4.21.2",
     "express-session": "^1.18.2",
     "express-validator": "^7.2.1",
+    "framer-motion": "^12.23.16",
     "helmet": "^8.1.0",
     "html-webpack-plugin": "^5.5.3",
     "html2canvas": "^1.4.1",

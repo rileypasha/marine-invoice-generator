@@ -3,21 +3,21 @@
  * Self-contained invoice editor without authentication requirements
  */
 import React, { useEffect, useState, useCallback } from 'react';
-import { useInvoice } from '../context/InvoiceContext';
+import { useInvoice } from '../context/InvoiceContext.jsx';
 import useUnsavedChanges from '../hooks/useUnsavedChanges';
 import useNavigationProtection from '../hooks/useNavigationProtection';
 import useTheme from '../hooks/useTheme';
 
 // Import Magic UI components
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Alert, AlertDescription } from '../components/ui/alert';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Textarea } from '../components/ui/textarea';
-import { Separator } from '../components/ui/separator';
-import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button.jsx';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.jsx';
+import { Alert, AlertDescription } from '../components/ui/alert.jsx';
+import { Input } from '../components/ui/input.jsx';
+import { Label } from '../components/ui/label.jsx';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select.jsx';
+import { Textarea } from '../components/ui/textarea.jsx';
+import { Separator } from '../components/ui/separator.jsx';
+import { Badge } from '../components/ui/badge.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Import pure utility functions
