@@ -1,8 +1,10 @@
 import '../styles/main.css';
 import '../styles/enhanced-sidebar.css';
 import '../styles/globals.css';
+import '../styles/settings.css';
 import { VesselsPage } from './components/VesselsPage.js';
 import { configureSidebar } from './components/sharedSidebar.js';
+import { initializeReactSettings } from '../react/components/SettingsProvider.jsx';
 
 // React imports for Magic UI integration
 import React from 'react';
@@ -65,6 +67,10 @@ class VesselsApp {
       console.log('📱 VESSELS DEBUG: Configuring sidebar...');
       configureSidebar('vessels');
       console.log('✅ VESSELS DEBUG: Sidebar configured');
+
+      console.log('⚙️ VESSELS DEBUG: Initializing React settings...');
+      initializeReactSettings();
+      console.log('✅ VESSELS DEBUG: React settings initialized');
 
       console.log('🎉 VESSELS DEBUG: VesselsApp initialization completed successfully');
 

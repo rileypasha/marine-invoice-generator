@@ -4,6 +4,7 @@ import '../styles/main.css';
 import '../styles/mobile-responsive.css';
 import '../styles/enhanced-sidebar.css';
 import '../styles/globals.css';
+import '../styles/settings.css';
 import { InvoiceState } from './state/InvoiceState.js';
 import { VesselForm } from './components/VesselForm.js';
 import { CustomerForm } from './components/CustomerForm.js';
@@ -15,7 +16,7 @@ import { CommentsPanel } from './components/CommentsPanel.js';
 import { UserManager } from './auth/UserManager.js';
 import { AuthModal } from './auth/AuthModal.js';
 import { ThemeManager } from './settings/ThemeManager.js';
-import { SettingsModal } from './settings/SettingsModal.js';
+import { initializeReactSettings } from '../react/components/SettingsProvider.jsx';
 import { InvoiceStorage } from './storage/InvoiceStorage.js';
 import { PromptModal } from './components/PromptModal.js';
 import { MobileMenu } from './components/MobileMenu.js';
@@ -71,8 +72,10 @@ class InvoiceApp {
       
       // Initialize UI components
       this.authModal = new AuthModal(this.userManager);
-      this.settingsModal = new SettingsModal(this.userManager, this.themeManager);
       this.promptModal = new PromptModal();
+
+      // Initialize React settings modal
+      initializeReactSettings();
       
       // Initialize invoice state and components
       this.state = new InvoiceState();
@@ -138,205 +141,50 @@ class InvoiceApp {
   
   async checkAuthentication() {
     try {
-      console.log('🔍 APP.JS: Checking authentication...');
-      
-      // FIRST - Check SERVER session (most reliable)
-      try {
-        const sessionResponse = await fetch('/api/simple-auth/check', {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-        
-        console.log('📡 Session check response:', sessionResponse.status);
-        
-        if (sessionResponse.ok) {
-          const sessionData = await sessionResponse.json();
-          if (sessionData.authenticated) {
-            console.log('✅ SERVER SESSION VALID:', sessionData.user);
-            
-            // CRITICAL: Set user and save to localStorage for persistence
-            this.userManager.currentUser = sessionData.user;
-            
-            // Save to localStorage for future page loads
-            localStorage.setItem('marine_invoice_user', JSON.stringify(sessionData.user));
-            const session = {
-              userId: sessionData.user.id || 'test-user-1',
-              timestamp: new Date().getTime(),
-              rememberMe: true
-            };
-            localStorage.setItem('marine_invoice_session', JSON.stringify(session));
-            
-            // Notify all listeners
-            this.userManager.notify();
-            return true;
-          }
+      console.log('🔍 APP.JS: Checking server session authentication...');
+
+      // Check server session only - NO localStorage fallback for authentication
+      const sessionResponse = await fetch('/api/simple-auth/check', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
         }
-      } catch (err) {
-        console.log('Session check failed:', err);
-      }
-      
-      // SECOND - Check localStorage fallback
-      const storedUser = localStorage.getItem('marine_invoice_user');
-      if (storedUser) {
-        console.log('📦 Found stored user, using localStorage authentication');
-        try {
-          const user = JSON.parse(storedUser);
-          console.log('✅ Successfully parsed user:', user);
-          
-          // CRITICAL: Set user in UserManager and save session properly
-          this.userManager.currentUser = user;
-          
-          // Save both user and session data
-          localStorage.setItem('marine_invoice_user', JSON.stringify(user));
-          const sessionData = {
-            userId: user.id || 'test-user-1',
-            timestamp: new Date().getTime(),
-            rememberMe: true
-          };
-          localStorage.setItem('marine_invoice_session', JSON.stringify(sessionData));
-          
-          // Notify all listeners that user is set
+      });
+
+      console.log('📡 APP.JS: Session check response:', sessionResponse.status);
+
+      if (sessionResponse.ok) {
+        const sessionData = await sessionResponse.json();
+        if (sessionData.authenticated && sessionData.user) {
+          console.log('✅ APP.JS: Server session valid:', sessionData.user.email);
+
+          // Set user in UserManager for UI purposes
+          this.userManager.currentUser = sessionData.user;
           this.userManager.notify();
-          localStorage.setItem('auth_method', 'localStorage');
-          
-          console.log('✅ UserManager updated with user and session saved');
-          
-          // Sidebar user profile management removed
-          
-          console.log('✅ AUTHENTICATION SUCCESSFUL via localStorage');
-          return true;
-        } catch (e) {
-          console.error('❌ Failed to parse stored user:', e);
-          localStorage.removeItem('marine_invoice_user');
-        }
-      }
-      
-      // THIRD - Try standard cookie-based session
-      // SKIP THIS if we already have localStorage auth to prevent clearing the session
-      if (!this.userManager.currentUser) {
-        const response = await fetch('/api/auth/me', {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        console.log('📡 Cookie auth response:', response.status);
-        
-        if (response.ok) {
-          const userData = await response.json();
-          console.log('✅ Cookie authentication successful:', userData);
-          this.userManager.currentUser = userData.user;
-          this.userManager.saveSession(true);
-          this.userManager.notify();
-          localStorage.setItem('auth_method', 'cookie');
+
+          // Optional: Cache user info in localStorage for UI display only (NOT for auth)
+          localStorage.setItem('marine_invoice_user_display', JSON.stringify(sessionData.user));
+
           return true;
         }
       }
-      
-      // Cookie auth failed, try token auth
-      console.log('🔄 Cookie auth failed, trying token authentication...');
-      
-      const token = localStorage.getItem('auth_token');
-      const tokenExpiry = localStorage.getItem('auth_token_expiry');
-      
-      if (token && tokenExpiry) {
-        // Check if token is expired
-        if (Number(tokenExpiry) < Date.now()) {
-          console.log('⚠️ Token expired, clearing...');
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('auth_token_expiry');
-          localStorage.removeItem('auth_method');
-        } else {
-          // Verify token with server
-          const tokenResponse = await fetch('/api/token-auth/verify', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (tokenResponse.ok) {
-            const tokenData = await tokenResponse.json();
-            console.log('✅ Token authentication successful:', tokenData);
-            this.userManager.currentUser = tokenData.user;
-            this.userManager.saveSession(true);
-            this.userManager.notify();
-            localStorage.setItem('auth_method', 'token');
-            
-            // Store token for API calls
-            window.authToken = token;
-            return true;
-          } else {
-            console.log('❌ Token verification failed');
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('auth_token_expiry');
-          }
-        }
-      }
-      
-      // All auth methods failed
-      
-      // Check if we still have a current user from localStorage before clearing
-      if (this.userManager.currentUser) {
-        console.log('✅ Still have user from localStorage, keeping authentication');
-        return true;
-      }
-      
-      // No valid authentication found
-      console.log('🚫 No valid authentication found');
+
+      console.log('🚫 APP.JS: No valid server session found');
       this.userManager.clearSession();
       return false;
-      
+
     } catch (error) {
-      console.log('🚫 Authentication check error:', error);
-      
-      // On network error, try localStorage fallback
-      const storedUser = localStorage.getItem('marine_invoice_user');
-      if (storedUser) {
-        console.log('📦 Network error - using localStorage fallback');
-        try {
-          const user = JSON.parse(storedUser);
-          this.userManager.currentUser = user;
-          this.userManager.saveSession(true);
-          this.userManager.notify();
-          localStorage.setItem('auth_method', 'localStorage');
-          
-          // Sidebar user profile management removed
-          
-          return true;
-        } catch (e) {
-          console.error('Failed to parse stored user:', e);
-          localStorage.removeItem('marine_invoice_user');
-        }
-      }
-      
+      console.error('❌ APP.JS: Authentication check error:', error);
       this.userManager.clearSession();
       return false;
     }
   }
   
   async checkMasterUser() {
-    try {
-      // Check if user is already authenticated as master
-      const response = await fetch('/api/auth/check-master', {
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.isMaster) {
-          console.log('👑 Master user detected - redirecting to dashboard');
-          window.location.href = '/master';
-        }
-      }
-    } catch (error) {
-      console.log('Could not check master status:', error);
-    }
+    // Master access check disabled to prevent redirect loop
+    // Master users are redirected at login time via UserManager
+    console.log('🎯 Skipping automatic master redirect to prevent infinite loop');
   }
   
   initComponents() {

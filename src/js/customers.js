@@ -3,9 +3,13 @@
  * 🔧 PHASE 3 STABILIZATION: Enhanced initialization with comprehensive error handling
  * ✨ MAGIC UI INTEGRATION: React components with Magic UI styling
  */
+import '../styles/main.css';
+import '../styles/enhanced-sidebar.css';
 import '../styles/globals.css';
+import '../styles/settings.css';
 import { CustomersPage } from './components/CustomersPage.js';
 import { configureSidebar } from './components/sharedSidebar.js';
+import { initializeReactSettings } from '../react/components/SettingsProvider.jsx';
 
 // React imports for Magic UI integration
 import React from 'react';
@@ -50,6 +54,9 @@ const CustomerManager = {
 
       configureSidebar('customers');
 
+      // Initialize React settings
+      initializeReactSettings();
+
       // ✨ MAGIC UI: Initialize React-based UI with Magic UI components
       await this.createReactCustomersPage();
 
@@ -64,56 +71,31 @@ const CustomerManager = {
 
   async validateAuthentication() {
     try {
-      // Check localStorage
-      const storedUser = localStorage.getItem('marine_invoice_user');
-      const storedSession = localStorage.getItem('marine_invoice_session');
+      console.log('🔍 CUSTOMERS: Checking server session authentication...');
 
-      if (!storedUser || !storedSession) {
-        return { valid: false, reason: 'No stored authentication data' };
-      }
+      // Check server session only - NO localStorage fallback
+      const response = await fetch('/api/simple-auth/check', {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' }
+      });
 
-      const user = JSON.parse(storedUser);
-      const session = JSON.parse(storedSession);
+      console.log('📡 CUSTOMERS: Session check response:', response.status);
 
-      // Validate user data
-      if (!user.id || !user.email) {
-        return { valid: false, reason: 'Invalid user data structure' };
-      }
-
-      // Check session expiry
-      const now = Date.now();
-      const sessionAge = now - session.timestamp;
-      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-
-      if (sessionAge > maxAge) {
-        return { valid: false, reason: 'Session expired' };
-      }
-
-      // Validate with server if possible
-      try {
-        const response = await fetch('/api/auth/check', {
-          method: 'GET',
-          credentials: 'include',
-          headers: { 'Accept': 'application/json' }
-        });
-
-        if (response.ok) {
-          const serverAuth = await response.json();
-          if (serverAuth.authenticated) {
-            console.log('✅ Server authentication confirmed');
-            return { valid: true, user: serverAuth.user || user, source: 'server' };
-          }
+      if (response.ok) {
+        const serverAuth = await response.json();
+        if (serverAuth.authenticated && serverAuth.user) {
+          console.log('✅ CUSTOMERS: Server session valid:', serverAuth.user.email);
+          return { valid: true, user: serverAuth.user };
         }
-      } catch (serverError) {
-        console.warn('⚠️ Server auth check failed, using localStorage:', serverError.message);
       }
 
-      // Fallback to localStorage validation
-      return { valid: true, user, source: 'localStorage' };
+      console.log('🚫 CUSTOMERS: No valid server session found');
+      return { valid: false, reason: 'Server session authentication required' };
 
     } catch (error) {
-      console.error('❌ Authentication validation error:', error);
-      return { valid: false, reason: `Validation error: ${error.message}` };
+      console.error('❌ CUSTOMERS: Authentication check error:', error);
+      return { valid: false, reason: 'Authentication service unavailable' };
     }
   },
 

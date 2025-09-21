@@ -2,10 +2,14 @@
  * Invoices Entry Point - Initialize invoice directory page
  */
 
+import '../styles/main.css';
+import '../styles/enhanced-sidebar.css';
 import '../styles/invoices-page.css';
 import '../styles/globals.css';
+import '../styles/settings.css';
 import { InvoicesIndex } from './components/InvoicesIndex.js';
 import { configureSidebar } from './components/sharedSidebar.js';
+import { initializeReactSettings } from '../react/components/SettingsProvider.jsx';
 
 // React imports for Magic UI integration
 import React from 'react';
@@ -27,6 +31,9 @@ const InvoiceManager = {
     console.log('🚀 Initializing Invoices Directory...');
 
     configureSidebar('invoices');
+
+    // Initialize React settings
+    initializeReactSettings();
 
     try {
       // Check authentication
@@ -288,54 +295,31 @@ window.InvoiceManager = InvoiceManager;
 
 async function checkAuthentication() {
   try {
-    // Check localStorage first
-    const storedUser = localStorage.getItem('marine_invoice_user');
-    const storedSession = localStorage.getItem('marine_invoice_session');
+    console.log('🔍 INVOICES: Checking server session authentication...');
 
-    if (!storedUser || !storedSession) {
-      return { valid: false, reason: 'No stored authentication data' };
-    }
+    // Check server session only - NO localStorage fallback
+    const response = await fetch('/api/simple-auth/check', {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Accept': 'application/json' }
+    });
 
-    const user = JSON.parse(storedUser);
-    const session = JSON.parse(storedSession);
+    console.log('📡 INVOICES: Session check response:', response.status);
 
-    // Basic validation
-    if (!user.id || !user.email) {
-      return { valid: false, reason: 'Invalid user data' };
-    }
-
-    // Check session age
-    const sessionAge = Date.now() - session.timestamp;
-    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-
-    if (sessionAge > maxAge) {
-      return { valid: false, reason: 'Session expired' };
-    }
-
-    // Try to validate with server
-    try {
-      const response = await fetch('/api/simple-auth/check', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Accept': 'application/json' }
-      });
-
-      if (response.ok) {
-        const serverAuth = await response.json();
-        if (serverAuth.authenticated) {
-          return { valid: true, user: serverAuth.user || user };
-        }
+    if (response.ok) {
+      const serverAuth = await response.json();
+      if (serverAuth.authenticated && serverAuth.user) {
+        console.log('✅ INVOICES: Server session valid:', serverAuth.user.email);
+        return { valid: true, user: serverAuth.user };
       }
-    } catch (serverError) {
-      console.warn('Server auth check failed, using localStorage:', serverError.message);
     }
 
-    // Fallback to localStorage
-    return { valid: true, user };
+    console.log('🚫 INVOICES: No valid server session found');
+    return { valid: false, reason: 'Server session authentication required' };
 
   } catch (error) {
-    console.error('Authentication check error:', error);
-    return { valid: false, reason: 'Authentication error' };
+    console.error('❌ INVOICES: Authentication check error:', error);
+    return { valid: false, reason: 'Authentication service unavailable' };
   }
 }
 
