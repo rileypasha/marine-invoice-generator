@@ -81,8 +81,8 @@ router.post('/form-login', express.urlencoded({ extended: true }), async (req, r
         redirecting: true
       });
 
-      // Redirect to app
-      res.redirect('/app');
+      // Redirect to invoices page (overview of all invoices)
+      res.redirect('/invoices');
     });
   } catch (error) {
     logger.error({

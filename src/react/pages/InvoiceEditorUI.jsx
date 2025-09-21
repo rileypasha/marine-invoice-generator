@@ -128,7 +128,26 @@ const InvoiceEditorUI = ({
                   </CardHeader>
                   <CardContent>
                     <div id="vessel-form-container">
-                      {/* VesselFormUI will be mounted here */}
+                      {/* Loading skeleton while VesselFormUI is mounting */}
+                      <div className="vessel-loading-placeholder animate-pulse space-y-4">
+                        <div className="space-y-2">
+                          <div className="h-4 bg-muted rounded w-1/4"></div>
+                          <div className="h-10 bg-muted rounded"></div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="h-4 bg-muted rounded w-1/3"></div>
+                          <div className="h-10 bg-muted rounded"></div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="h-4 bg-muted rounded w-1/4"></div>
+                          <div className="h-10 bg-muted rounded"></div>
+                        </div>
+                        <div className="flex gap-2 pt-4">
+                          <div className="h-9 bg-muted rounded w-20"></div>
+                          <div className="h-9 bg-muted rounded w-24"></div>
+                        </div>
+                      </div>
+                      {/* VesselFormUI will be mounted here and replace the placeholder */}
                     </div>
                   </CardContent>
                 </Card>

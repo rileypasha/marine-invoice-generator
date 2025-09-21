@@ -4,81 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Customer Directory - MG Invoices</title>
-
-    <!-- Favicons -->
+    <meta name="description" content="Customer directory and management for Marine Group Invoice Generator">
     <link rel="icon" type="image/png" href="./assets/favicon.png">
     <link rel="apple-touch-icon" href="./assets/favicon.png">
     <link rel="shortcut icon" href="./assets/favicon.png">
-
-    <!-- Meta tags -->
-    <meta name="description" content="Customer directory and management for Marine Group Invoice Generator">
-
-    <!-- CSS handled by webpack via JavaScript imports -->
-
-    <style>
-        /* Page-specific styles */
-        body {
-            background: rgb(24, 24, 27); /* zinc-900 */
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-        }
-
-        .page-container {
-            min-height: 100vh;
-        }
-
-        .page-main {
-            min-height: 100vh;
-            padding: 2rem;
-        }
-    </style>
 </head>
 <body>
-    <div class="app-layout page-container">
-        <div class="sidebar" data-sidebar>
-            <div class="sidebar__header">
-                <div class="sidebar__logo">MG</div>
-            </div>
-
-            <div class="sidebar__nav">
-                <a href="/app" class="sidebar__nav-item sidebar__nav-item--inactive" data-nav="invoices" title="Invoices">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14,2 14,8 20,8"/>
-                    </svg>
-                </a>
-                <a href="/customers" class="sidebar__nav-item sidebar__nav-item--inactive" data-nav="customers" title="Customers">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                        <circle cx="12" cy="7" r="4"/>
-                    </svg>
-                </a>
-                <a href="/vessels" class="sidebar__nav-item sidebar__nav-item--inactive" data-nav="vessels" title="Vessels">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M2 20a2.4 2.4 0 0 0 2 1 2.4 2.4 0 0 0 2-1 2.4 2.4 0 0 1 4 0 2.4 2.4 0 0 0 4 0 2.4 2.4 0 0 1 4 0 2.4 2.4 0 0 0 2 1 2.4 2.4 0 0 0 2-1"/>
-                        <path d="M10 18V6a2 2 0 1 1 4 0v12"/>
-                    </svg>
-                </a>
-                <a href="#" class="sidebar__nav-item sidebar__nav-item--inactive" data-nav="settings" title="Settings">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                    </svg>
-                </a>
-            </div>
-
-            <div class="sidebar__footer">
-                <!-- Footer content removed -->
-            </div>
-        </div>
-
-        <main class="page-main">
-            <div id="customers-page"></div>
-        </main>
-    </div>
-
-    <!-- JavaScript bundle will be injected by webpack -->
+    <!-- React Application Mount Point -->
+    <div id="app"></div>
 </body>
 </html>

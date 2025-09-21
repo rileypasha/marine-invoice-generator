@@ -304,32 +304,39 @@ app.use('/api/change-tracking', changeTrackingRouter);
 
 // Master dashboard UI routes (protected)
 app.get('/master', requireMaster, (req, res) => {
-  // In production, serve from dist; in development, from src
-  const dashboardPath = process.env.NODE_ENV === 'production' 
-    ? path.join(__dirname, '../dist/master/dashboard.html')
-    : path.join(__dirname, '../src/master/dashboard.html');
+  // Serve the webpack-generated React master dashboard
+  const dashboardPath = path.join(__dirname, '../dist/master.html');
   res.sendFile(dashboardPath);
 });
 
-// Master changes view route
+// Master changes view route (still using old files for now)
 app.get('/master/changes', requireMaster, (req, res) => {
-  const changesPath = process.env.NODE_ENV === 'production' 
+  const changesPath = process.env.NODE_ENV === 'production'
     ? path.join(__dirname, '../dist/master/changes.html')
-    : path.join(__dirname, '../src/master/changes.html');
+    : path.join(__dirname, '../src/master-old/changes.html');
   res.sendFile(changesPath);
 });
 
-// Serve master assets - in production from dist, in development from src
-if (process.env.NODE_ENV === 'production') {
-  app.use('/master', express.static(path.join(__dirname, '../dist/master')));
-} else {
-  app.use('/master', express.static(path.join(__dirname, '../src/master')));
-}
+// Master dashboard is now handled by React - no static file serving needed
 
 // Serve app.html for /app route - works in both development and production
 app.get('/app', (req, res) => {
   console.log('Serving app.html for /app route');
   // Always use dist/app.html since that's where the built file exists
+  const appPath = path.join(__dirname, '../dist/app.html');
+  res.sendFile(appPath);
+});
+
+// Serve app.html for /invoice/create route - invoice creation
+app.get('/invoice/create', (req, res) => {
+  console.log('Serving app.html for /invoice/create route');
+  const appPath = path.join(__dirname, '../dist/app.html');
+  res.sendFile(appPath);
+});
+
+// Serve app.html for /invoice/:id/edit route - invoice editing
+app.get('/invoice/:id/edit', (req, res) => {
+  console.log(`Serving app.html for /invoice/${req.params.id}/edit route`);
   const appPath = path.join(__dirname, '../dist/app.html');
   res.sendFile(appPath);
 });

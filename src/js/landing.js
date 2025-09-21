@@ -1,96 +1,64 @@
+/**
+ * Landing Page Entry Point - React-based landing page
+ * Converted from vanilla JS to pure React implementation
+ */
 import '../styles/landing.css';
 import '../styles/auth.css';
 import '../styles/mobile-responsive.css';
-import { UserManager } from './auth/UserManager.js';
-import { AuthModal } from './auth/AuthModal.js';
 
-class LandingPage {
-  constructor() {
-    console.log('🚀 Initializing Landing Page...');
-    
-    // Initialize authentication
-    this.userManager = new UserManager();
-    this.authModal = new AuthModal(this.userManager);
-    
-    // Check if user is already authenticated
-    this.checkAuthentication();
-    
-    // Initialize event listeners
-    this.initEventListeners();
-    
-    console.log('✅ Landing Page initialized');
-  }
-  
-  async checkAuthentication() {
-    try {
-      // Check server authentication status
-      const response = await fetch('/api/auth/me', {
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        const userData = await response.json();
-        console.log('👤 User authenticated via server, redirecting to app...');
-        // Set the user data directly and notify listeners
-        this.userManager.currentUser = userData.user;
-        this.userManager.saveSession(true);
-        this.userManager.notify();
-        this.redirectToApp();
-      } else {
-        // Don't clear localStorage - just show landing page
-        // Users can still have valid localStorage from previous sessions
-        console.log('No server authentication found, showing landing page');
-      }
-    } catch (error) {
-      console.log('Authentication check failed, showing landing page:', error);
-      // Don't clear localStorage on network errors
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import LandingPageUI from '../react/pages/LandingPageUI.jsx';
+import AuthProvider from '../react/context/AuthContext.jsx';
+
+// React app initialization
+function initializeLandingPage() {
+  console.log('🚀 Initializing React Landing Page...');
+
+  try {
+    // Get the container element
+    const container = document.getElementById('landing-page');
+    if (!container) {
+      throw new Error('Landing page container not found');
     }
-  }
-  
-  redirectToApp() {
-    // Redirect to the main application
-    window.location.href = '/app';
-  }
-  
-  initEventListeners() {
-    // Header navigation buttons
-    const signInNavBtn = document.getElementById('sign-in-nav-btn');
-    
-    // System access buttons
-    const getStartedBtn = document.getElementById('get-started-btn');
-    
-    // Sign in buttons (all buttons now show signin)
-    [signInNavBtn, getStartedBtn].forEach(btn => {
-      if (btn) {
-        btn.addEventListener('click', () => {
-          this.showAuthModal('signin');
-        });
-      }
-    });
-    
-    // Listen for successful authentication
-    this.userManager.subscribe((user) => {
-      if (user) {
-        console.log('👤 User authenticated, redirecting to app...');
-        setTimeout(() => {
-          this.redirectToApp();
-        }, 1000); // Small delay to show success state
-      }
-    });
-  }
-  
-  showAuthModal(mode = 'signup') {
-    this.authModal.show(mode);
+
+    // Create React root
+    const root = createRoot(container);
+
+    // Render the landing page with auth context
+    root.render(
+      React.createElement(AuthProvider, {},
+        React.createElement(LandingPageUI)
+      )
+    );
+
+    console.log('✅ React Landing Page initialized successfully');
+
+  } catch (error) {
+    console.error('❌ Failed to initialize React Landing Page:', error);
+
+    // Fallback error display
+    const container = document.getElementById('landing-page');
+    if (container) {
+      container.innerHTML = `
+        <div style="padding: 2rem; text-align: center; color: #ef4444;">
+          <h1>Error Loading Landing Page</h1>
+          <p>Failed to initialize the application. Please refresh the page.</p>
+          <button onclick="window.location.reload()" style="padding: 0.5rem 1rem; margin-top: 1rem; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Reload Page
+          </button>
+        </div>
+      `;
+    }
   }
 }
 
-// Initialize landing page when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('🔥 Landing Page DOM loaded, initializing...');
-  new LandingPage();
-});
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeLandingPage);
+} else {
+  initializeLandingPage();
+}
 
-// Add global error handler
-window.addEventListener('error', (e) => {
-  console.error('Landing Page Error:', e.error);
-});
+// Global exposure for debugging
+window.initializeLandingPage = initializeLandingPage;

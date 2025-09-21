@@ -1,8 +1,4 @@
 import '../styles/main.css';
-import '../styles/enhanced-sidebar.css';
-import '../styles/globals.css';
-import '../styles/settings.css';
-import { VesselsPage } from './components/VesselsPage.js';
 import { configureSidebar } from './components/sharedSidebar.js';
 import { initializeReactSettings } from '../react/components/SettingsProvider.jsx';
 
@@ -13,7 +9,6 @@ import VesselsPageUI from '../react/pages/VesselsPageUI.jsx';
 
 class VesselsApp {
   constructor() {
-    console.log('🏗️ VESSELS DEBUG: VesselsApp constructor started');
     // CRITICAL FIX: Do NOT instantiate UserManager here - it causes localStorage operations
     this.userManager = null; // Will be created AFTER successful authentication
     this.vesselsPage = null;
@@ -25,58 +20,39 @@ class VesselsApp {
     this.totalPages = 1;
     this.totalVessels = 0;
     this.pageSize = 25;
-    console.log('✅ VESSELS DEBUG: VesselsApp constructor completed successfully');
   }
 
   async initialize() {
-    console.log('🚀 VESSELS DEBUG: VesselsApp initialize started');
     try {
-      console.log('🔐 VESSELS DEBUG: About to check authentication...');
       const authResult = await checkAuthentication(); // Use standalone function like invoices.js
 
-      console.log('🔍 VESSELS DEBUG: Authentication result:', authResult);
 
       if (!authResult.valid) {
-        console.log('🚫 VESSELS DEBUG: Authentication failed, redirecting to login...');
         window.location.href = '/working-login';
         return;
       }
 
-      console.log('✅ VESSELS DEBUG: Authentication successful for user:', authResult.user.email);
 
       // CRITICAL FIX: Only create UserManager AFTER successful authentication
-      console.log('🎯 VESSELS DEBUG: Creating UserManager after successful auth...');
       const { UserManager } = await import('./auth/UserManager.js');
       this.userManager = new UserManager();
       this.userManager.currentUser = authResult.user;
       this.userManager.notify();
-      console.log('✅ VESSELS DEBUG: UserManager created and configured');
 
-      console.log('🎨 VESSELS DEBUG: About to create React vessels page...');
       await this.createReactVesselsPage();
-      console.log('✅ VESSELS DEBUG: React vessels page created');
 
-      console.log('👤 VESSELS DEBUG: Initializing auth UI...');
       this.initAuth(authResult.user);
-      console.log('✅ VESSELS DEBUG: Auth UI initialized');
 
-      console.log('🚪 VESSELS DEBUG: Setting up logout handler...');
       this.setupLogoutHandler();
-      console.log('✅ VESSELS DEBUG: Logout handler set up');
 
-      console.log('📱 VESSELS DEBUG: Configuring sidebar...');
       configureSidebar('vessels');
-      console.log('✅ VESSELS DEBUG: Sidebar configured');
 
-      console.log('⚙️ VESSELS DEBUG: Initializing React settings...');
       initializeReactSettings();
-      console.log('✅ VESSELS DEBUG: React settings initialized');
 
-      console.log('🎉 VESSELS DEBUG: VesselsApp initialization completed successfully');
 
     } catch (error) {
-      console.error('❌ VESSELS DEBUG: Failed to initialize VesselsApp:', error);
-      console.error('❌ VESSELS DEBUG: Error stack:', error.stack);
+      console.error('Failed to initialize VesselsApp:', error);
+      console.error('Error stack:', error.stack);
       this.showError('Failed to initialize vessel directory');
     }
   }
@@ -85,7 +61,6 @@ class VesselsApp {
     try {
       // Clean up any existing React root
       if (this.reactRoot) {
-        console.log('🧹 Cleaning up existing React root');
         this.reactRoot.unmount();
         this.reactRoot = null;
       }
@@ -215,16 +190,13 @@ class VesselsApp {
 
     logoutBtn.addEventListener('click', async () => {
       try {
-        console.log('🚪 VESSELS DEBUG: Logout button clicked');
         if (this.userManager) {
-          console.log('🔐 VESSELS DEBUG: Using UserManager logout');
           await this.userManager.logout();
         } else {
-          console.log('🔄 VESSELS DEBUG: No UserManager, redirecting to home');
           window.location.href = '/';
         }
       } catch (error) {
-        console.error('❌ VESSELS DEBUG: Logout failed:', error);
+        console.error('Logout failed:', error);
         this.showError('Failed to logout');
       }
     }, { once: false });
@@ -266,7 +238,6 @@ function bootstrapVesselsApp() {
 // Standalone authentication function (like invoices.js)
 async function checkAuthentication() {
   try {
-    console.log('🔍 VESSELS STANDALONE: Checking server session authentication...');
 
     // Check server session only - NO localStorage fallback
     const response = await fetch('/api/simple-auth/check', {
@@ -275,22 +246,18 @@ async function checkAuthentication() {
       headers: { 'Accept': 'application/json' }
     });
 
-    console.log('📡 VESSELS STANDALONE: Session check response:', response.status);
 
     if (response.ok) {
       const serverAuth = await response.json();
-      console.log('📄 VESSELS STANDALONE: Server response:', serverAuth);
       if (serverAuth.authenticated && serverAuth.user) {
-        console.log('✅ VESSELS STANDALONE: Server session valid:', serverAuth.user.email);
         return { valid: true, user: serverAuth.user };
       }
     }
 
-    console.log('🚫 VESSELS STANDALONE: No valid server session found');
     return { valid: false, reason: 'Server session authentication required' };
 
   } catch (error) {
-    console.error('❌ VESSELS STANDALONE: Authentication check error:', error);
+    console.error('Authentication check error:', error);
     return { valid: false, reason: 'Authentication service unavailable' };
   }
 }

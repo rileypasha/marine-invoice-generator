@@ -4,10 +4,6 @@
  * ✨ MAGIC UI INTEGRATION: React components with Magic UI styling
  */
 import '../styles/main.css';
-import '../styles/enhanced-sidebar.css';
-import '../styles/globals.css';
-import '../styles/settings.css';
-import { CustomersPage } from './components/CustomersPage.js';
 import { configureSidebar } from './components/sharedSidebar.js';
 import { initializeReactSettings } from '../react/components/SettingsProvider.jsx';
 

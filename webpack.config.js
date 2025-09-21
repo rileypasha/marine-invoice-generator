@@ -9,11 +9,13 @@ module.exports = {
     customers: path.resolve(__dirname, 'src/js/customers.js'),
     invoices: path.resolve(__dirname, 'src/js/invoices.js'),
     vessels: path.resolve(__dirname, 'src/js/vessels.js'),
-    'react-test': path.resolve(__dirname, 'src/js/react-test.js')
+    master: path.resolve(__dirname, 'src/js/master.js'),
+    standalone: path.resolve(__dirname, 'src/js/standalone-app.js')
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: '[name].bundle.[contenthash:8].js'
+    filename: '[name].bundle.[contenthash:8].js',
+    publicPath: '/'
   },
   module: {
     rules: [
@@ -84,17 +86,23 @@ module.exports = {
       chunks: ['vessels'],
       favicon: path.resolve(__dirname, 'src/assets/favicon.png')
     }),
-    // React test page (development only)
+    // Master dashboard page (master auth required)
     new HtmlWebpackPlugin({
-      template: path.resolve(__dirname, 'src/react-test.html'),
-      filename: 'react-test.html',
-      chunks: ['react-test'],
+      template: path.resolve(__dirname, 'src/master.html'),
+      filename: 'master.html',
+      chunks: ['master'],
+      favicon: path.resolve(__dirname, 'src/assets/favicon.png')
+    }),
+    // Standalone invoice page (no auth required)
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, 'src/standalone.html'),
+      filename: 'standalone.html',
+      chunks: ['standalone'],
       favicon: path.resolve(__dirname, 'src/assets/favicon.png')
     }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: path.resolve(__dirname, 'src/assets/favicon.png'), to: 'assets/favicon.png' },
-        { from: path.resolve(__dirname, 'src/master'), to: 'master' }
+        { from: path.resolve(__dirname, 'src/assets/favicon.png'), to: 'assets/favicon.png' }
       ]
     })
   ],
@@ -132,6 +140,18 @@ module.exports = {
       },
       {
         context: ['/vessels'],
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        logLevel: 'debug'
+      },
+      {
+        context: ['/invoice'],
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        logLevel: 'debug'
+      },
+      {
+        context: ['/master'],
         target: 'http://localhost:3001',
         changeOrigin: true,
         logLevel: 'debug'

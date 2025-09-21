@@ -15,6 +15,7 @@ import {
   Input,
   Badge
 } from '../components/index.js';
+import InvoicePreviewUI from '../components/forms/InvoicePreviewUI.jsx';
 
 const MasterDashboardUI = ({
   stats = { totalSaved: 0, todayCount: 0, weekTotal: 0 },
@@ -311,13 +312,11 @@ const MasterDashboardUI = ({
               </Button>
             </div>
             <div className="p-4">
-              {/* Invoice preview content would be rendered here */}
-              <div className="text-center py-8">
-                <div className="text-muted-foreground">Invoice preview content</div>
-                <div className="text-sm text-muted-foreground mt-2">
-                  Preview for Invoice ID: {previewInvoiceData.id}
-                </div>
-              </div>
+              <InvoicePreviewUI
+                invoiceData={previewInvoiceData.data || previewInvoiceData.parsedData || {}}
+                user={user}
+                showFullPreview={true}
+              />
             </div>
             <div className="flex items-center justify-end gap-2 p-4 border-t">
               <Button onClick={onExportCsv} variant="outline">

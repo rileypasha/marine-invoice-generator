@@ -3,11 +3,7 @@
  */
 
 import '../styles/main.css';
-import '../styles/enhanced-sidebar.css';
 import '../styles/invoices-page.css';
-import '../styles/globals.css';
-import '../styles/settings.css';
-import { InvoicesIndex } from './components/InvoicesIndex.js';
 import { configureSidebar } from './components/sharedSidebar.js';
 import { initializeReactSettings } from '../react/components/SettingsProvider.jsx';
 
@@ -254,8 +250,8 @@ const InvoiceManager = {
 
   handleAddNew() {
     console.log('Add new invoice');
-    // Navigate to main app for invoice creation
-    window.location.href = '/app';
+    // Navigate to invoice creation page
+    window.location.href = '/invoice/create';
   },
 
   handlePageChange(page) {

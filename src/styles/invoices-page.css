@@ -79,7 +79,6 @@
   text-decoration: none;
   outline: none;
   background-color: rgb(79, 70, 229); /* indigo-600 */
-  color: white;
   box-shadow: 0 4px 14px 0 rgb(79, 70, 229, 0.3);
 }
 
@@ -494,7 +493,6 @@
 
 .btn--primary {
   background-color: rgb(79, 70, 229); /* indigo-600 */
-  color: white;
   border-color: rgb(79, 70, 229);
 }
 
