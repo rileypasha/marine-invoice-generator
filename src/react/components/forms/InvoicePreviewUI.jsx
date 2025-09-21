@@ -18,16 +18,48 @@ const InvoicePreviewUI = ({
   user = null,
   showFullPreview = false
 }) => {
-  const { vessel = {}, customer = {}, services = [], notes = {}, metadata = {} } = invoiceData;
+  // Safely extract data with proper defaults and validation
+  const vessel = invoiceData?.vessel || {};
+  const customer = invoiceData?.customer || {};
+  const scope = invoiceData?.scope || {};
+  const notes = invoiceData?.notes || {};
+  const metadata = invoiceData?.metadata || {};
 
-  // Calculate totals
-  const subtotal = services.reduce((sum, service) => sum + (service.total || 0), 0);
-  const taxRate = metadata.taxRate || 8.75;
-  const taxableAmount = services
-    .filter(service => service.taxStatus === 'taxable')
-    .reduce((sum, service) => sum + (service.total || 0), 0);
-  const taxAmount = (taxableAmount * taxRate) / 100;
-  const total = subtotal + taxAmount;
+  // Get line items from the correct location - support both structures for compatibility
+  const lineItems = Array.isArray(scope?.lineItems) ? scope.lineItems :
+                   Array.isArray(invoiceData?.services) ? invoiceData.services :
+                   Array.isArray(invoiceData?.lineItems) ? invoiceData.lineItems : [];
+
+  // Calculate totals with safe array operations - check scope first, fallback to calculated
+  const scopeSubtotal = scope?.subtotal;
+  const scopeTaxAmount = scope?.taxAmount;
+  const scopeTotal = scope?.total;
+
+  // Calculate from line items if scope totals not available
+  const calculatedSubtotal = lineItems.length > 0
+    ? lineItems.reduce((sum, item) => {
+        // Try different field names that might contain the amount
+        const amount = item?.total || item?.cost || item?.amount || 0;
+        return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+      }, 0)
+    : 0;
+
+  const taxRate = metadata?.taxRate || scope?.taxRate || 8.75;
+  const calculatedTaxableAmount = lineItems.length > 0
+    ? lineItems
+        .filter(item => item?.taxStatus === 'taxable' || item?.taxable !== false)
+        .reduce((sum, item) => {
+          const amount = item?.total || item?.cost || item?.amount || 0;
+          return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+        }, 0)
+    : 0;
+  const calculatedTaxAmount = (calculatedTaxableAmount * taxRate) / 100;
+  const calculatedTotal = calculatedSubtotal + calculatedTaxAmount;
+
+  // Use scope values if available, otherwise use calculated values
+  const subtotal = typeof scopeSubtotal === 'number' ? scopeSubtotal : calculatedSubtotal;
+  const taxAmount = typeof scopeTaxAmount === 'number' ? scopeTaxAmount : calculatedTaxAmount;
+  const total = typeof scopeTotal === 'number' ? scopeTotal : calculatedTotal;
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -41,7 +73,7 @@ const InvoicePreviewUI = ({
     return new Date(dateString).toLocaleDateString();
   };
 
-  if (!vessel.name && !customer.customerName && services.length === 0) {
+  if (!vessel.name && !customer.customerName && lineItems.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         <svg className="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,19 +118,19 @@ const InvoicePreviewUI = ({
             </div>
           </div>
 
-          {/* Services Summary */}
-          {services.length > 0 && (
+          {/* Line Items Summary */}
+          {lineItems.length > 0 && (
             <div className="space-y-2">
-              <div className="font-medium border-b pb-1">Services ({services.length})</div>
-              {services.slice(0, 3).map((service, index) => (
-                <div key={service.id || index} className="flex justify-between text-xs">
-                  <span className="truncate mr-2">{service.jobType}</span>
-                  <span className="font-medium">{formatCurrency(service.total)}</span>
+              <div className="font-medium border-b pb-1">Line Items ({lineItems.length})</div>
+              {lineItems.slice(0, 3).map((item, index) => (
+                <div key={item.id || index} className="flex justify-between text-xs">
+                  <span className="truncate mr-2">{item.jobType || item.description || item.name || 'Service'}</span>
+                  <span className="font-medium">{formatCurrency(item.total || item.cost || item.amount || 0)}</span>
                 </div>
               ))}
-              {services.length > 3 && (
+              {lineItems.length > 3 && (
                 <div className="text-xs text-muted-foreground">
-                  +{services.length - 3} more services
+                  +{lineItems.length - 3} more items
                 </div>
               )}
             </div>
@@ -164,49 +196,113 @@ const InvoicePreviewUI = ({
             </div>
           )}
 
-          {/* Services Table */}
-          {services.length > 0 && (
+          {/* Line Items Table */}
+          {lineItems.length > 0 && (
             <div className="mb-8">
               <h3 className="text-lg font-semibold mb-4">Services Provided</h3>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-1/3">Service</TableHead>
-                    <TableHead className="w-1/2">Description</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="w-1/4">Service</TableHead>
+                    <TableHead className="w-1/3">Description</TableHead>
+                    <TableHead className="text-right">Base Cost</TableHead>
+                    <TableHead className="text-right">Markup</TableHead>
+                    <TableHead className="text-right">Tax</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {services.map((service, index) => (
-                    <TableRow key={service.id || index}>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="font-medium">{service.jobType}</div>
-                          {service.itemType && (
-                            <Badge variant="secondary" className="text-xs">
-                              {service.itemType}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <p className="text-sm">{service.description}</p>
-                          {service.hours && (
-                            <p className="text-xs text-gray-600">
-                              {service.hours} hours @ {formatCurrency(service.rate)}/hr
-                            </p>
-                          )}
-                          {service.quantity && (
-                            <p className="text-xs text-gray-600">Quantity: {service.quantity}</p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(service.total)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {lineItems.map((item, index) => {
+                    // Calculate per-line-item values
+                    const baseCost = parseFloat(item.total || item.cost || item.amount || 0);
+
+                    // Get markup rate and convert from percentage to decimal if needed
+                    // For items with markupRate set to '0' or 0, no markup
+                    if (item.markupRate === '0' || item.markupRate === 0) {
+                      var markupRate = 0;
+                    } else {
+                      // Use item's specific markup rate or fall back to scope markup
+                      // Note: markupRate might be stored as percentage (2.5) or decimal (0.025)
+                      let rawMarkupRate = item.markupRate !== undefined ? item.markupRate : (scope?.markupRate || metadata?.markupRate || '0');
+
+                      // Convert to number and ensure it's in decimal form
+                      var markupRate = parseFloat(rawMarkupRate);
+                      if (markupRate > 1) {
+                        // It's a percentage, convert to decimal
+                        markupRate = markupRate / 100;
+                      }
+                    }
+
+                    const markupAmount = baseCost * markupRate;
+                    const subtotalWithMarkup = baseCost + markupAmount;
+
+                    // Determine if item is taxable - handle special cases and legacy fields
+                    let isTaxable = true; // Default to taxable
+
+                    // Clearance Fee is always non-taxable
+                    if (item.jobType === 'Clearance Fee' ||
+                        (item.description && item.description.includes('Clearance Fee'))) {
+                      isTaxable = false;
+                    }
+                    // Check tax status - look at both item-level and legacy fields
+                    else if (item.taxStatus === 'non-taxable' ||
+                        item.taxStatus === 'exempt' ||
+                        item.isTaxExempt === true ||
+                        item.isTaxable === false) {
+                      isTaxable = false;
+                    }
+                    // For items without explicit tax status, check if they're taxable
+                    else if (item.taxStatus === undefined && item.isTaxable === false) {
+                      isTaxable = false;
+                    }
+
+                    // Calculate tax - tax rate is already in decimal form (0.0875 = 8.75%)
+                    const taxRate = parseFloat(item.taxRate || scope?.taxRate || metadata?.taxRate || 0.0875);
+                    const taxAmount = isTaxable ? subtotalWithMarkup * taxRate : 0;
+
+                    // Final total for this line item
+                    const lineTotal = subtotalWithMarkup + taxAmount;
+
+                    return (
+                      <TableRow key={item.id || index}>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="font-medium">{item.jobType || item.name || item.description || 'Service'}</div>
+                            {(item.itemType || item.type) && (
+                              <Badge variant="secondary" className="text-xs">
+                                {item.itemType || item.type}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p className="text-sm">{item.description || item.details || item.jobType || ''}</p>
+                            {item.hours && (
+                              <p className="text-xs text-gray-600">
+                                {item.hours} hours @ {formatCurrency(item.rate || item.hourlyRate || 0)}/hr
+                              </p>
+                            )}
+                            {item.quantity && (
+                              <p className="text-xs text-gray-600">Quantity: {item.quantity}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(baseCost)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(markupAmount)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(taxAmount)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(lineTotal)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
