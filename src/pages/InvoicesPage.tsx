@@ -168,8 +168,8 @@ const InvoicesPage: React.FC = () => {
   };
 
   const handlePrint = (invoice: Invoice) => {
-    // Navigate to print view or open print dialog
-    navigate(`/invoices/${invoice.id}/print`);
+    // Navigate to invoice view page with print parameter to auto-trigger print
+    navigate(`/invoices/${invoice.id}?print=true`);
   };
 
   const handleAddNew = () => {

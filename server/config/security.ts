@@ -196,7 +196,7 @@ export function getSecurityConfig(): SecurityConfig {
   const configs: Record<string, SecurityConfig> = {
     development: {
       sessionSecret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
-      corsOrigins: ['http://localhost:3000', 'http://localhost:3001'],
+      corsOrigins: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004'],
       trustProxy: false,
     },
     production: {

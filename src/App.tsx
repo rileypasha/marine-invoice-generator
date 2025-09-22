@@ -11,6 +11,7 @@ import Vessels from './pages/Vessels'
 import CreateInvoice from './pages/CreateInvoice'
 import CreateCustomer from './pages/CreateCustomer'
 import CreateVessel from './pages/CreateVessel'
+import InvoiceView from './pages/InvoiceView'
 
 function App() {
   const handleLogin = (credentials: { email: string; password: string }) => {
@@ -99,6 +100,26 @@ function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <CreateVessel />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/invoices/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <CreateInvoice />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/invoices/:id"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <InvoiceView />
                   </MainLayout>
                 </ProtectedRoute>
               }

@@ -297,6 +297,104 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
   }
 });
 
+// PUT /api/v1/invoice/:id - Update existing invoice
+router.put('/:id', async (req: InvoiceRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+  const userId = req.userId!;
+  const invoiceId = req.params.id;
+
+  try {
+    const invoiceData = req.body;
+
+    // Validate invoice data
+    if (!invoiceData.total && !invoiceData.subtotal) {
+      logger.warn('Invalid invoice data', {
+        correlationId,
+        userId,
+        missingFields: {
+          total: !invoiceData.total,
+          subtotal: !invoiceData.subtotal,
+        },
+      });
+
+      return res.status(400).json({
+        code: 'INVALID_INVOICE_DATA',
+        message: 'Missing required fields: total or subtotal is required',
+        correlationId,
+      });
+    }
+
+    // Check if invoice exists and user owns it
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        userId,
+      },
+    });
+
+    if (!existingInvoice) {
+      logger.warn('Invoice not found or access denied', {
+        correlationId,
+        userId,
+        invoiceId,
+      });
+
+      return res.status(404).json({
+        code: 'INVOICE_NOT_FOUND',
+        message: 'Invoice not found or you do not have access to it',
+        correlationId,
+      });
+    }
+
+    // Generate invoice number if not provided (keep existing if available)
+    const invoiceNumber = invoiceData.invoiceNumber || existingInvoice.invoiceNumber || `INV-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+
+    // Update the invoice
+    const updatedInvoice = await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        ...invoiceData,
+        invoiceNumber,
+        status: 'saved', // Always canonical state, never draft
+        userId, // Ensure userId is maintained
+      },
+      include: {
+        customer: { select: { display_name: true, legal_name: true } },
+        vessel: { select: { name: true } },
+      },
+    });
+
+    logger.info('Invoice updated successfully', {
+      correlationId,
+      userId,
+      invoiceId: updatedInvoice.id,
+      total: updatedInvoice.total,
+    });
+
+    res.status(200).json({
+      id: updatedInvoice.id,
+      invoice: updatedInvoice,
+      message: 'Invoice updated successfully',
+      correlationId,
+      action: 'UPDATED',
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to update invoice', {
+      error: error.message,
+      correlationId,
+      userId,
+      invoiceId,
+    });
+
+    res.status(500).json({
+      code: 'UPDATE_FAILED',
+      message: 'Failed to update invoice',
+      correlationId,
+    });
+  }
+});
+
 // DELETE /api/v1/invoice/:id
 router.delete('/:id', async (req: InvoiceRequest, res: Response) => {
   const correlationId = req.correlationId!;
@@ -354,5 +452,6 @@ router.delete('/:id', async (req: InvoiceRequest, res: Response) => {
     });
   }
 });
+
 
 export default router;

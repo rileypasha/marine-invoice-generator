@@ -21,6 +21,13 @@ export {
   TableCaption
 } from './table';
 export { Input } from './input';
+export {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem
+} from './select';
 
 // Additional components needed for forms
 interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
@@ -67,67 +74,6 @@ export const Badge: React.FC<BadgeProps> = ({ children, variant = 'default', cla
   );
 };
 
-interface SelectProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-  value?: string;
-  onValueChange?: (value: string) => void;
-}
-
-export const Select: React.FC<SelectProps> = ({ children, value, onValueChange, ...props }) => {
-  return (
-    <div className="relative" {...props}>
-      {children}
-    </div>
-  );
-};
-
-interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  children: React.ReactNode;
-  className?: string;
-}
-
-export const SelectTrigger: React.FC<SelectTriggerProps> = ({ children, className = '', ...props }) => (
-  <button className={`flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 ${className}`} {...props}>
-    {children}
-    <svg className="h-4 w-4 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      <path d="m6 9 6 6 6-6"/>
-    </svg>
-  </button>
-);
-
-interface SelectValueProps extends React.HTMLAttributes<HTMLSpanElement> {
-  placeholder?: string;
-  className?: string;
-}
-
-export const SelectValue: React.FC<SelectValueProps> = ({ placeholder, className = '', ...props }) => (
-  <span className={`block truncate ${className}`} {...props}>
-    {placeholder}
-  </span>
-);
-
-interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-  className?: string;
-}
-
-export const SelectContent: React.FC<SelectContentProps> = ({ children, className = '', ...props }) => (
-  <div className={`relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md ${className}`} {...props}>
-    {children}
-  </div>
-);
-
-interface SelectItemProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-  value?: string;
-  className?: string;
-}
-
-export const SelectItem: React.FC<SelectItemProps> = ({ children, value, className = '', ...props }) => (
-  <div className={`relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground ${className}`} {...props}>
-    {children}
-  </div>
-);
 
 interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
