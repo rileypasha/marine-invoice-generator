@@ -7,14 +7,14 @@ services:
     plan: starter
     buildCommand: npm install && npm run build:all
     startCommand: npm run start:production
-    postBuildCommand: npm run seed:database
+    postBuildCommand: npm run reset:passwords
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
       - key: BUILD_VERSION
-        value: v1.0.1
+        value: v1.0.2
       - key: SESSION_SECRET
         generateValue: true
       - key: DATABASE_URL

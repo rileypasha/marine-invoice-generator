@@ -259,7 +259,7 @@ router.post('/refresh', csrfProtection, (req: AuthRequest, res: Response) => {
 
   // Extend session
   req.session.expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-  
+
   // Generate new CSRF token
   req.session.csrfToken = generateCsrfToken();
 
@@ -274,6 +274,55 @@ router.post('/refresh', csrfProtection, (req: AuthRequest, res: Response) => {
     sessionExpiry: req.session.expiresAt,
     correlationId,
   });
+});
+
+// GET /api/v1/auth/debug-users - Debug endpoint to list users (development only)
+router.get('/debug-users', async (req: AuthRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+
+  // Only allow in development or with special header
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const debugHeader = req.headers['x-debug-auth'] === 'enable';
+
+  if (!isDevelopment && !debugHeader) {
+    return res.status(404).json({
+      code: 'NOT_FOUND',
+      message: 'Endpoint not found',
+      correlationId,
+    });
+  }
+
+  try {
+    const result = await query(
+      'SELECT id, email, name, role, "createdAt", "updatedAt" FROM "User" ORDER BY "createdAt"'
+    );
+
+    logger.info('Debug users endpoint accessed', {
+      correlationId,
+      userCount: result.rows.length,
+      isDevelopment,
+      debugHeader,
+    });
+
+    res.json({
+      users: result.rows,
+      total: result.rows.length,
+      timestamp: new Date().toISOString(),
+      correlationId,
+    });
+
+  } catch (error: any) {
+    logger.error('Debug users endpoint failed', {
+      error: error.message,
+      correlationId,
+    });
+
+    res.status(500).json({
+      code: 'DEBUG_FAILED',
+      message: 'Failed to retrieve users',
+      correlationId,
+    });
+  }
 });
 
 export default router;

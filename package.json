@@ -24,6 +24,8 @@
     "migrate:remove-drafts:apply": "ts-node scripts/run-draft-migration.ts --apply",
     "migrate:deploy": "npx prisma migrate deploy",
     "seed:database": "ts-node scripts/seed-database.ts",
+    "reset:passwords": "ts-node scripts/reset-user-passwords.ts",
+    "setup:production": "bash scripts/production-setup.sh",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit"
   },

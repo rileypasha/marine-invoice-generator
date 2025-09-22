@@ -10,6 +10,12 @@ interface User {
 
 const DEFAULT_USERS: User[] = [
   {
+    email: 'test@marinegroupbw.com',
+    name: 'Test User',
+    password: 'TestPassword123!',
+    role: 'admin'
+  },
+  {
     email: 'admin@mginvoices.com',
     name: 'Admin User',
     password: 'AdminPassword123!',
