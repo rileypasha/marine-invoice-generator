@@ -23,6 +23,7 @@
     "migrate:remove-drafts": "ts-node scripts/run-draft-migration.ts",
     "migrate:remove-drafts:apply": "ts-node scripts/run-draft-migration.ts --apply",
     "migrate:deploy": "npx prisma migrate deploy",
+    "seed:database": "ts-node scripts/seed-database.ts",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit"
   },
