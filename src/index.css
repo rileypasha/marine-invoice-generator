@@ -36,7 +36,7 @@
   --primary-foreground: #fafafa;
   --sidebar-foreground: #0a0a0a;
   --secondary-foreground: #18181b;
-  --destructive-foreground: #ef4444;
+  --destructive-foreground: #fafafa;
   --sidebar-accent-foreground: #18181b;
   --sidebar-primary-foreground: #fafafa;
 }
@@ -75,7 +75,7 @@
   --primary-foreground: #18181b;
   --sidebar-foreground: #fafafa;
   --secondary-foreground: #fafafa;
-  --destructive-foreground: #ef4444;
+  --destructive-foreground: #fafafa;
   --sidebar-accent-foreground: #fafafa;
   --sidebar-primary-foreground: #fafafa;
 }

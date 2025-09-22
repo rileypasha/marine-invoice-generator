@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './InvoiceView.css';
 
@@ -86,20 +86,33 @@ interface Invoice {
 const InvoiceView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, csrfToken } = useAuth();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Check if we're in preview mode
+  const isPreviewMode = id === 'preview' || location.state?.previewData;
+  const previewData = location.state?.previewData;
+
   useEffect(() => {
-    if (!isAuthenticated || !csrfToken || !id) {
+    // Handle preview mode
+    if (isPreviewMode && previewData) {
+      setInvoice(previewData);
+      setIsLoading(false);
+      return;
+    }
+
+    // Handle regular mode
+    if (!isAuthenticated || !csrfToken || !id || isPreviewMode) {
       setIsLoading(false);
       return;
     }
 
     fetchInvoice();
-  }, [isAuthenticated, csrfToken, id]);
+  }, [isAuthenticated, csrfToken, id, isPreviewMode, previewData]);
 
   // Handle auto-print functionality
   useEffect(() => {
@@ -231,7 +244,11 @@ const InvoiceView: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate('/invoices');
+    if (isPreviewMode) {
+      navigate(-1); // Go back to the create invoice page
+    } else {
+      navigate('/invoices');
+    }
   };
 
   if (isLoading) {
@@ -249,7 +266,7 @@ const InvoiceView: React.FC = () => {
           <h2>Error</h2>
           <p>{error}</p>
           <button onClick={handleBack} className="btn-back">
-            Back to Invoices
+            {isPreviewMode ? 'Back to Create Invoice' : 'Back to Invoices'}
           </button>
         </div>
       </div>
@@ -262,7 +279,7 @@ const InvoiceView: React.FC = () => {
         <div className="error">
           <h2>Invoice Not Found</h2>
           <button onClick={handleBack} className="btn-back">
-            Back to Invoices
+            {isPreviewMode ? 'Back to Create Invoice' : 'Back to Invoices'}
           </button>
         </div>
       </div>
@@ -317,13 +334,13 @@ const InvoiceView: React.FC = () => {
   return (
     <div className="invoice-view-container">
       <div className="invoice-view-header no-print">
-        <h1>Invoice Details</h1>
+        <h1>{isPreviewMode ? 'Invoice Preview' : 'Invoice Details'}</h1>
         <div className="header-actions">
           <button onClick={handlePrint} className="btn-print">
             Print Invoice
           </button>
           <button onClick={handleBack} className="btn-back">
-            Back to Invoices
+            {isPreviewMode ? 'Back to Create Invoice' : 'Back to Invoices'}
           </button>
         </div>
       </div>

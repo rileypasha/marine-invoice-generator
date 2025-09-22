@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -13,8 +13,32 @@ import {
   TableHead,
   TableRow,
   TableCell,
-  Input
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '../components/magic/index';
+import DateRangePicker from '../components/DateRangePicker';
+
+interface Customer {
+  id: string;
+  display_name: string;
+  legal_name?: string;
+}
+
+interface Vessel {
+  id: string;
+  name: string;
+}
+
+interface FilterOptions {
+  dateRange?: { start?: Date; end?: Date };
+  customerId?: string;
+  vesselId?: string;
+  amountRange?: { min?: number; max?: number };
+}
 
 interface Invoice {
   id: string;
@@ -47,6 +71,10 @@ interface InvoicesProps {
   currentPage?: number;
   totalPages?: number;
   onPageChange?: (page: number) => void;
+  filters?: FilterOptions;
+  onFiltersChange?: (filters: FilterOptions) => void;
+  availableCustomers?: Customer[];
+  availableVessels?: Vessel[];
 }
 
 const Invoices: React.FC<InvoicesProps> = ({
@@ -62,9 +90,14 @@ const Invoices: React.FC<InvoicesProps> = ({
   stats = { total: 0, saved: 0, drafts: 0, submitted: 0 },
   currentPage = 1,
   totalPages = 1,
-  onPageChange
+  onPageChange,
+  filters = {},
+  onFiltersChange,
+  availableCustomers = [],
+  availableVessels = []
 }) => {
   const navigate = useNavigate();
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString();
@@ -124,57 +157,121 @@ const Invoices: React.FC<InvoicesProps> = ({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex-1 max-w-sm">
-              <Input
-                placeholder="Search invoices by title, customer, or vessel..."
-                value={searchTerm}
-                onChange={(e) => onSearch?.(e.target.value)}
-                className="w-full"
-              />
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="flex-1 max-w-sm">
+                <Input
+                  placeholder="Search invoices by title, customer, or vessel..."
+                  value={searchTerm}
+                  onChange={(e) => onSearch?.(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setFiltersExpanded(!filtersExpanded)}
+              >
+                {filtersExpanded ? 'Hide Filters' : 'Show Filters'}
+              </Button>
             </div>
+
+            {filtersExpanded && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Date Range</label>
+                  <DateRangePicker
+                    value={filters.dateRange || {}}
+                    onChange={(dateRange) => onFiltersChange?.({ ...filters, dateRange })}
+                    placeholder="Select date range"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Customer</label>
+                  <Select
+                    value={filters.customerId || ''}
+                    onValueChange={(customerId) => onFiltersChange?.({ ...filters, customerId: customerId || undefined })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Customers</SelectItem>
+                      {availableCustomers.map(customer => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.display_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Vessel</label>
+                  <Select
+                    value={filters.vesselId || ''}
+                    onValueChange={(vesselId) => onFiltersChange?.({ ...filters, vesselId: vesselId || undefined })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vessel" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Vessels</SelectItem>
+                      {availableVessels.map(vessel => (
+                        <SelectItem key={vessel.id} value={vessel.id}>
+                          {vessel.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Amount Range</label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Min"
+                      value={filters.amountRange?.min || ''}
+                      onChange={(e) => {
+                        const min = e.target.value ? parseFloat(e.target.value) : undefined;
+                        onFiltersChange?.({
+                          ...filters,
+                          amountRange: { ...filters.amountRange, min }
+                        });
+                      }}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Max"
+                      value={filters.amountRange?.max || ''}
+                      onChange={(e) => {
+                        const max = e.target.value ? parseFloat(e.target.value) : undefined;
+                        onFiltersChange?.({
+                          ...filters,
+                          amountRange: { ...filters.amountRange, max }
+                        });
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 lg:col-span-4 flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      onFiltersChange?.({});
+                    }}
+                  >
+                    Clear All Filters
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <div className="text-sm text-muted-foreground">Total Invoices</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{stats.saved}</div>
-              <div className="text-sm text-muted-foreground">Saved</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">{stats.drafts}</div>
-              <div className="text-sm text-muted-foreground">Drafts</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{stats.submitted}</div>
-              <div className="text-sm text-muted-foreground">Submitted</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Invoices Table */}
       <Card>
@@ -202,7 +299,8 @@ const Invoices: React.FC<InvoicesProps> = ({
                   <TableHead>Customer</TableHead>
                   <TableHead>Vessel</TableHead>
                   <TableHead>Amount</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Created At</TableHead>
+                  <TableHead>Last Modified</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -231,13 +329,11 @@ const Invoices: React.FC<InvoicesProps> = ({
                     <TableCell>
                       {formatCurrency(invoice.total_amount)}
                     </TableCell>
-                    <TableCell>
-                      <div>
-                        <div>{formatDate(invoice.invoice_date)}</div>
-                        <div className="text-sm text-muted-foreground">
-                          Updated {formatDate(invoice.updated_at)}
-                        </div>
-                      </div>
+                    <TableCell className="text-sm text-gray-600">
+                      {formatDate(invoice.invoice_date)}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                      {invoice.updated_at && invoice.updated_at !== invoice.invoice_date ? formatDate(invoice.updated_at) : formatDate(invoice.invoice_date)}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(invoice.status)}

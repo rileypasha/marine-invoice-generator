@@ -12,6 +12,7 @@ import CreateInvoice from './pages/CreateInvoice'
 import CreateCustomer from './pages/CreateCustomer'
 import CreateVessel from './pages/CreateVessel'
 import InvoiceView from './pages/InvoiceView'
+import Settings from './pages/Settings'
 
 function App() {
   const handleLogin = (credentials: { email: string; password: string }) => {
@@ -115,11 +116,31 @@ function App() {
               }
             />
             <Route
+              path="/invoices/preview"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <InvoiceView />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/invoices/:id"
               element={
                 <ProtectedRoute>
                   <MainLayout>
                     <InvoiceView />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Settings />
                   </MainLayout>
                 </ProtectedRoute>
               }

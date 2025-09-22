@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { apiRequest, API_ENDPOINTS } from '../config/api';
 
 interface User {
   id: string;
@@ -38,12 +39,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch('http://localhost:3001/api/v1/auth/login', {
+      const response = await apiRequest(API_ENDPOINTS.AUTH.LOGIN, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
@@ -70,9 +67,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async (): Promise<void> => {
     try {
-      await fetch('http://localhost:3001/api/v1/auth/logout', {
+      await apiRequest(API_ENDPOINTS.AUTH.LOGOUT, {
         method: 'POST',
-        credentials: 'include',
       });
     } catch (error) {
       console.error('Logout error:', error);
@@ -84,9 +80,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const checkAuth = async (): Promise<void> => {
     try {
-      const response = await fetch('http://localhost:3001/api/v1/auth/check', {
+      const response = await apiRequest(API_ENDPOINTS.AUTH.CHECK, {
         method: 'GET',
-        credentials: 'include',
       });
 
       if (response.ok) {

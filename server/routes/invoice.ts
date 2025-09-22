@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { logger } from '../utils/logger';
 // import { generateServerIdempotencyKey } from '../middleware/idempotency'; // Unused import
 import { prisma } from '../db/client';
+import nodemailer from 'nodemailer';
 
 const router = Router();
 
@@ -203,7 +204,7 @@ router.get('/:id', async (req: InvoiceRequest, res: Response) => {
 router.get('/', async (req: InvoiceRequest, res: Response) => {
   const correlationId = req.correlationId!;
   const userId = req.userId!;
-  const { page = 1, limit = 10, status, search } = req.query;
+  const { page = 1, limit = 10, status, search, startDate, endDate, customerId, vesselId, minAmount, maxAmount } = req.query;
 
   try {
     const skip = (Number(page) - 1) * Number(limit);
@@ -225,6 +226,40 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
         { customer: { displayName: { contains: search as string, mode: 'insensitive' } } },
         { vessel: { name: { contains: search as string, mode: 'insensitive' } } },
       ];
+    }
+
+    // Date range filter
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate as string);
+      }
+      if (endDate) {
+        const endDateObj = new Date(endDate as string);
+        endDateObj.setHours(23, 59, 59, 999); // Include the entire end date
+        where.createdAt.lte = endDateObj;
+      }
+    }
+
+    // Customer filter
+    if (customerId) {
+      where.customerId = customerId as string;
+    }
+
+    // Vessel filter
+    if (vesselId) {
+      where.vesselId = vesselId as string;
+    }
+
+    // Amount range filter
+    if (minAmount || maxAmount) {
+      where.total = {};
+      if (minAmount) {
+        where.total.gte = parseFloat(minAmount as string);
+      }
+      if (maxAmount) {
+        where.total.lte = parseFloat(maxAmount as string);
+      }
     }
 
     const [invoices, total] = await Promise.all([
@@ -453,5 +488,121 @@ router.delete('/:id', async (req: InvoiceRequest, res: Response) => {
   }
 });
 
+// POST /api/v1/invoice/email
+router.post('/email', async (req: InvoiceRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+  const userId = req.userId!;
+
+  try {
+    const { invoiceData, emailTo, emailMessage } = req.body;
+
+    // Validate input
+    if (!invoiceData || !emailTo) {
+      logger.warn('Missing required email data', {
+        correlationId,
+        userId,
+        hasInvoiceData: !!invoiceData,
+        hasEmailTo: !!emailTo,
+      });
+      return res.status(400).json({
+        code: 'INVALID_EMAIL_DATA',
+        message: 'Invoice data and email recipient are required',
+        correlationId,
+      });
+    }
+
+    // Create email transporter (using SMTP or configured email service)
+    const transporter = nodemailer.createTransport({
+      // For development, you can use a service like Gmail or a test service
+      // In production, configure this with your actual email service
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    // Prepare email content
+    const vesselName = invoiceData.vessel?.name || 'Unknown Vessel';
+    const customerName = invoiceData.customer?.customerName || 'Unknown Customer';
+    const invoiceTotal = invoiceData.total || 0;
+
+    const emailSubject = `Invoice for ${vesselName} - ${customerName}`;
+
+    const emailBody = `
+      <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #2c5aa0;">Marine Group Invoice</h2>
+
+            <p>Dear ${customerName},</p>
+
+            <p>Please find attached the invoice for services provided for your vessel <strong>${vesselName}</strong>.</p>
+
+            ${emailMessage ? `<p><strong>Message:</strong><br>${emailMessage}</p>` : ''}
+
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: #2c5aa0;">Invoice Summary</h3>
+              <p><strong>Vessel:</strong> ${vesselName}</p>
+              <p><strong>Customer:</strong> ${customerName}</p>
+              <p><strong>Total Amount:</strong> $${invoiceTotal.toFixed(2)}</p>
+              <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+
+            <p>If you have any questions about this invoice, please don't hesitate to contact us.</p>
+
+            <p>Thank you for your business!</p>
+
+            <p style="margin-top: 30px;">
+              Best regards,<br>
+              Marine Group Team
+            </p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Send email
+    const mailOptions = {
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: emailTo,
+      subject: emailSubject,
+      html: emailBody,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    logger.info('Invoice email sent successfully', {
+      correlationId,
+      userId,
+      emailTo,
+      vesselName,
+      customerName,
+      invoiceTotal,
+    });
+
+    res.json({
+      success: true,
+      message: 'Invoice email sent successfully',
+      correlationId,
+    });
+
+  } catch (error) {
+    logger.error('Failed to send invoice email', {
+      correlationId,
+      userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    res.status(500).json({
+      code: 'EMAIL_SEND_FAILED',
+      message: 'Failed to send invoice email',
+      correlationId,
+    });
+  }
+});
 
 export default router;

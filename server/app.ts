@@ -1,6 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import compression from 'compression';
+import path from 'path';
 import { configureSecurity, getSecurityConfig } from './config/security';
 import { attachCorrelationId, requireAuth, optionalAuth } from './middleware/auth';
 import { ensureCsrfToken, csrfProtection, getCsrfToken, rateLimitCsrfGeneration, getCsrfRateLimitStats } from './middleware/csrf';
@@ -12,6 +13,7 @@ import invoiceRoutes from './routes/invoice';
 import authRoutes from './routes/auth';
 import customerRoutes from './routes/customers';
 import vesselRoutes from './routes/vessels';
+import geoRoutes from './routes/geo';
 
 /**
  * Enhanced compression middleware with intelligent content detection
@@ -167,6 +169,11 @@ app.use('/api/v1/vessels',
   vesselRoutes
 );
 
+app.use('/api/geo',
+  requireAuth,
+  geoRoutes
+);
+
 // API 404 handler - ensures API routes return JSON errors, not HTML pages
 app.use('/api/*', (req: any, res: any) => {
   const correlationId = req.correlationId || 'api_404';
@@ -185,18 +192,35 @@ app.use('/api/*', (req: any, res: any) => {
   });
 });
 
-// Serve static files
-app.use(express.static('.', {
-  index: 'index.html',
-  setHeaders: (res, path) => {
-    // Cache static assets for 1 hour, HTML for 5 minutes
-    if (path.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
-    } else if (path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
-      res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour
+// Serve static files from built React app
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+if (!isDevelopment) {
+  // In production, serve the built React app
+  app.use(express.static(path.join(__dirname, '../dist'), {
+    setHeaders: (res, filePath) => {
+      // Cache static assets for 1 year, HTML for 5 minutes
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
+      } else if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+      }
     }
-  }
-}));
+  }));
+} else {
+  // In development, serve from the current directory (for any non-API routes)
+  app.use(express.static('.', {
+    index: 'index.html',
+    setHeaders: (res, filePath) => {
+      // Cache static assets for 1 hour, HTML for 5 minutes
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
+      } else if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
+        res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour
+      }
+    }
+  }));
+}
 
 // Error handling middleware
 app.use((err: any, req: any, res: any, _next: any) => {
@@ -221,15 +245,23 @@ app.use((err: any, req: any, res: any, _next: any) => {
   });
 });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    code: 'NOT_FOUND',
-    message: 'The requested resource was not found',
-    path: req.path,
-    correlationId: (req as any).correlationId,
+// Client-side routing support for React app
+if (!isDevelopment) {
+  app.get('*', (req, res) => {
+    // Serve React app for all non-API routes
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
   });
-});
+} else {
+  // 404 handler for development
+  app.use((req, res) => {
+    res.status(404).json({
+      code: 'NOT_FOUND',
+      message: 'The requested resource was not found',
+      path: req.path,
+      correlationId: (req as any).correlationId,
+    });
+  });
+}
 
 // Graceful shutdown
 let server: any;

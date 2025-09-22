@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, Eye, Plus, User, ArrowLeft } from 'lucide-react';
+import { Save, Plus, User, ArrowLeft } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
+import AddressAutocomplete from '../components/AddressAutocomplete';
 import {
   Select,
   SelectContent,
@@ -21,16 +22,7 @@ interface Customer {
   customerEmail: string;
   customerPhone: string;
   customerAddress: string;
-  estimatorName: string;
   contactName: string;
-}
-
-interface LinkedCustomer {
-  id: string;
-  company_name?: string;
-  display_name?: string;
-  email?: string;
-  phone?: string;
 }
 
 const CreateCustomer: React.FC = () => {
@@ -40,28 +32,13 @@ const CreateCustomer: React.FC = () => {
     customerEmail: '',
     customerPhone: '',
     customerAddress: '',
-    estimatorName: '',
     contactName: '',
     id: null
   });
-
-  const [showCustomerSelector, setShowCustomerSelector] = useState(false);
-  const [linkedCustomer, setLinkedCustomer] = useState<LinkedCustomer | null>(null);
-  const [availableCustomers, setAvailableCustomers] = useState<LinkedCustomer[]>([]);
   const [emailError, setEmailError] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load available customers on component mount
-  useEffect(() => {
-    // In a real app, this would fetch from your API
-    // For now, we'll use mock data
-    setAvailableCustomers([
-      { id: '1', company_name: 'Marine Services Inc', email: 'contact@marineservices.com', phone: '(555) 123-4567' },
-      { id: '2', company_name: 'Harbor Logistics', email: 'info@harborlogistics.com', phone: '(555) 987-6543' },
-      { id: '3', display_name: 'Captain John Smith', email: 'john@example.com', phone: '(555) 456-7890' }
-    ]);
-  }, []);
 
   const handleInputChange = (field: keyof Customer, value: string) => {
     setCustomerData(prev => ({
@@ -70,31 +47,6 @@ const CreateCustomer: React.FC = () => {
     }));
   };
 
-  const handleCustomerLink = (customerId: string) => {
-    const customer = availableCustomers.find(c => c.id === customerId);
-    if (customer) {
-      setLinkedCustomer(customer);
-      // Auto-fill customer data from linked customer
-      setCustomerData(prev => ({
-        ...prev,
-        customerName: customer.company_name || customer.display_name || '',
-        customerEmail: customer.email || '',
-        customerPhone: customer.phone || ''
-      }));
-    }
-    setShowCustomerSelector(false);
-  };
-
-  const handleCustomerUnlink = () => {
-    setLinkedCustomer(null);
-    // Clear auto-filled data
-    setCustomerData(prev => ({
-      ...prev,
-      customerName: '',
-      customerEmail: '',
-      customerPhone: ''
-    }));
-  };
 
   // Email validation
   const validateEmail = (email: string): boolean => {
@@ -154,9 +106,31 @@ const CreateCustomer: React.FC = () => {
     }
   };
 
-  const handlePreview = () => {
-    console.log('Preview customer:', customerData);
+  const handleSaveAndNew = async () => {
+    setIsLoading(true);
+    try {
+      // In a real app, this would save to your API
+      console.log('Saving customer:', customerData);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Reset form for new customer
+      setCustomerData({
+        customerName: '',
+        customerEmail: '',
+        customerPhone: '',
+        customerAddress: '',
+        contactName: '',
+        id: null
+      });
+      setEmailError('');
+      setPhoneError('');
+    } catch (error) {
+      console.error('Error saving customer:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
 
   const handleNew = () => {
     setCustomerData({
@@ -164,11 +138,9 @@ const CreateCustomer: React.FC = () => {
       customerEmail: '',
       customerPhone: '',
       customerAddress: '',
-      estimatorName: '',
       contactName: '',
       id: null
     });
-    setLinkedCustomer(null);
     setEmailError('');
     setPhoneError('');
   };
@@ -196,10 +168,6 @@ const CreateCustomer: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <Button variant="outline" onClick={handlePreview} disabled={!isFormValid}>
-              <Eye className="h-4 w-4 mr-2" />
-              Preview
-            </Button>
             <Button variant="outline" onClick={handleNew}>
               <Plus className="h-4 w-4 mr-2" />
               New
@@ -207,6 +175,10 @@ const CreateCustomer: React.FC = () => {
             <Button onClick={handleSave} disabled={!isFormValid || isLoading}>
               <Save className="h-4 w-4 mr-2" />
               {isLoading ? 'Saving...' : 'Save Customer'}
+            </Button>
+            <Button onClick={handleSaveAndNew} disabled={!isFormValid || isLoading}>
+              <Save className="h-4 w-4 mr-2" />
+              Save & New
             </Button>
           </div>
         </div>
@@ -224,116 +196,13 @@ const CreateCustomer: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Customer Selector Section */}
-              <div className="border rounded-lg p-4 bg-muted/50">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h4 className="text-sm font-medium">Link to Existing Customer</h4>
-                    <p className="text-xs text-muted-foreground">
-                      Auto-fill details from your customer database
-                    </p>
-                  </div>
-                  {linkedCustomer ? (
-                    <Badge variant="secondary" className="text-xs">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                      </svg>
-                      Linked to {linkedCustomer.company_name || linkedCustomer.display_name}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs">
-                      Not linked
-                    </Badge>
-                  )}
-                </div>
-
-                {linkedCustomer ? (
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm">
-                      <div className="font-medium">{linkedCustomer.company_name || linkedCustomer.display_name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {linkedCustomer.email && linkedCustomer.email}
-                        {linkedCustomer.email && linkedCustomer.phone && ' • '}
-                        {linkedCustomer.phone && linkedCustomer.phone}
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCustomerUnlink}
-                    >
-                      Unlink
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {showCustomerSelector ? (
-                      <div className="space-y-2">
-                        <Select onValueChange={handleCustomerLink}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choose a customer to link..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableCustomers.map((customer) => (
-                              <SelectItem key={customer.id} value={customer.id}>
-                                <div className="flex flex-col">
-                                  <span className="font-medium">
-                                    {customer.company_name || customer.display_name}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {customer.email}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowCustomerSelector(false)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowCustomerSelector(true)}
-                        disabled={isLoading || availableCustomers.length === 0}
-                      >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                        </svg>
-                        Link Existing Customer
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
 
               {/* Customer Details Form */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Estimator Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="estimator-name">Estimator Name</Label>
-                  <Input
-                    id="estimator-name"
-                    type="text"
-                    placeholder="Who is creating this estimate?"
-                    value={customerData.estimatorName}
-                    onChange={(e) => handleInputChange('estimatorName', e.target.value)}
-                    disabled={isLoading}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    The person preparing this invoice
-                  </p>
-                </div>
 
-                {/* Contact Name */}
+                {/* Customer Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="contact-name">Contact Name</Label>
+                  <Label htmlFor="contact-name">Customer Name</Label>
                   <Input
                     id="contact-name"
                     type="text"
@@ -344,9 +213,9 @@ const CreateCustomer: React.FC = () => {
                   />
                 </div>
 
-                {/* Customer Name */}
+                {/* Company Name */}
                 <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="customer-name">Customer/Company Name *</Label>
+                  <Label htmlFor="customer-name">Company Name *</Label>
                   <Input
                     id="customer-name"
                     type="text"
@@ -396,17 +265,15 @@ const CreateCustomer: React.FC = () => {
                 {/* Customer Address */}
                 <div className="md:col-span-2 space-y-2">
                   <Label htmlFor="customer-address">Address</Label>
-                  <Textarea
-                    id="customer-address"
-                    placeholder="Enter customer address (street, city, state, zip)"
+                  <AddressAutocomplete
                     value={customerData.customerAddress}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('customerAddress', e.target.value)}
+                    onChange={(value) => handleInputChange('customerAddress', value)}
+                    placeholder="Enter customer address (street, city, state, zip)"
                     disabled={isLoading}
-                    rows={3}
-                    className="resize-none"
+                    className="min-h-[80px] resize-none"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Full mailing address for the customer
+                    Full mailing address for the customer. Start typing to see address suggestions.
                   </p>
                 </div>
               </div>

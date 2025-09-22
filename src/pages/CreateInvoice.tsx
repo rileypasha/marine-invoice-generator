@@ -18,12 +18,24 @@ import {
   SelectContent,
   SelectItem
 } from '../components/magic/index';
+import jsPDF from 'jspdf';
 
 interface Vessel {
   name: string;
   weight: string;
   beam: string;
   id?: string;
+}
+
+interface DatabaseVessel {
+  id: string;
+  name: string;
+  registration_number?: string;
+  length_ft?: number;
+  beam_ft?: number;
+  weight_tons?: number;
+  home_port?: string;
+  owner_name?: string;
 }
 
 interface Customer {
@@ -93,6 +105,18 @@ const CreateInvoice: React.FC = () => {
   const [isFetchingData, setIsFetchingData] = useState(isEditMode);
   const [activeTab, setActiveTab] = useState('vessel');
   const [error, setError] = useState<string | null>(null);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [emailRecipient, setEmailRecipient] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
+  const [isEmailSending, setIsEmailSending] = useState(false);
+  const [isWeightFocused, setIsWeightFocused] = useState(false);
+  const [isBeamFocused, setIsBeamFocused] = useState(false);
+
+  // Vessel linking state
+  const [availableVessels, setAvailableVessels] = useState<DatabaseVessel[]>([]);
+  const [isLoadingVessels, setIsLoadingVessels] = useState(false);
+  const [selectedVesselId, setSelectedVesselId] = useState<string>('');
+  const [vesselSearchQuery, setVesselSearchQuery] = useState('');
 
   // Fetch existing invoice data when in edit mode
   useEffect(() => {
@@ -233,11 +257,70 @@ const CreateInvoice: React.FC = () => {
   }, [invoiceData.vessel.weight]);
 
   const handleVesselChange = (field: keyof Vessel, value: string) => {
+    // Strip suffixes before storing the value
+    let cleanValue = value;
+    if (field === 'weight') {
+      cleanValue = value.replace(' tons', '').trim();
+    } else if (field === 'beam') {
+      cleanValue = value.replace(' ft', '').trim();
+    }
+
     setInvoiceData(prev => ({
       ...prev,
-      vessel: { ...prev.vessel, [field]: value }
+      vessel: { ...prev.vessel, [field]: cleanValue }
     }));
     setHasUnsavedChanges(true);
+
+    // Clear vessel link when manually editing fields
+    if (selectedVesselId) {
+      setSelectedVesselId('');
+    }
+  };
+
+  // Helper function to format value with suffix for display
+  const formatWithSuffix = (value: string, suffix: string) => {
+    if (!value || value.trim() === '') return '';
+    const cleanValue = value.replace(suffix, '').trim();
+    return cleanValue ? cleanValue + suffix : '';
+  };
+
+  // Helper function to remove suffix for editing
+  const stripSuffix = (value: string, suffix: string) => {
+    if (!value) return '';
+    return value.replace(suffix, '').trim();
+  };
+
+  // Function to search vessels
+  const searchVessels = async (query: string) => {
+    if (!isAuthenticated || !csrfToken || query.length < 2) {
+      setAvailableVessels([]);
+      return;
+    }
+
+    setIsLoadingVessels(true);
+    try {
+      const response = await fetch(`/api/v1/vessels/search?query=${encodeURIComponent(query)}&limit=10`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableVessels(data.vessels || []);
+      } else {
+        console.error('Failed to search vessels:', response.statusText);
+        setAvailableVessels([]);
+      }
+    } catch (error) {
+      console.error('Error searching vessels:', error);
+      setAvailableVessels([]);
+    } finally {
+      setIsLoadingVessels(false);
+    }
   };
 
   const handleCustomerChange = (field: keyof Customer, value: string) => {
@@ -434,6 +517,46 @@ const CreateInvoice: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
+  // Form validation function to check required fields
+  const getFormValidation = () => {
+    const missingFields = [];
+
+    // Check vessel fields
+    if (!invoiceData.vessel.name?.trim()) {
+      missingFields.push("Vessel Name");
+    }
+    if (!invoiceData.vessel.weight?.trim() || parseFloat(invoiceData.vessel.weight) <= 0) {
+      missingFields.push("Vessel Weight");
+    }
+
+    // Check customer fields
+    if (!invoiceData.customer.customerName?.trim()) {
+      missingFields.push("Customer Name");
+    }
+
+    // Check services - at least one service with description and cost/rate
+    const hasValidService = invoiceData.services.some(service => {
+      const hasDescription = service.description?.trim();
+      const hasCost = service.total > 0 || service.rate > 0 ||
+                     (service.manualCost && service.manualCost > 0) ||
+                     ((service.laborHours || 0) > 0 || (service.otHours || 0) > 0);
+      return hasDescription && hasCost;
+    });
+
+    if (!hasValidService) {
+      missingFields.push("At least one service");
+    }
+
+    return {
+      isComplete: missingFields.length === 0,
+      missingFields,
+      completedCount: 4 - missingFields.length,
+      totalRequired: 4
+    };
+  };
+
+  const formValidation = getFormValidation();
+
   const handleSave = async () => {
     if (!isAuthenticated || !csrfToken) {
       setError('Please log in to save invoices');
@@ -449,6 +572,7 @@ const CreateInvoice: React.FC = () => {
 
       const payload = {
         title: invoiceData.metadata.title || `Invoice for ${invoiceData.vessel.name}`,
+        vesselId: invoiceData.vessel.id || null,
         vesselName: invoiceData.vessel.name,
         vesselWeight: parseFloat(invoiceData.vessel.weight) || 0,
         vesselBeam: parseFloat(invoiceData.vessel.beam) || 0,
@@ -519,7 +643,169 @@ const CreateInvoice: React.FC = () => {
   };
 
   const handlePreview = () => {
-    console.log('Preview invoice:', invoiceData);
+    // Calculate totals for preview
+    const calculatedServices = invoiceData.services.map(service => {
+      const baseCost = calculateLineItemCost(service);
+      const costWithMarkup = applyMarkup(baseCost, service);
+      const taxAmount = calculateTax(service, costWithMarkup);
+      return {
+        ...service,
+        cost: baseCost,
+        markupAmount: costWithMarkup - baseCost,
+        taxAmount,
+        total: costWithMarkup + taxAmount
+      };
+    });
+
+    const subtotal = calculatedServices.reduce((sum, service) => sum + (service.total - service.taxAmount), 0);
+    const totalTax = calculatedServices.reduce((sum, service) => sum + service.taxAmount, 0);
+    const finalTotal = subtotal + totalTax;
+    const baseCost = calculatedServices.reduce((sum, service) => sum + service.cost, 0);
+    const grossProfit = subtotal - baseCost;
+    const profitPercent = baseCost > 0 ? (grossProfit / baseCost) * 100 : 0;
+
+    // Create preview data structure matching the invoice format
+    const previewData = {
+      previewMode: true,
+      id: 'preview',
+      invoiceNumber: `PREVIEW-${Date.now().toString().slice(-6)}`,
+      title: invoiceData.metadata.title || `Invoice for ${invoiceData.vessel.name}`,
+      status: 'draft',
+      total: finalTotal,
+      subtotal,
+      taxAmount: totalTax,
+      grossProfit,
+      profitPercent,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      savedAt: new Date().toISOString(),
+      userName: invoiceData.customer.estimatorName || 'Current User',
+      vesselId: invoiceData.vessel.id || null,
+      vesselName: invoiceData.vessel.name,
+      vesselWeight: parseFloat(invoiceData.vessel.weight) || 0,
+      vesselBeam: parseFloat(invoiceData.vessel.beam) || 0,
+      customerName: invoiceData.customer.customerName,
+      customerEmail: invoiceData.customer.customerEmail,
+      customerPhone: invoiceData.customer.customerPhone,
+      notes: invoiceData.notes,
+      parsedData: {
+        vessel: {
+          name: invoiceData.vessel.name,
+          weight: parseFloat(invoiceData.vessel.weight) || 0,
+          beam: parseFloat(invoiceData.vessel.beam) || 0
+        },
+        customer: {
+          customerName: invoiceData.customer.customerName,
+          customerEmail: invoiceData.customer.customerEmail,
+          customerPhone: invoiceData.customer.customerPhone,
+          customerAddress: invoiceData.customer.customerAddress
+        },
+        scope: {
+          lineItems: calculatedServices,
+          subtotal,
+          taxAmount: totalTax,
+          total: finalTotal
+        }
+      }
+    };
+
+    // Navigate to preview with the calculated data
+    navigate('/invoices/preview', {
+      state: { previewData }
+    });
+  };
+
+  const handleSaveAndNew = async () => {
+    // Check if form is valid before saving
+    if (!formValidation.isComplete) {
+      setError(`Please complete required fields: ${formValidation.missingFields.join(", ")}`);
+      return;
+    }
+
+    if (!isAuthenticated || !csrfToken) {
+      setError('Please log in to save invoices');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const url = isEditMode ? `/api/v1/invoice/${id}` : '/api/v1/invoice/save';
+      const method = isEditMode ? 'PUT' : 'POST';
+
+      const payload = {
+        title: invoiceData.metadata.title || `Invoice for ${invoiceData.vessel.name}`,
+        vesselId: invoiceData.vessel.id || null,
+        vesselName: invoiceData.vessel.name,
+        vesselWeight: parseFloat(invoiceData.vessel.weight) || 0,
+        vesselBeam: parseFloat(invoiceData.vessel.beam) || 0,
+        customerName: invoiceData.customer.customerName,
+        customerEmail: invoiceData.customer.customerEmail,
+        customerPhone: invoiceData.customer.customerPhone,
+        notes: invoiceData.notes,
+        // Calculate totals
+        subtotal: invoiceData.services.reduce((sum, service) => sum + service.total, 0),
+        total: invoiceData.services.reduce((sum, service) => sum + service.total, 0) +
+               (invoiceData.metadata.taxRate ?
+                (invoiceData.services.reduce((sum, service) => sum + service.total, 0) * invoiceData.metadata.taxRate / 100) : 0),
+        parsedData: {
+          vessel: {
+            name: invoiceData.vessel.name,
+            weight: parseFloat(invoiceData.vessel.weight) || 0,
+            beam: parseFloat(invoiceData.vessel.beam) || 0
+          },
+          customer: {
+            customerName: invoiceData.customer.customerName,
+            customerEmail: invoiceData.customer.customerEmail,
+            customerPhone: invoiceData.customer.customerPhone,
+            customerAddress: invoiceData.customer.customerAddress
+          },
+          scope: {
+            lineItems: invoiceData.services.map(service => ({
+              description: service.description,
+              quantity: service.quantity,
+              rate: service.rate,
+              cost: service.total
+            })),
+            taxRate: invoiceData.metadata.taxRate,
+            subtotal: invoiceData.services.reduce((sum, service) => sum + service.total, 0),
+            total: invoiceData.services.reduce((sum, service) => sum + service.total, 0) +
+                   (invoiceData.metadata.taxRate ?
+                    (invoiceData.services.reduce((sum, service) => sum + service.total, 0) * invoiceData.metadata.taxRate / 100) : 0)
+          }
+        }
+      };
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to ${isEditMode ? 'update' : 'save'} invoice`);
+      }
+
+      const result = await response.json();
+
+      // Instead of navigating, clear the form for new invoice
+      handleNewInvoice();
+
+      // Clear any errors
+      setError(null);
+
+    } catch (error: any) {
+      console.error('Error saving invoice:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleNewInvoice = () => {
@@ -541,15 +827,369 @@ const CreateInvoice: React.FC = () => {
   };
 
   const handlePrint = () => {
-    console.log('Print invoice');
+    // Calculate totals for print preview
+    const calculatedServices = invoiceData.services.map(service => {
+      const baseCost = calculateLineItemCost(service);
+      const costWithMarkup = applyMarkup(baseCost, service);
+      const taxAmount = calculateTax(service, costWithMarkup);
+      return {
+        ...service,
+        cost: baseCost,
+        markupAmount: costWithMarkup - baseCost,
+        taxAmount,
+        total: costWithMarkup + taxAmount
+      };
+    });
+
+    const subtotal = calculatedServices.reduce((sum, service) => sum + (service.total - service.taxAmount), 0);
+    const totalTax = calculatedServices.reduce((sum, service) => sum + service.taxAmount, 0);
+    const finalTotal = subtotal + totalTax;
+    const baseCost = calculatedServices.reduce((sum, service) => sum + service.cost, 0);
+    const grossProfit = subtotal - baseCost;
+    const profitPercent = baseCost > 0 ? (grossProfit / baseCost) * 100 : 0;
+
+    // Create print data structure
+    const printData = {
+      previewMode: true,
+      id: 'print',
+      invoiceNumber: `PRINT-${Date.now().toString().slice(-6)}`,
+      title: invoiceData.metadata.title || `Invoice for ${invoiceData.vessel.name}`,
+      status: 'draft',
+      total: finalTotal,
+      subtotal,
+      taxAmount: totalTax,
+      grossProfit,
+      profitPercent,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      savedAt: new Date().toISOString(),
+      userName: invoiceData.customer.estimatorName || 'Current User',
+      vesselId: invoiceData.vessel.id || null,
+      vesselName: invoiceData.vessel.name,
+      vesselWeight: parseFloat(invoiceData.vessel.weight) || 0,
+      vesselBeam: parseFloat(invoiceData.vessel.beam) || 0,
+      customerName: invoiceData.customer.customerName,
+      customerEmail: invoiceData.customer.customerEmail,
+      customerPhone: invoiceData.customer.customerPhone,
+      notes: invoiceData.notes,
+      parsedData: {
+        vessel: {
+          name: invoiceData.vessel.name,
+          weight: parseFloat(invoiceData.vessel.weight) || 0,
+          beam: parseFloat(invoiceData.vessel.beam) || 0
+        },
+        customer: {
+          customerName: invoiceData.customer.customerName,
+          customerEmail: invoiceData.customer.customerEmail,
+          customerPhone: invoiceData.customer.customerPhone,
+          customerAddress: invoiceData.customer.customerAddress
+        },
+        scope: {
+          lineItems: calculatedServices,
+          subtotal,
+          taxAmount: totalTax,
+          total: finalTotal
+        }
+      }
+    };
+
+    // Navigate to preview with print parameter
+    navigate('/invoices/preview?print=true', {
+      state: { previewData: printData }
+    });
   };
 
   const handleExportPDF = () => {
-    console.log('Export PDF');
+    // Calculate totals for PDF export
+    const calculatedServices = invoiceData.services.map(service => {
+      const baseCost = calculateLineItemCost(service);
+      const costWithMarkup = applyMarkup(baseCost, service);
+      const taxAmount = calculateTax(service, costWithMarkup);
+      return {
+        ...service,
+        cost: baseCost,
+        markupAmount: costWithMarkup - baseCost,
+        taxAmount,
+        total: costWithMarkup + taxAmount
+      };
+    });
+
+    const subtotal = calculatedServices.reduce((sum, service) => sum + (service.total - service.taxAmount), 0);
+    const totalTax = calculatedServices.reduce((sum, service) => sum + service.taxAmount, 0);
+    const finalTotal = subtotal + totalTax;
+    const baseCost = calculatedServices.reduce((sum, service) => sum + service.cost, 0);
+    const grossProfit = subtotal - baseCost;
+    const profitPercent = baseCost > 0 ? (grossProfit / baseCost) * 100 : 0;
+
+    // Create PDF
+    const pdf = new jsPDF();
+
+    // Set font
+    pdf.setFont('helvetica');
+
+    // Header
+    pdf.setFontSize(20);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('Marine Group', 20, 30);
+
+    pdf.setFontSize(16);
+    pdf.text('Invoice Request Form', 20, 45);
+
+    pdf.setFontSize(12);
+    pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, 60);
+    pdf.text(`Invoice #: INV-${Date.now().toString().slice(-6)}`, 20, 70);
+
+    // Vessel Information
+    pdf.setFontSize(14);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('Vessel Details', 20, 90);
+
+    pdf.setFontSize(11);
+    pdf.text(`Vessel: ${invoiceData.vessel.name || 'N/A'}`, 20, 105);
+    pdf.text(`Weight: ${invoiceData.vessel.weight || 'N/A'} tons`, 20, 115);
+    pdf.text(`Length: ${invoiceData.vessel.beam || 'N/A'} ft`, 20, 125);
+
+    // Customer Information
+    pdf.setFontSize(14);
+    pdf.text('Customer Information', 20, 145);
+
+    pdf.setFontSize(11);
+    pdf.text(`Customer: ${invoiceData.customer.customerName || 'N/A'}`, 20, 160);
+    pdf.text(`Email: ${invoiceData.customer.customerEmail || 'N/A'}`, 20, 170);
+    pdf.text(`Phone: ${invoiceData.customer.customerPhone || 'N/A'}`, 20, 180);
+
+    // Services Table
+    let yPos = 200;
+    pdf.setFontSize(14);
+    pdf.text('Services', 20, yPos);
+    yPos += 15;
+
+    // Table headers
+    pdf.setFontSize(10);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('Description', 20, yPos);
+    pdf.text('Type', 80, yPos);
+    pdf.text('Cost', 120, yPos);
+    pdf.text('Markup', 140, yPos);
+    pdf.text('Tax', 160, yPos);
+    pdf.text('Total', 175, yPos);
+
+    // Draw header line
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(20, yPos + 2, 190, yPos + 2);
+    yPos += 10;
+
+    // Service rows
+    pdf.setTextColor(0, 0, 0);
+    calculatedServices.forEach((service, index) => {
+      const description = (service.description || '').substring(0, 25);
+      const type = (service.jobType || service.itemType || '').substring(0, 15);
+
+      pdf.text(description, 20, yPos);
+      pdf.text(type, 80, yPos);
+      pdf.text(`$${service.cost.toFixed(2)}`, 120, yPos);
+      pdf.text(`$${service.markupAmount.toFixed(2)}`, 140, yPos);
+      pdf.text(`$${service.taxAmount.toFixed(2)}`, 160, yPos);
+      pdf.text(`$${service.total.toFixed(2)}`, 175, yPos);
+
+      yPos += 10;
+
+      // Check if we need a new page
+      if (yPos > 270) {
+        pdf.addPage();
+        yPos = 30;
+      }
+    });
+
+    // Totals section
+    yPos += 10;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(120, yPos, 190, yPos);
+    yPos += 10;
+
+    pdf.setFontSize(11);
+    pdf.text(`Subtotal: $${subtotal.toFixed(2)}`, 140, yPos);
+    yPos += 10;
+    pdf.text(`Tax: $${totalTax.toFixed(2)}`, 140, yPos);
+    yPos += 10;
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`Total: $${finalTotal.toFixed(2)}`, 140, yPos);
+    yPos += 15;
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Gross Profit: $${grossProfit.toFixed(2)}`, 140, yPos);
+    yPos += 10;
+    pdf.text(`Profit %: ${profitPercent.toFixed(2)}%`, 140, yPos);
+
+    // Notes section
+    if (invoiceData.notes && invoiceData.notes.trim()) {
+      yPos += 20;
+      pdf.setFontSize(12);
+      pdf.text('Notes:', 20, yPos);
+      yPos += 10;
+      pdf.setFontSize(10);
+
+      // Split notes into lines
+      const noteLines = pdf.splitTextToSize(invoiceData.notes, 170);
+      noteLines.forEach((line: string) => {
+        pdf.text(line, 20, yPos);
+        yPos += 6;
+      });
+    }
+
+    // Save the PDF
+    const fileName = `Invoice_${invoiceData.vessel.name || 'Unknown'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    pdf.save(fileName);
   };
 
   const handleEmail = () => {
-    console.log('Email invoice');
+    // Set default email recipient to customer's email
+    setEmailRecipient(invoiceData.customer.customerEmail || '');
+    setEmailMessage('');
+    setShowEmailDialog(true);
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailRecipient.trim()) {
+      alert('Please enter an email recipient');
+      return;
+    }
+
+    setIsEmailSending(true);
+
+    try {
+      // Calculate totals for email
+      const calculatedServices = invoiceData.services.map(service => {
+        const baseCost = calculateLineItemCost(service);
+        const costWithMarkup = applyMarkup(baseCost, service);
+        const taxAmount = calculateTax(service, costWithMarkup);
+        return {
+          ...service,
+          cost: baseCost,
+          markupAmount: costWithMarkup - baseCost,
+          taxAmount,
+          total: costWithMarkup + taxAmount
+        };
+      });
+
+      const subtotal = calculatedServices.reduce((sum, service) => sum + (service.total - service.taxAmount), 0);
+      const totalTax = calculatedServices.reduce((sum, service) => sum + service.taxAmount, 0);
+      const finalTotal = subtotal + totalTax;
+
+      // Prepare email data
+      const emailData = {
+        invoiceData: {
+          ...invoiceData,
+          services: calculatedServices,
+          total: finalTotal,
+          subtotal,
+          taxAmount: totalTax
+        },
+        emailTo: emailRecipient,
+        emailMessage: emailMessage
+      };
+
+      const response = await fetch('/api/v1/invoice/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken!
+        },
+        credentials: 'include',
+        body: JSON.stringify(emailData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send email');
+      }
+
+      const result = await response.json();
+      alert('Invoice email sent successfully!');
+      setShowEmailDialog(false);
+
+    } catch (error) {
+      console.error('Error sending email:', error);
+      alert('Failed to send email. Please try again.');
+    } finally {
+      setIsEmailSending(false);
+    }
+  };
+
+  const handleExportCSV = () => {
+    // Calculate totals for CSV export
+    const calculatedServices = invoiceData.services.map(service => {
+      const baseCost = calculateLineItemCost(service);
+      const costWithMarkup = applyMarkup(baseCost, service);
+      const taxAmount = calculateTax(service, costWithMarkup);
+      return {
+        ...service,
+        cost: baseCost,
+        markupAmount: costWithMarkup - baseCost,
+        taxAmount,
+        total: costWithMarkup + taxAmount
+      };
+    });
+
+    // Create CSV content
+    const csvHeaders = [
+      'Description',
+      'Type',
+      'Labor Hours',
+      'OT Hours',
+      'Base Cost',
+      'Markup',
+      'Tax',
+      'Total'
+    ];
+
+    const csvRows = calculatedServices.map(service => [
+      `"${service.description || ''}"`,
+      `"${service.jobType || service.itemType || ''}"`,
+      service.laborHours || 0,
+      service.otHours || 0,
+      service.cost.toFixed(2),
+      service.markupAmount.toFixed(2),
+      service.taxAmount.toFixed(2),
+      service.total.toFixed(2)
+    ]);
+
+    // Add summary rows
+    const subtotal = calculatedServices.reduce((sum, service) => sum + (service.total - service.taxAmount), 0);
+    const totalTax = calculatedServices.reduce((sum, service) => sum + service.taxAmount, 0);
+    const finalTotal = subtotal + totalTax;
+    const baseCost = calculatedServices.reduce((sum, service) => sum + service.cost, 0);
+    const grossProfit = subtotal - baseCost;
+
+    csvRows.push(
+      ['', '', '', '', '', '', '', ''],
+      ['', '', '', '', 'SUBTOTAL', '', '', subtotal.toFixed(2)],
+      ['', '', '', '', 'TOTAL TAX', '', '', totalTax.toFixed(2)],
+      ['', '', '', '', 'FINAL TOTAL', '', '', finalTotal.toFixed(2)],
+      ['', '', '', '', 'GROSS PROFIT', '', '', grossProfit.toFixed(2)]
+    );
+
+    // Create CSV content
+    const csvContent = [
+      // Invoice header info
+      `"Invoice for ${invoiceData.vessel.name}"`,
+      `"Customer: ${invoiceData.customer.customerName}"`,
+      `"Date: ${new Date().toLocaleDateString()}"`,
+      '',
+      csvHeaders.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+
+    const fileName = `Invoice_${invoiceData.vessel.name || 'Unknown'}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Calculate totals
@@ -619,19 +1259,45 @@ const CreateInvoice: React.FC = () => {
                 Unsaved Changes
               </Badge>
             )}
+            <Badge
+              variant="outline"
+              className={`text-xs ${
+                formValidation.isComplete
+                  ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                  : "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100"
+              }`}
+            >
+              {formValidation.isComplete ? (
+                <span className="flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Invoice information is complete
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  Missing: {formValidation.missingFields.slice(0, 2).join(", ")}
+                  {formValidation.missingFields.length > 2 &&
+                    ` +${formValidation.missingFields.length - 2} more`}
+                </span>
+              )}
+            </Badge>
           </div>
 
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={handleNewInvoice}
-              disabled={isLoading}
+              onClick={handleSaveAndNew}
+              disabled={isLoading || !formValidation.isComplete}
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v14m-7-7h14" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
               </svg>
-              New
+              Save & New
             </Button>
 
             <Button
@@ -711,6 +1377,67 @@ const CreateInvoice: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Link to Existing Vessel */}
+                  <div className="space-y-2">
+                    <Label htmlFor="vessel-link">Link to Existing Vessel</Label>
+                    <Select
+                      value={selectedVesselId}
+                      onValueChange={(value) => {
+                        setSelectedVesselId(value);
+                        if (value && value !== '') {
+                          const selectedVessel = availableVessels.find(v => v.id === value);
+                          if (selectedVessel) {
+                            setInvoiceData(prev => ({
+                              ...prev,
+                              vessel: {
+                                ...prev.vessel,
+                                id: selectedVessel.id,
+                                name: selectedVessel.name,
+                                weight: selectedVessel.weight_tons?.toString() || '',
+                                beam: selectedVessel.beam_ft?.toString() || ''
+                              }
+                            }));
+                          }
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Search for a vessel..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <div className="p-2">
+                          <Input
+                            placeholder="Type to search vessels..."
+                            value={vesselSearchQuery}
+                            onChange={(e) => {
+                              setVesselSearchQuery(e.target.value);
+                              searchVessels(e.target.value);
+                            }}
+                            className="mb-2"
+                          />
+                          {isLoadingVessels && (
+                            <div className="text-sm text-muted-foreground p-2">Loading vessels...</div>
+                          )}
+                          {availableVessels.length === 0 && vesselSearchQuery.length >= 2 && !isLoadingVessels && (
+                            <div className="text-sm text-muted-foreground p-2">No vessels found</div>
+                          )}
+                          {availableVessels.map((vessel) => (
+                            <SelectItem key={vessel.id} value={vessel.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{vessel.name}</span>
+                                {vessel.registration_number && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Reg: {vessel.registration_number}
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </div>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="vessel-name">Vessel Name</Label>
                     <Input
@@ -722,21 +1449,25 @@ const CreateInvoice: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-weight">Weight (tons)</Label>
+                      <Label htmlFor="vessel-weight">Weight</Label>
                       <Input
                         id="vessel-weight"
-                        value={invoiceData.vessel.weight}
+                        value={isWeightFocused ? stripSuffix(invoiceData.vessel.weight, ' tons') : formatWithSuffix(invoiceData.vessel.weight, ' tons')}
                         onChange={(e) => handleVesselChange('weight', e.target.value)}
-                        placeholder="0.0"
+                        onFocus={() => setIsWeightFocused(true)}
+                        onBlur={() => setIsWeightFocused(false)}
+                        placeholder=""
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-beam">Beam (ft)</Label>
+                      <Label htmlFor="vessel-beam">Length</Label>
                       <Input
                         id="vessel-beam"
-                        value={invoiceData.vessel.beam}
+                        value={isBeamFocused ? stripSuffix(invoiceData.vessel.beam, ' ft') : formatWithSuffix(invoiceData.vessel.beam, ' ft')}
                         onChange={(e) => handleVesselChange('beam', e.target.value)}
-                        placeholder="0.0"
+                        onFocus={() => setIsBeamFocused(true)}
+                        onBlur={() => setIsBeamFocused(false)}
+                        placeholder=""
                       />
                     </div>
                   </div>
@@ -1081,7 +1812,7 @@ const CreateInvoice: React.FC = () => {
                     )}
                     {invoiceData.vessel.beam && (
                       <div className="text-xs text-muted-foreground">
-                        Beam: {invoiceData.vessel.beam} ft
+                        Length: {invoiceData.vessel.beam} ft
                       </div>
                     )}
                   </div>
@@ -1168,11 +1899,86 @@ const CreateInvoice: React.FC = () => {
                   </svg>
                   Email Invoice
                 </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={handleExportCSV}
+                  disabled={isLoading || !invoiceData.services.length}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export CSV
+                </Button>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
+
+      {/* Email Dialog */}
+      {showEmailDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Email Invoice</h3>
+
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="emailRecipient">Email Recipient *</Label>
+                  <Input
+                    id="emailRecipient"
+                    type="email"
+                    value={emailRecipient}
+                    onChange={(e) => setEmailRecipient(e.target.value)}
+                    placeholder="customer@example.com"
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="emailMessage">Message (Optional)</Label>
+                  <Textarea
+                    id="emailMessage"
+                    value={emailMessage}
+                    onChange={(e) => setEmailMessage(e.target.value)}
+                    placeholder="Add a personal message to include with the invoice..."
+                    rows={4}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                  <strong>Invoice Details:</strong><br />
+                  Vessel: {invoiceData.vessel.name || 'N/A'}<br />
+                  Customer: {invoiceData.customer.customerName || 'N/A'}<br />
+                  Services: {invoiceData.services.length} item(s)
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEmailDialog(false)}
+                  disabled={isEmailSending}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSendEmail}
+                  disabled={isEmailSending || !emailRecipient.trim()}
+                  className="flex-1"
+                >
+                  {isEmailSending ? 'Sending...' : 'Send Email'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

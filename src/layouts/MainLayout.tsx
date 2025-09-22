@@ -39,12 +39,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     navigation.push({ name: 'Dashboard', href: '/dashboard', icon: Home });
   }
 
-  // All users can see Create, Invoices, Customers, and Vessels
+  // All users can see Create, Invoices, Customers, Vessels, and Settings
   navigation.push(
     { name: 'Create', href: '/invoices/create', icon: Plus },
     { name: 'Invoices', href: '/invoices', icon: FileText },
     { name: 'Customers', href: '/customers', icon: Users },
-    { name: 'Vessels', href: '/vessels', icon: Ship }
+    { name: 'Vessels', href: '/vessels', icon: Ship },
+    { name: 'Settings', href: '/settings', icon: Settings }
   );
 
   const handleLogout = async () => {
@@ -63,7 +64,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <div className="flex items-center flex-shrink-0 px-4">
             <img
               className="h-8 w-auto"
-              src="/newlogo.png"
+              src="/notextlogo.png"
               alt="Marine Group"
             />
             <span className="ml-2 text-lg font-semibold text-gray-900">
@@ -145,7 +146,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 <div className="flex-shrink-0 flex items-center px-4">
                   <img
                     className="h-8 w-auto"
-                    src="/newlogo.png"
+                    src="/notextlogo.png"
                     alt="Marine Group"
                   />
                   <span className="ml-2 text-lg font-semibold text-gray-900">

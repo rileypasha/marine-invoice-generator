@@ -3,6 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Invoices from './Invoices';
 
+interface Customer {
+  id: string;
+  display_name: string;
+  legal_name?: string;
+}
+
+interface Vessel {
+  id: string;
+  name: string;
+}
+
+interface FilterOptions {
+  dateRange?: { start?: Date; end?: Date };
+  customerId?: string;
+  vesselId?: string;
+  amountRange?: { min?: number; max?: number };
+}
+
 interface ApiInvoice {
   id: string;
   invoiceNumber?: string;
@@ -48,11 +66,14 @@ const InvoicesPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState({ total: 0, saved: 0, drafts: 0, submitted: 0 });
+  const [filters, setFilters] = useState<FilterOptions>({});
+  const [availableCustomers, setAvailableCustomers] = useState<Customer[]>([]);
+  const [availableVessels, setAvailableVessels] = useState<Vessel[]>([]);
 
   const { isAuthenticated, csrfToken } = useAuth();
   const navigate = useNavigate();
 
-  const fetchInvoices = async (page = 1, search = '') => {
+  const fetchInvoices = async (page = 1, search = '', filterOptions: FilterOptions = {}) => {
     if (!isAuthenticated || !csrfToken) return;
 
     setIsLoading(true);
@@ -64,6 +85,26 @@ const InvoicesPage: React.FC = () => {
 
       if (search.trim()) {
         searchParams.append('search', search);
+      }
+
+      // Add filter parameters
+      if (filterOptions.dateRange?.start) {
+        searchParams.append('startDate', filterOptions.dateRange.start.toISOString());
+      }
+      if (filterOptions.dateRange?.end) {
+        searchParams.append('endDate', filterOptions.dateRange.end.toISOString());
+      }
+      if (filterOptions.customerId) {
+        searchParams.append('customerId', filterOptions.customerId);
+      }
+      if (filterOptions.vesselId) {
+        searchParams.append('vesselId', filterOptions.vesselId);
+      }
+      if (filterOptions.amountRange?.min !== undefined) {
+        searchParams.append('minAmount', filterOptions.amountRange.min.toString());
+      }
+      if (filterOptions.amountRange?.max !== undefined) {
+        searchParams.append('maxAmount', filterOptions.amountRange.max.toString());
       }
 
       const response = await fetch(`/api/v1/invoice?${searchParams}`, {
@@ -119,19 +160,71 @@ const InvoicesPage: React.FC = () => {
     }
   };
 
+  const fetchCustomers = async () => {
+    if (!isAuthenticated || !csrfToken) return;
+
+    try {
+      const response = await fetch('/api/v1/customers', {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableCustomers(data.customers || []);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    }
+  };
+
+  const fetchVessels = async () => {
+    if (!isAuthenticated || !csrfToken) return;
+
+    try {
+      const response = await fetch('/api/v1/vessels', {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableVessels(data.vessels || []);
+      }
+    } catch (error) {
+      console.error('Error fetching vessels:', error);
+    }
+  };
+
   useEffect(() => {
-    fetchInvoices(currentPage, searchTerm);
-  }, [isAuthenticated, csrfToken, currentPage]);
+    if (isAuthenticated && csrfToken) {
+      fetchCustomers();
+      fetchVessels();
+    }
+  }, [isAuthenticated, csrfToken]);
+
+  useEffect(() => {
+    fetchInvoices(currentPage, searchTerm, filters);
+  }, [isAuthenticated, csrfToken, currentPage, searchTerm, filters]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
     setCurrentPage(1);
-    fetchInvoices(1, term);
+  };
+
+  const handleFiltersChange = (newFilters: FilterOptions) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
   };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    fetchInvoices(page, searchTerm);
   };
 
   const handleEdit = (invoice: Invoice) => {
@@ -157,7 +250,7 @@ const InvoicesPage: React.FC = () => {
 
       if (response.ok) {
         // Refresh the list
-        fetchInvoices(currentPage, searchTerm);
+        fetchInvoices(currentPage, searchTerm, filters);
       } else {
         alert('Failed to delete invoice');
       }
@@ -191,6 +284,10 @@ const InvoicesPage: React.FC = () => {
       currentPage={currentPage}
       totalPages={totalPages}
       onPageChange={handlePageChange}
+      filters={filters}
+      onFiltersChange={handleFiltersChange}
+      availableCustomers={availableCustomers}
+      availableVessels={availableVessels}
     />
   );
 };
