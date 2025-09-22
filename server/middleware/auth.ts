@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
+import '../types/session';
 
 export interface AuthenticatedRequest extends Request {
   userId?: string;
@@ -77,7 +78,7 @@ export const requireAuth = (req: AuthenticatedRequest, res: Response, next: Next
   next();
 };
 
-export const optionalAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+export const optionalAuth = (req: AuthenticatedRequest, _: Response, next: NextFunction): void => {
   const correlationId = req.headers['x-correlation-id'] as string || `auth_${Date.now()}`;
   req.correlationId = correlationId;
 
@@ -101,7 +102,7 @@ export const optionalAuth = (req: AuthenticatedRequest, res: Response, next: Nex
   next();
 };
 
-export const refreshSession = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+export const refreshSession = (req: AuthenticatedRequest, _: Response, next: NextFunction): void => {
   if (req.session?.userId) {
     // Update session expiry
     const expiryTime = new Date(Date.now() + (30 * 60 * 1000)); // 30 minutes

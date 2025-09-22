@@ -6,9 +6,12 @@ import { attachCorrelationId, requireAuth, optionalAuth } from './middleware/aut
 import { ensureCsrfToken, csrfProtection, getCsrfToken, rateLimitCsrfGeneration, getCsrfRateLimitStats } from './middleware/csrf';
 import { idempotency } from './middleware/idempotency';
 import { logger, requestLogger, metrics } from './utils/logger';
-import { TIMEOUTS_ENV, NETWORK } from '../src/config/constants';
+import { TIMEOUTS_ENV, NETWORK } from './config/constants';
+import './types/session';
 import invoiceRoutes from './routes/invoice';
 import authRoutes from './routes/auth';
+import customerRoutes from './routes/customers';
+import vesselRoutes from './routes/vessels';
 
 /**
  * Enhanced compression middleware with intelligent content detection
@@ -37,11 +40,8 @@ function createOptimizedCompression() {
       // Compress text-based content
       return compression.filter(req, res);
     },
-    // Enable Brotli compression for modern browsers
-    brotli: {
-      enabled: true,
-      zlib: {},
-    },
+    // Enable Brotli compression for modern browsers if available
+    // Note: Brotli config removed due to type incompatibility
   });
 }
 
@@ -66,8 +66,8 @@ function performanceMiddleware() {
         });
       }
 
-      // Record metrics
-      metrics.recordRequestDuration(req.method, req.route?.path || req.path, duration);
+      // Record metrics (disabled - method not available)
+      // metrics.recordRequestDuration(req.method, req.route?.path || req.path, duration);
     });
 
     next();
@@ -75,13 +75,13 @@ function performanceMiddleware() {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Optimized middleware stack
 app.use(createOptimizedCompression());
 app.use(bodyParser.json({
   limit: NETWORK.REQUEST_SIZE_LIMIT,
-  verify: (req, res, buf) => {
+  verify: (req, _res, buf) => {
     // Store raw body for webhook verification if needed
     (req as any).rawBody = buf;
   }
@@ -103,12 +103,13 @@ app.use(requestLogger);
 app.use(ensureCsrfToken);
 
 // Health check endpoint (no auth required)
-app.get('/health', (req, res) => {
+app.get('/health', (_req: any, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV,
+    correlationId: _req.correlationId,
   });
 });
 
@@ -147,15 +148,58 @@ app.get('/api/v1/csrf-token', rateLimitCsrfGeneration, getCsrfToken);
 app.use('/api/v1/auth', authRoutes);
 
 // Protected routes
-app.use('/api/v1/invoice', 
+app.use('/api/v1/invoice',
   requireAuth,
   csrfProtection,
   idempotency,
   invoiceRoutes
 );
 
+app.use('/api/v1/customers',
+  requireAuth,
+  csrfProtection,
+  customerRoutes
+);
+
+app.use('/api/v1/vessels',
+  requireAuth,
+  csrfProtection,
+  vesselRoutes
+);
+
+// API 404 handler - ensures API routes return JSON errors, not HTML pages
+app.use('/api/*', (req: any, res: any) => {
+  const correlationId = req.correlationId || 'api_404';
+
+  logger.warn('API endpoint not found', {
+    path: req.path,
+    method: req.method,
+    correlationId,
+  });
+
+  res.status(404).json({
+    code: 'NOT_FOUND',
+    message: 'API endpoint not found',
+    path: req.path,
+    correlationId,
+  });
+});
+
+// Serve static files
+app.use(express.static('.', {
+  index: 'index.html',
+  setHeaders: (res, path) => {
+    // Cache static assets for 1 hour, HTML for 5 minutes
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
+    } else if (path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour
+    }
+  }
+}));
+
 // Error handling middleware
-app.use((err: any, req: any, res: any, next: any) => {
+app.use((err: any, req: any, res: any, _next: any) => {
   const correlationId = req.correlationId || 'error';
   
   logger.error('Unhandled error', {

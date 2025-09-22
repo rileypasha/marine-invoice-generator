@@ -96,7 +96,7 @@ class LRURateLimitCache {
 interface CsrfRequest extends Request {
   csrfToken?: () => string;
   correlationId?: string;
-  session?: any;
+  session: any;
 }
 
 // CSRF token generation
@@ -185,7 +185,7 @@ export const csrfProtection = (req: CsrfRequest, res: Response, next: NextFuncti
 };
 
 // Middleware to ensure CSRF token exists in session
-export const ensureCsrfToken = (req: CsrfRequest, res: Response, next: NextFunction): void => {
+export const ensureCsrfToken = (req: CsrfRequest, _res: Response, next: NextFunction): void => {
   if (req.session && !req.session.csrfToken) {
     req.session.csrfToken = generateCsrfToken();
     logger.debug('Generated new CSRF token', {
@@ -234,12 +234,12 @@ export const csrfCookieOptions = {
  * Enhanced CSRF token manager with performance optimizations
  */
 export class CsrfTokenManager {
-  private secret: string;
+  private _secret: string;
   private tokenCache = new Map<string, { token: string; timestamp: number }>();
   private readonly tokenTTL = 30 * 60 * 1000; // 30 minutes
 
   constructor(secret: string) {
-    this.secret = secret;
+    this._secret = secret;
 
     // Cleanup expired tokens periodically
     setInterval(() => this.cleanupExpiredTokens(), 5 * 60 * 1000); // Every 5 minutes

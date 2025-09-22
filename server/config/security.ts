@@ -1,4 +1,4 @@
-import express, { Application } from 'express';
+import { Application } from 'express';
 import session from 'express-session';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -163,7 +163,7 @@ export function configureSecurity(app: Application, config: SecurityConfig): voi
   app.use('/api/v1/invoice/save', saveLimiter);
 
   // Security headers middleware
-  app.use((req, res, next) => {
+  app.use((_req, res, next) => {
     // Prevent clickjacking
     res.setHeader('X-Frame-Options', 'DENY');
     

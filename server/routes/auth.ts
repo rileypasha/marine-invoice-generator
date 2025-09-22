@@ -3,24 +3,14 @@ import bcrypt from 'bcrypt';
 import { logger } from '../utils/logger';
 import { generateCsrfToken } from '../middleware/csrf';
 import { csrfProtection } from '../middleware/csrf';
+import { query } from '../config/database';
+import '../types/session';
 
 const router = Router();
 
 interface AuthRequest extends Request {
   correlationId?: string;
 }
-
-// Mock user database (replace with real database)
-const userDb = new Map<string, any>();
-
-// Initialize with a test user
-userDb.set('test@example.com', {
-  id: 'user_1',
-  email: 'test@example.com',
-  username: 'test',
-  passwordHash: bcrypt.hashSync('password123', 10),
-  createdAt: new Date().toISOString(),
-});
 
 // POST /api/v1/auth/register
 router.post('/register', async (req: AuthRequest, res: Response) => {
@@ -38,7 +28,8 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
     }
 
     // Check if user exists
-    if (userDb.has(email)) {
+    const existingUser = await query('SELECT id FROM "User" WHERE email = $1', [email]);
+    if (existingUser.rows.length > 0) {
       logger.warn('Registration attempt with existing email', {
         correlationId,
         email,
@@ -54,24 +45,20 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user
-    const userId = `user_${Date.now()}`;
-    const user = {
-      id: userId,
-      email,
-      username,
-      passwordHash,
-      createdAt: new Date().toISOString(),
-    };
+    // Create user in PostgreSQL
+    const result = await query(
+      'INSERT INTO "User" (id, email, name, password, role, "createdAt", "updatedAt") VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW(), NOW()) RETURNING id, email, name, role, "createdAt"',
+      [email, username, passwordHash, 'standard']
+    );
 
-    userDb.set(email, user);
+    const user = result.rows[0];
 
     // Create session
     if (req.session) {
-      req.session.userId = userId;
-      req.session.email = email;
+      req.session.userId = user.id;
+      req.session.email = user.email;
       req.session.expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-      
+
       // Generate CSRF token
       if (!req.session.csrfToken) {
         req.session.csrfToken = generateCsrfToken();
@@ -80,14 +67,15 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
 
     logger.info('User registered successfully', {
       correlationId,
-      userId,
-      email,
+      userId: user.id,
+      email: user.email,
     });
 
     res.status(201).json({
-      userId,
-      email,
-      username,
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
       csrfToken: req.session?.csrfToken,
       sessionExpiry: req.session?.expiresAt,
       correlationId,
@@ -110,39 +98,40 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
 // POST /api/v1/auth/login
 router.post('/login', async (req: AuthRequest, res: Response) => {
   const correlationId = req.correlationId!;
-  const { username, password, email } = req.body;
+  const { email, password } = req.body;
 
   try {
-    // Find user by email or username
-    let user = null;
-    if (email) {
-      user = userDb.get(email);
-    } else if (username) {
-      // Find by username
-      for (const [, u] of userDb) {
-        if (u.username === username) {
-          user = u;
-          break;
-        }
-      }
+    // Find user by email in PostgreSQL database
+    if (!email || !password) {
+      return res.status(400).json({
+        code: 'INVALID_INPUT',
+        message: 'Email and password are required',
+        correlationId,
+      });
     }
+
+    const result = await query(
+      'SELECT id, email, name, password, role, "createdAt" FROM "User" WHERE email = $1',
+      [email]
+    );
+
+    const user = result.rows.length > 0 ? result.rows[0] : null;
 
     if (!user) {
       logger.warn('Login attempt with invalid credentials', {
         correlationId,
-        username,
         email,
       });
 
       return res.status(401).json({
         code: 'INVALID_CREDENTIALS',
-        message: 'Invalid username or password',
+        message: 'Invalid email or password',
         correlationId,
       });
     }
 
     // Verify password
-    const passwordValid = await bcrypt.compare(password, user.passwordHash);
+    const passwordValid = await bcrypt.compare(password, user.password);
     if (!passwordValid) {
       logger.warn('Login attempt with incorrect password', {
         correlationId,
@@ -151,7 +140,7 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
 
       return res.status(401).json({
         code: 'INVALID_CREDENTIALS',
-        message: 'Invalid username or password',
+        message: 'Invalid email or password',
         correlationId,
       });
     }
@@ -175,7 +164,8 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
     res.json({
       userId: user.id,
       email: user.email,
-      username: user.username,
+      name: user.name,
+      role: user.role,
       csrfToken: req.session?.csrfToken,
       sessionExpiry: req.session?.expiresAt,
       correlationId,

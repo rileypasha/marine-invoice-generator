@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { logger } from '../utils/logger';
-import { generateServerIdempotencyKey } from '../middleware/idempotency';
+// import { generateServerIdempotencyKey } from '../middleware/idempotency'; // Unused import
+import { prisma } from '../db/client';
 
 const router = Router();
 
@@ -8,9 +9,6 @@ interface InvoiceRequest extends Request {
   userId?: string;
   correlationId?: string;
 }
-
-// Mock database operations (replace with real database)
-const invoiceDb = new Map<string, any>();
 
 // POST /api/v1/invoice/save
 router.post('/save', async (req: InvoiceRequest, res: Response) => {
@@ -20,52 +18,65 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
 
   try {
     const invoiceData = req.body;
-    
+
     // Validate invoice data
-    if (!invoiceData.amount || !invoiceData.customerName) {
+    if (!invoiceData.total && !invoiceData.subtotal) {
       logger.warn('Invalid invoice data', {
         correlationId,
         userId,
         missingFields: {
-          amount: !invoiceData.amount,
-          customerName: !invoiceData.customerName,
+          total: !invoiceData.total,
+          subtotal: !invoiceData.subtotal,
         },
       });
-      
+
       return res.status(400).json({
         code: 'INVALID_INVOICE_DATA',
-        message: 'Missing required fields: amount and customerName are required',
+        message: 'Missing required fields: total or subtotal is required',
         correlationId,
       });
     }
 
-    // Generate invoice ID if not provided
-    const invoiceId = invoiceData.id || `INV-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+    // Generate invoice number if not provided
+    const invoiceNumber = invoiceData.invoiceNumber || `INV-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
-    // Check for existing invoice for idempotency
-    const existingInvoice = invoiceDb.get(invoiceId);
-    if (existingInvoice && existingInvoice.userId === userId) {
+    // Check for existing invoice for idempotency (by ID if provided)
+    let existingInvoice = null;
+    if (invoiceData.id) {
+      existingInvoice = await prisma.invoice.findFirst({
+        where: {
+          id: invoiceData.id,
+          userId,
+        },
+      });
+    }
+
+    if (existingInvoice) {
       // Update existing invoice instead of creating duplicate
-      const updatedInvoice = {
-        ...existingInvoice,
-        ...invoiceData,
-        id: invoiceId,
-        userId,
-        updatedAt: new Date().toISOString(),
-        status: 'saved', // Always canonical state, never draft
-      };
-      invoiceDb.set(invoiceId, updatedInvoice);
+      const updatedInvoice = await prisma.invoice.update({
+        where: { id: existingInvoice.id },
+        data: {
+          ...invoiceData,
+          invoiceNumber,
+          status: 'saved', // Always canonical state, never draft
+        },
+        include: {
+          customer: { select: { display_name: true, legal_name: true } },
+          vessel: { select: { name: true } },
+        },
+      });
 
       logger.info('Invoice updated (idempotent)', {
         correlationId,
         userId,
-        invoiceId,
+        invoiceId: updatedInvoice.id,
         idempotencyKey,
-        amount: updatedInvoice.amount,
+        total: updatedInvoice.total,
       });
 
       return res.status(200).json({
-        id: invoiceId,
+        id: updatedInvoice.id,
+        invoice: updatedInvoice,
         message: 'Invoice updated successfully',
         correlationId,
         action: 'UPDATED',
@@ -73,28 +84,30 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
     }
 
     // Create new invoice (canonical, never draft)
-    const invoice = {
-      ...invoiceData,
-      id: invoiceId,
-      userId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: 'saved', // Always canonical state, never draft
-    };
-
-    // Store in mock database
-    invoiceDb.set(invoiceId, invoice);
+    const invoice = await prisma.invoice.create({
+      data: {
+        ...invoiceData,
+        invoiceNumber,
+        userId,
+        status: 'saved', // Always canonical state, never draft
+      },
+      include: {
+        customer: { select: { display_name: true, legal_name: true } },
+        vessel: { select: { name: true } },
+      },
+    });
 
     logger.info('Invoice saved successfully', {
       correlationId,
       userId,
-      invoiceId,
+      invoiceId: invoice.id,
       idempotencyKey,
-      amount: invoice.amount,
+      total: invoice.total,
     });
 
     res.status(200).json({
-      id: invoiceId,
+      id: invoice.id,
+      invoice,
       message: 'Invoice saved successfully',
       correlationId,
       action: 'CREATED',
@@ -123,7 +136,14 @@ router.get('/:id', async (req: InvoiceRequest, res: Response) => {
   const invoiceId = req.params.id;
 
   try {
-    const invoice = invoiceDb.get(invoiceId);
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      include: {
+        customer: true,
+        vessel: true,
+        user: { select: { name: true, email: true } },
+      },
+    });
 
     if (!invoice) {
       logger.warn('Invoice not found', {
@@ -161,7 +181,7 @@ router.get('/:id', async (req: InvoiceRequest, res: Response) => {
       invoiceId,
     });
 
-    res.json(invoice);
+    res.json({ invoice, correlationId });
 
   } catch (error: any) {
     logger.error('Failed to retrieve invoice', {
@@ -183,37 +203,81 @@ router.get('/:id', async (req: InvoiceRequest, res: Response) => {
 router.get('/', async (req: InvoiceRequest, res: Response) => {
   const correlationId = req.correlationId!;
   const userId = req.userId!;
-  const { page = 1, limit = 10, status } = req.query;
+  const { page = 1, limit = 10, status, search } = req.query;
 
   try {
-    // Get user's invoices from mock database (exclude any legacy drafts)
-    const userInvoices = Array.from(invoiceDb.values())
-      .filter(invoice => invoice.userId === userId)
-      .filter(invoice => invoice.status !== 'draft') // Exclude legacy draft records
-      .filter(invoice => !status || invoice.status === status)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const skip = (Number(page) - 1) * Number(limit);
 
-    // Pagination
-    const startIndex = (Number(page) - 1) * Number(limit);
-    const endIndex = startIndex + Number(limit);
-    const paginatedInvoices = userInvoices.slice(startIndex, endIndex);
+    // Build where clause with tenant isolation
+    const where: any = {
+      userId,
+      status: { not: 'draft' }, // Exclude legacy draft records
+    };
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (search) {
+      where.OR = [
+        { invoiceNumber: { contains: search as string, mode: 'insensitive' } },
+        { title: { contains: search as string, mode: 'insensitive' } },
+        { customer: { displayName: { contains: search as string, mode: 'insensitive' } } },
+        { vessel: { name: { contains: search as string, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [invoices, total] = await Promise.all([
+      prisma.invoice.findMany({
+        where,
+        skip,
+        take: Number(limit),
+        orderBy: { createdAt: 'desc' },
+        include: {
+          customer: { select: { display_name: true, legal_name: true } },
+          vessel: { select: { name: true } },
+        },
+      }),
+      prisma.invoice.count({ where }),
+    ]);
+
+    // Calculate stats
+    const stats = await prisma.invoice.groupBy({
+      by: ['status'],
+      where: { userId },
+      _count: { status: true },
+    });
+
+    const statsMap = {
+      total: await prisma.invoice.count({ where: { userId } }),
+      saved: 0,
+      drafts: 0,
+      submitted: 0,
+    };
+
+    stats.forEach(stat => {
+      if (stat.status === 'saved') statsMap.saved = stat._count.status;
+      if (stat.status === 'draft') statsMap.drafts = stat._count.status;
+      if (stat.status === 'submitted') statsMap.submitted = stat._count.status;
+    });
 
     logger.info('Invoices retrieved successfully', {
       correlationId,
       userId,
-      count: paginatedInvoices.length,
-      total: userInvoices.length,
+      count: invoices.length,
+      total,
       page,
       limit,
     });
 
     res.json({
-      invoices: paginatedInvoices,
+      invoices,
+      stats: statsMap,
       pagination: {
         page: Number(page),
         limit: Number(limit),
-        total: userInvoices.length,
-        totalPages: Math.ceil(userInvoices.length / Number(limit)),
+        total,
+        totalPages: Math.ceil(total / Number(limit)),
       },
       correlationId,
     });
@@ -240,7 +304,9 @@ router.delete('/:id', async (req: InvoiceRequest, res: Response) => {
   const invoiceId = req.params.id;
 
   try {
-    const invoice = invoiceDb.get(invoiceId);
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+    });
 
     if (!invoice) {
       return res.status(404).json({
@@ -258,7 +324,9 @@ router.delete('/:id', async (req: InvoiceRequest, res: Response) => {
       });
     }
 
-    invoiceDb.delete(invoiceId);
+    await prisma.invoice.delete({
+      where: { id: invoiceId },
+    });
 
     logger.info('Invoice deleted successfully', {
       correlationId,
