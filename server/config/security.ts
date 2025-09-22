@@ -48,11 +48,18 @@ export function configureSecurity(app: Application, config: SecurityConfig): voi
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin) return callback(null, true);
-      
+
+      // Log all CORS requests for debugging
+      logger.info('CORS request', {
+        origin,
+        allowedOrigins: config.corsOrigins,
+        matches: config.corsOrigins.includes(origin)
+      });
+
       if (config.corsOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        logger.warn('CORS blocked request', { origin });
+        logger.warn('CORS blocked request', { origin, allowedOrigins: config.corsOrigins });
         callback(new Error('Not allowed by CORS'));
       }
     },
@@ -75,7 +82,7 @@ export function configureSecurity(app: Application, config: SecurityConfig): voi
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'strict',
       maxAge: 30 * 60 * 1000, // 30 minutes
       domain: config.cookieDomain,
     },

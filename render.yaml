@@ -14,7 +14,7 @@ services:
       - key: PORT
         value: 10000
       - key: BUILD_VERSION
-        value: v1.0.2
+        value: v1.0.3
       - key: SESSION_SECRET
         generateValue: true
       - key: DATABASE_URL
@@ -27,7 +27,7 @@ services:
           name: marine-group-redis
           property: connectionString
       - key: CORS_ORIGINS
-        value: https://mginvoices.com,https://www.mginvoices.com
+        value: https://mginvoices.com,https://www.mginvoices.com,https://marine-invoice-generator.onrender.com
       - key: COOKIE_DOMAIN
         value: .mginvoices.com
     autoDeploy: true
