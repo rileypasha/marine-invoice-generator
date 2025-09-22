@@ -94,6 +94,36 @@ app.use(bodyParser.urlencoded({
   parameterLimit: 1000 // Prevent parameter pollution
 }));
 
+// Serve static files from built React app (before CORS to avoid blocking)
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+if (!isDevelopment) {
+  // In production, serve the built React app
+  app.use(express.static(path.join(__dirname, '../../dist'), {
+    setHeaders: (res, filePath) => {
+      // Cache static assets for 1 year, HTML for 5 minutes
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
+      } else if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+      }
+    }
+  }));
+} else {
+  // In development, serve from the current directory (for any non-API routes)
+  app.use(express.static('.', {
+    index: 'index.html',
+    setHeaders: (res, filePath) => {
+      // Cache static assets for 1 hour, HTML for 5 minutes
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
+      } else if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
+        res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour
+      }
+    }
+  }));
+}
+
 // Security configuration
 const securityConfig = getSecurityConfig();
 configureSecurity(app, securityConfig);
@@ -191,36 +221,6 @@ app.use('/api/*', (req: any, res: any) => {
     correlationId,
   });
 });
-
-// Serve static files from built React app
-const isDevelopment = process.env.NODE_ENV === 'development';
-
-if (!isDevelopment) {
-  // In production, serve the built React app
-  app.use(express.static(path.join(__dirname, '../../dist'), {
-    setHeaders: (res, filePath) => {
-      // Cache static assets for 1 year, HTML for 5 minutes
-      if (filePath.endsWith('.html')) {
-        res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
-      } else if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
-        res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
-      }
-    }
-  }));
-} else {
-  // In development, serve from the current directory (for any non-API routes)
-  app.use(express.static('.', {
-    index: 'index.html',
-    setHeaders: (res, filePath) => {
-      // Cache static assets for 1 hour, HTML for 5 minutes
-      if (filePath.endsWith('.html')) {
-        res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
-      } else if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
-        res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour
-      }
-    }
-  }));
-}
 
 // Error handling middleware
 app.use((err: any, req: any, res: any, _next: any) => {
