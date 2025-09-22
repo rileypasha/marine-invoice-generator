@@ -197,7 +197,7 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 
 if (!isDevelopment) {
   // In production, serve the built React app
-  app.use(express.static(path.join(__dirname, '../dist'), {
+  app.use(express.static(path.join(__dirname, '../../dist'), {
     setHeaders: (res, filePath) => {
       // Cache static assets for 1 year, HTML for 5 minutes
       if (filePath.endsWith('.html')) {
@@ -249,7 +249,7 @@ app.use((err: any, req: any, res: any, _next: any) => {
 if (!isDevelopment) {
   app.get('*', (req, res) => {
     // Serve React app for all non-API routes
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
+    res.sendFile(path.join(__dirname, '../../dist/index.html'));
   });
 } else {
   // 404 handler for development
