@@ -341,16 +341,95 @@ router.post('/reset-passwords', async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    // Import and run the reset function
-    const { resetUserPasswords } = await import('../../scripts/reset-user-passwords');
+    // Run the password reset directly here to avoid import issues
+    const bcrypt = await import('bcrypt');
+
+    interface User {
+      email: string;
+      name: string;
+      password: string;
+      role: string;
+    }
+
+    const RESET_USERS: User[] = [
+      {
+        email: 'test@marinegroupbw.com',
+        name: 'Test User',
+        password: 'TestPassword123!',
+        role: 'admin'
+      },
+      {
+        email: 'rpasha@marinegroupbw.com',
+        name: 'Riley Pasha',
+        password: 'RileyPassword123!',
+        role: 'admin'
+      },
+      {
+        email: 'admin@mginvoices.com',
+        name: 'Admin User',
+        password: 'AdminPassword123!',
+        role: 'admin'
+      },
+      {
+        email: 'user@mginvoices.com',
+        name: 'Standard User',
+        password: 'UserPassword123!',
+        role: 'standard'
+      }
+    ];
 
     logger.info('Password reset endpoint accessed', {
       correlationId,
       requestIP: req.ip,
     });
 
-    // Run the password reset
-    await resetUserPasswords();
+    // Get existing users
+    const existingUsers = await query('SELECT id, email, name, role, "createdAt" FROM "User" ORDER BY "createdAt"');
+    const existingEmails = existingUsers.rows.map(row => row.email);
+
+    logger.info('Found existing users', {
+      correlationId,
+      userCount: existingUsers.rows.length,
+      emails: existingEmails,
+    });
+
+    // Reset each user
+    for (const user of RESET_USERS) {
+      const passwordHash = await bcrypt.hash(user.password, 10);
+
+      if (existingEmails.includes(user.email)) {
+        // Update existing user
+        const result = await query(
+          `UPDATE "User"
+           SET password = $1, name = $2, role = $3, "updatedAt" = NOW()
+           WHERE email = $4
+           RETURNING id, email, name, role`,
+          [passwordHash, user.name, user.role, user.email]
+        );
+
+        if (result.rows.length > 0) {
+          logger.info('Updated user password', {
+            correlationId,
+            email: result.rows[0].email,
+            role: result.rows[0].role,
+          });
+        }
+      } else {
+        // Create new user
+        const result = await query(
+          `INSERT INTO "User" (id, email, name, password, role, "createdAt", "updatedAt")
+           VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW(), NOW())
+           RETURNING id, email, name, role`,
+          [user.email, user.name, passwordHash, user.role]
+        );
+
+        logger.info('Created new user', {
+          correlationId,
+          email: result.rows[0].email,
+          role: result.rows[0].role,
+        });
+      }
+    }
 
     logger.info('Password reset completed successfully', {
       correlationId,
