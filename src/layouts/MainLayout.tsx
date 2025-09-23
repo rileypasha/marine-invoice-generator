@@ -34,10 +34,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // Build navigation based on user role
   const navigation = [];
 
-  // Only show Dashboard for master/admin users
-  if (currentUser?.role === 'master' || currentUser?.role === 'admin') {
-    navigation.push({ name: 'Dashboard', href: '/dashboard', icon: Home });
-  }
 
   // All users can see Create, Invoices, Customers, Vessels, and Settings
   navigation.push(
@@ -59,7 +55,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     <div className="min-h-screen bg-gray-50 flex">
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
+        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0 px-4">
             <img
@@ -107,9 +103,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 <div className="ml-3 flex-1">
                   <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
                     {currentUser?.name}
-                  </p>
-                  <p className="text-xs font-medium text-gray-500 group-hover:text-gray-700">
-                    {currentUser?.role}
                   </p>
                 </div>
                 <Button
@@ -187,9 +180,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <div className="ml-3 flex-1">
                     <p className="text-base font-medium text-gray-700">
                       {currentUser?.name}
-                    </p>
-                    <p className="text-sm font-medium text-gray-500">
-                      {currentUser?.role}
                     </p>
                   </div>
                   <Button

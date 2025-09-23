@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { logger } from '../utils/logger';
 import { prisma } from '../db/client';
+import multer from 'multer';
+import { parse } from 'csv-parse/sync';
+import { randomUUID } from 'crypto';
 
 const router = Router();
 
@@ -30,6 +33,47 @@ const validateCustomer = (data: any) => {
   // Phone validation (basic)
   if (data.phone && !/^[\d\s\-\+\(\)]+$/.test(data.phone)) {
     errors.push({ field: 'phone', message: 'Valid phone number is required' });
+  }
+
+  return errors;
+};
+
+// Configure multer for CSV file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  },
+});
+
+// CSV import validation
+const validateCsvRow = (row: any, rowIndex: number) => {
+  const errors: Array<{ row: number; error: string }> = [];
+
+  // Required field validation
+  if (!row.display_name || row.display_name.trim().length === 0) {
+    errors.push({ row: rowIndex, error: 'Display name is required' });
+  }
+
+  if (row.display_name && row.display_name.length > 255) {
+    errors.push({ row: rowIndex, error: 'Display name must be less than 255 characters' });
+  }
+
+  // Email validation
+  if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
+    errors.push({ row: rowIndex, error: 'Invalid email format' });
+  }
+
+  // Phone validation
+  if (row.phone && !/^[\d\s\-\+\(\)]+$/.test(row.phone)) {
+    errors.push({ row: rowIndex, error: 'Invalid phone number format' });
   }
 
   return errors;
@@ -100,6 +144,148 @@ router.get('/search', async (req: CustomerRequest, res: Response) => {
     res.status(500).json({
       code: 'SEARCH_FAILED',
       message: 'Failed to search customers',
+      correlationId,
+    });
+  }
+});
+
+// POST /api/v1/customers/import - Import customers from CSV
+router.post('/import', upload.single('file'), async (req: CustomerRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+  const userId = req.userId!;
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        code: 'NO_FILE',
+        message: 'No file uploaded',
+        correlationId,
+      });
+    }
+
+    logger.info('CSV import started', {
+      correlationId,
+      userId,
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+    });
+
+    // Parse CSV
+    let records: any[];
+    try {
+      records = parse(req.file.buffer, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+      });
+    } catch (error: any) {
+      logger.error('CSV parsing failed', {
+        error: error.message,
+        correlationId,
+        userId,
+      });
+
+      return res.status(400).json({
+        code: 'INVALID_CSV',
+        message: 'Invalid CSV format',
+        correlationId,
+      });
+    }
+
+    if (records.length === 0) {
+      return res.status(400).json({
+        code: 'EMPTY_CSV',
+        message: 'CSV file is empty',
+        correlationId,
+      });
+    }
+
+    // Validate all rows first
+    const allErrors: Array<{ row: number; error: string }> = [];
+    const validRecords: any[] = [];
+
+    records.forEach((record, index) => {
+      const rowErrors = validateCsvRow(record, index + 2); // +2 for header row and 0-based index
+      if (rowErrors.length > 0) {
+        allErrors.push(...rowErrors);
+      } else {
+        validRecords.push(record);
+      }
+    });
+
+    // Check for existing customers by display_name
+    const existingCustomers = await prisma.customer.findMany({
+      where: {
+        display_name: {
+          in: validRecords.map(r => r.display_name),
+        },
+      },
+      select: { display_name: true },
+    });
+
+    const existingNames = new Set(existingCustomers.map(c => c.display_name));
+    const newCustomers = validRecords.filter(r => !existingNames.has(r.display_name));
+    const skippedCount = validRecords.length - newCustomers.length;
+
+    // Prepare data for database insertion
+    const customersToCreate = newCustomers.map(record => ({
+      id: randomUUID(),
+      display_name: record.display_name.trim(),
+      legal_name: record.legal_name?.trim() || null,
+      email: record.email?.trim() || null,
+      phone: record.phone?.trim() || null,
+      tax_id: record.tax_id?.trim() || null,
+      address_line1: record.address_line1?.trim() || null,
+      address_line2: record.address_line2?.trim() || null,
+      city: record.city?.trim() || null,
+      state: record.state?.trim() || null,
+      postal_code: record.postal_code?.trim() || null,
+      country: record.country?.trim() || 'US',
+      notes: record.notes?.trim() || null,
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+    }));
+
+    // Bulk insert new customers
+    let importedCount = 0;
+    if (customersToCreate.length > 0) {
+      const result = await prisma.customer.createMany({
+        data: customersToCreate,
+        skipDuplicates: true,
+      });
+      importedCount = result.count;
+    }
+
+    logger.info('CSV import completed', {
+      correlationId,
+      userId,
+      totalRows: records.length,
+      imported: importedCount,
+      skipped: skippedCount,
+      failed: allErrors.length,
+    });
+
+    res.json({
+      success: true,
+      imported: importedCount,
+      skipped: skippedCount,
+      failed: allErrors.length,
+      errors: allErrors.slice(0, 10), // Limit to first 10 errors for response
+      correlationId,
+    });
+
+  } catch (error: any) {
+    logger.error('CSV import failed', {
+      error: error.message,
+      correlationId,
+      userId,
+      stack: error.stack,
+    });
+
+    res.status(500).json({
+      code: 'IMPORT_FAILED',
+      message: 'Failed to import customers',
       correlationId,
     });
   }

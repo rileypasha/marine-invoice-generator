@@ -4,7 +4,6 @@ import { AuthProvider } from './context/AuthContext'
 import EmployeeLoginPortal from './components/EmployeeLoginPortal'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import MainLayout from './layouts/MainLayout'
-import Dashboard from './pages/Dashboard'
 import InvoicesPage from './pages/InvoicesPage'
 import Customers from './pages/Customers'
 import Vessels from './pages/Vessels'
@@ -32,16 +31,6 @@ function App() {
                     onLogin={handleLogin}
                     isLoading={false}
                   />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <Dashboard />
-                  </MainLayout>
                 </ProtectedRoute>
               }
             />
