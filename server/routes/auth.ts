@@ -325,4 +325,56 @@ router.get('/debug-users', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// POST /api/v1/auth/reset-passwords - One-time password reset endpoint
+router.post('/reset-passwords', async (req: AuthRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+
+  // Only allow with special header
+  const resetHeader = req.headers['x-reset-auth'] === 'marine-group-2025';
+
+  if (!resetHeader) {
+    return res.status(404).json({
+      code: 'NOT_FOUND',
+      message: 'Endpoint not found',
+      correlationId,
+    });
+  }
+
+  try {
+    // Import and run the reset function
+    const { resetUserPasswords } = await import('../../scripts/reset-user-passwords');
+
+    logger.info('Password reset endpoint accessed', {
+      correlationId,
+      requestIP: req.ip,
+    });
+
+    // Run the password reset
+    await resetUserPasswords();
+
+    logger.info('Password reset completed successfully', {
+      correlationId,
+    });
+
+    res.json({
+      success: true,
+      message: 'Passwords reset successfully',
+      timestamp: new Date().toISOString(),
+      correlationId,
+    });
+
+  } catch (error: any) {
+    logger.error('Password reset failed', {
+      error: error.message,
+      correlationId,
+    });
+
+    res.status(500).json({
+      code: 'RESET_FAILED',
+      message: 'Failed to reset passwords',
+      correlationId,
+    });
+  }
+});
+
 export default router;

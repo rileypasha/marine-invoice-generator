@@ -14,7 +14,7 @@ services:
       - key: PORT
         value: 10000
       - key: BUILD_VERSION
-        value: v1.0.3
+        value: v1.0.4
       - key: SESSION_SECRET
         generateValue: true
       - key: DATABASE_URL
