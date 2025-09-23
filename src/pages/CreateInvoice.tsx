@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -36,6 +36,15 @@ interface DatabaseVessel {
   weight_tons?: number;
   home_port?: string;
   owner_name?: string;
+}
+
+interface DatabaseCustomer {
+  id: string;
+  display_name: string;
+  legal_name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
 }
 
 interface Customer {
@@ -117,6 +126,18 @@ const CreateInvoice: React.FC = () => {
   const [isLoadingVessels, setIsLoadingVessels] = useState(false);
   const [selectedVesselId, setSelectedVesselId] = useState<string>('');
   const [vesselSearchQuery, setVesselSearchQuery] = useState('');
+
+  // Customer linking state
+  const [availableCustomers, setAvailableCustomers] = useState<DatabaseCustomer[]>([]);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+
+  // Address autocomplete state
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
+  const addressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch existing invoice data when in edit mode
   useEffect(() => {
@@ -256,6 +277,23 @@ const CreateInvoice: React.FC = () => {
     }
   }, [invoiceData.vessel.weight]);
 
+  // Cleanup address timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (addressTimeoutRef.current) {
+        clearTimeout(addressTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Format phone number as (XXX) XXX-XXXX
+  const formatPhoneNumber = (value: string): string => {
+    const numbers = value.replace(/\D/g, '').slice(0, 10);
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 6) return `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
+    return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6)}`;
+  };
+
   const handleVesselChange = (field: keyof Vessel, value: string) => {
     // Strip suffixes before storing the value
     let cleanValue = value;
@@ -323,10 +361,84 @@ const CreateInvoice: React.FC = () => {
     }
   };
 
+  const searchCustomers = async (query: string) => {
+    if (!isAuthenticated || !csrfToken || query.length < 2) {
+      setAvailableCustomers([]);
+      return;
+    }
+
+    setIsLoadingCustomers(true);
+    try {
+      const response = await fetch(`/api/v1/customers/search?query=${encodeURIComponent(query)}&limit=10`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableCustomers(data.customers || []);
+      } else {
+        console.error('Failed to search customers:', response.statusText);
+        setAvailableCustomers([]);
+      }
+    } catch (error) {
+      console.error('Error searching customers:', error);
+      setAvailableCustomers([]);
+    } finally {
+      setIsLoadingCustomers(false);
+    }
+  };
+
+  const searchAddresses = async (query: string) => {
+    if (!query || query.length < 3) {
+      setAddressSuggestions([]);
+      setShowAddressSuggestions(false);
+      return;
+    }
+
+    setIsLoadingAddress(true);
+    try {
+      const response = await fetch(`/api/geo/address-autocomplete?query=${encodeURIComponent(query)}&limit=5`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const suggestions = await response.json();
+        setAddressSuggestions(suggestions || []);
+        setShowAddressSuggestions(true);
+      } else {
+        console.error('Failed to search addresses:', response.statusText);
+        setAddressSuggestions([]);
+        setShowAddressSuggestions(false);
+      }
+    } catch (error) {
+      console.error('Error searching addresses:', error);
+      setAddressSuggestions([]);
+      setShowAddressSuggestions(false);
+    } finally {
+      setIsLoadingAddress(false);
+    }
+  };
+
   const handleCustomerChange = (field: keyof Customer, value: string) => {
+    let processedValue = value;
+
+    // Format phone number automatically
+    if (field === 'customerPhone') {
+      processedValue = formatPhoneNumber(value);
+    }
+
     setInvoiceData(prev => ({
       ...prev,
-      customer: { ...prev.customer, [field]: value }
+      customer: { ...prev.customer, [field]: processedValue }
     }));
     setHasUnsavedChanges(true);
   };
@@ -1485,7 +1597,79 @@ const CreateInvoice: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Link to Existing Customer */}
+                  <div className="space-y-2">
+                    <Label htmlFor="customer-link">Link to Existing Customer</Label>
+                    <Select
+                      value={selectedCustomerId}
+                      onValueChange={(value) => {
+                        setSelectedCustomerId(value);
+                        if (value && value !== '') {
+                          const selectedCustomer = availableCustomers.find(c => c.id === value);
+                          if (selectedCustomer) {
+                            setInvoiceData(prev => ({
+                              ...prev,
+                              customer: {
+                                ...prev.customer,
+                                id: selectedCustomer.id,
+                                contactName: selectedCustomer.display_name || '',
+                                customerName: selectedCustomer.legal_name || selectedCustomer.display_name || '',
+                                customerEmail: selectedCustomer.email || '',
+                                customerPhone: selectedCustomer.phone ? formatPhoneNumber(selectedCustomer.phone) : '',
+                                customerAddress: selectedCustomer.address || ''
+                              }
+                            }));
+                          }
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Search for a customer..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <div className="p-2">
+                          <Input
+                            placeholder="Type to search customers..."
+                            value={customerSearchQuery}
+                            onChange={(e) => {
+                              setCustomerSearchQuery(e.target.value);
+                              searchCustomers(e.target.value);
+                            }}
+                            className="mb-2"
+                          />
+                          {isLoadingCustomers && (
+                            <div className="text-sm text-muted-foreground p-2">Loading customers...</div>
+                          )}
+                          {availableCustomers.length === 0 && customerSearchQuery.length >= 2 && !isLoadingCustomers && (
+                            <div className="text-sm text-muted-foreground p-2">No customers found</div>
+                          )}
+                          {availableCustomers.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{customer.display_name}</span>
+                                {customer.email && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {customer.email}
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </div>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="contact-name">Customer Name</Label>
+                      <Input
+                        id="contact-name"
+                        value={invoiceData.customer.contactName}
+                        onChange={(e) => handleCustomerChange('contactName', e.target.value)}
+                        placeholder="Customer name"
+                      />
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="customer-name">Company Name</Label>
                       <Input
@@ -1495,19 +1679,10 @@ const CreateInvoice: React.FC = () => {
                         placeholder="Company name"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="contact-name">Contact Name</Label>
-                      <Input
-                        id="contact-name"
-                        value={invoiceData.customer.contactName}
-                        onChange={(e) => handleCustomerChange('contactName', e.target.value)}
-                        placeholder="Contact person"
-                      />
-                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="customer-email">Email</Label>
+                      <Label htmlFor="customer-email">Email Address</Label>
                       <Input
                         id="customer-email"
                         type="email"
@@ -1517,7 +1692,7 @@ const CreateInvoice: React.FC = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="customer-phone">Phone</Label>
+                      <Label htmlFor="customer-phone">Phone Number</Label>
                       <Input
                         id="customer-phone"
                         value={invoiceData.customer.customerPhone}
@@ -1526,14 +1701,54 @@ const CreateInvoice: React.FC = () => {
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 relative">
                     <Label htmlFor="customer-address">Address</Label>
-                    <Textarea
+                    <Input
                       id="customer-address"
                       value={invoiceData.customer.customerAddress}
-                      onChange={(e) => handleCustomerChange('customerAddress', e.target.value)}
-                      placeholder="Customer address"
+                      onChange={(e) => {
+                        handleCustomerChange('customerAddress', e.target.value);
+                        const query = e.target.value;
+
+                        // Clear existing timeout
+                        if (addressTimeoutRef.current) {
+                          clearTimeout(addressTimeoutRef.current);
+                        }
+
+                        if (query.length >= 3) {
+                          // Set new timeout with proper cleanup
+                          addressTimeoutRef.current = setTimeout(() => {
+                            searchAddresses(query);
+                          }, 300);
+                        } else {
+                          setShowAddressSuggestions(false);
+                        }
+                      }}
+                      onBlur={() => {
+                        // Hide suggestions after a short delay to allow selection
+                        setTimeout(() => setShowAddressSuggestions(false), 200);
+                      }}
+                      placeholder="Start typing address for suggestions..."
                     />
+                    {showAddressSuggestions && addressSuggestions.length > 0 && (
+                      <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-48 overflow-y-auto">
+                        {isLoadingAddress && (
+                          <div className="text-sm text-muted-foreground p-2">Loading addresses...</div>
+                        )}
+                        {addressSuggestions.map((suggestion, index) => (
+                          <div
+                            key={index}
+                            className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                            onClick={() => {
+                              handleCustomerChange('customerAddress', suggestion.formatted || '');
+                              setShowAddressSuggestions(false);
+                            }}
+                          >
+                            {suggestion.formatted}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
