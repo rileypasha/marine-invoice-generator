@@ -495,9 +495,6 @@ const CreateCustomer: React.FC = () => {
                     disabled={isLoading || isLoadingData}
                     className=""
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Start typing for address suggestions.
-                  </p>
                 </div>
               </div>
             </CardContent>
