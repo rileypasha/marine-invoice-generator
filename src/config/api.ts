@@ -9,8 +9,8 @@ export function getApiBaseUrl(): string {
     return window.location.origin;
   }
 
-  // In development, use the dev server port
-  return 'http://localhost:3001';
+  // In development, use the Vite proxy (empty string = relative URLs)
+  return '';
 }
 
 /**

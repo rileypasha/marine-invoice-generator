@@ -86,10 +86,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
+        // Extract a display name from email (part before @)
+        const displayName = data.email.split('@')[0];
         setCurrentUser({
           id: data.userId,
           email: data.email,
-          name: data.email, // Using email as name since backend doesn't return name in check
+          name: displayName,
           role: 'standard' // Default role
         });
         setCsrfToken(data.csrfToken);

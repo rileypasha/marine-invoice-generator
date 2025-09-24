@@ -161,7 +161,7 @@ const Invoices: React.FC<InvoicesProps> = ({
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div className="flex-1 max-w-sm">
                 <Input
-                  placeholder="Search invoices by title, customer, or vessel..."
+                  placeholder="Search invoices by title, contact, or vessel..."
                   value={searchTerm}
                   onChange={(e) => onSearch?.(e.target.value)}
                   className="w-full"
@@ -187,16 +187,16 @@ const Invoices: React.FC<InvoicesProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Customer</label>
+                  <label className="block text-sm font-medium mb-2">Contact</label>
                   <Select
                     value={filters.customerId || ''}
                     onValueChange={(customerId) => onFiltersChange?.({ ...filters, customerId: customerId || undefined })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select customer" />
+                      <SelectValue placeholder="Select contact" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Customers</SelectItem>
+                      <SelectItem value="">All Contacts</SelectItem>
                       {availableCustomers.map(customer => (
                         <SelectItem key={customer.id} value={customer.id}>
                           {customer.display_name}
@@ -296,7 +296,7 @@ const Invoices: React.FC<InvoicesProps> = ({
               <TableHeader>
                 <TableRow>
                   <TableHead>Invoice #</TableHead>
-                  <TableHead>Customer</TableHead>
+                  <TableHead>Contact</TableHead>
                   <TableHead>Vessel</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Created At</TableHead>

@@ -1,215 +1,186 @@
-import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useLocation } from 'react-router-dom';
 import {
-  Home,
   FileText,
   Users,
   Ship,
   Settings,
-  LogOut,
-  Menu,
-  X,
-  ChevronDown,
-  User,
-  Plus
+  SquarePen,
+  PanelLeftOpen,
+  PanelLeftClose
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { Button } from '../components/ui/button';
 import {
-  Card,
-  CardContent
-} from '../components/ui/card';
+  Sidebar,
+  SidebarBody,
+  SidebarLink,
+  useSidebar,
+} from '../components/ui/sidebar';
 
 interface MainLayoutProps {
   children: React.ReactNode;
 }
 
-const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { currentUser, logout } = useAuth();
+const SidebarContent = () => {
   const location = useLocation();
-  const navigate = useNavigate();
+  const { open, setOpen } = useSidebar();
+  const [isLogoHovered, setIsLogoHovered] = React.useState(false);
+  // ChatGPT-style hover effects: hover:bg-gray-200, rounded-lg, tooltips
 
-  // Build navigation based on user role
-  const navigation = [];
 
+  const toggleSidebar = () => {
+    setOpen(!open);
+  };
 
-  // All users can see Create, Invoices, Customers, Vessels, and Settings
-  navigation.push(
-    { name: 'Create', href: '/invoices/create', icon: Plus },
-    { name: 'Invoices', href: '/invoices', icon: FileText },
-    { name: 'Customers', href: '/customers', icon: Users },
-    { name: 'Vessels', href: '/vessels', icon: Ship },
-    { name: 'Settings', href: '/settings', icon: Settings }
-  );
+  // Build navigation links for Magic UI sidebar
+  const links = [
+    {
+      label: 'Create',
+      href: '/invoices/create',
+      icon: <SquarePen className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+    },
+    {
+      label: 'Invoices',
+      href: '/invoices',
+      icon: <FileText className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+    },
+    {
+      label: 'Contacts',
+      href: '/customers',
+      icon: <Users className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+    },
+    {
+      label: 'Vessels',
+      href: '/vessels',
+      icon: <Ship className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+    },
+    {
+      label: 'Settings',
+      href: '/settings',
+      icon: <Settings className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+    },
+  ];
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
+  // Separate settings link for bottom placement
+  const settingsLink = {
+    label: 'Settings',
+    href: '/settings',
+    icon: <Settings className="text-gray-700 h-4 w-4 flex-shrink-0" />,
   };
 
   const isActive = (href: string) => location.pathname === href;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4">
-          {/* Logo */}
-          <div className="flex items-center flex-shrink-0 px-4">
-            <img
-              className="h-8 w-auto"
-              src="/notextlogo.png"
-              alt="Marine Group"
-            />
-            <span className="ml-2 text-lg font-semibold text-gray-900">
-              Marine Group
-            </span>
-          </div>
-
-          {/* Navigation */}
-          <nav className="mt-8 flex-1 px-2 space-y-1">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                    isActive(item.href)
-                      ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <Icon
-                    className={`mr-3 flex-shrink-0 h-5 w-5 ${
-                      isActive(item.href) ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
-                    }`}
-                  />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* User section */}
-          <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-            <div className="flex-shrink-0 w-full group block">
-              <div className="flex items-center">
-                <div className="inline-block h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
-                  <User className="h-4 w-4 text-white" />
-                </div>
-                <div className="ml-3 flex-1">
-                  <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
-                    {currentUser?.name}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="ml-3"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile sidebar */}
-      {sidebarOpen && (
-        <div className="lg:hidden">
-          <div className="fixed inset-0 flex z-40">
-            <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
-            <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white">
-              <div className="absolute top-0 right-0 -mr-12 pt-2">
-                <button
-                  type="button"
-                  className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <X className="h-6 w-6 text-white" />
-                </button>
-              </div>
-
-              <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
-                <div className="flex-shrink-0 flex items-center px-4">
-                  <img
-                    className="h-8 w-auto"
-                    src="/notextlogo.png"
-                    alt="Marine Group"
-                  />
-                  <span className="ml-2 text-lg font-semibold text-gray-900">
-                    Marine Group
-                  </span>
-                </div>
-                <nav className="mt-5 px-2 space-y-1">
-                  {navigation.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.name}
-                        to={item.href}
-                        className={`group flex items-center px-2 py-2 text-base font-medium rounded-md ${
-                          isActive(item.href)
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        }`}
-                        onClick={() => setSidebarOpen(false)}
-                      >
-                        <Icon
-                          className={`mr-4 flex-shrink-0 h-6 w-6 ${
-                            isActive(item.href) ? 'text-blue-500' : 'text-gray-400'
-                          }`}
-                        />
-                        {item.name}
-                      </Link>
-                    );
-                  })}
-                </nav>
-              </div>
-
-              <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-                <div className="flex items-center">
-                  <div className="inline-block h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
-                    <User className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <p className="text-base font-medium text-gray-700">
-                      {currentUser?.name}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleLogout}
-                    className="ml-3"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main content */}
-      <div className="lg:pl-64 flex flex-col flex-1">
-        {/* Top bar */}
-        <div className="sticky top-0 z-10 lg:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-gray-50">
-          <button
-            type="button"
-            className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
-            onClick={() => setSidebarOpen(true)}
+    <div className="flex flex-col h-full justify-between overflow-y-auto overflow-x-hidden">
+      {/* Top section with logo and navigation */}
+      <div className="flex flex-col">
+        {/* Logo */}
+        <div
+          className={`flex items-center py-2 relative ${open ? 'justify-between' : 'justify-start pl-0'}`}
+          onMouseEnter={() => setIsLogoHovered(true)}
+          onMouseLeave={() => setIsLogoHovered(false)}
+        >
+          {/* Logo with individual hover */}
+          <div
+            className={`relative rounded-lg transition-colors duration-300 ${open ? 'hover:bg-gray-50' : ''}`}
           >
-            <Menu className="h-6 w-6" />
+            {/* Collapsed hover overlay - only show when not hovered */}
+            {!open && !isLogoHovered && <div className="absolute inset-0 pl-1 pr-2 py-2 ml-0 rounded-lg pointer-events-none"></div>}
+            {!open && isLogoHovered && <div className="absolute inset-0 pl-1 pr-2 py-2 ml-0 rounded-lg transition-colors duration-300 pointer-events-none bg-gray-50"></div>}
+
+            <div className={`flex items-center relative z-10 ${isLogoHovered && !open ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+              <img
+                className="h-8 w-8 flex-shrink-0"
+                style={{ marginLeft: '6px' }}
+                src="/bw_logo.svg"
+                alt="Marine Group"
+              />
+            </div>
+          </div>
+
+          {/* Toggle Button */}
+          <button
+            onClick={toggleSidebar}
+            className={`p-1.5 rounded-md transition-all duration-200 z-20 ${
+              open
+                ? 'static hover:bg-gray-50'
+                : `absolute ${isLogoHovered ? 'opacity-100 visible' : 'opacity-0 invisible'}`
+            }`}
+            style={{
+              marginLeft: open ? '-2px' : undefined,
+              left: open ? undefined : '8px'
+            }}
+          >
+            {open ? (
+              <PanelLeftClose className="h-5 w-5 text-gray-600" />
+            ) : (
+              <PanelLeftOpen className="h-5 w-5 text-gray-600" />
+            )}
           </button>
         </div>
 
+        {/* Navigation Links */}
+        <div className="mt-1 flex flex-col gap-2">
+          {links.filter(link => link.label !== 'Settings').map((link, idx) => (
+            <SidebarLink
+              key={idx}
+              link={{
+                ...link,
+                icon: React.cloneElement(link.icon as React.ReactElement, {
+                  className: `h-5 w-5 flex-shrink-0 ${
+                    isActive(link.href)
+                      ? 'text-gray-900'
+                      : 'text-gray-950'
+                  }`,
+                  style: { marginLeft: '8px' }
+                })
+              }}
+              className={`pl-1 pr-2 py-2 ml-0 rounded-lg transition-colors duration-300 ${
+                isActive(link.href)
+                  ? 'bg-gray-100 text-gray-900'
+                  : 'hover:bg-gray-50 text-gray-600'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom section with settings */}
+      <div className="mt-auto pt-4 border-t border-gray-200">
+        <SidebarLink
+          link={{
+            ...settingsLink,
+            icon: React.cloneElement(settingsLink.icon as React.ReactElement, {
+              className: `h-5 w-5 flex-shrink-0 ${
+                isActive(settingsLink.href)
+                  ? 'text-gray-900'
+                  : 'text-gray-950'
+              }`,
+              style: { marginLeft: '8px' }
+            })
+          }}
+          className={`pl-1 pr-2 py-2 ml-0 rounded-lg transition-colors duration-300 ${
+            isActive(settingsLink.href)
+              ? 'bg-gray-100 text-gray-900'
+              : 'hover:bg-gray-50 text-gray-600'
+          }`}
+        />
+      </div>
+
+    </div>
+  );
+};
+
+const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+  return (
+    <div className="min-h-screen bg-gray-50 flex w-full">
+      <Sidebar>
+        <SidebarBody className="justify-start gap-10">
+          <SidebarContent />
+        </SidebarBody>
+      </Sidebar>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col">
         {/* Page content */}
         <main className="flex-1">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

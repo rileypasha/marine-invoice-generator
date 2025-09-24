@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Invoices from './Invoices';
 
@@ -72,6 +72,7 @@ const InvoicesPage: React.FC = () => {
 
   const { isAuthenticated, csrfToken } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const fetchInvoices = async (page = 1, search = '', filterOptions: FilterOptions = {}) => {
     if (!isAuthenticated || !csrfToken) return;
@@ -212,6 +213,21 @@ const InvoicesPage: React.FC = () => {
   useEffect(() => {
     fetchInvoices(currentPage, searchTerm, filters);
   }, [isAuthenticated, csrfToken, currentPage, searchTerm, filters]);
+
+  // Apply customer filter from URL parameter when availableCustomers is loaded
+  useEffect(() => {
+    const customerIdFromUrl = searchParams.get('customer_id');
+    if (customerIdFromUrl && availableCustomers.length > 0) {
+      // Check if the customer exists in the available customers
+      const customerExists = availableCustomers.some(customer => customer.id === customerIdFromUrl);
+      if (customerExists) {
+        setFilters(prevFilters => ({
+          ...prevFilters,
+          customerId: customerIdFromUrl
+        }));
+      }
+    }
+  }, [searchParams, availableCustomers]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);

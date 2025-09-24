@@ -378,10 +378,10 @@ const InvoiceView: React.FC = () => {
         </div>
 
         <div className="invoice-section">
-          <h3>Customer Information</h3>
+          <h3>Contact Information</h3>
           <div className="invoice-details">
             <p><strong>Estimator:</strong> <span>{invoice.userName || 'N/A'}</span></p>
-            <p><strong>Customer:</strong> <span>{customer.display_name || customer.customerName || invoice.customerName || 'N/A'}</span></p>
+            <p><strong>Contact:</strong> <span>{customer.display_name || customer.customerName || invoice.customerName || 'N/A'}</span></p>
             <p><strong>Email:</strong> <span>{customer.email || customer.customerEmail || invoice.customerEmail || 'N/A'}</span></p>
             <p><strong>Phone:</strong> <span>{customer.phone || customer.customerPhone || invoice.customerPhone || 'N/A'}</span></p>
             {customer.address && (

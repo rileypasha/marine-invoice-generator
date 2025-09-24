@@ -643,7 +643,7 @@ const CreateInvoice: React.FC = () => {
 
     // Check customer fields
     if (!invoiceData.customer.customerName?.trim()) {
-      missingFields.push("Customer Name");
+      missingFields.push("Contact Name");
     }
 
     // Check services - at least one service with description and cost/rate
@@ -1061,12 +1061,12 @@ const CreateInvoice: React.FC = () => {
     pdf.text(`Weight: ${invoiceData.vessel.weight || 'N/A'} tons`, 20, 115);
     pdf.text(`Length: ${invoiceData.vessel.beam || 'N/A'} ft`, 20, 125);
 
-    // Customer Information
+    // Contact Information
     pdf.setFontSize(14);
-    pdf.text('Customer Information', 20, 145);
+    pdf.text('Contact Information', 20, 145);
 
     pdf.setFontSize(11);
-    pdf.text(`Customer: ${invoiceData.customer.customerName || 'N/A'}`, 20, 160);
+    pdf.text(`Contact: ${invoiceData.customer.customerName || 'N/A'}`, 20, 160);
     pdf.text(`Email: ${invoiceData.customer.customerEmail || 'N/A'}`, 20, 170);
     pdf.text(`Phone: ${invoiceData.customer.customerPhone || 'N/A'}`, 20, 180);
 
@@ -1283,7 +1283,7 @@ const CreateInvoice: React.FC = () => {
     const csvContent = [
       // Invoice header info
       `"Invoice for ${invoiceData.vessel.name}"`,
-      `"Customer: ${invoiceData.customer.customerName}"`,
+      `"Contact: ${invoiceData.customer.customerName}"`,
       `"Date: ${new Date().toLocaleDateString()}"`,
       '',
       csvHeaders.join(','),
@@ -1461,7 +1461,7 @@ const CreateInvoice: React.FC = () => {
               />
               <TabButton
                 id="customer"
-                label="Customer"
+                label="Contact"
                 isActive={activeTab === 'customer'}
                 onClick={() => setActiveTab('customer')}
               />
@@ -1587,19 +1587,19 @@ const CreateInvoice: React.FC = () => {
               </Card>
             )}
 
-            {/* Customer Tab */}
+            {/* Contact Tab */}
             {activeTab === 'customer' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Customer Information</CardTitle>
+                  <CardTitle>Contact Information</CardTitle>
                   <CardDescription>
-                    Enter customer and contact details
+                    Enter contact and customer details
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Link to Existing Customer */}
                   <div className="space-y-2">
-                    <Label htmlFor="customer-link">Link to Existing Customer</Label>
+                    <Label htmlFor="customer-link">Link to Existing Contact</Label>
                     <Select
                       value={selectedCustomerId}
                       onValueChange={(value) => {
@@ -1624,12 +1624,12 @@ const CreateInvoice: React.FC = () => {
                       }}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Search for a customer..." />
+                        <SelectValue placeholder="Search for a contact..." />
                       </SelectTrigger>
                       <SelectContent>
                         <div className="p-2">
                           <Input
-                            placeholder="Type to search customers..."
+                            placeholder="Type to search contacts..."
                             value={customerSearchQuery}
                             onChange={(e) => {
                               setCustomerSearchQuery(e.target.value);
@@ -1638,10 +1638,10 @@ const CreateInvoice: React.FC = () => {
                             className="mb-2"
                           />
                           {isLoadingCustomers && (
-                            <div className="text-sm text-muted-foreground p-2">Loading customers...</div>
+                            <div className="text-sm text-muted-foreground p-2">Loading contacts...</div>
                           )}
                           {availableCustomers.length === 0 && customerSearchQuery.length >= 2 && !isLoadingCustomers && (
-                            <div className="text-sm text-muted-foreground p-2">No customers found</div>
+                            <div className="text-sm text-muted-foreground p-2">No contacts found</div>
                           )}
                           {availableCustomers.map((customer) => (
                             <SelectItem key={customer.id} value={customer.id}>
@@ -1662,12 +1662,12 @@ const CreateInvoice: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="contact-name">Customer Name</Label>
+                      <Label htmlFor="contact-name">Contact Name</Label>
                       <Input
                         id="contact-name"
                         value={invoiceData.customer.contactName}
                         onChange={(e) => handleCustomerChange('contactName', e.target.value)}
-                        placeholder="Customer name"
+                        placeholder="Contact name"
                       />
                     </div>
                     <div className="space-y-2">
@@ -2033,10 +2033,10 @@ const CreateInvoice: React.FC = () => {
                   </div>
                 )}
 
-                {/* Customer Summary */}
+                {/* Contact Summary */}
                 {invoiceData.customer.customerName && (
                   <div className="pb-3 border-b">
-                    <div className="text-sm font-medium">Customer</div>
+                    <div className="text-sm font-medium">Contact</div>
                     <div className="text-sm text-muted-foreground">{invoiceData.customer.customerName}</div>
                     {invoiceData.customer.customerEmail && (
                       <div className="text-xs text-muted-foreground">
@@ -2168,7 +2168,7 @@ const CreateInvoice: React.FC = () => {
                 <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
                   <strong>Invoice Details:</strong><br />
                   Vessel: {invoiceData.vessel.name || 'N/A'}<br />
-                  Customer: {invoiceData.customer.customerName || 'N/A'}<br />
+                  Contact: {invoiceData.customer.customerName || 'N/A'}<br />
                   Services: {invoiceData.services.length} item(s)
                 </div>
               </div>

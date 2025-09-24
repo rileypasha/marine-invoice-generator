@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   CardHeader,
@@ -7,9 +8,17 @@ import {
   CardContent,
   Button
 } from '../components/magic/index';
-import { Settings as SettingsIcon, User, Shield, Bell, Database } from 'lucide-react';
+import { Settings as SettingsIcon, User, Shield, Bell, Database, LogOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Settings: React.FC = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -50,6 +59,14 @@ const Settings: React.FC = () => {
               </Button>
               <Button variant="outline" className="w-full justify-start">
                 Email Preferences
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
               </Button>
             </div>
           </CardContent>

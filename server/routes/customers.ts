@@ -38,6 +38,141 @@ const validateCustomer = (data: any) => {
   return errors;
 };
 
+// Header mapping from user-friendly names to database field names
+const headerMapping: Record<string, string> = {
+  'Customer Name': 'display_name',
+  'Company Name': 'legal_name',
+  'Email Address': 'email',
+  'Phone Number': 'phone',
+  'Address': 'full_address', // Special field for single address parsing
+  // Keep legacy field mappings for backward compatibility
+  'City': 'city',
+  'State': 'state',
+  'ZIP Code': 'postal_code',
+  'Postal Code': 'postal_code',
+  'display_name': 'display_name',
+  'legal_name': 'legal_name',
+  'email': 'email',
+  'phone': 'phone',
+  'address_line1': 'address_line1',
+  'city': 'city',
+  'state': 'state',
+  'postal_code': 'postal_code',
+};
+
+// Function to parse a single address string into components
+const parseAddress = (addressString: string) => {
+  if (!addressString || addressString.trim().length === 0) {
+    return {
+      address_line1: null,
+      city: null,
+      state: null,
+      postal_code: null
+    };
+  }
+
+  const cleanAddress = addressString.trim();
+
+  // Split by commas to get potential components
+  const parts = cleanAddress.split(',').map(part => part.trim());
+
+  if (parts.length === 1) {
+    // Only one part - treat as street address
+    return {
+      address_line1: parts[0],
+      city: null,
+      state: null,
+      postal_code: null
+    };
+  }
+
+  let streetAddress = '';
+  let city = '';
+  let state = '';
+  let postalCode = '';
+
+  if (parts.length >= 2) {
+    // First part is always street address
+    streetAddress = parts[0];
+
+    // Last part might contain state and/or ZIP
+    const lastPart = parts[parts.length - 1];
+
+    // Check if last part contains ZIP code pattern
+    const zipMatch = lastPart.match(/\b(\d{5}(?:-\d{4})?)\b/);
+    if (zipMatch) {
+      postalCode = zipMatch[1];
+      // Remove ZIP from the last part to get state
+      const withoutZip = lastPart.replace(zipMatch[0], '').trim();
+      if (withoutZip) {
+        state = withoutZip;
+      }
+    } else {
+      // No ZIP found, last part might be state
+      state = lastPart;
+    }
+
+    // Handle city
+    if (parts.length === 3) {
+      // Format: "Street, City, State ZIP"
+      city = parts[1];
+    } else if (parts.length === 4) {
+      // Format: "Street, City, State, ZIP" or similar
+      city = parts[1];
+      if (!state && !postalCode) {
+        state = parts[2];
+      }
+    } else if (parts.length > 4) {
+      // Multiple parts - combine middle parts as city
+      city = parts.slice(1, -1).join(', ');
+    }
+  }
+
+  // Clean up state - handle full state names and abbreviations
+  if (state) {
+    state = state.trim();
+    // If state looks like a ZIP code pattern, it might be misplaced
+    if (/^\d{5}(?:-\d{4})?$/.test(state)) {
+      if (!postalCode) {
+        postalCode = state;
+        state = '';
+      }
+    }
+    // Limit state to reasonable length (abbreviations or full names)
+    if (state.length > 20) {
+      state = state.substring(0, 20);
+    }
+  }
+
+  return {
+    address_line1: streetAddress || null,
+    city: city || null,
+    state: state || null,
+    postal_code: postalCode || null
+  };
+};
+
+// Function to normalize CSV headers to database field names
+const normalizeHeaders = (record: any): any => {
+  const normalizedRecord: any = {};
+
+  Object.keys(record).forEach(key => {
+    const normalizedKey = headerMapping[key] || key.toLowerCase().replace(/\s+/g, '_');
+    normalizedRecord[normalizedKey] = record[key];
+  });
+
+  // Handle single address field parsing
+  if (normalizedRecord.full_address) {
+    const addressComponents = parseAddress(normalizedRecord.full_address);
+    // Merge parsed address components into the record
+    Object.assign(normalizedRecord, addressComponents);
+    // Remove the temporary full_address field
+    delete normalizedRecord.full_address;
+  }
+
+  return normalizedRecord;
+};
+
 // Configure multer for CSV file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -53,27 +188,27 @@ const upload = multer({
   },
 });
 
-// CSV import validation
+// CSV import validation with user-friendly error messages
 const validateCsvRow = (row: any, rowIndex: number) => {
   const errors: Array<{ row: number; error: string }> = [];
 
   // Required field validation
   if (!row.display_name || row.display_name.trim().length === 0) {
-    errors.push({ row: rowIndex, error: 'Display name is required' });
+    errors.push({ row: rowIndex, error: 'Customer Name is required' });
   }
 
   if (row.display_name && row.display_name.length > 255) {
-    errors.push({ row: rowIndex, error: 'Display name must be less than 255 characters' });
+    errors.push({ row: rowIndex, error: 'Customer Name must be less than 255 characters' });
   }
 
   // Email validation
   if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
-    errors.push({ row: rowIndex, error: 'Invalid email format' });
+    errors.push({ row: rowIndex, error: 'Invalid Email Address format' });
   }
 
   // Phone validation
   if (row.phone && !/^[\d\s\-\+\(\)]+$/.test(row.phone)) {
-    errors.push({ row: rowIndex, error: 'Invalid phone number format' });
+    errors.push({ row: rowIndex, error: 'Invalid Phone Number format' });
   }
 
   return errors;
@@ -200,16 +335,19 @@ router.post('/import', upload.single('file'), async (req: CustomerRequest, res: 
       });
     }
 
-    // Validate all rows first
+    // Normalize headers and validate all rows
     const allErrors: Array<{ row: number; error: string }> = [];
     const validRecords: any[] = [];
 
     records.forEach((record, index) => {
-      const rowErrors = validateCsvRow(record, index + 2); // +2 for header row and 0-based index
+      // Normalize headers from user-friendly names to database field names
+      const normalizedRecord = normalizeHeaders(record);
+
+      const rowErrors = validateCsvRow(normalizedRecord, index + 2); // +2 for header row and 0-based index
       if (rowErrors.length > 0) {
         allErrors.push(...rowErrors);
       } else {
-        validRecords.push(record);
+        validRecords.push(normalizedRecord);
       }
     });
 
@@ -456,6 +594,7 @@ router.post('/', async (req: CustomerRequest, res: Response) => {
     const customer = await prisma.customer.create({
       data: {
         ...customerData,
+        updated_at: new Date(),
       },
     });
 

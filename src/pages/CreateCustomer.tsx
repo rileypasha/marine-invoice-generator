@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, Plus, User, ArrowLeft } from 'lucide-react';
+import { createApiUrl, API_ENDPOINTS } from '../config/api';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -18,7 +20,6 @@ import {
 
 interface Customer {
   id?: string | null;
-  customerName: string;
   customerEmail: string;
   customerPhone: string;
   customerAddress: string;
@@ -27,8 +28,8 @@ interface Customer {
 
 const CreateCustomer: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, csrfToken } = useAuth();
   const [customerData, setCustomerData] = useState<Customer>({
-    customerName: '',
     customerEmail: '',
     customerPhone: '',
     customerAddress: '',
@@ -38,6 +39,7 @@ const CreateCustomer: React.FC = () => {
   const [emailError, setEmailError] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
 
   const handleInputChange = (field: keyof Customer, value: string) => {
@@ -91,31 +93,171 @@ const CreateCustomer: React.FC = () => {
     }
   };
 
+  const parseAddress = (address: string) => {
+    // Simple address parsing - splits by commas
+    const parts = address.split(',').map(part => part.trim());
+
+    if (parts.length >= 3) {
+      // Format: "Street, City, State ZIP" or "Street, City, State, ZIP"
+      const street = parts[0];
+      const city = parts[1];
+      const stateZip = parts[2];
+
+      // Extract state and ZIP from last part
+      const stateZipMatch = stateZip.match(/^(.+?)\s+(\d{5}(-\d{4})?)$/);
+
+      if (stateZipMatch) {
+        return {
+          address_line1: street,
+          city: city,
+          state: stateZipMatch[1],
+          postal_code: stateZipMatch[2],
+        };
+      } else {
+        return {
+          address_line1: street,
+          city: city,
+          state: stateZip,
+          postal_code: '',
+        };
+      }
+    } else if (parts.length === 2) {
+      return {
+        address_line1: parts[0],
+        city: parts[1],
+        state: '',
+        postal_code: '',
+      };
+    } else {
+      return {
+        address_line1: address,
+        city: '',
+        state: '',
+        postal_code: '',
+      };
+    }
+  };
+
   const handleSave = async () => {
+    if (!isAuthenticated || !csrfToken) {
+      setSubmitError('Please log in to save contacts');
+      return;
+    }
+
     setIsLoading(true);
+    setSubmitError('');
+
     try {
-      // In a real app, this would save to your API
-      console.log('Saving customer:', customerData);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Generate unique ID
+      const customerId = `cust_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Parse address
+      const addressParts = customerData.customerAddress ? parseAddress(customerData.customerAddress) : {
+        address_line1: '',
+        city: '',
+        state: '',
+        postal_code: ''
+      };
+
+      // Map frontend fields to backend schema
+      const customerPayload = {
+        id: customerId,
+        display_name: customerData.contactName,
+        legal_name: customerData.contactName || null,
+        email: customerData.customerEmail || null,
+        phone: customerData.customerPhone || null,
+        ...addressParts,
+        country: 'US'
+      };
+
+      const response = await fetch(createApiUrl(API_ENDPOINTS.CUSTOMERS), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include',
+        body: JSON.stringify(customerPayload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 409) {
+          setSubmitError('A contact with this name already exists.');
+        } else if (errorData.errors) {
+          setSubmitError(errorData.errors.map((err: any) => err.message).join(', '));
+        } else {
+          setSubmitError(errorData.message || 'Failed to create contact');
+        }
+        return;
+      }
+
+      // Success - navigate back to contacts list
       navigate('/customers');
     } catch (error) {
       console.error('Error saving customer:', error);
+      setSubmitError('Network error. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSaveAndNew = async () => {
+    if (!isAuthenticated || !csrfToken) {
+      setSubmitError('Please log in to save contacts');
+      return;
+    }
+
     setIsLoading(true);
+    setSubmitError('');
+
     try {
-      // In a real app, this would save to your API
-      console.log('Saving customer:', customerData);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Reset form for new customer
+      // Generate unique ID
+      const customerId = `cust_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Parse address
+      const addressParts = customerData.customerAddress ? parseAddress(customerData.customerAddress) : {
+        address_line1: '',
+        city: '',
+        state: '',
+        postal_code: ''
+      };
+
+      // Map frontend fields to backend schema
+      const customerPayload = {
+        id: customerId,
+        display_name: customerData.contactName,
+        legal_name: customerData.contactName || null,
+        email: customerData.customerEmail || null,
+        phone: customerData.customerPhone || null,
+        ...addressParts,
+        country: 'US'
+      };
+
+      const response = await fetch(createApiUrl(API_ENDPOINTS.CUSTOMERS), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include',
+        body: JSON.stringify(customerPayload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 409) {
+          setSubmitError('A contact with this name already exists.');
+        } else if (errorData.errors) {
+          setSubmitError(errorData.errors.map((err: any) => err.message).join(', '));
+        } else {
+          setSubmitError(errorData.message || 'Failed to create contact');
+        }
+        return;
+      }
+
+      // Success - reset form for new contact
       setCustomerData({
-        customerName: '',
         customerEmail: '',
         customerPhone: '',
         customerAddress: '',
@@ -124,8 +266,10 @@ const CreateCustomer: React.FC = () => {
       });
       setEmailError('');
       setPhoneError('');
+      setSubmitError('');
     } catch (error) {
       console.error('Error saving customer:', error);
+      setSubmitError('Network error. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -145,7 +289,7 @@ const CreateCustomer: React.FC = () => {
     setPhoneError('');
   };
 
-  const isFormValid = customerData.customerName && customerData.customerEmail && !emailError && !phoneError;
+  const isFormValid = customerData.contactName && customerData.customerEmail && !emailError && !phoneError;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -160,11 +304,11 @@ const CreateCustomer: React.FC = () => {
               className="flex items-center"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Customers
+              Back to Contacts
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Create New Customer</h1>
-              <p className="text-gray-600">Add a new customer to your database</p>
+              <h1 className="text-3xl font-bold text-gray-900">Create New Contact</h1>
+              <p className="text-gray-600">Add a new contact to your database</p>
             </div>
           </div>
           <div className="flex items-center space-x-3">
@@ -174,7 +318,7 @@ const CreateCustomer: React.FC = () => {
             </Button>
             <Button onClick={handleSave} disabled={!isFormValid || isLoading}>
               <Save className="h-4 w-4 mr-2" />
-              {isLoading ? 'Saving...' : 'Save Customer'}
+              {isLoading ? 'Saving...' : 'Save Contact'}
             </Button>
             <Button onClick={handleSaveAndNew} disabled={!isFormValid || isLoading}>
               <Save className="h-4 w-4 mr-2" />
@@ -192,17 +336,28 @@ const CreateCustomer: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <User className="h-5 w-5 mr-2" />
-                Customer Information
+                Contact Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Error Message */}
+              {submitError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+                  <div className="flex">
+                    <svg className="w-5 h-5 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <span>{submitError}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Customer Details Form */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                 {/* Customer Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="contact-name">Customer Name</Label>
+                  <Label htmlFor="contact-name">Contact Name *</Label>
                   <Input
                     id="contact-name"
                     type="text"
@@ -210,22 +365,10 @@ const CreateCustomer: React.FC = () => {
                     value={customerData.contactName}
                     onChange={(e) => handleInputChange('contactName', e.target.value)}
                     disabled={isLoading}
-                  />
-                </div>
-
-                {/* Company Name */}
-                <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="customer-name">Company Name *</Label>
-                  <Input
-                    id="customer-name"
-                    type="text"
-                    placeholder="Enter customer or company name"
-                    value={customerData.customerName}
-                    onChange={(e) => handleInputChange('customerName', e.target.value)}
-                    disabled={isLoading}
                     required
                   />
                 </div>
+
 
                 {/* Customer Email */}
                 <div className="space-y-2">
@@ -233,7 +376,7 @@ const CreateCustomer: React.FC = () => {
                   <Input
                     id="customer-email"
                     type="email"
-                    placeholder="customer@example.com"
+                    placeholder="contact@example.com"
                     value={customerData.customerEmail}
                     onChange={(e) => handleEmailChange(e.target.value)}
                     disabled={isLoading}
@@ -268,12 +411,12 @@ const CreateCustomer: React.FC = () => {
                   <AddressAutocomplete
                     value={customerData.customerAddress}
                     onChange={(value) => handleInputChange('customerAddress', value)}
-                    placeholder="Enter customer address (street, city, state, zip)"
+                    placeholder="Enter contact address (street, city, state, zip)"
                     disabled={isLoading}
                     className="min-h-[80px] resize-none"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Full mailing address for the customer. Start typing to see address suggestions.
+                    Full mailing address for the contact. Start typing to see address suggestions.
                   </p>
                 </div>
               </div>
@@ -289,7 +432,7 @@ const CreateCustomer: React.FC = () => {
               <CardTitle className="text-lg">Form Status</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {!customerData.customerName && (
+              {!customerData.contactName && (
                 <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
                   <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -312,7 +455,7 @@ const CreateCustomer: React.FC = () => {
                   <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  Customer information is complete
+                  Contact information is complete
                 </div>
               )}
             </CardContent>
@@ -325,10 +468,10 @@ const CreateCustomer: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-2">
               <Button variant="outline" className="w-full" onClick={() => navigate('/customers')}>
-                View All Customers
+                View All Contacts
               </Button>
               <Button variant="outline" className="w-full" onClick={() => navigate('/invoices/create')}>
-                Create Invoice for Customer
+                Create Invoice for Contact
               </Button>
             </CardContent>
           </Card>

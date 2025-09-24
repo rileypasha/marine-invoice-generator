@@ -30,9 +30,21 @@ export default defineConfig({
     open: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        ws: true,
+        timeout: 10000,
+        proxyTimeout: 10000,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('Proxy error:', err.message);
+            if (!res.headersSent) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Backend connection failed', message: err.message }));
+            }
+          });
+        },
       }
     }
   },
