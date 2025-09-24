@@ -30,6 +30,9 @@ const SidebarContent = () => {
 
   const toggleSidebar = () => {
     setOpen(!open);
+    // Reset hover states to ensure clean state
+    setIsLogoHovered(false);
+    setIsSidebarHovered(false);
   };
 
   // Build navigation links for Magic UI sidebar
@@ -91,7 +94,7 @@ const SidebarContent = () => {
             {/* Collapsed hover overlay - only show when not hovered */}
             {!open && !isLogoHovered && <div className="absolute inset-0 pl-1 pr-2 py-2 ml-0 rounded-lg pointer-events-none"></div>}
 
-            <div className={`flex items-center relative z-10 ${(isLogoHovered || isSidebarHovered) && !open ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+            <div className={`flex items-center relative z-10 ${!open && (isLogoHovered || isSidebarHovered) ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <img
                 className="h-8 w-8 flex-shrink-0"
                 style={{ marginLeft: '6px' }}
@@ -102,24 +105,28 @@ const SidebarContent = () => {
           </div>
 
           {/* Toggle Button */}
-          <button
-            onClick={toggleSidebar}
-            className={`pl-3 pr-4 py-2 ml-0 rounded-lg transition-colors duration-300 z-20 ${
-              open
-                ? 'absolute hover:bg-gray-50'
-                : `absolute hover:bg-gray-50 ${(isLogoHovered || isSidebarHovered) ? 'opacity-100 visible' : 'opacity-0 invisible'}`
-            }`}
-            style={{
-              right: open ? '8px' : undefined,
-              left: open ? undefined : '1px'
-            }}
-          >
-            {open ? (
-              <PanelLeftClose className="h-5 w-5 text-gray-400" />
-            ) : (
+          {!open && (isLogoHovered || isSidebarHovered) && (
+            <button
+              onClick={toggleSidebar}
+              className="absolute pl-3 pr-4 py-2 ml-0 rounded-lg hover:bg-gray-50 z-30"
+              style={{
+                left: '1px'
+              }}
+            >
               <PanelLeftOpen className="h-5 w-5 text-gray-400" />
-            )}
-          </button>
+            </button>
+          )}
+          {open && (
+            <button
+              onClick={toggleSidebar}
+              className="absolute pl-3 pr-4 py-2 ml-0 rounded-lg hover:bg-gray-50 z-30"
+              style={{
+                right: '8px'
+              }}
+            >
+              <PanelLeftClose className="h-5 w-5 text-gray-400" />
+            </button>
+          )}
         </div>
 
         {/* Navigation Links */}
@@ -179,7 +186,7 @@ const FixedHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div
-      className="fixed top-0 z-30 transition-all duration-300"
+      className="fixed top-0 z-30"
       style={{
         left: open ? '220px' : '56px',
         right: '0'
@@ -195,7 +202,7 @@ const MainContent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div
-      className="transition-all duration-300"
+      className=""
       style={{
         marginLeft: open ? '220px' : '56px'
       }}

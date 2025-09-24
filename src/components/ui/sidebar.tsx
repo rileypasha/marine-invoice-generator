@@ -84,25 +84,21 @@ export const DesktopSidebar = ({
   className,
   children,
   ...props
-}: React.ComponentProps<typeof motion.div>) => {
+}: React.ComponentProps<"div">) => {
   const { open, setOpen, animate } = useSidebar();
   return (
-    <motion.div
+    <div
       className={cn(
         "fixed left-0 top-0 h-screen px-1 py-2 hidden md:flex md:flex-col bg-white border-r border-gray-200 w-[220px] flex-shrink-0 z-40 overflow-hidden",
         className
       )}
-      animate={{
-        width: animate ? (open ? "220px" : "56px") : "220px",
-      }}
-      transition={{
-        duration: 0.001,
-        ease: "easeInOut",
+      style={{
+        width: open ? "220px" : "56px"
       }}
       {...props}
     >
       {children}
-    </motion.div>
+    </div>
   );
 };
 
@@ -199,19 +195,14 @@ export const SidebarLink = ({
           {...props}
         >
           {link.icon}
-          <motion.span
-            animate={{
-              display: animate ? (open ? "inline-block" : "none") : "inline-block",
-              opacity: animate ? (open ? 1 : 0) : 1,
+          <span
+            className="text-gray-900 text-sm whitespace-pre inline-block !p-0 !m-0"
+            style={{
+              display: open ? "inline-block" : "none"
             }}
-            transition={{
-              duration: 0.001,
-              ease: "easeInOut",
-            }}
-            className="text-gray-900 text-sm transition duration-150 whitespace-pre inline-block !p-0 !m-0"
           >
             {link.label}
-          </motion.span>
+          </span>
         </button>
         {/* Simple tooltip */}
         {showTooltip && (
@@ -246,19 +237,14 @@ export const SidebarLink = ({
         {...props}
       >
         {link.icon}
-        <motion.span
-          animate={{
-            display: animate ? (open ? "inline-block" : "none") : "inline-block",
-            opacity: animate ? (open ? 1 : 0) : 1,
+        <span
+          className="text-gray-900 text-sm whitespace-pre inline-block !p-0 !m-0"
+          style={{
+            display: open ? "inline-block" : "none"
           }}
-          transition={{
-            duration: 0.001,
-            ease: "easeInOut",
-          }}
-          className="text-gray-900 text-sm transition duration-150 whitespace-pre inline-block !p-0 !m-0"
         >
           {link.label}
-        </motion.span>
+        </span>
       </Link>
       {/* Simple tooltip */}
       {showTooltip && (
