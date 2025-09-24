@@ -89,7 +89,7 @@ export const DesktopSidebar = ({
   return (
     <motion.div
       className={cn(
-        "fixed left-0 top-0 h-screen px-1 py-2 hidden md:flex md:flex-col bg-white border-r border-gray-200 w-[220px] flex-shrink-0 z-40",
+        "fixed left-0 top-0 h-screen px-1 py-2 hidden md:flex md:flex-col bg-white border-r border-gray-200 w-[220px] flex-shrink-0 z-40 overflow-hidden",
         className
       )}
       animate={{
@@ -216,7 +216,7 @@ export const SidebarLink = ({
         {/* Simple tooltip */}
         {showTooltip && (
           <div
-            className="fixed px-2 py-1 bg-black text-white text-sm rounded shadow-lg pointer-events-none whitespace-nowrap z-[9999]"
+            className="fixed px-2 py-1 bg-black text-white text-xs rounded-lg shadow-lg pointer-events-none whitespace-nowrap z-[9999]"
             style={{
               left: `${tooltipPosition.x}px`,
               top: `${tooltipPosition.y}px`,
@@ -263,7 +263,7 @@ export const SidebarLink = ({
       {/* Simple tooltip */}
       {showTooltip && (
         <div
-          className="fixed px-2 py-1 bg-black text-white text-sm rounded shadow-lg pointer-events-none whitespace-nowrap z-[9999]"
+          className="fixed px-2 py-1 bg-black text-white text-xs rounded-lg shadow-lg pointer-events-none whitespace-nowrap z-[9999]"
           style={{
             left: `${tooltipPosition.x}px`,
             top: `${tooltipPosition.y}px`,

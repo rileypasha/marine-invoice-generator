@@ -24,6 +24,7 @@ const SidebarContent = () => {
   const location = useLocation();
   const { open, setOpen } = useSidebar();
   const [isLogoHovered, setIsLogoHovered] = React.useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = React.useState(false);
   // ChatGPT-style hover effects: hover:bg-gray-200, rounded-lg, tooltips
 
 
@@ -70,7 +71,11 @@ const SidebarContent = () => {
   const isActive = (href: string) => location.pathname === href;
 
   return (
-    <div className="flex flex-col h-full justify-between overflow-y-auto">
+    <div
+      className="flex flex-col h-full justify-between"
+      onMouseEnter={() => setIsSidebarHovered(true)}
+      onMouseLeave={() => setIsSidebarHovered(false)}
+    >
       {/* Top section with logo and navigation */}
       <div className="flex flex-col">
         {/* Logo */}
@@ -86,7 +91,7 @@ const SidebarContent = () => {
             {/* Collapsed hover overlay - only show when not hovered */}
             {!open && !isLogoHovered && <div className="absolute inset-0 pl-1 pr-2 py-2 ml-0 rounded-lg pointer-events-none"></div>}
 
-            <div className={`flex items-center relative z-10 ${isLogoHovered && !open ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+            <div className={`flex items-center relative z-10 ${(isLogoHovered || isSidebarHovered) && !open ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <img
                 className="h-8 w-8 flex-shrink-0"
                 style={{ marginLeft: '6px' }}
@@ -102,7 +107,7 @@ const SidebarContent = () => {
             className={`pl-3 pr-4 py-2 ml-0 rounded-lg transition-colors duration-300 z-20 ${
               open
                 ? 'absolute hover:bg-gray-50'
-                : `absolute hover:bg-gray-50 ${isLogoHovered ? 'opacity-100 visible' : 'opacity-0 invisible'}`
+                : `absolute hover:bg-gray-50 ${(isLogoHovered || isSidebarHovered) ? 'opacity-100 visible' : 'opacity-0 invisible'}`
             }`}
             style={{
               right: open ? '8px' : undefined,
