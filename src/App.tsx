@@ -15,7 +15,7 @@ import Settings from './pages/Settings'
 
 const RedirectCustomerEdit = () => {
   const { id } = useParams<{ id: string }>();
-  return <Navigate to={`/clients/${id}/edit`} replace />;
+  return <Navigate to={`/contacts/${id}/edit`} replace />;
 };
 
 function App() {
@@ -50,7 +50,7 @@ function App() {
               }
             />
             <Route
-              path="/clients"
+              path="/contacts"
               element={
                 <ProtectedRoute>
                   <MainLayout>
@@ -80,7 +80,7 @@ function App() {
               }
             />
             <Route
-              path="/clients/create"
+              path="/contacts/create"
               element={
                 <ProtectedRoute>
                   <MainLayout>
@@ -90,7 +90,7 @@ function App() {
               }
             />
             <Route
-              path="/clients/:id/edit"
+              path="/contacts/:id/edit"
               element={
                 <ProtectedRoute>
                   <MainLayout>
@@ -155,8 +155,11 @@ function App() {
             <Route path="/invoices/:id" element={<Navigate to="/requests/:id" replace />} />
             <Route path="/invoices/:id/edit" element={<Navigate to="/requests/:id/edit" replace />} />
             <Route path="/invoices/preview" element={<Navigate to="/requests/preview" replace />} />
-            <Route path="/customers" element={<Navigate to="/clients" replace />} />
-            <Route path="/customers/create" element={<Navigate to="/clients/create" replace />} />
+            <Route path="/customers" element={<Navigate to="/contacts" replace />} />
+            <Route path="/customers/create" element={<Navigate to="/contacts/create" replace />} />
+            <Route path="/clients" element={<Navigate to="/contacts" replace />} />
+            <Route path="/clients/create" element={<Navigate to="/contacts/create" replace />} />
+            <Route path="/clients/:id/edit" element={<RedirectCustomerEdit />} />
             <Route path="/customers/:id/edit" element={<RedirectCustomerEdit />} />
           </Routes>
         </div>

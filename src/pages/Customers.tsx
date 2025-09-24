@@ -418,18 +418,18 @@ const Customers: React.FC = () => {
             </div>
             {!searchQuery && (
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button onClick={() => navigate('/clients/create')}>Add Your First Contact</Button>
+                <Button onClick={() => navigate('/contacts/create')}>Add Your First Contact</Button>
                 <Button onClick={() => setShowImportModal(true)} variant="outline">Import from CSV</Button>
               </div>
             )}
             {searchQuery && (
-              <Button onClick={() => navigate('/clients/create')}>Add Contact</Button>
+              <Button onClick={() => navigate('/contacts/create')}>Add Contact</Button>
             )}
           </div>
         ) : (
           <ContactsTable
             customers={customers}
-            onEdit={(id) => navigate(`/clients/${id}/edit`)}
+            onEdit={(id) => navigate(`/contacts/${id}/edit`)}
             onDelete={(id) => {
               const customer = customers.find(c => c.id === id);
               console.log('Delete clicked for customer:', { id, customer });
@@ -439,7 +439,7 @@ const Customers: React.FC = () => {
                 customerName: customer?.display_name || 'this contact'
               });
             }}
-            onAddClick={() => navigate('/clients/create')}
+            onAddClick={() => navigate('/contacts/create')}
             onViewInvoices={handleViewInvoices}
             onNewInvoice={handleNewInvoice}
             onPrint={() => {

@@ -45,7 +45,7 @@ const SidebarContent = () => {
     },
     {
       label: 'People',
-      href: '/clients',
+      href: '/contacts',
       icon: <User className="text-gray-700 h-4 w-4 flex-shrink-0" />,
     },
     {
@@ -70,7 +70,7 @@ const SidebarContent = () => {
   const isActive = (href: string) => location.pathname === href;
 
   return (
-    <div className="flex flex-col h-full justify-between overflow-y-auto overflow-x-hidden">
+    <div className="flex flex-col h-full justify-between overflow-y-auto">
       {/* Top section with logo and navigation */}
       <div className="flex flex-col">
         {/* Logo */}
@@ -210,9 +210,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         return 'New Request';
       case '/requests':
         return 'Invoice Requests';
-      case '/clients':
+      case '/contacts':
         return 'Contact Directory';
-      case '/clients/create':
+      case '/contacts/create':
         return 'New Contact';
       case '/vessels':
         return 'Vessel Directory';
@@ -224,7 +224,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         if (location.pathname.startsWith('/requests/')) {
           return 'Request Details';
         }
-        if (location.pathname.startsWith('/clients/') && location.pathname.endsWith('/edit')) {
+        if (location.pathname.startsWith('/contacts/') && location.pathname.endsWith('/edit')) {
           return 'Contact Directory';
         }
         return 'Dashboard';

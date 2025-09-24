@@ -166,15 +166,32 @@ export const SidebarLink = ({
   props?: any;
 }) => {
   const { open, animate } = useSidebar();
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const buttonRef = React.useRef<HTMLButtonElement | HTMLAnchorElement>(null);
+
+  const handleMouseEnter = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        x: rect.right + 8,
+        y: rect.top + rect.height / 2
+      });
+      setShowTooltip(true);
+    }
+  };
 
   // If there's an onClick handler, render as button instead of Link
   if (link.onClick) {
     return (
-      <div className="relative group">
+      <div className="relative">
         <button
+          ref={buttonRef as React.RefObject<HTMLButtonElement>}
           onClick={link.onClick}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={() => setShowTooltip(false)}
           className={cn(
-            `flex items-center group py-2 w-full text-left justify-start ${
+            `flex items-center py-2 w-full text-left justify-start ${
               open ? 'gap-2 pl-3' : 'gap-0 pl-0'
             }`,
             className
@@ -191,14 +208,21 @@ export const SidebarLink = ({
               duration: 0.001,
               ease: "easeInOut",
             }}
-            className="text-gray-900 text-sm group-hover:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"
+            className="text-gray-900 text-sm transition duration-150 whitespace-pre inline-block !p-0 !m-0"
           >
             {link.label}
           </motion.span>
         </button>
-        {/* Tooltip for collapsed state */}
-        {!open && (
-          <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+        {/* Simple tooltip */}
+        {showTooltip && (
+          <div
+            className="fixed px-2 py-1 bg-black text-white text-sm rounded shadow-lg pointer-events-none whitespace-nowrap z-[9999]"
+            style={{
+              left: `${tooltipPosition.x}px`,
+              top: `${tooltipPosition.y}px`,
+              transform: 'translateY(-50%)'
+            }}
+          >
             {link.label}
           </div>
         )}
@@ -207,11 +231,14 @@ export const SidebarLink = ({
   }
 
   return (
-    <div className="relative group">
+    <div className="relative">
       <Link
+        ref={buttonRef as React.RefObject<HTMLAnchorElement>}
         to={link.href}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={() => setShowTooltip(false)}
         className={cn(
-          `flex items-center group py-2 justify-start ${
+          `flex items-center py-2 justify-start ${
             open ? 'gap-2 pl-3' : 'gap-0 pl-0'
           }`,
           className
@@ -228,14 +255,21 @@ export const SidebarLink = ({
             duration: 0.001,
             ease: "easeInOut",
           }}
-          className="text-gray-900 text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"
+          className="text-gray-900 text-sm transition duration-150 whitespace-pre inline-block !p-0 !m-0"
         >
           {link.label}
         </motion.span>
       </Link>
-      {/* Tooltip for collapsed state */}
-      {!open && (
-        <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+      {/* Simple tooltip */}
+      {showTooltip && (
+        <div
+          className="fixed px-2 py-1 bg-black text-white text-sm rounded shadow-lg pointer-events-none whitespace-nowrap z-[9999]"
+          style={{
+            left: `${tooltipPosition.x}px`,
+            top: `${tooltipPosition.y}px`,
+            transform: 'translateY(-50%)'
+          }}
+        >
           {link.label}
         </div>
       )}

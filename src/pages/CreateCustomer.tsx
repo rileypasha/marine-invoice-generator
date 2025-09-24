@@ -259,7 +259,7 @@ const CreateCustomer: React.FC = () => {
       }
 
       // Success - navigate back to contacts list
-      navigate('/clients');
+      navigate('/contacts');
     } catch (error) {
       console.error('Error saving customer:', error);
       setSubmitError('Network error. Please check your connection and try again.');
@@ -365,7 +365,7 @@ const CreateCustomer: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate('/clients')}
+              onClick={() => navigate('/contacts')}
               className="flex items-center"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />

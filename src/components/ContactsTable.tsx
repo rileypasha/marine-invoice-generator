@@ -186,7 +186,7 @@ export function ContactsTable({ customers, onEdit, onDelete, onAddClick, onPrint
                 View Invoices
               </DropdownMenuItem>
               <DropdownMenuItem
-                onSelect={() => onEdit?.(customer.id) || navigate(`/clients/${customer.id}/edit`)}
+                onSelect={() => onEdit?.(customer.id) || navigate(`/contacts/${customer.id}/edit`)}
               >
                 Edit contact
               </DropdownMenuItem>
