@@ -25,6 +25,9 @@ const SidebarContent = () => {
   const { open, setOpen } = useSidebar();
   const [isLogoHovered, setIsLogoHovered] = React.useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = React.useState(false);
+  const [showExpandTooltip, setShowExpandTooltip] = React.useState(false);
+  const [tooltipPosition, setTooltipPosition] = React.useState({ x: 0, y: 0 });
+  const expandButtonRef = React.useRef<HTMLButtonElement>(null);
   // ChatGPT-style hover effects: hover:bg-gray-200, rounded-lg, tooltips
 
 
@@ -33,6 +36,22 @@ const SidebarContent = () => {
     // Reset hover states to ensure clean state
     setIsLogoHovered(false);
     setIsSidebarHovered(false);
+    setShowExpandTooltip(false);
+  };
+
+  const handleExpandButtonMouseEnter = () => {
+    if (expandButtonRef.current && !open) {
+      const rect = expandButtonRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        x: rect.right + 8,
+        y: rect.top + rect.height / 2
+      });
+      setShowExpandTooltip(true);
+    }
+  };
+
+  const handleExpandButtonMouseLeave = () => {
+    setShowExpandTooltip(false);
   };
 
   // Build navigation links for Magic UI sidebar
@@ -107,7 +126,10 @@ const SidebarContent = () => {
           {/* Toggle Button */}
           {!open && (isLogoHovered || isSidebarHovered) && (
             <button
+              ref={expandButtonRef}
               onClick={toggleSidebar}
+              onMouseEnter={handleExpandButtonMouseEnter}
+              onMouseLeave={handleExpandButtonMouseLeave}
               className="absolute pl-3 pr-4 py-2 ml-0 rounded-lg hover:bg-gray-50 z-30"
               style={{
                 left: '1px'
@@ -115,6 +137,20 @@ const SidebarContent = () => {
             >
               <PanelLeftOpen className="h-5 w-5 text-gray-400" />
             </button>
+          )}
+
+          {/* Expand Button Tooltip */}
+          {showExpandTooltip && (
+            <div
+              className="fixed px-2 py-1 bg-black text-white text-xs rounded-lg shadow-lg pointer-events-none whitespace-nowrap z-[9999]"
+              style={{
+                left: `${tooltipPosition.x}px`,
+                top: `${tooltipPosition.y}px`,
+                transform: 'translateY(-50%)'
+              }}
+            >
+              Open sidebar
+            </div>
           )}
           {open && (
             <button
