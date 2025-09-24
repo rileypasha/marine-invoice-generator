@@ -540,21 +540,6 @@ const CreateCustomer: React.FC = () => {
               )}
             </CardContent>
           </Card>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full" onClick={() => navigate('/clients')}>
-                View All Contacts
-              </Button>
-              <Button variant="outline" className="w-full" onClick={() => navigate('/requests/new')}>
-                Create Invoice for Contact
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
