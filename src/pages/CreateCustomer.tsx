@@ -486,17 +486,17 @@ const CreateCustomer: React.FC = () => {
                 </div>
 
                 {/* Customer Address */}
-                <div className="md:col-span-2 space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="customer-address">Address</Label>
                   <AddressAutocomplete
                     value={customerData.customerAddress}
                     onChange={(value) => handleInputChange('customerAddress', value)}
-                    placeholder="Enter contact address (street, city, state, zip)"
+                    placeholder="Enter contact address"
                     disabled={isLoading || isLoadingData}
-                    className="min-h-[80px] resize-none"
+                    className=""
                   />
                   <p className="text-xs text-muted-foreground">
-                    Full mailing address for the contact. Start typing to see address suggestions.
+                    Start typing for address suggestions.
                   </p>
                 </div>
               </div>
