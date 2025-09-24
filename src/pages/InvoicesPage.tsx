@@ -244,11 +244,11 @@ const InvoicesPage: React.FC = () => {
   };
 
   const handleEdit = (invoice: Invoice) => {
-    navigate(`/invoices/${invoice.id}/edit`);
+    navigate(`/requests/${invoice.id}/edit`);
   };
 
   const handleView = (invoice: Invoice) => {
-    navigate(`/invoices/${invoice.id}`);
+    navigate(`/requests/${invoice.id}`);
   };
 
   const handleDelete = async (invoice: Invoice) => {
@@ -278,11 +278,11 @@ const InvoicesPage: React.FC = () => {
 
   const handlePrint = (invoice: Invoice) => {
     // Navigate to invoice view page with print parameter to auto-trigger print
-    navigate(`/invoices/${invoice.id}?print=true`);
+    navigate(`/requests/${invoice.id}?print=true`);
   };
 
   const handleAddNew = () => {
-    navigate('/invoices/create');
+    navigate('/requests/new');
   };
 
   return (

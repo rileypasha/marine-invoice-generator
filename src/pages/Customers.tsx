@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
+import { Users } from 'lucide-react';
 import {
   Card,
   CardHeader,
@@ -12,6 +14,7 @@ import {
   Label
 } from '../components/magic/index';
 import { ContactsTable } from '../components/ContactsTable';
+import { useFileInput } from '../components/hooks/use-file-input';
 
 interface Customer {
   id: string;
@@ -47,9 +50,36 @@ const Customers: React.FC = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; customerId: string; customerName: string }>({
+    show: false,
+    customerId: '',
+    customerName: ''
+  });
+
+  // State for bulk delete operations
+  const [selectedCustomers, setSelectedCustomers] = useState<Customer[]>([]);
+
+  // Initialize file input hook for CSV imports
+  const {
+    fileName,
+    error: fileError,
+    fileInputRef: styledFileInputRef,
+    handleFileSelect: handleStyledFileSelect,
+    clearFile
+  } = useFileInput({
+    accept: ".csv",
+    maxSize: 5
+  });
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // State for total customers count (for header display)
   const [totalCustomers, setTotalCustomers] = useState(0);
+
+  // State for invoice modal
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [selectedCustomerInvoices, setSelectedCustomerInvoices] = useState<any[]>([]);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+  const [selectedCustomerName, setSelectedCustomerName] = useState('');
 
   // Fetch all customers from API (client-side pagination)
   const fetchCustomers = async (search: string = searchQuery) => {
@@ -106,6 +136,68 @@ const Customers: React.FC = () => {
     fetchCustomers(query);
   };
 
+  // Fetch invoices for a specific customer
+  const fetchCustomerInvoices = async (customerId: string) => {
+    if (!isAuthenticated || !csrfToken) return;
+
+    setIsLoadingInvoices(true);
+    try {
+      const response = await fetch(`/api/v1/invoices?customer_id=${customerId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedCustomerInvoices(data.invoices || []);
+      } else {
+        console.error('Failed to fetch customer invoices');
+        setSelectedCustomerInvoices([]);
+      }
+    } catch (error) {
+      console.error('Error fetching customer invoices:', error);
+      setSelectedCustomerInvoices([]);
+    } finally {
+      setIsLoadingInvoices(false);
+    }
+  };
+
+  // Handle view invoices click
+  const handleViewInvoices = (customerId: string) => {
+    const customer = customers.find(c => c.id === customerId);
+    setSelectedCustomerName(customer?.display_name || 'Unknown Contact');
+    setShowInvoiceModal(true);
+    fetchCustomerInvoices(customerId);
+  };
+
+  // Close invoice modal
+  const closeInvoiceModal = () => {
+    setShowInvoiceModal(false);
+    setSelectedCustomerInvoices([]);
+    setSelectedCustomerName('');
+  };
+
+  // Handle new invoice click
+  const handleNewInvoice = (customer: Customer) => {
+    // Build query parameters with customer information
+    const params = new URLSearchParams({
+      customerId: customer.id,
+      customerName: customer.display_name,
+      legalName: customer.legal_name || customer.display_name,
+      email: customer.email || '',
+      phone: customer.phone || '',
+      address: customer.address_line1 && customer.city
+        ? `${customer.address_line1}, ${customer.city}${customer.state ? `, ${customer.state}` : ''}`
+        : customer.address_line1 || ''
+    });
+
+    // Navigate to new invoice page with customer data
+    navigate(`/requests/new?${params.toString()}`);
+  };
+
   // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -117,6 +209,19 @@ const Customers: React.FC = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  // Enhanced file select handler that integrates with the styled file input
+  const handleStyledFileSelectWrapper = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleStyledFileSelect(event);
+    const file = event.target.files?.[0];
+    if (file && file.type === 'text/csv') {
+      setSelectedFile(file);
+      setImportResult(null);
+    } else if (file) {
+      setSelectedFile(null);
+      alert('Please select a valid CSV file');
     }
   };
 
@@ -160,17 +265,123 @@ const Customers: React.FC = () => {
     setShowImportModal(false);
     setSelectedFile(null);
     setImportResult(null);
+    clearFile(); // Clear the styled file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    if (!isAuthenticated || !csrfToken) return;
+
+    try {
+      if (deleteModal.customerId === 'bulk') {
+        console.log('Bulk delete confirmed for:', selectedCustomers.length, 'customers');
+        setIsBulkDeleting(true);
+
+        // Delete each selected customer one by one
+        let successCount = 0;
+        let errorCount = 0;
+        const errors: string[] = [];
+
+        for (const customer of selectedCustomers) {
+          try {
+            const response = await fetch(`/api/v1/customers/${customer.id}`, {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+              },
+              credentials: 'include',
+            });
+
+            if (response.ok) {
+              successCount++;
+            } else {
+              errorCount++;
+              const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+              errors.push(`${customer.display_name}: ${errorData.message || 'Unknown error'}`);
+            }
+          } catch (error) {
+            errorCount++;
+            errors.push(`${customer.display_name}: Network error`);
+          }
+        }
+
+        setIsBulkDeleting(false);
+
+        // Show results
+        if (errorCount === 0) {
+          // All deletions successful
+          console.log(`Successfully deleted ${successCount} customers`);
+        } else if (successCount > 0) {
+          // Partial success
+          alert(`Deleted ${successCount} clients successfully, but ${errorCount} failed:\n${errors.join('\n')}`);
+        } else {
+          // All failed
+          alert(`Failed to delete all clients:\n${errors.join('\n')}`);
+          setDeleteModal({ show: false, customerId: '', customerName: '' });
+          return; // Don't refresh if all failed
+        }
+
+        // Refresh the list to show updated data
+        await fetchCustomers();
+        setSelectedCustomers([]); // Clear selection
+      } else {
+        // Single delete API call
+        console.log('Deleting customer with ID:', deleteModal.customerId);
+
+        const response = await fetch(`/api/v1/customers/${deleteModal.customerId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
+          },
+          credentials: 'include',
+        });
+
+        console.log('Delete response status:', response.status);
+
+        if (response.ok) {
+          // Successfully deleted - refresh the list
+          await fetchCustomers();
+        } else {
+          const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+          console.error('Delete failed:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData,
+            customerId: deleteModal.customerId
+          });
+          alert(`Failed to delete client: ${errorData.message || response.statusText || 'Unknown error'}`);
+          return; // Don't close modal if deletion failed
+        }
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Failed to delete client. Please try again.');
+      setIsBulkDeleting(false);
+      return; // Don't close modal if deletion failed
+    }
+
+    setDeleteModal({ show: false, customerId: '', customerName: '' });
+  };
+
+  // Close delete modal
+  const closeDeleteModal = () => {
+    if (isBulkDeleting) return; // Prevent closing during bulk deletion
+    setDeleteModal({ show: false, customerId: '', customerName: '' });
+    setSelectedCustomers([]); // Clear selected customers
+    setIsBulkDeleting(false); // Reset bulk deleting state
+  };
+
   // Generate sample CSV for download
   const downloadSampleCSV = () => {
-    const sampleData = `Customer Name,Company Name,Email Address,Phone Number,Address
-"Acme Corp","Acme Corporation LLC","contact@acme.com","(555) 123-4567","123 Main St, New York, NY 10001"
-"TechStart Inc","","info@techstart.com","(555) 567-8901","456 Tech Ave, San Francisco, CA 94105"
-"Marine Services","Marine Services LLC","admin@marineservices.com","(555) 999-0000","789 Harbor Dr, Miami, FL 33101"`;
+    const sampleData = `Contact Name,Email Address,Phone Number,Address
+"Acme Corp","contact@acme.com","5551234567","123 Main St, New York, NY 10001"
+"TechStart Inc","info@techstart.com","5555678901","456 Tech Ave, San Francisco, CA 94105"
+"Marine Services","admin@marineservices.com","5559990000","789 Harbor Dr, Miami, FL 33101"`;
 
     const blob = new Blob([sampleData], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -185,69 +396,302 @@ const Customers: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Contact Directory</CardTitle>
-          <CardDescription>
-            Manage your contact database with search, import, and CRUD operations
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-end mb-4">
-            <div className="flex gap-2">
-              <Button onClick={() => setShowImportModal(true)} variant="outline">
-                Import
-              </Button>
-              <Button onClick={() => navigate('/customers/create')}>
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v14m-7-7h14" />
-                </svg>
-                Add Contact
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Customers Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Contacts ({totalCustomers})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-muted-foreground">Loading contacts...</div>
+      <div>
+        <div className="mb-1">
+          <h2 className="flex items-center gap-2 text-3xl font-semibold">
+            <Users className="h-6 w-6" />
+            Contacts
+          </h2>
+        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-muted-foreground">Loading contacts...</div>
+          </div>
+        ) : customers.length === 0 ? (
+          <div className="text-center py-8">
+            <svg className="mx-auto h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <div className="text-muted-foreground mb-4">
+              {searchQuery ? 'No contacts found matching your search' : 'No contacts found'}
             </div>
-          ) : customers.length === 0 ? (
-            <div className="text-center py-8">
-              <svg className="mx-auto h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <div className="text-muted-foreground mb-4">
-                {searchQuery ? 'No contacts found matching your search' : 'No contacts found'}
+            {!searchQuery && (
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button onClick={() => navigate('/clients/create')}>Add Your First Contact</Button>
+                <Button onClick={() => setShowImportModal(true)} variant="outline">Import from CSV</Button>
               </div>
-              <Button onClick={() => navigate('/customers/create')}>Add Your First Contact</Button>
-            </div>
-          ) : (
-            <ContactsTable
-              customers={customers}
-              onEdit={(id) => navigate(`/customers/${id}/edit`)}
-              onDelete={(id) => {
-                // TODO: Implement delete functionality with API call
-                console.log('Delete contact:', id);
-                // For now, just refresh the list
-                fetchCustomers();
-              }}
-            />
-          )}
-        </CardContent>
-      </Card>
+            )}
+            {searchQuery && (
+              <Button onClick={() => navigate('/clients/create')}>Add Contact</Button>
+            )}
+          </div>
+        ) : (
+          <ContactsTable
+            customers={customers}
+            onEdit={(id) => navigate(`/clients/${id}/edit`)}
+            onDelete={(id) => {
+              const customer = customers.find(c => c.id === id);
+              console.log('Delete clicked for customer:', { id, customer });
+              setDeleteModal({
+                show: true,
+                customerId: id,
+                customerName: customer?.display_name || 'this contact'
+              });
+            }}
+            onAddClick={() => navigate('/clients/create')}
+            onViewInvoices={handleViewInvoices}
+            onNewInvoice={handleNewInvoice}
+            onPrint={() => {
+              // Add print-specific styles to hide sidebar and format table properly
+              const printStyles = document.createElement('style');
+              printStyles.innerHTML = `
+                @media print {
+                  @page {
+                    size: landscape;
+                    margin: 0.5in;
+                  }
+
+                  /* Hide sidebar */
+                  .fixed.left-0.top-0.h-screen,
+                  [class*="sidebar"] {
+                    display: none !important;
+                  }
+
+                  /* Reset main content margin and padding */
+                  main {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    width: 100% !important;
+                  }
+
+                  /* Hide fixed header and reset margin */
+                  .fixed.top-0.z-30 {
+                    position: relative !important;
+                    left: 0 !important;
+                    right: auto !important;
+                  }
+
+                  /* Container adjustments for centering */
+                  .max-w-7xl {
+                    max-width: none !important;
+                    width: 100% !important;
+                  }
+
+                  .mx-auto {
+                    margin: 0 auto !important;
+                    width: 100% !important;
+                  }
+
+                  .px-4, .sm\\:px-6, .lg\\:px-8 {
+                    padding: 0 !important;
+                  }
+
+                  .py-8 {
+                    padding-top: 0 !important;
+                    padding-bottom: 0 !important;
+                  }
+
+                  /* Hide search bar and buttons for cleaner print */
+                  .flex.items-center.py-4,
+                  .flex.items-center.justify-between.py-4 {
+                    display: none !important;
+                  }
+
+                  /* Ensure content fills page and centers */
+                  body, html {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    width: 100% !important;
+                  }
+
+                  /* Table container centering */
+                  .rounded-md.border {
+                    border: none !important;
+                    border-radius: 0 !important;
+                    margin: 0 auto !important;
+                    width: 100% !important;
+                  }
+
+                  /* Style the table for print */
+                  table {
+                    border-collapse: collapse !important;
+                    width: 100% !important;
+                    font-size: 11px !important;
+                    table-layout: fixed !important;
+                    margin: 0 auto !important;
+                  }
+
+                  /* Repeat headers on each page */
+                  thead {
+                    display: table-header-group !important;
+                  }
+
+                  tbody {
+                    display: table-row-group !important;
+                  }
+
+                  /* Column widths */
+                  th:nth-child(2), td:nth-child(2) { width: 20% !important; } /* Name */
+                  th:nth-child(3), td:nth-child(3) { width: 25% !important; } /* Email */
+                  th:nth-child(4), td:nth-child(4) { width: 15% !important; } /* Phone */
+                  th:nth-child(5), td:nth-child(5) { width: 35% !important; } /* Address */
+
+                  th, td {
+                    border: 1px solid #000 !important;
+                    padding: 4px 6px !important;
+                    text-align: left !important;
+                    word-wrap: break-word !important;
+                    overflow: visible !important;
+                    white-space: normal !important;
+                    page-break-inside: avoid !important;
+                  }
+
+                  /* Header styling - ensure repeats on all pages */
+                  th {
+                    background-color: #f0f0f0 !important;
+                    font-weight: bold !important;
+                    height: auto !important;
+                    vertical-align: top !important;
+                    page-break-after: avoid !important;
+                    page-break-before: avoid !important;
+                  }
+
+                  /* Force header buttons to show in print */
+                  th button,
+                  th button *,
+                  thead th button,
+                  thead th button * {
+                    display: inline !important;
+                    visibility: visible !important;
+                    background: none !important;
+                    border: none !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    font-weight: bold !important;
+                    color: black !important;
+                    white-space: normal !important;
+                    opacity: 1 !important;
+                  }
+
+                  /* Hide sort arrows in print but keep text */
+                  th button svg,
+                  thead th button svg {
+                    display: none !important;
+                  }
+
+                  /* Hide checkboxes column */
+                  th:first-child, td:first-child {
+                    display: none !important;
+                  }
+
+                  /* Hide actions column */
+                  th:last-child, td:last-child {
+                    display: none !important;
+                  }
+
+                  /* Override general button hiding for table headers */
+                  th button {
+                    display: inline !important;
+                  }
+
+                  /* Hide all other buttons except table header buttons */
+                  button:not(th button):not(thead th button) {
+                    display: none !important;
+                  }
+
+                  /* Add title */
+                  body::before {
+                    content: "Clients Directory";
+                    display: block;
+                    font-size: 18px;
+                    font-weight: bold;
+                    margin-bottom: 10px;
+                    text-align: center;
+                  }
+                }
+              `;
+
+              document.head.appendChild(printStyles);
+              window.print();
+
+              // Clean up styles after print dialog closes
+              setTimeout(() => {
+                document.head.removeChild(printStyles);
+              }, 1000);
+            }}
+            onImport={() => setShowImportModal(true)}
+            onExport={() => {
+              // Export all customers to CSV
+              const csvData = customers.map(customer => ({
+                'Contact Name': customer.display_name,
+                'Email Address': customer.email || '',
+                'Phone Number': customer.phone || '',
+                'Address': customer.address_line1 && customer.city
+                  ? `${customer.address_line1}, ${customer.city}${customer.state ? `, ${customer.state}` : ''}`
+                  : customer.address_line1 || ''
+              }));
+
+              const headers = ['Contact Name', 'Email Address', 'Phone Number', 'Address'];
+              const csvContent = [
+                headers.join(','),
+                ...csvData.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
+              ].join('\n');
+
+              const blob = new Blob([csvContent], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `all_clients_${new Date().toISOString().split('T')[0]}.csv`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }}
+            onBulkDelete={(selectedRows) => {
+              setSelectedCustomers(selectedRows);
+              setDeleteModal({
+                show: true,
+                customerId: 'bulk',
+                customerName: `${selectedRows.length} selected client${selectedRows.length === 1 ? '' : 's'}`
+              });
+            }}
+            onBulkExport={(selectedRows) => {
+              console.log('Bulk export:', selectedRows);
+              // TODO: Implement bulk CSV export functionality
+              // Create CSV with only selected rows
+              const csvData = selectedRows.map(customer => ({
+                'Contact Name': customer.display_name,
+                'Email Address': customer.email || '',
+                'Phone Number': customer.phone || '',
+                'Address': customer.address_line1 && customer.city
+                  ? `${customer.address_line1}, ${customer.city}${customer.state ? `, ${customer.state}` : ''}`
+                  : customer.address_line1 || ''
+              }));
+
+              const headers = ['Contact Name', 'Email Address', 'Phone Number', 'Address'];
+              const csvContent = [
+                headers.join(','),
+                ...csvData.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
+              ].join('\n');
+
+              const blob = new Blob([csvContent], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `selected_clients_${new Date().toISOString().split('T')[0]}.csv`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }}
+          />
+        )}
+      </div>
 
       {/* Import Modal */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      {showImportModal && createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">Import Contacts from CSV</h3>
 
@@ -255,28 +699,54 @@ const Customers: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="csv-file">Select CSV File</Label>
-                  <Input
-                    id="csv-file"
+                  <div className="mt-2 flex gap-2 items-center">
+                    <Button
+                      onClick={() => styledFileInputRef.current?.click()}
+                      variant="outline"
+                      type="button"
+                    >
+                      {fileName ? 'Change File' : 'Choose File'}
+                    </Button>
+                    {fileName && (
+                      <Button
+                        onClick={clearFile}
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+
+                  <input
                     type="file"
                     accept=".csv"
-                    ref={fileInputRef}
-                    onChange={handleFileSelect}
-                    className="mt-1"
+                    className="hidden"
+                    ref={styledFileInputRef}
+                    onChange={handleStyledFileSelectWrapper}
                   />
+
+                  {fileName && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Selected: {fileName}
+                    </p>
+                  )}
+                  {fileError && (
+                    <p className="text-sm text-red-500 mt-2">
+                      Error: {fileError}
+                    </p>
+                  )}
                 </div>
 
                 <div className="text-sm text-gray-600">
                   <p className="font-medium mb-2">CSV column headers:</p>
                   <ul className="list-disc list-inside space-y-1">
                     <li><strong>Contact Name</strong> (required) - Contact display name</li>
-                    <li><strong>Company Name</strong> (optional) - Legal business name</li>
                     <li><strong>Email Address</strong> (optional) - Email address</li>
                     <li><strong>Phone Number</strong> (optional) - Phone number</li>
                     <li><strong>Address</strong> (optional) - Complete address (e.g., "123 Main St, New York, NY 10001")</li>
                   </ul>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Note: The Address field will automatically parse street, city, state, and ZIP code from the full address.
-                  </p>
                 </div>
 
                 <Button
@@ -304,7 +774,7 @@ const Customers: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 <div className="text-center">
-                  {importResult.success ? (
+                  {importResult.failed === 0 ? (
                     <div className="text-green-600">
                       <svg className="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -346,7 +816,117 @@ const Customers: React.FC = () => {
               </div>
             )}
           </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4 shadow-lg border">
+            <h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
+
+            {isBulkDeleting ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Deleting selected clients...</p>
+                <p className="text-sm text-gray-500 mt-2">Please wait while we delete {selectedCustomers.length} client{selectedCustomers.length === 1 ? '' : 's'}.</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to delete {deleteModal.customerName}? This action cannot be undone.
+                </p>
+
+                <div className="flex gap-3 justify-end">
+                  <Button onClick={closeDeleteModal} variant="outline">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleDeleteConfirm} variant="destructive">
+                    Delete
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* Invoice Modal */}
+      {showInvoiceModal && createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Invoices for {selectedCustomerName}</h3>
+                <Button onClick={closeInvoiceModal} variant="ghost" size="sm">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+              {isLoadingInvoices ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-gray-600">Loading invoices...</span>
+                </div>
+              ) : selectedCustomerInvoices.length === 0 ? (
+                <div className="text-center py-8">
+                  <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-gray-600">No invoices found for this contact.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {selectedCustomerInvoices.map((invoice) => (
+                    <div key={invoice.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4">
+                            <h4 className="font-medium text-gray-900">#{invoice.invoice_number}</h4>
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              invoice.status === 'paid'
+                                ? 'bg-green-100 text-green-800'
+                                : invoice.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {invoice.status}
+                            </span>
+                          </div>
+                          <div className="mt-1 text-sm text-gray-600">
+                            <div>Created: {new Date(invoice.created_at).toLocaleDateString()}</div>
+                            {invoice.due_date && (
+                              <div>Due: {new Date(invoice.due_date).toLocaleDateString()}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-gray-900">
+                            ${invoice.total ? parseFloat(invoice.total).toFixed(2) : '0.00'}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-2"
+                            onClick={() => navigate(`/requests/${invoice.id}`)}
+                          >
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

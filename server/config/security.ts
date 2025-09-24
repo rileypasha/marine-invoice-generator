@@ -115,7 +115,7 @@ export function configureSecurity(app: Application, config: SecurityConfig): voi
   // Rate limiting
   const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: 10000, // Limit each IP to 10,000 requests per windowMs (development-friendly)
     message: 'Too many requests from this IP',
     standardHeaders: true,
     legacyHeaders: false,
@@ -133,7 +133,7 @@ export function configureSecurity(app: Application, config: SecurityConfig): voi
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // Limit auth attempts
+    max: 500, // Limit auth attempts (development-friendly)
     skipSuccessfulRequests: true,
     handler: (req, res) => {
       logger.warn('Auth rate limit exceeded', {
@@ -149,7 +149,7 @@ export function configureSecurity(app: Application, config: SecurityConfig): voi
 
   const saveLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 10, // 10 saves per minute
+    max: 100, // 100 saves per minute (development-friendly)
     keyGenerator: (req: any) => req.session?.userId || req.ip,
     handler: (req, res) => {
       logger.warn('Save rate limit exceeded', {

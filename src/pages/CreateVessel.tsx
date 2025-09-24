@@ -430,7 +430,7 @@ const CreateVessel: React.FC = () => {
               <Button variant="outline" className="w-full" onClick={() => navigate('/vessels')}>
                 View All Vessels
               </Button>
-              <Button variant="outline" className="w-full" onClick={() => navigate('/invoices/create')}>
+              <Button variant="outline" className="w-full" onClick={() => navigate('/requests/new')}>
                 Create Invoice for Vessel
               </Button>
             </CardContent>

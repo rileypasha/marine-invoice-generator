@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Card,
@@ -90,6 +90,7 @@ interface InvoiceData {
 const CreateInvoice: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAuthenticated, csrfToken } = useAuth();
 
   const isEditMode = !!id;
@@ -215,6 +216,40 @@ const CreateInvoice: React.FC = () => {
 
     fetchInvoiceData();
   }, [isEditMode, isAuthenticated, csrfToken, id]);
+
+  // Handle query parameters for pre-filling customer data
+  useEffect(() => {
+    // Only process query params if we're NOT in edit mode (creating a new invoice)
+    if (isEditMode || !searchParams.has('customerId')) {
+      return;
+    }
+
+    const customerId = searchParams.get('customerId');
+    const customerName = searchParams.get('customerName');
+    const legalName = searchParams.get('legalName');
+    const email = searchParams.get('email');
+    const phone = searchParams.get('phone');
+    const address = searchParams.get('address');
+
+    if (customerId) {
+      // Set the selected customer ID to auto-select in the dropdown
+      setSelectedCustomerId(customerId);
+
+      // Pre-fill the customer data
+      setInvoiceData(prev => ({
+        ...prev,
+        customer: {
+          ...prev.customer,
+          id: customerId,
+          contactName: customerName || '',
+          customerName: legalName || customerName || '',
+          customerEmail: email || '',
+          customerPhone: phone || '',
+          customerAddress: address || ''
+        }
+      }));
+    }
+  }, [isEditMode, searchParams]);
 
   // Automatically add/update Clearance Fee based on vessel weight
   useEffect(() => {
@@ -744,7 +779,7 @@ const CreateInvoice: React.FC = () => {
       setHasUnsavedChanges(false);
 
       // Navigate to invoice view on success
-      navigate(`/invoices/${result.id || result.invoice?.id}`);
+      navigate(`/requests/${result.id || result.invoice?.id}`);
 
     } catch (error: any) {
       console.error('Error saving invoice:', error);
@@ -822,7 +857,7 @@ const CreateInvoice: React.FC = () => {
     };
 
     // Navigate to preview with the calculated data
-    navigate('/invoices/preview', {
+    navigate('/requests/preview', {
       state: { previewData }
     });
   };
@@ -1006,7 +1041,7 @@ const CreateInvoice: React.FC = () => {
     };
 
     // Navigate to preview with print parameter
-    navigate('/invoices/preview?print=true', {
+    navigate('/requests/preview?print=true', {
       state: { previewData: printData }
     });
   };
@@ -1351,7 +1386,7 @@ const CreateInvoice: React.FC = () => {
           </div>
           <h2 className="text-lg font-semibold mb-2">Error</h2>
           <p className="text-sm text-muted-foreground mb-4">{error}</p>
-          <Button onClick={() => navigate('/invoices')}>
+          <Button onClick={() => navigate('/requests')}>
             Back to Invoices
           </Button>
         </div>

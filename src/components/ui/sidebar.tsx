@@ -41,7 +41,7 @@ export const SidebarProvider = ({
   setOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   animate?: boolean;
 }) => {
-  const [openState, setOpenState] = useState(false);
+  const [openState, setOpenState] = useState(true);
 
   const open = openProp !== undefined ? openProp : openState;
   const setOpen = setOpenProp !== undefined ? setOpenProp : setOpenState;
@@ -89,14 +89,14 @@ export const DesktopSidebar = ({
   return (
     <motion.div
       className={cn(
-        "h-screen px-1 py-2 hidden md:flex md:flex-col bg-white border-r border-gray-200 w-[260px] flex-shrink-0",
+        "fixed left-0 top-0 h-screen px-1 py-2 hidden md:flex md:flex-col bg-white border-r border-gray-200 w-[220px] flex-shrink-0 z-40",
         className
       )}
       animate={{
-        width: animate ? (open ? "260px" : "56px") : "260px",
+        width: animate ? (open ? "220px" : "56px") : "220px",
       }}
       transition={{
-        duration: 0.3,
+        duration: 0.001,
         ease: "easeInOut",
       }}
       {...props}
@@ -188,7 +188,7 @@ export const SidebarLink = ({
               opacity: animate ? (open ? 1 : 0) : 1,
             }}
             transition={{
-              duration: 0.2,
+              duration: 0.001,
               ease: "easeInOut",
             }}
             className="text-gray-900 text-sm group-hover:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"
@@ -225,7 +225,7 @@ export const SidebarLink = ({
             opacity: animate ? (open ? 1 : 0) : 1,
           }}
           transition={{
-            duration: 0.2,
+            duration: 0.001,
             ease: "easeInOut",
           }}
           className="text-gray-900 text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"

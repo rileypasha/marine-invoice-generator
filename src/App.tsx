@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import EmployeeLoginPortal from './components/EmployeeLoginPortal'
 import ProtectedRoute from './components/auth/ProtectedRoute'
@@ -12,6 +12,11 @@ import CreateCustomer from './pages/CreateCustomer'
 import CreateVessel from './pages/CreateVessel'
 import InvoiceView from './pages/InvoiceView'
 import Settings from './pages/Settings'
+
+const RedirectCustomerEdit = () => {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/clients/${id}/edit`} replace />;
+};
 
 function App() {
   const handleLogin = (credentials: { email: string; password: string }) => {
@@ -35,7 +40,7 @@ function App() {
               }
             />
             <Route
-              path="/invoices"
+              path="/requests"
               element={
                 <ProtectedRoute>
                   <MainLayout>
@@ -45,7 +50,7 @@ function App() {
               }
             />
             <Route
-              path="/customers"
+              path="/clients"
               element={
                 <ProtectedRoute>
                   <MainLayout>
@@ -65,7 +70,7 @@ function App() {
               }
             />
             <Route
-              path="/invoices/create"
+              path="/requests/new"
               element={
                 <ProtectedRoute>
                   <MainLayout>
@@ -75,7 +80,17 @@ function App() {
               }
             />
             <Route
-              path="/customers/create"
+              path="/clients/create"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <CreateCustomer />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/clients/:id/edit"
               element={
                 <ProtectedRoute>
                   <MainLayout>
@@ -95,7 +110,7 @@ function App() {
               }
             />
             <Route
-              path="/invoices/:id/edit"
+              path="/requests/:id/edit"
               element={
                 <ProtectedRoute>
                   <MainLayout>
@@ -105,7 +120,7 @@ function App() {
               }
             />
             <Route
-              path="/invoices/preview"
+              path="/requests/preview"
               element={
                 <ProtectedRoute>
                   <MainLayout>
@@ -115,7 +130,7 @@ function App() {
               }
             />
             <Route
-              path="/invoices/:id"
+              path="/requests/:id"
               element={
                 <ProtectedRoute>
                   <MainLayout>
@@ -134,6 +149,15 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Redirect old URLs to new ones */}
+            <Route path="/invoices" element={<Navigate to="/requests" replace />} />
+            <Route path="/invoices/create" element={<Navigate to="/requests/new" replace />} />
+            <Route path="/invoices/:id" element={<Navigate to="/requests/:id" replace />} />
+            <Route path="/invoices/:id/edit" element={<Navigate to="/requests/:id/edit" replace />} />
+            <Route path="/invoices/preview" element={<Navigate to="/requests/preview" replace />} />
+            <Route path="/customers" element={<Navigate to="/clients" replace />} />
+            <Route path="/customers/create" element={<Navigate to="/clients/create" replace />} />
+            <Route path="/customers/:id/edit" element={<RedirectCustomerEdit />} />
           </Routes>
         </div>
       </Router>

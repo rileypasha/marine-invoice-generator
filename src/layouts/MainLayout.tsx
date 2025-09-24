@@ -211,9 +211,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       case '/requests':
         return 'Invoice Requests';
       case '/clients':
-        return 'Client Directory';
+        return 'Contact Directory';
       case '/clients/create':
-        return 'New Person';
+        return 'New Contact';
       case '/vessels':
         return 'Vessel Directory';
       case '/vessels/create':

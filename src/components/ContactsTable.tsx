@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DataTable } from "@/components/ui/data-table"
+import { parsePhoneNumber } from 'libphonenumber-js'
 
 interface Customer {
   id: string;
@@ -42,10 +43,36 @@ interface ContactsTableProps {
   customers: Customer[]
   onEdit?: (id: string) => void
   onDelete?: (id: string) => void
+  onAddClick?: () => void
+  onPrint?: () => void
+  onImport?: () => void
+  onExport?: () => void
+  onBulkDelete?: (selectedRows: Customer[]) => void
+  onBulkExport?: (selectedRows: Customer[]) => void
+  onViewInvoices?: (customerId: string) => void
+  onNewInvoice?: (customer: Customer) => void
 }
 
-export function ContactsTable({ customers, onEdit, onDelete }: ContactsTableProps) {
+export function ContactsTable({ customers, onEdit, onDelete, onAddClick, onPrint, onImport, onExport, onBulkDelete, onBulkExport, onViewInvoices, onNewInvoice }: ContactsTableProps) {
   const navigate = useNavigate()
+
+  // Helper function to format phone numbers for display
+  const formatPhoneForDisplay = (phone: string | null | undefined): string => {
+    if (!phone) return '-'
+
+    // If it's already in E.164 format, format it nicely
+    if (phone.startsWith('+')) {
+      try {
+        const parsed = parsePhoneNumber(phone)
+        return parsed ? parsed.formatInternational() : phone
+      } catch {
+        return phone
+      }
+    }
+
+    // If it's in old format like "(555) 123-4567", return as-is
+    return phone
+  }
 
   const columns: ColumnDef<Customer>[] = [
     {
@@ -71,20 +98,20 @@ export function ContactsTable({ customers, onEdit, onDelete }: ContactsTableProp
       enableHiding: false,
     },
     {
-      accessorKey: "legal_name",
+      accessorKey: "display_name",
       header: ({ column }) => {
         return (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            Contact
+            Name
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         )
       },
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("legal_name") || '-'}</div>
+        <div className="font-medium">{row.getValue("display_name") || '-'}</div>
       ),
     },
     {
@@ -105,7 +132,7 @@ export function ContactsTable({ customers, onEdit, onDelete }: ContactsTableProp
         return (
           <div className="lowercase" title={email || undefined}>
             {email ? (
-              <a href={`mailto:${email}`} className="text-blue-600 hover:underline">
+              <a href={`mailto:${email}`} className="text-black hover:underline">
                 {email}
               </a>
             ) : '-'}
@@ -118,7 +145,7 @@ export function ContactsTable({ customers, onEdit, onDelete }: ContactsTableProp
       header: "Phone",
       cell: ({ row }) => {
         const phone = row.getValue("phone") as string
-        return <div className="whitespace-nowrap">{phone || '-'}</div>
+        return <div className="whitespace-nowrap">{formatPhoneForDisplay(phone)}</div>
       },
     },
     {
@@ -149,21 +176,22 @@ export function ContactsTable({ customers, onEdit, onDelete }: ContactsTableProp
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
-                onSelect={() => navigate(`/invoices?customer_id=${customer.id}`)}
+                onSelect={() => onNewInvoice?.(customer)}
+              >
+                New Invoice
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => onViewInvoices?.(customer.id)}
               >
                 View Invoices
               </DropdownMenuItem>
               <DropdownMenuItem
-                onSelect={() => onEdit?.(customer.id) || navigate(`/customers/${customer.id}/edit`)}
+                onSelect={() => onEdit?.(customer.id) || navigate(`/clients/${customer.id}/edit`)}
               >
                 Edit contact
               </DropdownMenuItem>
               <DropdownMenuItem
-                onSelect={() => {
-                  if (confirm('Are you sure you want to delete this contact?')) {
-                    onDelete?.(customer.id)
-                  }
-                }}
+                onSelect={() => onDelete?.(customer.id)}
                 className="text-red-600"
               >
                 Delete contact
@@ -179,8 +207,16 @@ export function ContactsTable({ customers, onEdit, onDelete }: ContactsTableProp
     <DataTable
       columns={columns}
       data={customers}
-      searchPlaceholder="Filter contacts..."
+      searchPlaceholder="Search clients..."
       searchColumn="display_name"
+      showAddButton={true}
+      addButtonText="Add Contact"
+      onAddClick={onAddClick}
+      onPrint={onPrint}
+      onImport={onImport}
+      onExport={onExport}
+      onBulkDelete={onBulkDelete}
+      onBulkExport={onBulkExport}
     />
   )
 }

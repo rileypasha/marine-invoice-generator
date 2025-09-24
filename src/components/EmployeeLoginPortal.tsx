@@ -51,7 +51,7 @@ const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
       if (success) {
         console.log('Login successful');
         onLogin(formData);
-        navigate('/dashboard');
+        navigate('/requests/new');
       } else {
         setError('Invalid email or password');
       }

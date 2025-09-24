@@ -247,7 +247,7 @@ const InvoiceView: React.FC = () => {
     if (isPreviewMode) {
       navigate(-1); // Go back to the create invoice page
     } else {
-      navigate('/invoices');
+      navigate('/requests');
     }
   };
 

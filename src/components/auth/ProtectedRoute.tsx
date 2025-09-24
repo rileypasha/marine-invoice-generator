@@ -29,7 +29,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!requireAuth && isAuthenticated) {
-    return <Navigate to="/invoices" replace />;
+    return <Navigate to="/invoices/create" replace />;
   }
 
   return <>{children}</>;

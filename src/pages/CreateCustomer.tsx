@@ -10,6 +10,8 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import AddressAutocomplete from '../components/AddressAutocomplete';
+import { PhoneField } from '../components/phone/PhoneField';
+import { isValidPhoneNumber, parsePhoneNumber } from 'libphonenumber-js';
 import {
   Select,
   SelectContent,
@@ -52,6 +54,25 @@ const CreateCustomer: React.FC = () => {
     }));
   };
 
+  // Helper function to normalize phone numbers from database
+  const normalizePhoneNumber = (phone: string | null | undefined): string => {
+    if (!phone) return '';
+
+    // If it's already in E.164 format, return as-is
+    if (phone.startsWith('+')) {
+      return phone;
+    }
+
+    // Try to parse US formatted numbers like "(555) 123-4567"
+    try {
+      const parsed = parsePhoneNumber(phone, 'US');
+      return parsed ? parsed.format('E.164') : phone;
+    } catch {
+      // If parsing fails, return the original phone number
+      return phone;
+    }
+  };
+
 
   // Email validation
   const validateEmail = (email: string): boolean => {
@@ -69,28 +90,12 @@ const CreateCustomer: React.FC = () => {
     }
   };
 
-  // Phone formatting
-  const formatPhoneNumber = (phoneStr: string): string => {
-    const cleaned = phoneStr.replace(/\D/g, '');
-    const limited = cleaned.slice(0, 10);
+  // Phone validation with international support
+  const handlePhoneChange = (value: string | undefined) => {
+    handleInputChange('customerPhone', value || '');
 
-    if (limited.length === 10) {
-      return limited.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
-    } else if (limited.length === 7) {
-      return limited.replace(/(\d{3})(\d{4})/, '$1-$2');
-    } else if (limited.length > 3) {
-      return limited.replace(/(\d{3})(\d+)/, '($1) $2');
-    }
-    return limited;
-  };
-
-  const handlePhoneChange = (value: string) => {
-    const formatted = formatPhoneNumber(value);
-    handleInputChange('customerPhone', formatted);
-
-    const cleaned = value.replace(/\D/g, '');
-    if (cleaned.length > 0 && cleaned.length < 10) {
-      setPhoneError('Phone number must be 10 digits');
+    if (value && !isValidPhoneNumber(value)) {
+      setPhoneError('Please enter a valid phone number');
     } else {
       setPhoneError('');
     }
@@ -173,7 +178,7 @@ const CreateCustomer: React.FC = () => {
           setCustomerData({
             contactName: customer.display_name || '',
             customerEmail: customer.email || '',
-            customerPhone: customer.phone || '',
+            customerPhone: normalizePhoneNumber(customer.phone),
             customerAddress: customer.address_line1 ?
               [customer.address_line1, customer.city, customer.state].filter(Boolean).join(', ') : '',
             id: customer.id
@@ -367,13 +372,12 @@ const CreateCustomer: React.FC = () => {
               Back to Contacts
             </Button>
           </div>
+          <div className="flex-1 flex justify-center">
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isEditMode ? 'Edit Contact' : 'Create New Contact'}
+            </h1>
+          </div>
           <div className="flex items-center space-x-3">
-            {!isEditMode && (
-              <Button variant="outline" onClick={handleNew}>
-                <Plus className="h-4 w-4 mr-2" />
-                New
-              </Button>
-            )}
             <Button onClick={handleSave} disabled={!isFormValid || isLoading || isLoadingData}>
               <Save className="h-4 w-4 mr-2" />
               {isLoading ? (isEditMode ? 'Updating...' : 'Saving...') : (isEditMode ? 'Update Contact' : 'Save Contact')}
@@ -388,21 +392,11 @@ const CreateCustomer: React.FC = () => {
         </div>
       </div>
 
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {isEditMode ? 'Edit Contact' : 'Create New Contact'}
-        </h1>
-        <p className="text-gray-600 mt-1">
-          {isEditMode ? 'Update contact information' : 'Add a new contact to your database'}
-        </p>
-      </div>
-
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
         {/* Customer Form */}
         <div className="lg:col-span-2">
-          <Card>
+          <Card className="h-full">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <User className="h-5 w-5 mr-2" />
@@ -471,21 +465,16 @@ const CreateCustomer: React.FC = () => {
                 </div>
 
                 {/* Customer Phone */}
-                <div className="space-y-2">
-                  <Label htmlFor="customer-phone">Phone Number</Label>
-                  <Input
-                    id="customer-phone"
-                    type="tel"
-                    placeholder="(555) 123-4567"
-                    value={customerData.customerPhone}
-                    onChange={(e) => handlePhoneChange(e.target.value)}
-                    disabled={isLoading || isLoadingData}
-                    className={phoneError ? 'border-red-500' : ''}
-                  />
-                  {phoneError && (
-                    <p className="text-xs text-red-600">{phoneError}</p>
-                  )}
-                </div>
+                <PhoneField
+                  name="customer-phone"
+                  label="Phone Number"
+                  value={customerData.customerPhone}
+                  onChange={handlePhoneChange}
+                  placeholder="Enter phone number"
+                  disabled={isLoading || isLoadingData}
+                  error={phoneError}
+                  defaultCountry="US"
+                />
 
                 {/* Customer Address */}
                 <div className="space-y-2">
@@ -504,9 +493,9 @@ const CreateCustomer: React.FC = () => {
         </div>
 
         {/* Sidebar */}
-        <div className="flex flex-col space-y-6">
+        <div className="space-y-6">
           {/* Form Status */}
-          <Card className="flex-1">
+          <Card className="h-full">
             <CardHeader>
               <CardTitle className="text-lg">Form Status</CardTitle>
             </CardHeader>

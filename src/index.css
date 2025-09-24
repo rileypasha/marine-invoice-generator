@@ -128,3 +128,9 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* Phone Input Country Dropdown Styling */
+.PhoneInputCountry {
+  position: relative;
+  --PhoneInputCountryFlag-height: 0.75em;
+}

@@ -4,6 +4,7 @@ import { prisma } from '../db/client';
 import multer from 'multer';
 import { parse } from 'csv-parse/sync';
 import { randomUUID } from 'crypto';
+import { parsePhoneNumber } from 'libphonenumber-js';
 
 const router = Router();
 
@@ -30,8 +31,8 @@ const validateCustomer = (data: any) => {
     errors.push({ field: 'email', message: 'Valid email is required' });
   }
 
-  // Phone validation (basic)
-  if (data.phone && !/^[\d\s\-\+\(\)]+$/.test(data.phone)) {
+  // Phone validation (basic) - more flexible since we can format it
+  if (data.phone && !/^[\d\s\-\+\(\)\.x]+$/i.test(data.phone)) {
     errors.push({ field: 'phone', message: 'Valid phone number is required' });
   }
 
@@ -40,7 +41,7 @@ const validateCustomer = (data: any) => {
 
 // Header mapping from user-friendly names to database field names
 const headerMapping: Record<string, string> = {
-  'Customer Name': 'display_name',
+  'Contact Name': 'display_name',
   'Company Name': 'legal_name',
   'Email Address': 'email',
   'Phone Number': 'phone',
@@ -58,6 +59,31 @@ const headerMapping: Record<string, string> = {
   'city': 'city',
   'state': 'state',
   'postal_code': 'postal_code',
+};
+
+// Function to format phone numbers consistently for CSV import
+const formatPhoneNumber = (phone: string | null | undefined): string | null => {
+  if (!phone || phone.trim().length === 0) {
+    return null;
+  }
+
+  const cleanPhone = phone.trim();
+
+  try {
+    // If the phone already starts with +, try parsing it as-is (international format)
+    if (cleanPhone.startsWith('+')) {
+      const parsed = parsePhoneNumber(cleanPhone);
+      return parsed ? parsed.format('E.164') : cleanPhone;
+    }
+
+    // For US numbers without country code, assume US and parse
+    const parsed = parsePhoneNumber(cleanPhone, 'US');
+    return parsed ? parsed.format('E.164') : cleanPhone;
+  } catch (error) {
+    // If parsing fails, return the original phone number
+    console.warn(`Failed to format phone number: ${cleanPhone}`, error);
+    return cleanPhone;
+  }
 };
 
 // Function to parse a single address string into components
@@ -194,11 +220,11 @@ const validateCsvRow = (row: any, rowIndex: number) => {
 
   // Required field validation
   if (!row.display_name || row.display_name.trim().length === 0) {
-    errors.push({ row: rowIndex, error: 'Customer Name is required' });
+    errors.push({ row: rowIndex, error: 'Contact Name is required' });
   }
 
   if (row.display_name && row.display_name.length > 255) {
-    errors.push({ row: rowIndex, error: 'Customer Name must be less than 255 characters' });
+    errors.push({ row: rowIndex, error: 'Contact Name must be less than 255 characters' });
   }
 
   // Email validation
@@ -206,9 +232,12 @@ const validateCsvRow = (row: any, rowIndex: number) => {
     errors.push({ row: rowIndex, error: 'Invalid Email Address format' });
   }
 
-  // Phone validation
-  if (row.phone && !/^[\d\s\-\+\(\)]+$/.test(row.phone)) {
-    errors.push({ row: rowIndex, error: 'Invalid Phone Number format' });
+  // Phone validation - more flexible since we'll format it during processing
+  if (row.phone && row.phone.trim().length > 0) {
+    // Basic check - should contain mostly digits, spaces, dashes, plus, parentheses
+    if (!/^[\d\s\-\+\(\)\.x]+$/i.test(row.phone)) {
+      errors.push({ row: rowIndex, error: 'Invalid Phone Number format' });
+    }
   }
 
   return errors;
@@ -371,7 +400,7 @@ router.post('/import', upload.single('file'), async (req: CustomerRequest, res: 
       display_name: record.display_name.trim(),
       legal_name: record.legal_name?.trim() || null,
       email: record.email?.trim() || null,
-      phone: record.phone?.trim() || null,
+      phone: formatPhoneNumber(record.phone),
       tax_id: record.tax_id?.trim() || null,
       address_line1: record.address_line1?.trim() || null,
       address_line2: record.address_line2?.trim() || null,
