@@ -388,6 +388,16 @@ const CreateCustomer: React.FC = () => {
         </div>
       </div>
 
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {isEditMode ? 'Edit Contact' : 'Create New Contact'}
+        </h1>
+        <p className="text-gray-600 mt-1">
+          {isEditMode ? 'Update contact information' : 'Add a new contact to your database'}
+        </p>
+      </div>
+
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
         {/* Customer Form */}

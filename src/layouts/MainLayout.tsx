@@ -225,7 +225,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           return 'Request Details';
         }
         if (location.pathname.startsWith('/clients/') && location.pathname.endsWith('/edit')) {
-          return 'Edit Contact';
+          return 'Contact Directory';
         }
         return 'Dashboard';
     }
