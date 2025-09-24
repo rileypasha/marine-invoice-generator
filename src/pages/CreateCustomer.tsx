@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Save, Plus, User, ArrowLeft } from 'lucide-react';
 import { createApiUrl, API_ENDPOINTS } from '../config/api';
 import { useAuth } from '../context/AuthContext';
@@ -28,7 +28,9 @@ interface Customer {
 
 const CreateCustomer: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const { isAuthenticated, csrfToken } = useAuth();
+  const isEditMode = Boolean(id);
   const [customerData, setCustomerData] = useState<Customer>({
     customerEmail: '',
     customerPhone: '',
@@ -39,6 +41,7 @@ const CreateCustomer: React.FC = () => {
   const [emailError, setEmailError] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(isEditMode);
   const [submitError, setSubmitError] = useState('');
 
 
@@ -138,6 +141,59 @@ const CreateCustomer: React.FC = () => {
     }
   };
 
+  // Load customer data for editing
+  useEffect(() => {
+    const loadCustomerData = async () => {
+      if (!isEditMode || !id || !isAuthenticated || !csrfToken) {
+        console.log('Edit mode check:', { isEditMode, id, isAuthenticated, csrfToken: !!csrfToken });
+        return;
+      }
+
+      try {
+        setIsLoadingData(true);
+        console.log('Loading customer data for ID:', id);
+
+        const response = await fetch(`/api/v1/customers/${id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
+          },
+          credentials: 'include',
+        });
+
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+
+        if (response.ok) {
+          const data = await response.json();
+          const customer = data.customer;
+          console.log('Customer data received:', customer);
+
+          setCustomerData({
+            contactName: customer.display_name || '',
+            customerEmail: customer.email || '',
+            customerPhone: customer.phone || '',
+            customerAddress: customer.address_line1 ?
+              [customer.address_line1, customer.city, customer.state].filter(Boolean).join(', ') : '',
+            id: customer.id
+          });
+        } else {
+          const errorText = await response.text();
+          console.error('Failed to load customer data:', response.status, errorText);
+          setSubmitError(`Failed to load customer data: ${response.status} ${response.statusText}`);
+        }
+      } catch (error) {
+        console.error('Error loading customer data:', error);
+        setSubmitError('Network error: Unable to load customer data. Please check your connection and try again.');
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    loadCustomerData();
+  }, [id, isEditMode, isAuthenticated, csrfToken]);
+
   const handleSave = async () => {
     if (!isAuthenticated || !csrfToken) {
       setSubmitError('Please log in to save contacts');
@@ -148,9 +204,6 @@ const CreateCustomer: React.FC = () => {
     setSubmitError('');
 
     try {
-      // Generate unique ID
-      const customerId = `cust_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
       // Parse address
       const addressParts = customerData.customerAddress ? parseAddress(customerData.customerAddress) : {
         address_line1: '',
@@ -161,7 +214,6 @@ const CreateCustomer: React.FC = () => {
 
       // Map frontend fields to backend schema
       const customerPayload = {
-        id: customerId,
         display_name: customerData.contactName,
         legal_name: customerData.contactName || null,
         email: customerData.customerEmail || null,
@@ -170,8 +222,17 @@ const CreateCustomer: React.FC = () => {
         country: 'US'
       };
 
-      const response = await fetch(createApiUrl(API_ENDPOINTS.CUSTOMERS), {
-        method: 'POST',
+      // Add ID for create mode only
+      if (!isEditMode) {
+        customerPayload.id = `cust_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      }
+
+      const url = isEditMode
+        ? `/api/v1/customers/${id}`
+        : createApiUrl(API_ENDPOINTS.CUSTOMERS);
+
+      const response = await fetch(url, {
+        method: isEditMode ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-Token': csrfToken
@@ -187,13 +248,13 @@ const CreateCustomer: React.FC = () => {
         } else if (errorData.errors) {
           setSubmitError(errorData.errors.map((err: any) => err.message).join(', '));
         } else {
-          setSubmitError(errorData.message || 'Failed to create contact');
+          setSubmitError(errorData.message || `Failed to ${isEditMode ? 'update' : 'create'} contact`);
         }
         return;
       }
 
       // Success - navigate back to contacts list
-      navigate('/customers');
+      navigate('/clients');
     } catch (error) {
       console.error('Error saving customer:', error);
       setSubmitError('Network error. Please check your connection and try again.');
@@ -278,7 +339,6 @@ const CreateCustomer: React.FC = () => {
 
   const handleNew = () => {
     setCustomerData({
-      customerName: '',
       customerEmail: '',
       customerPhone: '',
       customerAddress: '',
@@ -300,30 +360,38 @@ const CreateCustomer: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate('/customers')}
+              onClick={() => navigate('/clients')}
               className="flex items-center"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Contacts
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Create New Contact</h1>
-              <p className="text-gray-600">Add a new contact to your database</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {isEditMode ? 'Edit Contact' : 'Create New Contact'}
+              </h1>
+              <p className="text-gray-600">
+                {isEditMode ? 'Update contact information' : 'Add a new contact to your database'}
+              </p>
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <Button variant="outline" onClick={handleNew}>
-              <Plus className="h-4 w-4 mr-2" />
-              New
-            </Button>
-            <Button onClick={handleSave} disabled={!isFormValid || isLoading}>
+            {!isEditMode && (
+              <Button variant="outline" onClick={handleNew}>
+                <Plus className="h-4 w-4 mr-2" />
+                New
+              </Button>
+            )}
+            <Button onClick={handleSave} disabled={!isFormValid || isLoading || isLoadingData}>
               <Save className="h-4 w-4 mr-2" />
-              {isLoading ? 'Saving...' : 'Save Contact'}
+              {isLoading ? (isEditMode ? 'Updating...' : 'Saving...') : (isEditMode ? 'Update Contact' : 'Save Contact')}
             </Button>
-            <Button onClick={handleSaveAndNew} disabled={!isFormValid || isLoading}>
-              <Save className="h-4 w-4 mr-2" />
-              Save & New
-            </Button>
+            {!isEditMode && (
+              <Button onClick={handleSaveAndNew} disabled={!isFormValid || isLoading}>
+                <Save className="h-4 w-4 mr-2" />
+                Save & New
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -340,6 +408,18 @@ const CreateCustomer: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Loading Message */}
+              {isLoadingData && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md">
+                  <div className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Loading customer data...
+                  </div>
+                </div>
+              )}
               {/* Error Message */}
               {submitError && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
@@ -364,7 +444,7 @@ const CreateCustomer: React.FC = () => {
                     placeholder="Primary contact person"
                     value={customerData.contactName}
                     onChange={(e) => handleInputChange('contactName', e.target.value)}
-                    disabled={isLoading}
+                    disabled={isLoading || isLoadingData}
                     required
                   />
                 </div>
@@ -379,7 +459,7 @@ const CreateCustomer: React.FC = () => {
                     placeholder="contact@example.com"
                     value={customerData.customerEmail}
                     onChange={(e) => handleEmailChange(e.target.value)}
-                    disabled={isLoading}
+                    disabled={isLoading || isLoadingData}
                     className={emailError ? 'border-red-500' : ''}
                     required
                   />
@@ -397,7 +477,7 @@ const CreateCustomer: React.FC = () => {
                     placeholder="(555) 123-4567"
                     value={customerData.customerPhone}
                     onChange={(e) => handlePhoneChange(e.target.value)}
-                    disabled={isLoading}
+                    disabled={isLoading || isLoadingData}
                     className={phoneError ? 'border-red-500' : ''}
                   />
                   {phoneError && (
@@ -412,7 +492,7 @@ const CreateCustomer: React.FC = () => {
                     value={customerData.customerAddress}
                     onChange={(value) => handleInputChange('customerAddress', value)}
                     placeholder="Enter contact address (street, city, state, zip)"
-                    disabled={isLoading}
+                    disabled={isLoading || isLoadingData}
                     className="min-h-[80px] resize-none"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -467,10 +547,10 @@ const CreateCustomer: React.FC = () => {
               <CardTitle className="text-lg">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full" onClick={() => navigate('/customers')}>
+              <Button variant="outline" className="w-full" onClick={() => navigate('/clients')}>
                 View All Contacts
               </Button>
-              <Button variant="outline" className="w-full" onClick={() => navigate('/invoices/create')}>
+              <Button variant="outline" className="w-full" onClick={() => navigate('/requests/new')}>
                 Create Invoice for Contact
               </Button>
             </CardContent>
