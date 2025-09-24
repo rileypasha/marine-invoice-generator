@@ -366,14 +366,6 @@ const CreateCustomer: React.FC = () => {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Contacts
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {isEditMode ? 'Edit Contact' : 'Create New Contact'}
-              </h1>
-              <p className="text-gray-600">
-                {isEditMode ? 'Update contact information' : 'Add a new contact to your database'}
-              </p>
-            </div>
           </div>
           <div className="flex items-center space-x-3">
             {!isEditMode && (

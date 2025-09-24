@@ -2,7 +2,7 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   FileText,
-  Users,
+  User,
   Ship,
   Settings,
   SquarePen,
@@ -34,19 +34,19 @@ const SidebarContent = () => {
   // Build navigation links for Magic UI sidebar
   const links = [
     {
-      label: 'Create',
-      href: '/invoices/create',
+      label: 'New',
+      href: '/requests/new',
       icon: <SquarePen className="text-gray-700 h-4 w-4 flex-shrink-0" />,
     },
     {
-      label: 'Invoices',
-      href: '/invoices',
+      label: 'Requests',
+      href: '/requests',
       icon: <FileText className="text-gray-700 h-4 w-4 flex-shrink-0" />,
     },
     {
-      label: 'Contacts',
-      href: '/customers',
-      icon: <Users className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+      label: 'People',
+      href: '/clients',
+      icon: <User className="text-gray-700 h-4 w-4 flex-shrink-0" />,
     },
     {
       label: 'Vessels',
@@ -75,17 +75,16 @@ const SidebarContent = () => {
       <div className="flex flex-col">
         {/* Logo */}
         <div
-          className={`flex items-center py-2 relative ${open ? 'justify-between' : 'justify-start pl-0'}`}
+          className={`flex items-center py-2 relative justify-start`}
           onMouseEnter={() => setIsLogoHovered(true)}
           onMouseLeave={() => setIsLogoHovered(false)}
         >
           {/* Logo with individual hover */}
           <div
-            className={`relative rounded-lg transition-colors duration-300 ${open ? 'hover:bg-gray-50' : ''}`}
+            className={`relative rounded-lg transition-colors duration-300`}
           >
             {/* Collapsed hover overlay - only show when not hovered */}
             {!open && !isLogoHovered && <div className="absolute inset-0 pl-1 pr-2 py-2 ml-0 rounded-lg pointer-events-none"></div>}
-            {!open && isLogoHovered && <div className="absolute inset-0 pl-1 pr-2 py-2 ml-0 rounded-lg transition-colors duration-300 pointer-events-none bg-gray-50"></div>}
 
             <div className={`flex items-center relative z-10 ${isLogoHovered && !open ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <img
@@ -100,20 +99,20 @@ const SidebarContent = () => {
           {/* Toggle Button */}
           <button
             onClick={toggleSidebar}
-            className={`p-1.5 rounded-md transition-all duration-200 z-20 ${
+            className={`pl-3 pr-4 py-2 ml-0 rounded-lg transition-colors duration-300 z-20 ${
               open
-                ? 'static hover:bg-gray-50'
-                : `absolute ${isLogoHovered ? 'opacity-100 visible' : 'opacity-0 invisible'}`
+                ? 'absolute hover:bg-gray-50'
+                : `absolute hover:bg-gray-50 ${isLogoHovered ? 'opacity-100 visible' : 'opacity-0 invisible'}`
             }`}
             style={{
-              marginLeft: open ? '-2px' : undefined,
-              left: open ? undefined : '8px'
+              right: open ? '8px' : undefined,
+              left: open ? undefined : '1px'
             }}
           >
             {open ? (
-              <PanelLeftClose className="h-5 w-5 text-gray-600" />
+              <PanelLeftClose className="h-5 w-5 text-gray-400" />
             ) : (
-              <PanelLeftOpen className="h-5 w-5 text-gray-600" />
+              <PanelLeftOpen className="h-5 w-5 text-gray-400" />
             )}
           </button>
         </div>
@@ -129,7 +128,7 @@ const SidebarContent = () => {
                   className: `h-5 w-5 flex-shrink-0 ${
                     isActive(link.href)
                       ? 'text-gray-900'
-                      : 'text-gray-950'
+                      : 'text-gray-600'
                   }`,
                   style: { marginLeft: '8px' }
                 })
@@ -153,7 +152,7 @@ const SidebarContent = () => {
               className: `h-5 w-5 flex-shrink-0 ${
                 isActive(settingsLink.href)
                   ? 'text-gray-900'
-                  : 'text-gray-950'
+                  : 'text-gray-600'
               }`,
               style: { marginLeft: '8px' }
             })
@@ -170,25 +169,99 @@ const SidebarContent = () => {
   );
 };
 
-const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+const FixedHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { open } = useSidebar();
+
   return (
-    <div className="min-h-screen bg-gray-50 flex w-full">
-      <Sidebar>
-        <SidebarBody className="justify-start gap-10">
+    <div
+      className="fixed top-0 z-30 transition-all duration-300"
+      style={{
+        left: open ? '220px' : '56px',
+        right: '0'
+      }}
+    >
+      {children}
+    </div>
+  );
+};
+
+const MainContent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { open } = useSidebar();
+
+  return (
+    <div
+      className="transition-all duration-300"
+      style={{
+        marginLeft: open ? '220px' : '56px'
+      }}
+    >
+      {children}
+    </div>
+  );
+};
+
+const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+  const location = useLocation();
+
+  // Function to get page title based on current route
+  const getPageTitle = () => {
+    switch (location.pathname) {
+      case '/requests/new':
+        return 'New Request';
+      case '/requests':
+        return 'Invoice Requests';
+      case '/clients':
+        return 'Client Directory';
+      case '/clients/create':
+        return 'New Person';
+      case '/vessels':
+        return 'Vessel Directory';
+      case '/vessels/create':
+        return 'Create Vessel';
+      case '/settings':
+        return 'Settings';
+      default:
+        if (location.pathname.startsWith('/requests/')) {
+          return 'Request Details';
+        }
+        if (location.pathname.startsWith('/clients/') && location.pathname.endsWith('/edit')) {
+          return 'Edit Contact';
+        }
+        return 'Dashboard';
+    }
+  };
+
+  return (
+    <Sidebar>
+      <div className="min-h-screen bg-white">
+        <SidebarBody className="justify-start gap-0">
           <SidebarContent />
         </SidebarBody>
-      </Sidebar>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col">
-        {/* Page content */}
-        <main className="flex-1">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {children}
+        {/* Fixed Page title header */}
+        <FixedHeader>
+          <div className="bg-white border-b border-gray-200">
+            <div className="px-6">
+              <div className="py-3">
+                <h1 className="text-xl font-normal text-gray-900">
+                  {getPageTitle()}
+                </h1>
+              </div>
+            </div>
           </div>
-        </main>
+        </FixedHeader>
+
+        {/* Main content */}
+        <MainContent>
+          {/* Page content */}
+          <main className="flex-1 bg-white pt-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              {children}
+            </div>
+          </main>
+        </MainContent>
       </div>
-    </div>
+    </Sidebar>
   );
 };
 
