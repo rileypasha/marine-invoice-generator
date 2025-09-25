@@ -1,30 +1,17 @@
-"use client"
-
-import * as React from "react"
+import React, { useState } from "react"
 import { useNavigate } from 'react-router-dom'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { ArrowUpDown, MoreHorizontal, Plus, Printer, Upload, Download } from "lucide-react"
+import { parsePhoneNumber } from 'libphonenumber-js'
+import { ColumnDef } from "@tanstack/react-table"
+import { DataTable } from "@/components/ui/data-table"
+import { Checkbox as TableCheckbox } from "@/components/ui/checkbox"
+import { SimpleButton as Button } from "@/components/ui/simple-button"
 import {
   DropdownMenu,
+  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { DataTable } from "@/components/ui/data-table"
-import { parsePhoneNumber } from 'libphonenumber-js'
 
 interface Customer {
   id: string;
@@ -78,7 +65,7 @@ export function ContactsTable({ customers, onEdit, onDelete, onAddClick, onPrint
     {
       id: "select",
       header: ({ table }) => (
-        <Checkbox
+        <TableCheckbox
           checked={
             table.getIsAllPageRowsSelected() ||
             (table.getIsSomePageRowsSelected() && "indeterminate")
@@ -88,7 +75,7 @@ export function ContactsTable({ customers, onEdit, onDelete, onAddClick, onPrint
         />
       ),
       cell: ({ row }) => (
-        <Checkbox
+        <TableCheckbox
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"

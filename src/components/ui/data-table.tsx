@@ -15,8 +15,7 @@ import {
 } from "@tanstack/react-table"
 import { ArrowUpDown, ChevronDown, MoreHorizontal, Plus, Printer, Upload, Download, Trash2, X } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { SimpleButton as Button } from "@/components/ui/simple-button"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -28,13 +27,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+  SimpleTable as Table,
+  SimpleTableBody as TableBody,
+  SimpleTableCell as TableCell,
+  SimpleTableHead as TableHead,
+  SimpleTableHeader as TableHeader,
+  SimpleTableRow as TableRow,
+} from "@/components/ui/simple-table"
 import {
   Select,
   SelectContent,
