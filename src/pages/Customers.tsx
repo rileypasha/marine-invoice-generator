@@ -600,7 +600,8 @@ const Customers: React.FC = () => {
                     display: none !important;
                   }
 
-                  /* Add title */
+                  /* Add title - commented out to prevent page breaks */
+                  /*
                   body::before {
                     content: "Clients Directory";
                     display: block;
@@ -609,6 +610,7 @@ const Customers: React.FC = () => {
                     margin-bottom: 10px;
                     text-align: center;
                   }
+                  */
                 }
               `;
 

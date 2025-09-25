@@ -134,3 +134,355 @@ body {
   position: relative;
   --PhoneInputCountryFlag-height: 0.75em;
 }
+
+/* Print/Screen Toggle Utilities */
+@media screen {
+  .print-only {
+    display: none;
+  }
+}
+
+@media print {
+  .screen-only {
+    display: none !important;
+  }
+}
+
+/* Print Styles - Hardened for reliable table header repetition */
+@media print {
+  @page {
+    margin: 0.5in;
+    size: landscape;
+  }
+
+  /* Screen-only and print-only display control */
+  .screen-only {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* Page break control */
+  .page-break {
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  /* Let the browser paginate the real table */
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tbody {
+    display: table-row-group !important;
+  }
+
+  /* Never split a row across pages */
+  tr, img, svg {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Disable sticky headers and any transforms that create a new containing block */
+  th, thead, tr {
+    position: static !important;
+  }
+
+  * {
+    transform: none !important;
+  }
+
+  /* Disable overflow clipping on ancestors */
+  html, body, #root, main, .table-wrap, .content, .scroll, .container {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Make sure we didn't turn rows into blocks for responsive tables */
+  table, thead, tbody, tr, th, td {
+    display: revert !important;
+  }
+
+  /* Typical responsive wrappers */
+  .overflow-x-auto, .overflow-auto, .overflow-hidden {
+    overflow: visible !important;
+  }
+
+  /* Hide app chrome and sidebar components */
+  aside,
+  nav,
+  header,
+  footer,
+  .sidebar,
+  .left-rail,
+  .app-nav,
+  .app-sidebar,
+  .page-tabs,
+  [data-sidebar],
+  .sidebar-body {
+    display: none !important;
+  }
+
+  /* Hide specific sidebar components from our app */
+  .DesktopSidebar,
+  .MobileSidebar,
+  [class*="sidebar"],
+  .fixed.left-0,
+  [style*="position: fixed"].left-0 {
+    display: none !important;
+  }
+
+  /* Hide fixed header */
+  .fixed,
+  [style*="position: fixed"] {
+    display: none !important;
+  }
+
+  /* Expand main content to full width */
+  main,
+  .content,
+  .page,
+  .container,
+  .table-wrap,
+  .MainContent,
+  [style*="marginLeft"],
+  [style*="margin-left"],
+  [style*="margin-left: 220px"],
+  [style*="margin-left: 56px"] {
+    position: static !important;
+    float: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 12mm !important;
+    overflow: visible !important;
+    left: 0 !important;
+    transform: none !important;
+  }
+
+  /* Disable any grid layouts that might reserve sidebar space */
+  .app-grid,
+  .layout-grid {
+    display: block !important;
+  }
+
+  /* Disable sticky/fixed that can overlap */
+  * {
+    transform: none !important;
+  }
+
+  .sticky,
+  .fixed {
+    position: static !important;
+    top: auto !important;
+  }
+
+  /* Hide interactive elements EXCEPT table header buttons */
+  button:not(th button):not(thead button),
+  select,
+  input[type="search"],
+  input[type="text"],
+  .dropdown-menu,
+  [role="button"]:not(th [role="button"]) {
+    display: none !important;
+  }
+
+  /* Ensure body and main containers take full width */
+  body,
+  #root {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure tables render as real tables and paginate cleanly */
+  table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-before: avoid !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  th,
+  td {
+    position: static !important;
+  }
+
+  /* Optional: nicer margins */
+  @page {
+    margin: 12mm;
+  }
+
+  /* Ensure table headers and content are visible */
+  th,
+  td {
+    border: 1px solid #000 !important;
+    padding: 8px !important;
+    text-align: left !important;
+  }
+
+  /* Style table headers consistently in print */
+  th {
+    background-color: #f0f0f0 !important;
+    font-weight: bold !important;
+    position: static !important;
+  }
+
+  /* Style table header buttons for print */
+  th button,
+  thead button {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    text-align: left !important;
+    display: inline !important;
+  }
+
+  /* Hide sort icons in headers */
+  th svg,
+  thead svg,
+  th button svg,
+  thead button svg {
+    display: none !important;
+  }
+
+  /* Preserve background colors and styling in print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide checkboxes column (first column) - only in screen DataTable */
+  .screen-only table th:first-child,
+  .screen-only table td:first-child {
+    display: none !important;
+  }
+
+  /* Hide actions column (last column) - only in screen DataTable */
+  .screen-only table th:last-child,
+  .screen-only table td:last-child {
+    display: none !important;
+  }
+
+  /* Force show first/last columns if a prior rule hid them */
+  th:first-child,
+  td:first-child,
+  th:last-child,
+  td:last-child {
+    display: table-cell !important;
+    visibility: visible !important;
+  }
+
+  /* If Tailwind responsive classes hid them, unhide in print */
+  .hidden,
+  .sm\:hidden,
+  .md\:hidden {
+    display: table-cell !important;
+  }
+
+  /* Force print table elements to be visible regardless of responsive classes */
+  .print-only th,
+  .print-only td,
+  .print-only tr,
+  .print-only table {
+    display: revert !important;
+  }
+
+  .print-only th.hidden,
+  .print-only td.hidden,
+  .print-only tr.hidden {
+    display: table-cell !important;
+  }
+
+  .print-only .md\:hidden,
+  .print-only .sm\:hidden {
+    display: table-cell !important;
+  }
+
+  .print-only .md\:table-cell,
+  .print-only .sm\:table-cell {
+    display: table-cell !important;
+  }
+
+  /* Ensure Name and Address columns are always visible */
+  .print-only th:nth-child(1),
+  .print-only td:nth-child(1),
+  .print-only th:nth-child(4),
+  .print-only td:nth-child(4) {
+    display: table-cell !important;
+    visibility: visible !important;
+    min-width: 120px !important;
+  }
+
+  /* Hide pagination and search elements */
+  .pagination,
+  [role="searchbox"],
+  .search-container {
+    display: none !important;
+  }
+
+  /* Make sure headings are visible and keep with table */
+  h1,
+  h2,
+  h3 {
+    color: #000 !important;
+    margin-bottom: 10px !important;
+    page-break-after: avoid !important;
+  }
+
+  /* Hide any modals or overlays */
+  [role="dialog"],
+  .modal,
+  .overlay {
+    display: none !important;
+  }
+
+  /* Ensure main content container is visible */
+  .space-y-6,
+  .vessels-container {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide the DataTable toolbar row with search bar and buttons */
+  .py-4 {
+    display: none !important;
+  }
+
+  /* Remove spacing that causes page breaks */
+  .mb-1,
+  .mb-4 {
+    margin-bottom: 5px !important;
+  }
+
+  /* Remove excessive spacing from containers */
+  .space-y-6 > * + * {
+    margin-top: 0 !important;
+  }
+
+  /* Hide duplicate title from body::before pseudo-element */
+  body::before {
+    display: none !important;
+  }
+}

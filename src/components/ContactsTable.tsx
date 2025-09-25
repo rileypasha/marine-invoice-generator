@@ -12,6 +12,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
+import { PaginatedPrintTable } from "@/components/ui/paginated-print-table"
 
 interface Customer {
   id: string;
@@ -25,6 +26,30 @@ interface Customer {
   created_at: string;
   updated_at: string;
 }
+
+type ContactIn = {
+  firstName?: string;
+  lastName?: string;
+  display_name?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  address1?: string;
+  address2?: string;
+  address_line1?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  address?: string;
+};
+
+type Contact = {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+};
 
 interface ContactsTableProps {
   customers: Customer[]
@@ -60,6 +85,39 @@ export function ContactsTable({ customers, onEdit, onDelete, onAddClick, onPrint
     // If it's in old format like "(555) 123-4567", return as-is
     return phone
   }
+
+  // Normalize contacts for print
+  function normalizeContacts(rows: ContactIn[]): Contact[] {
+    return rows.map(r => {
+      const name =
+        r.name ??
+        r.display_name ??
+        [r.firstName, r.lastName].filter(Boolean).join(' ').trim();
+
+      const address =
+        r.address ??
+        [r.address1, r.address2, r.address_line1, r.city, r.state, r.postalCode, r.country]
+          .filter(Boolean)
+          .join(', ')
+          .replace(/\s+,/g, ',')
+          .trim();
+
+      return {
+        name: name || '',
+        email: r.email || '',
+        phone: r.phone || '',
+        address: address || '',
+      };
+    });
+  }
+
+  // Explicit contact columns for print - includes ALL columns
+  const contactCols = [
+    { key: 'name' as keyof Contact, header: 'Name' },
+    { key: 'email' as keyof Contact, header: 'Email' },
+    { key: 'phone' as keyof Contact, header: 'Phone' },
+    { key: 'address' as keyof Contact, header: 'Address' },
+  ] as const;
 
   const columns: ColumnDef<Customer>[] = [
     {
@@ -191,19 +249,31 @@ export function ContactsTable({ customers, onEdit, onDelete, onAddClick, onPrint
   ]
 
   return (
-    <DataTable
-      columns={columns}
-      data={customers}
-      searchPlaceholder="Search clients..."
-      searchColumn="display_name"
-      showAddButton={true}
-      addButtonText="Add Contact"
-      onAddClick={onAddClick}
-      onPrint={onPrint}
-      onImport={onImport}
-      onExport={onExport}
-      onBulkDelete={onBulkDelete}
-      onBulkExport={onBulkExport}
-    />
+    <>
+      {/* Screen-only interactive table */}
+      <div className="screen-only">
+        <DataTable
+          columns={columns}
+          data={customers}
+          searchPlaceholder="Search clients..."
+          searchColumn="display_name"
+          showAddButton={true}
+          addButtonText="Add Contact"
+          onAddClick={onAddClick}
+          onPrint={onPrint}
+          onImport={onImport}
+          onExport={onExport}
+          onBulkDelete={onBulkDelete}
+          onBulkExport={onBulkExport}
+        />
+      </div>
+
+      {/* Print-only paginated table */}
+      <PaginatedPrintTable
+        columns={contactCols}
+        rows={normalizeContacts(customers as ContactIn[])}
+        approxRowsPerPage={26}
+      />
+    </>
   )
 }

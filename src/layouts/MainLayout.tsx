@@ -265,7 +265,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       case '/vessels':
         return 'Vessel Directory';
       case '/vessels/create':
-        return 'Create Vessel';
+        return 'Vessel Directory';
       case '/settings':
         return 'Settings';
       default:
@@ -282,13 +282,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
     <Sidebar>
       <div className="min-h-screen bg-white">
-        <SidebarBody className="justify-start gap-0">
+        <SidebarBody className="justify-start gap-0 screen-only">
           <SidebarContent />
         </SidebarBody>
 
-        {/* Fixed Page title header */}
+        {/* Fixed Page title header - screen only */}
         <FixedHeader>
-          <div className="bg-white border-b border-gray-200">
+          <div className="bg-white border-b border-gray-200 screen-only">
             <div className="px-6">
               <div className="py-3">
                 <h1 className="text-xl font-normal text-gray-900">
@@ -301,12 +301,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
         {/* Main content */}
         <MainContent>
-          {/* Page content */}
-          <main className="flex-1 bg-white pt-16">
+          {/* Screen-only page content */}
+          <main className="flex-1 bg-white pt-16 screen-only">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
               {children}
             </div>
           </main>
+          {/* Print-only content */}
+          <div className="print-only">
+            {children}
+          </div>
         </MainContent>
       </div>
     </Sidebar>

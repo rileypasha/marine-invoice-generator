@@ -141,15 +141,10 @@ const CreateVessel: React.FC = () => {
               Back to Vessels
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Create New Vessel</h1>
-              <p className="text-gray-600">Add a new vessel to your fleet database</p>
+              <h1 className="text-3xl font-bold text-gray-900">Create Vessel</h1>
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <Button variant="outline" onClick={handleNew}>
-              <Plus className="h-4 w-4 mr-2" />
-              New
-            </Button>
             <Button variant="outline" onClick={handleSaveAndNew} disabled={!isFormValid || isLoading}>
               <Save className="h-4 w-4 mr-2" />
               {isLoading ? 'Saving...' : 'Save & New'}
@@ -170,7 +165,7 @@ const CreateVessel: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Ship className="h-5 w-5 mr-2" />
-                Vessel Information
+                Vessel Directory
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -207,9 +202,6 @@ const CreateVessel: React.FC = () => {
                       className="pr-12"
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Used for clearance fee calculation
-                  </p>
                 </div>
 
                 {/* Vessel Length */}
@@ -247,12 +239,6 @@ const CreateVessel: React.FC = () => {
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {vesselData.weight && isOverWeight
-                      ? 'Higher clearance fee will apply'
-                      : 'Standard clearance fee will apply'
-                    }
-                  </p>
                 </div>
               </div>
             </CardContent>
@@ -287,20 +273,6 @@ const CreateVessel: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full" onClick={() => navigate('/vessels')}>
-                View All Vessels
-              </Button>
-              <Button variant="outline" className="w-full" onClick={() => navigate('/requests/new')}>
-                Create Invoice for Vessel
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
