@@ -24,7 +24,7 @@ const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
   isLoading = false
 }) => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, checkAuth } = useAuth();
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
     password: ''
@@ -51,6 +51,10 @@ const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
       if (success) {
         console.log('Login successful');
         onLogin(formData);
+
+        // Wait briefly to ensure session cookie is fully established
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         navigate('/requests/new');
       } else {
         setError('Invalid email or password');

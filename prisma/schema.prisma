@@ -113,7 +113,7 @@ model Vessel {
   owner_phone         String?
   is_active           Boolean   @default(true)
   created_at          DateTime  @default(now())
-  updated_at          DateTime
+  updated_at          DateTime  @updatedAt
   invoices            Invoice[]
   user                User      @relation(fields: [userId], references: [id])
 

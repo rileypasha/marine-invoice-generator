@@ -82,7 +82,7 @@ export function configureSecurity(app: Application, config: SecurityConfig): voi
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'strict',
+      sameSite: 'lax', // Use 'lax' for both dev and prod to allow cross-page navigation
       maxAge: 30 * 60 * 1000, // 30 minutes
       domain: config.cookieDomain,
     },

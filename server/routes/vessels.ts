@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { logger } from '../utils/logger';
 import { prisma } from '../db/client';
+import { randomUUID } from 'crypto';
 
 const router = Router();
 
@@ -293,9 +294,10 @@ router.get('/:id', async (req: VesselRequest, res: Response) => {
 router.post('/', async (req: VesselRequest, res: Response) => {
   const correlationId = req.correlationId!;
   const userId = req.userId!;
+  const vesselData = req.body;
 
   try {
-    const vesselData = req.body;
+    // Process vessel creation
 
     // Validate vessel data
     const errors = validateVessel(vesselData);
@@ -317,7 +319,12 @@ router.post('/', async (req: VesselRequest, res: Response) => {
     // Create vessel (shared across all users)
     const vessel = await prisma.vessel.create({
       data: {
-        ...vesselData,
+        id: randomUUID(),
+        userId: vesselData.userId,
+        name: vesselData.name,
+        length_ft: vesselData.lengthFt,
+        weight_tons: vesselData.weightTons,
+        // Don't include updated_at - let Prisma handle it automatically
       },
     });
 
@@ -336,10 +343,38 @@ router.post('/', async (req: VesselRequest, res: Response) => {
   } catch (error: any) {
     logger.error('Failed to create vessel', {
       error: error.message,
+      stack: error.stack,
       correlationId,
       userId,
+      vesselData: {
+        name: vesselData.name,
+        lengthFt: vesselData.lengthFt,
+        weightTons: vesselData.weightTons,
+        hasUpdatedAt: !!vesselData.updated_at
+      }
     });
 
+    // Handle Prisma validation errors
+    if (error.name === 'PrismaClientValidationError') {
+      return res.status(400).json({
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid data provided for vessel creation',
+        error: error.message,
+        correlationId,
+      });
+    }
+
+    // Handle Prisma known request errors (e.g., constraint violations)
+    if (error.code && error.code.startsWith('P')) {
+      return res.status(400).json({
+        code: 'DATABASE_ERROR',
+        message: 'Database constraint violation',
+        error: error.message,
+        correlationId,
+      });
+    }
+
+    // Generic server error
     res.status(500).json({
       code: 'CREATE_FAILED',
       message: 'Failed to create vessel',
@@ -355,6 +390,16 @@ router.put('/:id', async (req: VesselRequest, res: Response) => {
   const vesselId = req.params.id;
 
   try {
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(vesselId)) {
+      return res.status(422).json({
+        code: 'INVALID_VESSEL_ID',
+        message: 'Invalid vessel ID format',
+        correlationId,
+      });
+    }
+
     const vesselData = req.body;
 
     // Validate vessel data
@@ -386,7 +431,13 @@ router.put('/:id', async (req: VesselRequest, res: Response) => {
     // Update vessel
     const vessel = await prisma.vessel.update({
       where: { id: vesselId },
-      data: vesselData,
+      data: {
+        userId: vesselData.userId,
+        name: vesselData.name,
+        length_ft: vesselData.lengthFt,
+        weight_tons: vesselData.weightTons,
+        // Don't include updated_at - let Prisma handle it automatically
+      },
     });
 
     logger.info('Vessel updated successfully', {
@@ -408,6 +459,27 @@ router.put('/:id', async (req: VesselRequest, res: Response) => {
       vesselId,
     });
 
+    // Handle Prisma validation errors
+    if (error.name === 'PrismaClientValidationError') {
+      return res.status(400).json({
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid data provided for vessel update',
+        error: error.message,
+        correlationId,
+      });
+    }
+
+    // Handle Prisma known request errors (e.g., constraint violations)
+    if (error.code && error.code.startsWith('P')) {
+      return res.status(400).json({
+        code: 'DATABASE_ERROR',
+        message: 'Database constraint violation',
+        error: error.message,
+        correlationId,
+      });
+    }
+
+    // Generic server error
     res.status(500).json({
       code: 'UPDATE_FAILED',
       message: 'Failed to update vessel',
