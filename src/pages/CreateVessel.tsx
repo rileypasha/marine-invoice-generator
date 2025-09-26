@@ -129,29 +129,29 @@ const CreateVessel: React.FC = () => {
     <div className="max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/vessels')}
-              className="flex items-center"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Vessels
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Create Vessel</h1>
-            </div>
+        <div className="relative flex items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/vessels')}
+            className="flex items-center"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Vessels
+          </Button>
+
+          <div className="flex-1 flex justify-center">
+            <h1 className="text-3xl font-bold text-gray-900">Create Vessel</h1>
           </div>
+
           <div className="flex items-center space-x-3">
-            <Button variant="outline" onClick={handleSaveAndNew} disabled={!isFormValid || isLoading}>
-              <Save className="h-4 w-4 mr-2" />
-              {isLoading ? 'Saving...' : 'Save & New'}
-            </Button>
             <Button onClick={handleSave} disabled={!isFormValid || isLoading}>
               <Save className="h-4 w-4 mr-2" />
               {isLoading ? 'Saving...' : 'Save Vessel'}
+            </Button>
+            <Button onClick={handleSaveAndNew} disabled={!isFormValid || isLoading} className="bg-black text-white hover:bg-gray-800">
+              <Save className="h-4 w-4 mr-2" />
+              {isLoading ? 'Saving...' : 'Save & New'}
             </Button>
           </div>
         </div>
@@ -168,11 +168,11 @@ const CreateVessel: React.FC = () => {
                 Vessel Directory
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-3" style={{ paddingRight: 0 }}>
               {/* Vessel Details Form */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-3">
                 {/* Vessel Name */}
-                <div className="md:col-span-3 space-y-2">
+                <div className="space-y-2 max-w-[95%]">
                   <Label htmlFor="vessel-name">Vessel Name *</Label>
                   <Input
                     id="vessel-name"
@@ -186,58 +186,61 @@ const CreateVessel: React.FC = () => {
                   />
                 </div>
 
-                {/* Vessel Weight */}
-                <div className="space-y-2">
-                  <Label htmlFor="vessel-weight">Weight</Label>
-                  <div className="relative">
-                    <Input
-                      id="vessel-weight"
-                      type="text"
-                      placeholder=""
-                      value={isWeightFocused ? stripSuffix(vesselData.weight, ' tons') : formatWithSuffix(vesselData.weight, ' tons')}
-                      onChange={(e) => handleNumericInput(e, 'weight')}
-                      onFocus={() => setIsWeightFocused(true)}
-                      onBlur={() => setIsWeightFocused(false)}
-                      disabled={isLoading}
-                      className="pr-12"
-                    />
+                {/* Weight, Length, and Clearance Category Row */}
+                <div className="flex flex-col md:flex-row md:gap-10">
+                  {/* Vessel Weight */}
+                  <div className="flex-[1] space-y-2">
+                    <Label htmlFor="vessel-weight">Weight</Label>
+                    <div className="relative">
+                      <Input
+                        id="vessel-weight"
+                        type="text"
+                        placeholder=""
+                        value={isWeightFocused ? stripSuffix(vesselData.weight, ' tons') : formatWithSuffix(vesselData.weight, ' tons')}
+                        onChange={(e) => handleNumericInput(e, 'weight')}
+                        onFocus={() => setIsWeightFocused(true)}
+                        onBlur={() => setIsWeightFocused(false)}
+                        disabled={isLoading}
+                        className="pr-12"
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* Vessel Length */}
-                <div className="space-y-2">
-                  <Label htmlFor="vessel-beam">Length</Label>
-                  <div className="relative">
-                    <Input
-                      id="vessel-beam"
-                      type="text"
-                      placeholder=""
-                      value={isBeamFocused ? stripSuffix(vesselData.beam, ' ft') : formatWithSuffix(vesselData.beam, ' ft')}
-                      onChange={(e) => handleNumericInput(e, 'beam')}
-                      onFocus={() => setIsBeamFocused(true)}
-                      onBlur={() => setIsBeamFocused(false)}
-                      disabled={isLoading}
-                      className="pr-8"
-                    />
+                  {/* Vessel Length */}
+                  <div className="flex-[1] space-y-2">
+                    <Label htmlFor="vessel-beam">Length</Label>
+                    <div className="relative">
+                      <Input
+                        id="vessel-beam"
+                        type="text"
+                        placeholder=""
+                        value={isBeamFocused ? stripSuffix(vesselData.beam, ' ft') : formatWithSuffix(vesselData.beam, ' ft')}
+                        onChange={(e) => handleNumericInput(e, 'beam')}
+                        onFocus={() => setIsBeamFocused(true)}
+                        onBlur={() => setIsBeamFocused(false)}
+                        disabled={isLoading}
+                        className="pr-8"
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* Weight Category Indicator */}
-                <div className="space-y-2">
-                  <Label>Clearance Category</Label>
-                  <div className="flex items-center space-x-2">
-                    {vesselData.weight && parseFloat(vesselData.weight) > 0 ? (
-                      <Badge
-                        variant={isOverWeight ? "destructive" : "secondary"}
-                        className="text-xs"
-                      >
-                        {isOverWeight ? 'Over 500 tons' : 'Under 500 tons'}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs">
-                        No weight specified
-                      </Badge>
-                    )}
+                  {/* Weight Category Indicator */}
+                  <div className="flex-[2] space-y-2">
+                    <Label>Clearance Category</Label>
+                    <div className="flex items-center space-x-2">
+                      {vesselData.weight && parseFloat(vesselData.weight) > 0 ? (
+                        <Badge
+                          variant={isOverWeight ? "destructive" : "secondary"}
+                          className="text-xs"
+                        >
+                          {isOverWeight ? 'Over 500 tons' : 'Under 500 tons'}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">
+                          No weight specified
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -246,15 +249,15 @@ const CreateVessel: React.FC = () => {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div>
           {/* Form Status */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Form Status</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2">
               {!vesselData.name && (
-                <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                <div className="text-sm text-muted-foreground bg-muted/50 p-2 rounded-lg">
                   <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -262,8 +265,17 @@ const CreateVessel: React.FC = () => {
                 </div>
               )}
 
+              {!vesselData.weight && (
+                <div className="text-sm text-muted-foreground bg-muted/50 p-2 rounded-lg">
+                  <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Weight is required for clearance fee
+                </div>
+              )}
+
               {isFormValid && (
-                <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg border border-green-200">
+                <div className="text-sm text-green-600 bg-green-50 p-2 rounded-lg border border-green-200">
                   <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
