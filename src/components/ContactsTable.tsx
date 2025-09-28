@@ -1,25 +1,44 @@
-import React, { useState, useMemo } from "react"
-import { useNavigate } from 'react-router-dom'
-import { ArrowUpDown, Plus, Printer, Upload, Download } from "lucide-react"
-import { parsePhoneNumber } from 'libphonenumber-js'
-import { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/ui/data-table"
-import { Checkbox as TableCheckbox } from "@/components/ui/checkbox"
-import { MoreHorizontal } from "lucide-react"
-import { useContactsRowActionsStore } from "@/features/contacts/state/rowActions.store"
-import { PaginatedPrintTable } from "@/components/ui/paginated-print-table"
-import { ContactSort } from "@/hooks/useContactsQueryState"
+import React, { useMemo, useCallback, useState, useEffect } from "react";
+import { useNavigate } from 'react-router-dom';
+import {
+  ColumnDef,
+  GroupingState,
+  ExpandedState,
+  OnChangeFn,
+  useReactTable,
+  getCoreRowModel,
+  getGroupedRowModel,
+  getExpandedRowModel,
+  getSortedRowModel,
+  flexRender
+} from "@tanstack/react-table";
+import { parsePhoneNumber } from 'libphonenumber-js';
+import { Checkbox as TableCheckbox } from "@/components/ui/checkbox";
+import { PaginatedPrintTable } from "@/components/ui/paginated-print-table";
+import {
+  SimpleTable as Table,
+  SimpleTableBody as TableBody,
+  SimpleTableCell as TableCell,
+  SimpleTableHead as TableHead,
+  SimpleTableHeader as TableHeader,
+  SimpleTableRow as TableRow,
+} from "@/components/ui/simple-table";
+import { ContactSort } from "@/hooks/useContactsQueryState";
+import { MoreHorizontal, ChevronDown, ChevronRight } from "lucide-react";
+import { useContactsRowActionsStore } from "@/features/contacts/state/rowActions.store";
+import { bucketByActivity, bucketByMonthlyActivity, formatActivityGroupSubtotal, fmtCurrency } from "@/features/contacts/activity";
 
 // Column width definitions for consistent spacing across all tables
 const CONTACTS_COLS = [
-  { id: 'select', w: '4%' },     // Checkbox column
-  { id: 'name', w: '24%' },      // Contact name column
-  { id: 'email', w: '22%' },     // Email column
-  { id: 'phone', w: '16%' },     // Phone column
-  { id: 'address', w: '22%' },   // Address column (hidden on smaller screens)
-  { id: 'invoices', w: '12%' },  // Invoices count column (centered)
-  { id: 'total', w: '16%' },     // Total amount column (centered)
-  { id: 'actions', w: '6%' }     // Actions column
+  { id: 'select', w: '4%' },               // Checkbox column
+  { id: 'name', w: '20%' },                // Contact name column
+  { id: 'email', w: '20%' },               // Email column
+  { id: 'phone', w: '14%' },               // Phone column
+  { id: 'monthly_invoices', w: '10%' },    // Monthly invoices count column (centered)
+  { id: 'monthly_total', w: '12%' },       // Monthly total amount column (centered)
+  { id: 'invoices', w: '10%' },            // Total invoices count column (centered)
+  { id: 'total', w: '12%' },               // Total amount column (centered)
+  { id: 'actions', w: '6%' }               // Actions column
 ];
 
 interface Customer {
@@ -35,6 +54,8 @@ interface Customer {
   updated_at: string;
   invoice_count?: number;
   invoice_total?: number;
+  monthly_invoice_count?: number;
+  monthly_invoice_total?: number;
 }
 
 type ContactIn = {
@@ -59,27 +80,54 @@ type Contact = {
   email: string;
   phone: string;
   address: string;
+  monthly_invoice_count?: number;
+  monthly_invoice_total?: number;
+  invoice_count?: number;
+  invoice_total?: number;
 };
 
 interface ContactsTableProps {
-  customers: Customer[]
-  sort?: ContactSort | null
-  onEdit?: (id: string) => void
-  onDelete?: (id: string) => void
-  onAddClick?: () => void
-  onPrint?: () => void
-  onImport?: () => void
-  onExport?: () => void
-  onBulkDelete?: (selectedRows: Customer[]) => void
-  onBulkExport?: (selectedRows: Customer[]) => void
-  onViewInvoices?: (customerId: string) => void
-  onNewInvoice?: (customer: Customer) => void
-  title?: React.ReactNode
+  customers: Customer[];
+  sort?: ContactSort | null;
+  groupBy?: 'activity' | 'monthlyActivity' | 'none';
+
+  // Controlled state props
+  grouping?: GroupingState;
+  expanded?: ExpandedState;
+  onGroupingChange?: OnChangeFn<GroupingState>;
+  onExpandedChange?: OnChangeFn<ExpandedState>;
+
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onBulkDelete?: (selectedRows: Customer[]) => void;
+  onBulkExport?: (selectedRows: Customer[]) => void;
+  onViewInvoices?: (customerId: string) => void;
+  onNewInvoice?: (customer: Customer) => void;
+  title?: React.ReactNode;
 }
 
-export function ContactsTable({ customers, sort, onEdit, onDelete, onAddClick, onPrint, onImport, onExport, onBulkDelete, onBulkExport, onViewInvoices, onNewInvoice, title }: ContactsTableProps) {
-  const navigate = useNavigate()
+export function ContactsTable({
+  customers,
+  sort,
+  groupBy = 'none',
+  grouping: controlledGrouping,
+  expanded: controlledExpanded,
+  onGroupingChange,
+  onExpandedChange,
+  onEdit,
+  onDelete,
+  onBulkDelete,
+  onBulkExport,
+  onViewInvoices,
+  onNewInvoice,
+  title
+}: ContactsTableProps) {
+  const navigate = useNavigate();
   const openRowActions = useContactsRowActionsStore((s) => s.openAt);
+
+  // Use controlled state or fallback to defaults
+  const grouping = controlledGrouping ?? [];
+  const expanded = controlledExpanded ?? {};
 
   // Sort customers based on the sort prop
   const sortedCustomers = useMemo(() => {
@@ -93,9 +141,13 @@ export function ContactsTable({ customers, sort, onEdit, onDelete, onAddClick, o
       if (aValue == null) aValue = '';
       if (bValue == null) bValue = '';
 
-      // Convert to string for comparison
-      aValue = String(aValue).toLowerCase();
-      bValue = String(bValue).toLowerCase();
+      // Convert to string for comparison (except for numbers)
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        // Keep as numbers for proper numeric sorting
+      } else {
+        aValue = String(aValue).toLowerCase();
+        bValue = String(bValue).toLowerCase();
+      }
 
       if (sort.direction === 'asc') {
         return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
@@ -107,21 +159,21 @@ export function ContactsTable({ customers, sort, onEdit, onDelete, onAddClick, o
 
   // Helper function to format phone numbers for display
   const formatPhoneForDisplay = (phone: string | null | undefined): string => {
-    if (!phone) return '-'
+    if (!phone) return '-';
 
     // If it's already in E.164 format, format it nicely
     if (phone.startsWith('+')) {
       try {
-        const parsed = parsePhoneNumber(phone)
-        return parsed ? parsed.formatInternational() : phone
+        const parsed = parsePhoneNumber(phone);
+        return parsed ? parsed.formatInternational() : phone;
       } catch {
-        return phone
+        return phone;
       }
     }
 
     // If it's in old format like "(555) 123-4567", return as-is
-    return phone
-  }
+    return phone;
+  };
 
   // Normalize contacts for print
   function normalizeContacts(rows: ContactIn[]): Contact[] {
@@ -148,14 +200,41 @@ export function ContactsTable({ customers, sort, onEdit, onDelete, onAddClick, o
     });
   }
 
-  // Explicit contact columns for print - includes ALL columns
-  const contactCols = [
+  // Print columns definition - includes ALL columns
+  const printColumns = [
     { key: 'name' as keyof Contact, header: 'Name' },
     { key: 'email' as keyof Contact, header: 'Email' },
     { key: 'phone' as keyof Contact, header: 'Phone' },
     { key: 'address' as keyof Contact, header: 'Address' },
-  ] as const;
+    {
+      key: 'monthly_invoice_count' as keyof Contact,
+      header: 'Monthly Invoices',
+      render: (value: any) => value || 0
+    },
+    {
+      key: 'monthly_invoice_total' as keyof Contact,
+      header: 'Monthly Amount',
+      render: (value: any) => (value || 0).toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      })
+    },
+    {
+      key: 'invoice_count' as keyof Contact,
+      header: 'Total Invoices',
+      render: (value: any) => value || 0
+    },
+    {
+      key: 'invoice_total' as keyof Contact,
+      header: 'Total Amount',
+      render: (value: any) => (value || 0).toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      })
+    }
+  ];
 
+  // Define columns for DataTable - wrapped in useMemo to prevent recreation on every render
   const columns: ColumnDef<Customer>[] = useMemo(() => [
     {
       id: "select",
@@ -194,7 +273,7 @@ export function ContactsTable({ customers, sort, onEdit, onDelete, onAddClick, o
       accessorKey: "email",
       header: "Email",
       cell: ({ row }) => {
-        const email = row.getValue("email") as string
+        const email = row.getValue("email") as string;
         return (
           <div className="lowercase" title={email || undefined}>
             {email ? (
@@ -203,7 +282,7 @@ export function ContactsTable({ customers, sort, onEdit, onDelete, onAddClick, o
               </a>
             ) : '-'}
           </div>
-        )
+        );
       },
       meta: { width: 'w-44' },
     },
@@ -211,42 +290,30 @@ export function ContactsTable({ customers, sort, onEdit, onDelete, onAddClick, o
       accessorKey: "phone",
       header: "Phone",
       cell: ({ row }) => {
-        const phone = row.getValue("phone") as string
-        return <div className="whitespace-nowrap">{formatPhoneForDisplay(phone)}</div>
+        const phone = row.getValue("phone") as string;
+        return <div className="whitespace-nowrap">{formatPhoneForDisplay(phone)}</div>;
       },
       meta: { width: 'w-32' },
     },
     {
-      id: "address",
-      header: "Address",
-      cell: ({ row }) => {
-        const customer = row.original
-        const address = customer.address_line1 && customer.city
-          ? `${customer.address_line1}, ${customer.city}${customer.state ? `, ${customer.state}` : ''}`
-          : customer.address_line1 || '-'
-
-        return <div title={address}>{address}</div>
-      },
-      meta: { className: 'hidden lg:table-cell', width: 'w-56' },
-    },
-    {
-      accessorKey: "invoice_count",
+      accessorKey: "monthly_invoice_count",
       header: ({ column }) => (
-        <div className="text-center">Invoices</div>
+        <div className="text-center">Monthly Invoices</div>
       ),
       cell: ({ row }) => {
-        const count = row.getValue("invoice_count") as number
-        return <div className="text-center">{count || 0}</div>
+        const count = row.getValue("monthly_invoice_count") as number;
+        return <div className="text-center">{count || 0}</div>;
       },
-      meta: { width: 'w-28' },
+      aggregationFn: 'sum',
+      meta: { width: 'w-32' },
     },
     {
-      accessorKey: "invoice_total",
+      accessorKey: "monthly_invoice_total",
       header: ({ column }) => (
-        <div className="text-center">Total</div>
+        <div className="text-center">Monthly Amount</div>
       ),
       cell: ({ row }) => {
-        const total = row.getValue("invoice_total") as number
+        const total = row.getValue("monthly_invoice_total") as number;
         return (
           <div className="text-center">
             {(total || 0).toLocaleString('en-US', {
@@ -254,8 +321,40 @@ export function ContactsTable({ customers, sort, onEdit, onDelete, onAddClick, o
               currency: 'USD'
             })}
           </div>
-        )
+        );
       },
+      aggregationFn: 'sum',
+      meta: { width: 'w-32' },
+    },
+    {
+      accessorKey: "invoice_count",
+      header: ({ column }) => (
+        <div className="text-center">Total Invoices</div>
+      ),
+      cell: ({ row }) => {
+        const count = row.getValue("invoice_count") as number;
+        return <div className="text-center">{count || 0}</div>;
+      },
+      aggregationFn: 'sum',
+      meta: { width: 'w-28' },
+    },
+    {
+      accessorKey: "invoice_total",
+      header: ({ column }) => (
+        <div className="text-center">Total Amount</div>
+      ),
+      cell: ({ row }) => {
+        const total = row.getValue("invoice_total") as number;
+        return (
+          <div className="text-center">
+            {(total || 0).toLocaleString('en-US', {
+              style: 'currency',
+              currency: 'USD'
+            })}
+          </div>
+        );
+      },
+      aggregationFn: 'sum',
       meta: { width: 'w-32' },
     },
     {
@@ -274,9 +373,20 @@ export function ContactsTable({ customers, sort, onEdit, onDelete, onAddClick, o
             onClick={(e) => {
               e.stopPropagation();
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+
+              // Smart positioning to prevent dropdown overflow
+              const dropdownWidth = 150; // Estimated width of dropdown menu
+              const buttonRight = r.right + window.scrollX;
+              const viewportWidth = window.innerWidth;
+
+              // If dropdown would overflow right edge, align it to the right of the button
+              const left = (buttonRight + dropdownWidth > viewportWidth)
+                ? buttonRight - dropdownWidth  // Align right edges
+                : r.left + window.scrollX;      // Default: align left edges
+
               openRowActions({
                 rowId: customer.id,
-                pos: { top: r.bottom + window.scrollY, left: r.left + window.scrollX },
+                pos: { top: r.bottom + window.scrollY, left },
                 handlers: {
                   newInvoice: (id) => onNewInvoice?.(customer),
                   viewInvoices: (id) => onViewInvoices?.(customer.id),
@@ -292,35 +402,171 @@ export function ContactsTable({ customers, sort, onEdit, onDelete, onAddClick, o
         );
       },
     },
-  ], [navigate, onNewInvoice, onViewInvoices, onEdit, onDelete, openRowActions])
+    // Virtual grouping column for activity
+    {
+      id: 'activityBucket',
+      header: 'Activity',
+      accessorFn: (row) => bucketByActivity(row.invoice_count).label,
+      enableGrouping: true,
+      cell: ({ row }) => null, // Hidden in normal rows
+      enableSorting: false,
+      enableHiding: false,
+    },
+    // Virtual grouping column for monthly activity
+    {
+      id: 'monthlyActivityBucket',
+      header: 'Monthly Activity',
+      accessorFn: (row) => bucketByMonthlyActivity(row.monthly_invoice_count).label,
+      enableGrouping: true,
+      cell: ({ row }) => null, // Hidden in normal rows
+      enableSorting: false,
+      enableHiding: false,
+    },
+  ], []); // Stable column definitions - callbacks captured in closure
+
+  // TanStack Table setup with grouping
+  const table = useReactTable({
+    data: sortedCustomers,
+    columns,
+    state: {
+      grouping,
+      expanded,
+    },
+    getRowId: row => row.id, // Stable unique ID for proper expansion state
+    onGroupingChange,
+    onExpandedChange,
+    getCoreRowModel: getCoreRowModel(),
+    getGroupedRowModel: getGroupedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    enableGrouping: true,
+    // CRITICAL: prevent resets that collapse groups
+    autoResetAll: false,
+    autoResetExpanded: false,
+  });
 
   return (
     <>
       {/* Screen-only interactive table with Airtable-style layout */}
       <div className="screen-only">
-        <div>
-          <div>
-            <DataTable
-              columns={columns}
-              data={sortedCustomers}
-              onPrint={onPrint}
-              onImport={onImport}
-              onExport={onExport}
-              onBulkDelete={onBulkDelete}
-              onBulkExport={onBulkExport}
-              title={title}
-              colWidths={CONTACTS_COLS}
-            />
-          </div>
+        <div className="border-r border-b">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    // Skip virtual grouping columns in header
+                    if (header.column.id === 'activityBucket' || header.column.id === 'monthlyActivityBucket') {
+                      return null;
+                    }
+                    return (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => {
+                  if (row.getIsGrouped()) {
+                    // Group header row
+                    const groupingValue = row.groupingValue as string;
+                    const subRowsCount = row.subRows.length;
+                    const isExpanded = row.getIsExpanded();
+
+                    // Calculate aggregated values for group
+                    const totalRevenue = row.subRows.reduce((sum, subRow) =>
+                      sum + (subRow.original.invoice_total || 0), 0);
+                    const monthlyRevenue = row.subRows.reduce((sum, subRow) =>
+                      sum + (subRow.original.monthly_invoice_total || 0), 0);
+
+                    return (
+                      <TableRow
+                        key={row.id}
+                        className="sticky top-[48px] z-10 bg-gray-50 hover:bg-gray-100 border-b-2 border-gray-200"
+                      >
+                        <TableCell colSpan={columns.length - 1} className="py-3">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              row.getToggleExpandedHandler()();
+                            }}
+                            className="flex items-center justify-between w-full text-left focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded p-1 -m-1"
+                            aria-expanded={isExpanded}
+                            aria-controls={`group-${row.id}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4 text-gray-500 pointer-events-none" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-gray-500 pointer-events-none" />
+                              )}
+                              <span className="font-medium text-gray-900">{groupingValue}</span>
+                              <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
+                                {subRowsCount}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {formatActivityGroupSubtotal(subRowsCount, totalRevenue, monthlyRevenue)}
+                            </div>
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+
+                  // Regular data row - only show if parent is expanded or no grouping
+                  if (row.depth > 0 && !row.getParentRow()?.getIsExpanded()) {
+                    return null;
+                  }
+
+                  return (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        // Skip virtual grouping columns in data rows
+                        if (cell.column.id === 'activityBucket' || cell.column.id === 'monthlyActivityBucket') {
+                          return null;
+                        }
+                        return (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
 
       {/* Print-only paginated table */}
       <PaginatedPrintTable
-        columns={contactCols}
+        columns={printColumns}
         rows={normalizeContacts(sortedCustomers as ContactIn[])}
         approxRowsPerPage={26}
       />
     </>
-  )
+  );
 }

@@ -24,7 +24,7 @@ import {
 import { VesselSort } from "@/hooks/useVesselsQueryState";
 import { MoreHorizontal, ChevronDown, ChevronRight } from "lucide-react";
 import { useRowActionsStore } from "@/features/vessels/state/rowActions.store";
-import { bucketBySize, bucketByActivity, formatGroupSubtotal, formatCurrency } from "@/features/vessels/grouping";
+import { bucketBySize, bucketByActivity, bucketByMonthlyActivity, formatGroupSubtotal, formatCurrency } from "@/features/vessels/grouping";
 
 // Column width definitions for consistent spacing across all tables
 const VESSELS_COLS = [
@@ -57,7 +57,7 @@ interface Vessel {
 interface VesselsTableProps {
   vessels: Vessel[];
   sort?: VesselSort | null;
-  groupBy?: 'size' | 'activity' | 'none';
+  groupBy?: 'size' | 'activity' | 'monthlyActivity' | 'none';
 
   // Controlled state props
   grouping?: GroupingState;
@@ -330,9 +330,20 @@ export function VesselsTable({
             onClick={(e) => {
               e.stopPropagation();
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+
+              // Smart positioning to prevent dropdown overflow
+              const dropdownWidth = 150; // Estimated width of dropdown menu
+              const buttonRight = r.right + window.scrollX;
+              const viewportWidth = window.innerWidth;
+
+              // If dropdown would overflow right edge, align it to the right of the button
+              const left = (buttonRight + dropdownWidth > viewportWidth)
+                ? buttonRight - dropdownWidth  // Align right edges
+                : r.left + window.scrollX;      // Default: align left edges
+
               openRowActions({
                 rowId: vessel.id,
-                pos: { top: r.bottom + window.scrollY, left: r.left + window.scrollX },
+                pos: { top: r.bottom + window.scrollY, left },
                 handlers: {
                   viewInvoices: (id) => handleViewInvoices(vessel),
                   newInvoice: (id) => handleNewInvoice(vessel),
@@ -367,6 +378,15 @@ export function VesselsTable({
       enableSorting: false,
       enableHiding: false,
     },
+    {
+      id: 'monthlyActivityBucket',
+      header: 'Monthly Activity',
+      accessorFn: (row) => bucketByMonthlyActivity(row.monthly_invoice_count).label,
+      enableGrouping: true,
+      cell: ({ row }) => null, // Hidden in normal rows
+      enableSorting: false,
+      enableHiding: false,
+    },
   ], []); // Stable column definitions - callbacks captured in closure
 
   // TanStack Table setup with grouping
@@ -394,14 +414,14 @@ export function VesselsTable({
     <>
       {/* Screen-only interactive table with Airtable-style layout */}
       <div className="screen-only">
-        <div className="rounded-md border">
+        <div className="border-r border-b">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
                     // Skip virtual grouping columns in header
-                    if (header.column.id === 'sizeBucket' || header.column.id === 'activityBucket') {
+                    if (header.column.id === 'sizeBucket' || header.column.id === 'activityBucket' || header.column.id === 'monthlyActivityBucket') {
                       return null;
                     }
                     return (
@@ -486,7 +506,7 @@ export function VesselsTable({
                     >
                       {row.getVisibleCells().map((cell) => {
                         // Skip virtual grouping columns in data rows
-                        if (cell.column.id === 'sizeBucket' || cell.column.id === 'activityBucket') {
+                        if (cell.column.id === 'sizeBucket' || cell.column.id === 'activityBucket' || cell.column.id === 'monthlyActivityBucket') {
                           return null;
                         }
                         return (
