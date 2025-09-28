@@ -177,6 +177,10 @@ router.get('/', async (req: VesselRequest, res: Response) => {
       ];
     }
 
+    // Calculate current month start date for monthly invoice filtering
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
     const [vessels, total] = await Promise.all([
       prisma.vessel.findMany({
         where,
@@ -187,29 +191,64 @@ router.get('/', async (req: VesselRequest, res: Response) => {
           id: true,
           name: true,
           registration_number: true,
-            length_ft: true,
+          length_ft: true,
           beam_ft: true,
           weight_tons: true,
           home_port: true,
           owner_name: true,
           created_at: true,
           updated_at: true,
+          _count: {
+            select: {
+              invoices: true,
+            },
+          },
+          invoices: {
+            select: {
+              total: true,
+              createdAt: true,
+            },
+          },
         },
       }),
       prisma.vessel.count({ where }),
     ]);
 
+    // Transform vessels to include aggregated invoice data
+    const vesselsWithInvoiceData = vessels.map(vessel => {
+      const invoice_count = vessel._count.invoices;
+      const invoice_total = vessel.invoices.reduce((sum, invoice) => sum + (invoice.total || 0), 0);
+
+      // Calculate monthly aggregations
+      const monthlyInvoices = vessel.invoices.filter(invoice =>
+        new Date(invoice.createdAt) >= currentMonthStart
+      );
+      const monthly_invoice_count = monthlyInvoices.length;
+      const monthly_invoice_total = monthlyInvoices.reduce((sum, invoice) => sum + (invoice.total || 0), 0);
+
+      // Remove the temporary fields and add the aggregated ones
+      const { _count, invoices, ...vesselData } = vessel;
+
+      return {
+        ...vesselData,
+        invoice_count,
+        invoice_total,
+        monthly_invoice_count,
+        monthly_invoice_total,
+      };
+    });
+
     logger.info('Vessels retrieved successfully', {
       correlationId,
       userId,
-      count: vessels.length,
+      count: vesselsWithInvoiceData.length,
       total,
       page,
       limit,
     });
 
     res.json({
-      vessels,
+      vessels: vesselsWithInvoiceData,
       pagination: {
         page: parseInt(page as string),
         limit: parseInt(limit as string),

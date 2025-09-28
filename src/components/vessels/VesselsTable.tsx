@@ -28,13 +28,15 @@ import { bucketBySize, bucketByActivity, formatGroupSubtotal, formatCurrency } f
 
 // Column width definitions for consistent spacing across all tables
 const VESSELS_COLS = [
-  { id: 'select', w: '4%' },     // Checkbox column
-  { id: 'name', w: '30%' },      // Vessel name column
-  { id: 'length', w: '16%' },    // Length column (right-aligned)
-  { id: 'weight', w: '16%' },    // Weight column (right-aligned)
-  { id: 'invoices', w: '12%' },  // Invoices count column (centered)
-  { id: 'total', w: '16%' },     // Total amount column (centered)
-  { id: 'actions', w: '6%' }     // Actions column
+  { id: 'select', w: '4%' },            // Checkbox column
+  { id: 'name', w: '20%' },             // Vessel name column
+  { id: 'length', w: '12%' },           // Length column (right-aligned)
+  { id: 'weight', w: '12%' },           // Weight column (right-aligned)
+  { id: 'monthly_invoices', w: '10%' }, // Monthly invoices count column (centered)
+  { id: 'monthly_total', w: '14%' },    // Monthly total amount column (centered)
+  { id: 'invoices', w: '10%' },         // Invoices count column (centered)
+  { id: 'total', w: '12%' },            // Total amount column (centered)
+  { id: 'actions', w: '6%' }            // Actions column
 ];
 
 interface Vessel {
@@ -48,6 +50,8 @@ interface Vessel {
   owner?: string;
   invoice_count?: number;
   invoice_total?: number;
+  monthly_invoice_count?: number;
+  monthly_invoice_total?: number;
 }
 
 interface VesselsTableProps {
@@ -166,13 +170,26 @@ export function VesselsTable({
       render: (value: any) => value ? `${value} tons` : '-'
     },
     {
+      key: 'monthly_invoice_count' as keyof Vessel,
+      header: 'Monthly Invoices',
+      render: (value: any) => value || 0
+    },
+    {
+      key: 'monthly_invoice_total' as keyof Vessel,
+      header: 'Monthly Amount',
+      render: (value: any) => (value || 0).toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      })
+    },
+    {
       key: 'invoice_count' as keyof Vessel,
-      header: 'Invoices',
+      header: 'Total Invoices',
       render: (value: any) => value || 0
     },
     {
       key: 'invoice_total' as keyof Vessel,
-      header: 'Total',
+      header: 'Total Amount',
       render: (value: any) => (value || 0).toLocaleString('en-US', {
         style: 'currency',
         currency: 'USD'
@@ -236,9 +253,40 @@ export function VesselsTable({
       meta: { width: 'w-32' },
     },
     {
+      accessorKey: "monthly_invoice_count",
+      header: ({ column }) => (
+        <div className="text-center">Monthly Invoices</div>
+      ),
+      cell: ({ row }) => {
+        const count = row.getValue("monthly_invoice_count") as number
+        return <div className="text-center">{count || 0}</div>
+      },
+      aggregationFn: 'sum',
+      meta: { width: 'w-32' },
+    },
+    {
+      accessorKey: "monthly_invoice_total",
+      header: ({ column }) => (
+        <div className="text-center">Monthly Amount</div>
+      ),
+      cell: ({ row }) => {
+        const total = row.getValue("monthly_invoice_total") as number
+        return (
+          <div className="text-center">
+            {(total || 0).toLocaleString('en-US', {
+              style: 'currency',
+              currency: 'USD'
+            })}
+          </div>
+        )
+      },
+      aggregationFn: 'sum',
+      meta: { width: 'w-32' },
+    },
+    {
       accessorKey: "invoice_count",
       header: ({ column }) => (
-        <div className="text-center">Invoices</div>
+        <div className="text-center">Total Invoices</div>
       ),
       cell: ({ row }) => {
         const count = row.getValue("invoice_count") as number
@@ -250,7 +298,7 @@ export function VesselsTable({
     {
       accessorKey: "invoice_total",
       header: ({ column }) => (
-        <div className="text-center">Total</div>
+        <div className="text-center">Total Amount</div>
       ),
       cell: ({ row }) => {
         const total = row.getValue("invoice_total") as number

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Ship, MoreHorizontal, Printer, Upload, Download, Anchor, Waves, Flag, Archive } from 'lucide-react';
+import { Plus, Ship, MoreHorizontal, Printer, Upload, Download, Anchor, Waves, Flag, Archive, CheckCircle, Circle } from 'lucide-react';
 import { SimpleButton as Button } from '@/components/ui/simple-button';
 import {
   DropdownMenu,
@@ -19,12 +19,20 @@ interface VesselsToolbarProps {
   // Local groupBy state from parent (for instant badge updates)
   currentGroupBy?: VesselGroupBy;
 
+  // Local segment state from parent (for instant dropdown updates)
+  currentSegment?: VesselSegment;
+
+  // Local fleet state from parent (for instant dropdown updates)
+  currentFleet?: string;
+
   // Action handlers
   onAddClick?: () => void;
   onPrint?: () => void;
   onImport?: () => void;
   onExport?: () => void;
   onGroupByChange?: (groupBy: VesselGroupBy) => void;  // NEW: Direct state handler
+  onSegmentChange?: (segment: VesselSegment) => void;  // NEW: Direct state handler
+  onFleetChange?: (fleet: string) => void;  // NEW: Direct state handler
 
   // Optional styling
   className?: string;
@@ -41,11 +49,15 @@ interface VesselsToolbarProps {
 export function VesselsToolbar({
   vessels,
   currentGroupBy,
+  currentSegment,
+  currentFleet,
   onAddClick,
   onPrint,
   onImport,
   onExport,
   onGroupByChange: externalHandler,  // NEW
+  onSegmentChange: externalSegmentHandler,  // NEW
+  onFleetChange: externalFleetHandler,  // NEW
   className = '',
   counts
 }: VesselsToolbarProps) {
@@ -61,13 +73,17 @@ export function VesselsToolbar({
 
   // Use local state if provided, otherwise fall back to URL state
   const activeGroupBy = currentGroupBy ?? groupBy;
+  const activeSegment = currentSegment ?? segment;
+  const activeFleet = currentFleet ?? fleet;
 
   // Calculate counts if not provided
   const calculatedCounts = counts || {
     all: vessels.length,
-    active: vessels.filter(v => !v.archived && v.name).length,
-    inactive: vessels.filter(v => !v.name || v.name.trim() === '').length,
+    active: vessels.filter(v => (v.invoice_count || 0) > 0).length,
+    inactive: vessels.filter(v => (v.invoice_count || 0) === 0).length,
     archived: vessels.filter(v => v.archived === true).length,
+    monthlyActive: vessels.filter(v => (v.monthly_invoice_count || 0) > 0).length,
+    monthlyInactive: vessels.filter(v => (v.monthly_invoice_count || 0) === 0).length,
   };
 
   // Segment options for ToolbarSelect
@@ -78,38 +94,53 @@ export function VesselsToolbar({
     },
     {
       value: 'active',
-      label: 'Active Fleet',
-      icon: <Anchor className="h-3.5 w-3.5" />,
+      label: 'Active',
+      icon: <CheckCircle className="h-3.5 w-3.5" />,
       count: calculatedCounts.active
     },
     {
       value: 'inactive',
       label: 'Inactive',
-      icon: <Waves className="h-3.5 w-3.5" />,
+      icon: <Circle className="h-3.5 w-3.5" />,
       count: calculatedCounts.inactive
-    },
-    {
-      value: 'archived',
-      label: 'Archived',
-      icon: <Archive className="h-3.5 w-3.5" />,
-      count: calculatedCounts.archived
     }
   ];
 
   // Fleet options for ToolbarSelect (secondary segment)
   const fleetOptions: ToolbarSelectOption[] = [
     { value: 'all', label: 'Monthly Activity' },
-    { value: 'commercial', label: 'Commercial', icon: <Flag className="h-3.5 w-3.5" /> },
-    { value: 'recreational', label: 'Recreational', icon: <Waves className="h-3.5 w-3.5" /> },
-    { value: 'military', label: 'Military', icon: <Anchor className="h-3.5 w-3.5" /> }
+    {
+      value: 'active',
+      label: 'Active',
+      icon: <CheckCircle className="h-3.5 w-3.5" />,
+      count: calculatedCounts.monthlyActive
+    },
+    {
+      value: 'inactive',
+      label: 'Inactive',
+      icon: <Circle className="h-3.5 w-3.5" />,
+      count: calculatedCounts.monthlyInactive
+    }
   ];
 
   const handleSegmentChange = (newSegment: string) => {
-    set({ segment: newSegment as typeof segment });
+    // Call external handler if provided (updates table state directly)
+    if (externalSegmentHandler) {
+      externalSegmentHandler(newSegment as typeof segment);
+    } else {
+      // Fallback to URL update only
+      set({ segment: newSegment as typeof segment });
+    }
   };
 
   const handleFleetChange = (newFleet: string) => {
-    set({ fleet: newFleet });
+    // Call external handler if provided (updates table state directly)
+    if (externalFleetHandler) {
+      externalFleetHandler(newFleet);
+    } else {
+      // Fallback to URL update only
+      set({ fleet: newFleet });
+    }
   };
 
   const handleSearchChange = (newQ: string) => {
@@ -195,16 +226,17 @@ export function VesselsToolbar({
           <div className="flex items-center gap-2">
             <ToolbarSelect
               label="Segment"
-              value={segment}
+              value={activeSegment}
               options={segmentOptions}
               onChange={handleSegmentChange}
               showCounts={true}
             />
             <ToolbarSelect
               label="Fleet"
-              value={fleet}
+              value={activeFleet}
               options={fleetOptions}
               onChange={handleFleetChange}
+              showCounts={true}
             />
           </div>
 

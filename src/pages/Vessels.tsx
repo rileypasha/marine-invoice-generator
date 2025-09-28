@@ -23,6 +23,8 @@ interface Vessel {
   owner?: string;
   invoice_count?: number;
   invoice_total?: number;
+  monthly_invoice_count?: number;
+  monthly_invoice_total?: number;
 }
 
 interface ImportResult {
@@ -48,6 +50,8 @@ const Vessels: React.FC = () => {
   const [grouping, setGrouping] = useState<GroupingState>([]);
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [currentGroupBy, setCurrentGroupBy] = useState<VesselGroupBy>('none');
+  const [currentSegment, setCurrentSegment] = useState<VesselSegment>('all');
+  const [currentFleet, setCurrentFleet] = useState<string>('all');
 
   // Import state management
   const [showImportModal, setShowImportModal] = useState(false);
@@ -81,6 +85,20 @@ const Vessels: React.FC = () => {
                            vessel.flag?.toLowerCase().includes(searchQuery) ||
                            vessel.owner?.toLowerCase().includes(searchQuery);
       if (!matchesSearch) return false;
+    }
+
+    // Segment filter (active/inactive based on invoice count)
+    if (queryState.segment && queryState.segment !== 'all') {
+      const hasInvoices = (vessel.invoice_count || 0) > 0;
+      if (queryState.segment === 'active' && !hasInvoices) return false;
+      if (queryState.segment === 'inactive' && hasInvoices) return false;
+    }
+
+    // Fleet filter (active/inactive based on monthly invoice count)
+    if (queryState.fleet && queryState.fleet !== 'all') {
+      const hasMonthlyInvoices = (vessel.monthly_invoice_count || 0) > 0;
+      if (queryState.fleet === 'active' && !hasMonthlyInvoices) return false;
+      if (queryState.fleet === 'inactive' && hasMonthlyInvoices) return false;
     }
 
     // Status filter (active/inactive based on invoice count)
@@ -134,10 +152,14 @@ const Vessels: React.FC = () => {
     fetchVessels();
   }, [isAuthenticated, csrfToken]);
 
-  // Initialize grouping from URL on mount only
+  // Initialize grouping, segment, and fleet from URL on mount only
   useEffect(() => {
     const g = queryState.groupBy;
+    const s = queryState.segment;
+    const f = queryState.fleet;
     setCurrentGroupBy(g); // Initialize local state for badge
+    setCurrentSegment(s); // Initialize local state for dropdown
+    setCurrentFleet(f); // Initialize local state for fleet dropdown
     if (g === 'size') setGrouping(['sizeBucket']);
     else if (g === 'activity') setGrouping(['activityBucket']);
     else setGrouping([]);
@@ -158,6 +180,24 @@ const Vessels: React.FC = () => {
 
     // Update URL for bookmarking (async, but doesn't affect badge)
     queryState.set({ groupBy: newGroupBy });
+  }, [queryState]);
+
+  // Direct segment change handler that updates state + URL
+  const handleSegmentChangeWithState = useCallback((newSegment: VesselSegment) => {
+    // Update local segment state IMMEDIATELY (for dropdown)
+    setCurrentSegment(newSegment);
+
+    // Update URL for bookmarking (async, but doesn't affect dropdown)
+    queryState.set({ segment: newSegment });
+  }, [queryState]);
+
+  // Direct fleet change handler that updates state + URL
+  const handleFleetChangeWithState = useCallback((newFleet: string) => {
+    // Update local fleet state IMMEDIATELY (for dropdown)
+    setCurrentFleet(newFleet);
+
+    // Update URL for bookmarking (async, but doesn't affect dropdown)
+    queryState.set({ fleet: newFleet });
   }, [queryState]);
 
   // Handle file selection
@@ -504,11 +544,15 @@ const Vessels: React.FC = () => {
       <VesselsToolbar
         vessels={vessels}
         currentGroupBy={currentGroupBy}
+        currentSegment={currentSegment}
+        currentFleet={currentFleet}
         onAddClick={() => navigate('/vessels/create')}
         onPrint={handlePrint}
         onImport={() => setShowImportModal(true)}
         onExport={handleExportCSV}
         onGroupByChange={handleGroupByChangeWithState}
+        onSegmentChange={handleSegmentChangeWithState}
+        onFleetChange={handleFleetChangeWithState}
       />
 
       <div>
