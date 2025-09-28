@@ -8,6 +8,17 @@ import { VesselSort } from "@/hooks/useVesselsQueryState";
 import { MoreHorizontal } from "lucide-react";
 import { useRowActionsStore } from "@/features/vessels/state/rowActions.store";
 
+// Column width definitions for consistent spacing across all tables
+const VESSELS_COLS = [
+  { id: 'select', w: '4%' },     // Checkbox column
+  { id: 'name', w: '30%' },      // Vessel name column
+  { id: 'length', w: '16%' },    // Length column (right-aligned)
+  { id: 'weight', w: '16%' },    // Weight column (right-aligned)
+  { id: 'invoices', w: '12%' },  // Invoices count column (centered)
+  { id: 'total', w: '16%' },     // Total amount column (centered)
+  { id: 'actions', w: '6%' }     // Actions column
+];
+
 interface Vessel {
   id: string;
   name?: string;
@@ -262,6 +273,7 @@ export function VesselsTable({
               onBulkDelete={onBulkDelete}
               onBulkExport={onBulkExport}
               title={title}
+              colWidths={VESSELS_COLS}
             />
           </div>
         </div>

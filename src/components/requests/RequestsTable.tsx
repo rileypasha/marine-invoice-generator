@@ -6,6 +6,19 @@ import { createInvoiceColumns } from "@/components/InvoiceTableColumns";
 import { RequestSort } from "@/hooks/useRequestsQueryState";
 import { useRequestsRowActionsStore } from "@/features/requests/state/rowActions.store";
 
+// Column width definitions for consistent spacing across all tables
+const REQUESTS_COLS = [
+  { id: 'select', w: '4%' },   // Checkbox column
+  { id: 'request', w: '18%' }, // Request # column
+  { id: 'contact', w: '18%' }, // Contact column
+  { id: 'vessel', w: '18%' },  // Vessel column
+  { id: 'amount', w: '12%' },  // Amount column (right-aligned)
+  { id: 'created', w: '12%' }, // Created at column (right-aligned)
+  { id: 'modified', w: '12%' }, // Last modified column (right-aligned)
+  { id: 'status', w: '10%' },  // Status column (centered)
+  { id: 'actions', w: '6%' }   // Actions column
+];
+
 interface Invoice {
   id: string;
   invoice_number?: string;
@@ -176,6 +189,7 @@ export function RequestsTable({
               onBulkDelete={onBulkDelete}
               onBulkExport={onBulkExport}
               title={title}
+              colWidths={REQUESTS_COLS}
             />
           </div>
         </div>

@@ -58,6 +58,7 @@ interface DataTableProps<TData, TValue> {
   onBulkExport?: (selectedRows: TData[]) => void
   initialPageSize?: number
   title?: React.ReactNode
+  colWidths?: Array<{ id: string; w: string }>
 }
 
 export function DataTable<TData, TValue>({
@@ -76,6 +77,7 @@ export function DataTable<TData, TValue>({
   onBulkExport,
   initialPageSize = 25,
   title,
+  colWidths,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -227,7 +229,14 @@ export function DataTable<TData, TValue>({
         </div>
       )}
       {/* Airtable-style table without card wrapper */}
-      <Table className="w-full table-fixed">
+      <Table className="w-full table-fixed border-separate border-spacing-0">
+        {colWidths && (
+          <colgroup>
+            {colWidths.map(col => (
+              <col key={col.id} style={{ width: col.w }} />
+            ))}
+          </colgroup>
+        )}
         <TableHeader className="sticky top-0 z-20 bg-white border-b border-gray-200">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
@@ -236,7 +245,7 @@ export function DataTable<TData, TValue>({
                 return (
                   <TableHead
                     key={header.id}
-                    className={`text-xs font-medium text-gray-600 tracking-wide py-2 px-3 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
+                    className={`text-xs font-medium text-muted-foreground tracking-wide px-6 py-3 md:px-4 xl:px-6 first:pl-6 last:pr-6 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
                   >
                     {header.isPlaceholder
                       ? null
@@ -265,7 +274,7 @@ export function DataTable<TData, TValue>({
                   return (
                     <TableCell
                       key={cell.id}
-                      className={`py-2 px-3 leading-5 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
+                      className={`text-sm text-foreground align-middle px-6 py-3 md:px-4 xl:px-6 first:pl-6 last:pr-6 truncate ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
                     >
                       {flexRender(
                         cell.column.columnDef.cell,

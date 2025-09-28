@@ -10,6 +10,18 @@ import { useContactsRowActionsStore } from "@/features/contacts/state/rowActions
 import { PaginatedPrintTable } from "@/components/ui/paginated-print-table"
 import { ContactSort } from "@/hooks/useContactsQueryState"
 
+// Column width definitions for consistent spacing across all tables
+const CONTACTS_COLS = [
+  { id: 'select', w: '4%' },     // Checkbox column
+  { id: 'name', w: '24%' },      // Contact name column
+  { id: 'email', w: '22%' },     // Email column
+  { id: 'phone', w: '16%' },     // Phone column
+  { id: 'address', w: '22%' },   // Address column (hidden on smaller screens)
+  { id: 'invoices', w: '12%' },  // Invoices count column (centered)
+  { id: 'total', w: '16%' },     // Total amount column (centered)
+  { id: 'actions', w: '6%' }     // Actions column
+];
+
 interface Customer {
   id: string;
   display_name: string;
@@ -297,6 +309,7 @@ export function ContactsTable({ customers, sort, onEdit, onDelete, onAddClick, o
               onBulkDelete={onBulkDelete}
               onBulkExport={onBulkExport}
               title={title}
+              colWidths={CONTACTS_COLS}
             />
           </div>
         </div>

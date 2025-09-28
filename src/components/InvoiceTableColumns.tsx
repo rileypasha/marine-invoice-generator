@@ -90,7 +90,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     ),
     enableSorting: false,
     enableHiding: false,
-    meta: { width: '4%' },
+    meta: { width: 'w-10' },
   },
   {
     accessorKey: "invoice_number",
@@ -101,12 +101,12 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     cell: ({ row }) => {
       const invoice = row.original;
       return (
-        <div className="font-medium !pl-3">
+        <div className="font-medium !pl-3 truncate min-w-0 max-w-full text-foreground">
           {invoice.invoice_number || `#${invoice.id}`}
         </div>
       );
     },
-    meta: { className: '!pl-3', width: '13%' },
+    meta: { width: 'w-40', className: '!pl-3' },
   },
   {
     accessorKey: "customer.display_name",
@@ -117,8 +117,8 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     cell: ({ row }) => {
       const invoice = row.original;
       return (
-        <div>
-          <div>
+        <div className="truncate min-w-0 max-w-full">
+          <div className="text-foreground">
             {invoice.customer?.company_name || invoice.customer?.display_name || '-'}
           </div>
           {invoice.customer?.contact_name && (
@@ -129,7 +129,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
         </div>
       );
     },
-    meta: { width: '13%' },
+    meta: { width: 'w-48' },
   },
   {
     accessorKey: "vessel.name",
@@ -139,9 +139,13 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     ),
     cell: ({ row }) => {
       const invoice = row.original;
-      return invoice.vessel?.name || '-';
+      return (
+        <div className="truncate min-w-0 max-w-full text-foreground">
+          {invoice.vessel?.name || '-'}
+        </div>
+      );
     },
-    meta: { width: '13%' },
+    meta: { width: 'w-40' },
   },
   {
     accessorKey: "total_amount",
@@ -152,58 +156,62 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     cell: ({ row }) => {
       const invoice = row.original;
       return (
-        <div className="text-right">
+        <div className="text-right tabular-nums">
           {formatCurrency(invoice.total_amount)}
         </div>
       );
     },
-    meta: { className: 'text-right', width: '13%' },
+    meta: { width: 'w-32', className: 'text-right' },
   },
   {
     accessorKey: "invoice_date",
     id: "created_at",
     header: () => (
-      <span>Created at</span>
+      <div className="text-right">Created at</div>
     ),
     cell: ({ row }) => {
       const invoice = row.original;
       return (
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-gray-600 text-right tabular-nums">
           {formatDate(invoice.invoice_date)}
         </div>
       );
     },
-    meta: { width: '13%' },
+    meta: { width: 'w-32' },
   },
   {
     accessorKey: "updated_at",
     id: "updated_at",
     header: () => (
-      <span>Last modified</span>
+      <div className="text-right">Last modified</div>
     ),
     cell: ({ row }) => {
       const invoice = row.original;
       return (
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-gray-600 text-right tabular-nums">
           {invoice.updated_at && invoice.updated_at !== invoice.invoice_date
             ? formatDate(invoice.updated_at)
             : formatDate(invoice.invoice_date)}
         </div>
       );
     },
-    meta: { width: '13%' },
+    meta: { width: 'w-32' },
   },
   {
     accessorKey: "status",
     id: "status",
     header: () => (
-      <span>Status</span>
+      <div className="text-center">Status</div>
     ),
     cell: ({ row }) => {
       const invoice = row.original;
-      return getStatusBadge(invoice.status);
+      return (
+        <div className="text-center whitespace-nowrap">
+          {getStatusBadge(invoice.status)}
+        </div>
+      );
     },
-    meta: { width: '13%' },
+    meta: { width: 'w-28' },
   },
   {
     id: "actions",
@@ -238,5 +246,6 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     },
     enableSorting: false,
     enableHiding: false,
+    meta: { width: 'w-16' },
   },
 ];
