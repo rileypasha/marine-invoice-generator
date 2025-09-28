@@ -12,6 +12,7 @@ import CreateCustomer from './pages/CreateCustomer'
 import CreateVessel from './pages/CreateVessel'
 import InvoiceView from './pages/InvoiceView'
 import Settings from './pages/Settings'
+import RowActionsLayer from './features/vessels/components/RowActionsLayer'
 
 const RedirectCustomerEdit = () => {
   const { id } = useParams<{ id: string }>();
@@ -110,6 +111,16 @@ function App() {
               }
             />
             <Route
+              path="/vessels/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <CreateVessel />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/requests/:id/edit"
               element={
                 <ProtectedRoute>
@@ -162,6 +173,7 @@ function App() {
             <Route path="/clients/:id/edit" element={<RedirectCustomerEdit />} />
             <Route path="/customers/:id/edit" element={<RedirectCustomerEdit />} />
           </Routes>
+          <RowActionsLayer />
         </div>
       </Router>
     </AuthProvider>
