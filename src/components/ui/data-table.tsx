@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronDown, MoreHorizontal, Plus, Printer, Upload, Download, Trash2, X } from "lucide-react"
+import { ArrowUpDown, ChevronDown, MoreHorizontal, Plus, Printer, Upload, Download, Trash2, X, Search } from "lucide-react"
 
 import { SimpleButton as Button } from "@/components/ui/simple-button"
 import {
@@ -41,15 +41,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from "@/components/ui/pagination"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -65,6 +56,8 @@ interface DataTableProps<TData, TValue> {
   onExport?: () => void
   onBulkDelete?: (selectedRows: TData[]) => void
   onBulkExport?: (selectedRows: TData[]) => void
+  initialPageSize?: number
+  title?: React.ReactNode
 }
 
 export function DataTable<TData, TValue>({
@@ -81,11 +74,14 @@ export function DataTable<TData, TValue>({
   onExport,
   onBulkDelete,
   onBulkExport,
+  initialPageSize = 25,
+  title,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  const [showSearch, setShowSearch] = React.useState(false)
 
   const table = useReactTable({
     data,
@@ -93,16 +89,10 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    initialState: {
-      pagination: {
-        pageSize: 25,
-      },
-    },
     state: {
       sorting,
       columnFilters,
@@ -116,20 +106,11 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className={`flex items-center ${hasSelectedRows ? 'py-2' : 'py-1'}`}>
         {!hasSelectedRows ? (
           <>
-            {searchColumn && (
-              <Input
-                placeholder={searchPlaceholder}
-                value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ""}
-                onChange={(event) =>
-                  table.getColumn(searchColumn)?.setFilterValue(event.target.value)
-                }
-                className="flex-1 mr-4 h-8"
-              />
-            )}
-            <div className="flex items-center gap-2">
+            {title && <div className="flex-1">{title}</div>}
+            <div className="flex items-center gap-2 ml-auto">
           {(onPrint || onImport || onExport) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -170,6 +151,7 @@ export function DataTable<TData, TValue>({
         ) : (
           <>
             <div className="flex items-center flex-1 mr-4">
+              {title && <div className="mr-4">{title}</div>}
               <span className="text-sm font-medium">
                 {selectedRows.length} item{selectedRows.length === 1 ? '' : 's'} selected
               </span>
@@ -216,134 +198,96 @@ export function DataTable<TData, TValue>({
           </>
         )}
       </div>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader style={{ backgroundColor: '#f9f9f9' }}>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
+      {searchColumn && (
+        <div className="flex justify-end -mt-2 pb-4">
+          <div className={`flex items-center border border-gray-300 rounded-md transition-all duration-300 ease-in-out overflow-hidden ${
+            showSearch
+              ? 'w-64 bg-white'
+              : 'w-8 bg-white hover:bg-gray-100'
+          }`}>
+            <input
+              className={`flex-1 h-6 outline-none transition-all duration-300 bg-transparent ${
+                showSearch ? 'opacity-100 px-3' : 'opacity-0 w-0 px-0'
+              }`}
+              placeholder={showSearch ? searchPlaceholder : ''}
+              value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ""}
+              onChange={(event) =>
+                table.getColumn(searchColumn)?.setFilterValue(event.target.value)
+              }
+              disabled={!showSearch}
+            />
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className="h-8 w-8 flex items-center justify-center flex-shrink-0 hover:bg-gray-100 transition-colors"
+              type="button"
+            >
+              <Search className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Airtable-style table without card wrapper */}
+      <Table className="w-full table-fixed">
+        <TableHeader className="sticky top-0 z-20 bg-white border-b border-gray-200">
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => {
+                const columnMeta = header.column.columnDef.meta as any
+                return (
+                  <TableHead
+                    key={header.id}
+                    className={`text-xs font-medium text-gray-600 tracking-wide py-2 px-3 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                  </TableHead>
+                )
+              })}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody className="text-[13.5px]">
+          {table.getRowModel().rows?.length ? (
+            table.getRowModel().rows.map((row, index) => (
+              <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() && "selected"}
+                className={`border-b border-gray-200 ${
+                  index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/50 hover:bg-gray-100'
+                }`}
+              >
+                {row.getVisibleCells().map((cell) => {
+                  const columnMeta = cell.column.columnDef.meta as any
                   return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      className={`py-2 px-3 leading-5 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),
                       )}
                     </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
-                </TableCell>
+                  )
+                })}
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex items-center justify-between py-4 px-1">
-        <div className="flex items-center space-x-2">
-          <p className="text-sm font-medium">Rows per page</p>
-          <Select
-            value={`${table.getState().pagination.pageSize}`}
-            onValueChange={(value) => {
-              table.setPageSize(Number(value))
-            }}
-          >
-            <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue placeholder={table.getState().pagination.pageSize} />
-            </SelectTrigger>
-            <SelectContent side="top">
-              {[10, 25, 50].map((pageSize) => (
-                <SelectItem key={pageSize} value={`${pageSize}`}>
-                  {pageSize}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center space-x-2 -mr-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            className="h-8 px-3"
-          >
-            Previous
-          </Button>
-
-          <div className="flex items-center space-x-1">
-            {Array.from({ length: Math.min(7, table.getPageCount()) }, (_, i) => {
-              const currentPage = table.getState().pagination.pageIndex
-              const totalPages = table.getPageCount()
-
-              let pageNumber: number
-              if (totalPages <= 7) {
-                pageNumber = i
-              } else if (currentPage < 4) {
-                pageNumber = i
-              } else if (currentPage > totalPages - 5) {
-                pageNumber = totalPages - 7 + i
-              } else {
-                pageNumber = currentPage - 3 + i
-              }
-
-              if (pageNumber < 0 || pageNumber >= totalPages) return null
-
-              const isActive = pageNumber === currentPage
-
-              return (
-                <Button
-                  key={pageNumber}
-                  variant={isActive ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => table.setPageIndex(pageNumber)}
-                  className={`h-8 w-8 p-0 ${isActive ? 'bg-black hover:bg-gray-800 text-white' : 'hover:bg-gray-100'}`}
-                >
-                  {pageNumber + 1}
-                </Button>
-              )
-            })}
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            className="h-8 px-3"
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center py-2.5 px-3"
+              >
+                No results.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
     </div>
   )
 }

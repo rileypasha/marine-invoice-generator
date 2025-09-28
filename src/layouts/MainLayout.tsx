@@ -261,7 +261,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       case '/contacts':
         return 'Contact Directory';
       case '/contacts/create':
-        return 'New Contact';
+        return 'Contact Directory';
       case '/vessels':
         return 'Vessel Directory';
       case '/vessels/create':
@@ -279,6 +279,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
   };
 
+  // Check if current route needs full-width layout (Airtable-style)
+  const isFullWidthRoute = () => {
+    return location.pathname === '/contacts' || location.pathname === '/vessels' || location.pathname === '/requests';
+  };
+
   return (
     <Sidebar>
       <div className="min-h-screen bg-white">
@@ -286,26 +291,36 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <SidebarContent />
         </SidebarBody>
 
-        {/* Fixed Page title header - screen only */}
-        <FixedHeader>
-          <div className="bg-white border-b border-gray-200 screen-only">
-            <div className="px-6">
-              <div className="py-3">
-                <h1 className="text-xl font-normal text-gray-900">
-                  {getPageTitle()}
-                </h1>
+        {/* Fixed Page title header - screen only (hidden for full-width routes) */}
+        {!isFullWidthRoute() && (
+          <FixedHeader>
+            <div className="bg-white border-b border-gray-200 screen-only">
+              <div className="px-6">
+                <div className="py-3">
+                  <h1 className="text-xl font-normal text-gray-900">
+                    {getPageTitle()}
+                  </h1>
+                </div>
               </div>
             </div>
-          </div>
-        </FixedHeader>
+          </FixedHeader>
+        )}
 
         {/* Main content */}
         <MainContent>
           {/* Screen-only page content */}
-          <main className="flex-1 bg-white pt-16 screen-only">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-              {children}
-            </div>
+          <main className="flex-1 bg-white screen-only" style={{ paddingTop: isFullWidthRoute() ? '0' : '4rem' }}>
+            {isFullWidthRoute() ? (
+              // Full-width layout for Airtable-style pages (like contacts)
+              <div className="w-full h-full">
+                {children}
+              </div>
+            ) : (
+              // Centered layout for other pages
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {children}
+              </div>
+            )}
           </main>
           {/* Print-only content */}
           <div className="print-only">

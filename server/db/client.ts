@@ -20,15 +20,8 @@ if (process.env.NODE_ENV === 'production') {
   prisma = global.__prisma;
 }
 
-// Connection test
-prisma.$connect()
-  .then(() => {
-    logger.info('Database connected successfully');
-  })
-  .catch((error) => {
-    logger.error('Database connection failed', { error: error.message });
-    process.exit(1);
-  });
+// Skip initial connection test - connections will be established on demand
+logger.info('Database client initialized - connections will be established on demand');
 
 // Graceful shutdown
 process.on('beforeExit', async () => {

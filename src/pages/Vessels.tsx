@@ -1,37 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Upload, MoreHorizontal, Printer, FileDown, Ship, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Checkbox } from '../components/ui/checkbox';
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Input,
   Label
 } from '../components/magic/index';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../components/ui/select';
-import { DataTable } from '../components/ui/data-table';
-import { ColumnDef } from '@tanstack/react-table';
-import { Checkbox as TableCheckbox } from '../components/ui/checkbox';
-import { SimpleButton as TableButton } from '../components/ui/simple-button';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '../components/ui/dropdown-menu';
-import { PaginatedPrintTable } from '../components/ui/paginated-print-table';
+import { VesselsToolbar } from '../components/vessels/VesselsToolbar';
+import { VesselsTable } from '../components/vessels/VesselsTable';
+import { useVesselsQueryState } from '../hooks/useVesselsQueryState';
 
 interface Vessel {
   id: string;
@@ -42,6 +20,8 @@ interface Vessel {
   imo_number?: string;
   flag?: string;
   owner?: string;
+  invoice_count?: number;
+  invoice_total?: number;
 }
 
 interface ImportResult {
@@ -52,33 +32,16 @@ interface ImportResult {
   errors: Array<{ row: number; error: string }>;
 }
 
-interface VesselsProps {
-  vessels?: Vessel[];
-  onEdit?: (vessel: Vessel) => void;
-  onDelete?: (vessel: Vessel) => void;
-  onAddNew?: () => void;
-  onSearch?: (query: string) => void;
-  searchQuery?: string;
-  isLoading?: boolean;
-  onImport?: () => void;
-}
-
-const Vessels: React.FC<VesselsProps> = ({
-  vessels: passedVessels = [],
-  onEdit,
-  onDelete,
-  onAddNew,
-  onSearch,
-  searchQuery = '',
-  isLoading: passedIsLoading = false,
-  onImport
-}) => {
+const Vessels: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, csrfToken, currentUser } = useAuth();
 
+  // URL-driven state management
+  const queryState = useVesselsQueryState();
+
   // Vessel data management
-  const [vessels, setVessels] = useState<Vessel[]>(passedVessels);
-  const [isLoading, setIsLoading] = useState(passedIsLoading);
+  const [vessels, setVessels] = useState<Vessel[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Import state management
   const [showImportModal, setShowImportModal] = useState(false);
@@ -87,22 +50,31 @@ const Vessels: React.FC<VesselsProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Delete state management
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; vessels: Vessel[] }>({
+    show: false,
+    vessels: []
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteResult, setDeleteResult] = useState<{ success: boolean; deleted: number; failed: number } | null>(null);
 
+  // State for invoice modal
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [selectedVesselInvoices, setSelectedVesselInvoices] = useState<any[]>([]);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+  const [selectedVesselName, setSelectedVesselName] = useState('');
 
-  // Pagination state management
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  // Filter vessels based on search query
+  const filteredVessels = vessels.filter(vessel => {
+    const searchQuery = queryState.q.toLowerCase();
+    if (!searchQuery) return true;
 
-  // Filter vessels based on search
-  const filteredVessels = vessels.filter(vessel =>
-    vessel.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    vessel.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    vessel.imo_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    vessel.flag?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    vessel.owner?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const totalPages = Math.ceil(filteredVessels.length / rowsPerPage);
+    return vessel.name?.toLowerCase().includes(searchQuery) ||
+           vessel.type?.toLowerCase().includes(searchQuery) ||
+           vessel.imo_number?.toLowerCase().includes(searchQuery) ||
+           vessel.flag?.toLowerCase().includes(searchQuery) ||
+           vessel.owner?.toLowerCase().includes(searchQuery);
+  });
 
   // Fetch vessels from API
   const fetchVessels = async () => {
@@ -110,7 +82,7 @@ const Vessels: React.FC<VesselsProps> = ({
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/v1/vessels', {
+      const response = await fetch('/api/v1/vessels?limit=1000', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -134,9 +106,7 @@ const Vessels: React.FC<VesselsProps> = ({
 
   // Fetch vessels on component mount
   useEffect(() => {
-    if (passedVessels.length === 0) {
-      fetchVessels();
-    }
+    fetchVessels();
   }, [isAuthenticated, csrfToken]);
 
   // Handle file selection
@@ -245,10 +215,6 @@ const Vessels: React.FC<VesselsProps> = ({
 
       // Refresh vessels list after successful import
       if (imported > 0) {
-        if (onImport) {
-          onImport();
-        }
-        // Always refresh our local vessel list
         fetchVessels();
       }
     } catch (error) {
@@ -294,7 +260,7 @@ const Vessels: React.FC<VesselsProps> = ({
       return;
     }
 
-    const headers = ['Name', 'Length (ft)', 'Weight (tons)'];
+    const headers = ['Vessel', 'Length (ft)', 'Weight (tons)'];
     const csvContent = [
       headers.join(','),
       ...vessels.map(vessel => [
@@ -320,28 +286,36 @@ const Vessels: React.FC<VesselsProps> = ({
     window.print();
   };
 
-  // Bulk delete function
-  const handleBulkDelete = async (selectedRows: Vessel[]) => {
+  // Bulk delete function - shows confirmation modal
+  const handleBulkDelete = useCallback((selectedRows: Vessel[]) => {
     if (selectedRows.length === 0) {
       alert('Please select vessels to delete');
       return;
     }
 
-    const confirmed = confirm(
-      `Are you sure you want to delete ${selectedRows.length} vessel${selectedRows.length > 1 ? 's' : ''}? This action cannot be undone.`
-    );
+    setDeleteModal({
+      show: true,
+      vessels: selectedRows
+    });
+  }, []);
 
-    if (!confirmed) return;
+  // Handle single vessel delete
+  const handleSingleDelete = useCallback((vessel: Vessel) => {
+    handleBulkDelete([vessel]);
+  }, [handleBulkDelete]);
 
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
     if (!isAuthenticated || !csrfToken) {
       alert('Authentication required');
       return;
     }
 
+    setIsDeleting(true);
     let deleted = 0;
     let failed = 0;
 
-    for (const vessel of selectedRows) {
+    for (const vessel of deleteModal.vessels) {
       try {
         const response = await fetch(`/api/v1/vessels/${vessel.id}`, {
           method: 'DELETE',
@@ -364,23 +338,94 @@ const Vessels: React.FC<VesselsProps> = ({
       }
     }
 
+    setIsDeleting(false);
+    setDeleteResult({
+      success: deleted > 0,
+      deleted,
+      failed
+    });
+
+    // Refresh the vessels list if any were deleted
     if (deleted > 0) {
-      alert(`Successfully deleted ${deleted} vessel${deleted > 1 ? 's' : ''}${failed > 0 ? `. Failed to delete ${failed} vessel${failed > 1 ? 's' : ''}.` : '.'}`);
-      // Refresh the vessels list
       fetchVessels();
-    } else {
-      alert('Failed to delete vessels. Please try again.');
     }
   };
 
+  // Close delete modal
+  const closeDeleteModal = () => {
+    if (isDeleting) return; // Prevent closing during deletion
+    setDeleteModal({ show: false, vessels: [] });
+    setDeleteResult(null); // Clear the result state
+  };
+
+  // Fetch invoices for a specific vessel
+  const fetchVesselInvoices = useCallback(async (vesselId: string) => {
+    if (!isAuthenticated || !csrfToken) return;
+
+    setIsLoadingInvoices(true);
+    try {
+      const response = await fetch(`/api/v1/invoices?vesselId=${vesselId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedVesselInvoices(data.invoices || []);
+      } else {
+        console.error('Failed to fetch vessel invoices');
+        setSelectedVesselInvoices([]);
+      }
+    } catch (error) {
+      console.error('Error fetching vessel invoices:', error);
+      setSelectedVesselInvoices([]);
+    } finally {
+      setIsLoadingInvoices(false);
+    }
+  }, [isAuthenticated, csrfToken]);
+
+  // Handle view invoices click
+  const handleViewInvoices = useCallback((vessel: Vessel) => {
+    setSelectedVesselName(vessel.name || 'Unknown Vessel');
+    setShowInvoiceModal(true);
+    fetchVesselInvoices(vessel.id);
+  }, [fetchVesselInvoices]);
+
+  // Handle edit vessel click
+  const handleEdit = useCallback((id: string) => {
+    navigate(`/vessels/${id}/edit`);
+  }, [navigate]);
+
+  // Close invoice modal
+  const closeInvoiceModal = () => {
+    setShowInvoiceModal(false);
+    setSelectedVesselInvoices([]);
+    setSelectedVesselName('');
+  };
+
+  // Handle new invoice for vessel
+  const handleNewInvoice = useCallback((vessel: Vessel) => {
+    const params = new URLSearchParams({
+      vesselId: vessel.id,
+      vesselName: vessel.name || '',
+      vesselWeight: vessel.weight_tons?.toString() || '',
+      vesselLength: vessel.length_ft?.toString() || ''
+    });
+
+    navigate(`/requests/new?${params.toString()}`);
+  }, [navigate]);
+
   // Bulk export function
-  const handleBulkExport = (selectedRows: Vessel[]) => {
+  const handleBulkExport = useCallback((selectedRows: Vessel[]) => {
     if (selectedRows.length === 0) {
       alert('Please select vessels to export');
       return;
     }
 
-    const headers = ['Name', 'Length (ft)', 'Weight (tons)'];
+    const headers = ['Vessel', 'Length (ft)', 'Weight (tons)'];
     const csvContent = [
       headers.join(','),
       ...selectedRows.map(vessel => [
@@ -399,189 +444,53 @@ const Vessels: React.FC<VesselsProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+  }, []);
 
-  // Pagination logic
-  const getPaginatedVessels = () => {
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    return filteredVessels.slice(startIndex, endIndex);
-  };
 
-  // Handle search change
-  const handleSearchChange = (value: string) => {
-    onSearch?.(value);
-    setCurrentPage(1); // Reset to first page when searching
-  };
-
-  // Handle rows per page change
-  const handleRowsPerPageChange = (newRowsPerPage: string) => {
-    setRowsPerPage(Number(newRowsPerPage));
-    setCurrentPage(1); // Reset to first page when changing rows per page
-  };
-
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  const paginatedVessels = getPaginatedVessels();
-
-  // Print columns definition - includes ALL columns
-  const printColumns = [
-    { key: 'name' as keyof Vessel, header: 'Vessel Name' },
-    {
-      key: 'length_ft' as keyof Vessel,
-      header: 'Height',
-      render: (value: any) => value ? `${value} ft` : '-'
-    },
-    {
-      key: 'weight_tons' as keyof Vessel,
-      header: 'Weight',
-      render: (value: any) => value ? `${value} tons` : '-'
-    }
-  ] as const;
-
-  // Define columns for DataTable
-  const columns: ColumnDef<Vessel>[] = [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <TableCheckbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <TableCheckbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: "name",
-      header: ({ column }) => (
-        <TableButton
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Vessel Name
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </TableButton>
-      ),
-      cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("name") || '-'}</div>
-      ),
-    },
-    {
-      accessorKey: "length_ft",
-      header: "Height",
-      cell: ({ row }) => {
-        const length = row.getValue("length_ft") as number
-        return <div>{length ? `${length} ft` : '-'}</div>
-      },
-    },
-    {
-      accessorKey: "weight_tons",
-      header: "Weight",
-      cell: ({ row }) => {
-        const weight = row.getValue("weight_tons") as number
-        return <div>{weight ? `${weight} tons` : '-'}</div>
-      },
-    },
-    {
-      id: "actions",
-      enableHiding: false,
-      cell: ({ row }) => {
-        const vessel = row.original
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <TableButton variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </TableButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onSelect={() => onEdit?.(vessel)}
-              >
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => onDelete?.(vessel)}
-                className="text-red-600"
-              >
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      },
-    },
-  ];
 
   return (
-    <div className="space-y-6">
-      {/* Vessels Table */}
-      {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-muted-foreground">Loading vessels...</div>
-            </div>
-          ) : vessels.length === 0 ? (
-            <div className="text-center py-8">
-              <svg className="mx-auto h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H4a2 2 0 00-2 2v6a2 2 0 002 2h4m0-10h8a2 2 0 012 2v6a2 2 0 01-2 2H8m0-10V4a2 2 0 012-2h4a2 2 0 012 2v3M8 17v3a2 2 0 002 2h4a2 2 0 002-2v-3" />
-              </svg>
-              <div className="text-muted-foreground mb-4">No vessels found</div>
-              <Button onClick={() => navigate('/vessels/create')}>Add Your First Vessel</Button>
-            </div>
-          ) : (
-            <>
-              <div className="mb-4">
-                <h2 className="flex items-center gap-2 text-3xl font-semibold mb-4">
-                  <Ship className="h-6 w-6" />
-                  Vessels
-                </h2>
-              </div>
+    <div className="flex flex-col">
+      <VesselsToolbar
+        vessels={vessels}
+        onAddClick={() => navigate('/vessels/create')}
+        onPrint={handlePrint}
+        onImport={() => setShowImportModal(true)}
+        onExport={handleExportCSV}
+      />
 
-              {/* Screen-only interactive table */}
-              <div className="screen-only">
-                <DataTable
-                  columns={columns}
-                  data={filteredVessels}
-                  searchPlaceholder="Search vessels..."
-                  searchColumn="name"
-                  showAddButton={true}
-                  addButtonText="Add Vessel"
-                  onAddClick={() => navigate('/vessels/create')}
-                  onPrint={handlePrint}
-                  onImport={() => setShowImportModal(true)}
-                  onExport={handleExportCSV}
-                  onBulkDelete={handleBulkDelete}
-                  onBulkExport={handleBulkExport}
-                />
-              </div>
-
-              {/* Print-only paginated table */}
-              <PaginatedPrintTable
-                columns={printColumns}
-                rows={filteredVessels}
-                approxRowsPerPage={30}
-              />
-            </>
-          )}
+      <div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-muted-foreground">Loading vessels...</div>
+          </div>
+        ) : vessels.length === 0 ? (
+          <div className="text-center py-8">
+            <svg className="mx-auto h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H4a2 2 0 00-2 2v6a2 2 0 002 2h4m0-10h8a2 2 0 012 2v6a2 2 0 01-2 2H8m0-10V4a2 2 0 012-2h4a2 2 0 012 2v3M8 17v3a2 2 0 002 2h4a2 2 0 002-2v-3" />
+            </svg>
+            <div className="text-muted-foreground mb-4">No vessels found</div>
+            <div className="flex gap-2 justify-center">
+              <Button onClick={() => navigate('/vessels/create')}>
+                Add Your First Vessel
+              </Button>
+              <Button variant="outline" onClick={() => setShowImportModal(true)}>
+                Import from CSV
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <VesselsTable
+            vessels={filteredVessels}
+            sort={queryState.sort}
+            onEdit={handleEdit}
+            onDelete={handleSingleDelete}
+            onBulkDelete={handleBulkDelete}
+            onBulkExport={handleBulkExport}
+            onViewInvoices={handleViewInvoices}
+            onNewInvoice={handleNewInvoice}
+          />
+        )}
+      </div>
 
       {/* Import Modal */}
       {showImportModal && createPortal(
@@ -593,14 +502,39 @@ const Vessels: React.FC<VesselsProps> = ({
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="csv-file">Select CSV File</Label>
+                  <div className="mt-2 flex gap-2 items-center">
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      variant="outline"
+                      type="button"
+                    >
+                      {selectedFile ? 'Change File' : 'Choose File'}
+                    </Button>
+                    {selectedFile && (
+                      <Button
+                        onClick={() => {
+                          setSelectedFile(null);
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = '';
+                          }
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+
                   <input
-                    id="csv-file"
                     type="file"
                     accept=".csv"
-                    className="mt-2 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    className="hidden"
                     ref={fileInputRef}
                     onChange={handleFileSelect}
                   />
+
                   {selectedFile && (
                     <p className="text-sm text-muted-foreground mt-2">
                       Selected: {selectedFile.name}
@@ -683,6 +617,153 @@ const Vessels: React.FC<VesselsProps> = ({
                 </Button>
               </div>
             )}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4 shadow-lg border">
+            {deleteResult ? (
+              <>
+                <h3 className="text-lg font-semibold mb-4">Delete Complete</h3>
+                <div className="space-y-4">
+                  <div className="text-center">
+                    {deleteResult.success ? (
+                      <div className="text-green-600">
+                        <svg className="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <p className="text-lg font-medium">Successfully Deleted</p>
+                      </div>
+                    ) : (
+                      <div className="text-red-600">
+                        <svg className="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        <p className="text-lg font-medium">Delete Failed</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 text-sm">
+                    <p><strong>Deleted:</strong> {deleteResult.deleted} vessel{deleteResult.deleted !== 1 ? 's' : ''}</p>
+                    <p><strong>Failed:</strong> {deleteResult.failed} vessel{deleteResult.failed !== 1 ? 's' : ''}</p>
+                  </div>
+
+                  <Button onClick={closeDeleteModal} className="w-full">
+                    Close
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
+
+                {isDeleting ? (
+                  <div className="text-center">
+                    <p className="text-gray-600 mb-4">Deleting vessels...</p>
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-gray-600 mb-6">
+                      Are you sure you want to delete {deleteModal.vessels.length} vessel{deleteModal.vessels.length > 1 ? 's' : ''}? This action cannot be undone.
+                    </p>
+
+                    <div className="flex gap-3 justify-end">
+                      <Button onClick={closeDeleteModal} variant="outline">
+                        Cancel
+                      </Button>
+                      <Button onClick={handleDeleteConfirm} variant="destructive">
+                        Delete
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Invoice Modal */}
+      {showInvoiceModal && createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Invoices for {selectedVesselName}</h3>
+                <Button onClick={closeInvoiceModal} variant="ghost" size="sm">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+              {isLoadingInvoices ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-gray-600">Loading invoices...</span>
+                </div>
+              ) : selectedVesselInvoices.length === 0 ? (
+                <div className="text-center py-8">
+                  <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-gray-600">No invoices found for this vessel.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {selectedVesselInvoices.map((invoice) => (
+                    <div key={invoice.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4">
+                            <h4 className="font-medium text-gray-900">#{invoice.invoice_number}</h4>
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              invoice.status === 'paid'
+                                ? 'bg-green-100 text-green-800'
+                                : invoice.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {invoice.status}
+                            </span>
+                          </div>
+                          <div className="mt-1 text-sm text-gray-600">
+                            <div>Created: {new Date(invoice.created_at).toLocaleDateString()}</div>
+                            {invoice.due_date && (
+                              <div>Due: {new Date(invoice.due_date).toLocaleDateString()}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-gray-900">
+                            ${invoice.total ? parseFloat(invoice.total).toFixed(2) : '0.00'}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-2"
+                            onClick={() => navigate(`/requests/${invoice.id}`)}
+                          >
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>,
         document.body

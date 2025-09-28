@@ -672,7 +672,7 @@ const Customers: React.FC = () => {
           />
 
           {/* Content area */}
-          <div className="px-6">
+          <div>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="text-muted-foreground">Loading contacts...</div>
