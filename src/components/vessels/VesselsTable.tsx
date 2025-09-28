@@ -1,12 +1,30 @@
-import React, { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
-import { ColumnDef } from "@tanstack/react-table";
-import { DataTable } from "@/components/ui/data-table";
+import {
+  ColumnDef,
+  GroupingState,
+  ExpandedState,
+  useReactTable,
+  getCoreRowModel,
+  getGroupedRowModel,
+  getExpandedRowModel,
+  getSortedRowModel,
+  flexRender
+} from "@tanstack/react-table";
 import { Checkbox as TableCheckbox } from "@/components/ui/checkbox";
 import { PaginatedPrintTable } from "@/components/ui/paginated-print-table";
+import {
+  SimpleTable as Table,
+  SimpleTableBody as TableBody,
+  SimpleTableCell as TableCell,
+  SimpleTableHead as TableHead,
+  SimpleTableHeader as TableHeader,
+  SimpleTableRow as TableRow,
+} from "@/components/ui/simple-table";
 import { VesselSort } from "@/hooks/useVesselsQueryState";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, ChevronDown, ChevronRight } from "lucide-react";
 import { useRowActionsStore } from "@/features/vessels/state/rowActions.store";
+import { bucketBySize, bucketByActivity, formatGroupSubtotal, formatCurrency } from "@/features/vessels/grouping";
 
 // Column width definitions for consistent spacing across all tables
 const VESSELS_COLS = [
@@ -35,6 +53,14 @@ interface Vessel {
 interface VesselsTableProps {
   vessels: Vessel[];
   sort?: VesselSort | null;
+  groupBy?: 'size' | 'activity' | 'none';
+
+  // Controlled state props
+  grouping?: GroupingState;
+  expanded?: ExpandedState;
+  onGroupingChange?: (grouping: GroupingState) => void;
+  onExpandedChange?: (expanded: ExpandedState) => void;
+
   onEdit?: (id: string) => void;
   onDelete?: (vessel: Vessel) => void;
   onBulkDelete?: (selectedRows: Vessel[]) => void;
@@ -47,6 +73,11 @@ interface VesselsTableProps {
 export function VesselsTable({
   vessels,
   sort,
+  groupBy = 'none',
+  grouping: controlledGrouping,
+  expanded: controlledExpanded,
+  onGroupingChange,
+  onExpandedChange,
   onEdit,
   onDelete,
   onBulkDelete,
@@ -57,6 +88,12 @@ export function VesselsTable({
 }: VesselsTableProps) {
   const navigate = useNavigate();
   const openRowActions = useRowActionsStore((s) => s.openAt);
+
+  // Use controlled state or fallback to defaults
+  const grouping = controlledGrouping ?? [];
+  const expanded = controlledExpanded ?? {};
+
+  // Note: No useEffect needed - parent manages grouping state synchronization
 
   // Sort vessels based on the sort prop
   const sortedVessels = useMemo(() => {
@@ -185,6 +222,7 @@ export function VesselsTable({
         const length = row.getValue("length_ft") as number
         return <div>{length ? `${length} ft` : '-'}</div>
       },
+      aggregationFn: 'mean',
       meta: { width: 'w-32' },
     },
     {
@@ -194,6 +232,7 @@ export function VesselsTable({
         const weight = row.getValue("weight_tons") as number
         return <div>{weight ? `${weight} tons` : '-'}</div>
       },
+      aggregationFn: 'mean',
       meta: { width: 'w-32' },
     },
     {
@@ -205,6 +244,7 @@ export function VesselsTable({
         const count = row.getValue("invoice_count") as number
         return <div className="text-center">{count || 0}</div>
       },
+      aggregationFn: 'sum',
       meta: { width: 'w-28' },
     },
     {
@@ -223,6 +263,7 @@ export function VesselsTable({
           </div>
         )
       },
+      aggregationFn: 'sum',
       meta: { width: 'w-32' },
     },
     {
@@ -259,23 +300,165 @@ export function VesselsTable({
         );
       },
     },
-  ], [navigate, onEdit, onDelete, handleNewInvoice, handleViewInvoices, handleSingleDelete, openRowActions]);
+    // Virtual grouping columns
+    {
+      id: 'sizeBucket',
+      header: 'Size',
+      accessorFn: (row) => bucketBySize(row.length_ft).label,
+      enableGrouping: true,
+      cell: ({ row }) => null, // Hidden in normal rows
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      id: 'activityBucket',
+      header: 'Activity',
+      accessorFn: (row) => bucketByActivity(row.invoice_count).label,
+      enableGrouping: true,
+      cell: ({ row }) => null, // Hidden in normal rows
+      enableSorting: false,
+      enableHiding: false,
+    },
+  ], []); // Stable column definitions - callbacks captured in closure
+
+  // TanStack Table setup with grouping
+  const table = useReactTable({
+    data: sortedVessels,
+    columns,
+    state: {
+      grouping,
+      expanded,
+    },
+    getRowId: (row) => row.id, // Stable unique ID for proper expansion state
+    onGroupingChange,
+    onExpandedChange,
+    getCoreRowModel: getCoreRowModel(),
+    getGroupedRowModel: getGroupedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    enableGrouping: true,
+    // CRITICAL: prevent resets that collapse groups
+    autoResetAll: false,
+    autoResetExpanded: false,
+  });
 
   return (
     <>
       {/* Screen-only interactive table with Airtable-style layout */}
       <div className="screen-only">
-        <div>
-          <div>
-            <DataTable
-              columns={columns}
-              data={sortedVessels}
-              onBulkDelete={onBulkDelete}
-              onBulkExport={onBulkExport}
-              title={title}
-              colWidths={VESSELS_COLS}
-            />
-          </div>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    // Skip virtual grouping columns in header
+                    if (header.column.id === 'sizeBucket' || header.column.id === 'activityBucket') {
+                      return null;
+                    }
+                    return (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => {
+                  if (row.getIsGrouped()) {
+                    // Group header row
+                    const groupingValue = row.groupingValue as string;
+                    const subRowsCount = row.subRows.length;
+                    const isExpanded = row.getIsExpanded();
+
+                    // Calculate aggregated values for group
+                    const totalRevenue = row.subRows.reduce((sum, subRow) =>
+                      sum + (subRow.original.invoice_total || 0), 0);
+                    const avgLength = row.subRows.length > 0
+                      ? row.subRows.reduce((sum, subRow) => sum + (subRow.original.length_ft || 0), 0) / row.subRows.length
+                      : 0;
+                    const avgWeight = row.subRows.length > 0
+                      ? row.subRows.reduce((sum, subRow) => sum + (subRow.original.weight_tons || 0), 0) / row.subRows.length
+                      : 0;
+
+                    return (
+                      <TableRow
+                        key={row.id}
+                        className="sticky top-[48px] z-10 bg-gray-50 hover:bg-gray-100 border-b-2 border-gray-200"
+                      >
+                        <TableCell colSpan={columns.length - 2} className="py-3">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              row.getToggleExpandedHandler()(e);
+                            }}
+                            className="flex items-center justify-between w-full text-left focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded p-1 -m-1"
+                            aria-expanded={isExpanded}
+                            aria-controls={`group-${row.id}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4 text-gray-500 pointer-events-none" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-gray-500 pointer-events-none" />
+                              )}
+                              <span className="font-medium text-gray-900">{groupingValue}</span>
+                              <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
+                                {subRowsCount}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {formatGroupSubtotal(subRowsCount, totalRevenue, avgLength, avgWeight)}
+                            </div>
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+
+                  // Regular data row - only show if parent is expanded or no grouping
+                  if (row.depth > 0 && !row.getParentRow()?.getIsExpanded()) {
+                    return null;
+                  }
+
+                  return (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        // Skip virtual grouping columns in data rows
+                        if (cell.column.id === 'sizeBucket' || cell.column.id === 'activityBucket') {
+                          return null;
+                        }
+                        return (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
 

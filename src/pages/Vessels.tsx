@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { GroupingState, ExpandedState } from '@tanstack/react-table';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
@@ -9,7 +10,7 @@ import {
 } from '../components/magic/index';
 import { VesselsToolbar } from '../components/vessels/VesselsToolbar';
 import { VesselsTable } from '../components/vessels/VesselsTable';
-import { useVesselsQueryState } from '../hooks/useVesselsQueryState';
+import { useVesselsQueryState, VesselGroupBy } from '../hooks/useVesselsQueryState';
 
 interface Vessel {
   id: string;
@@ -43,6 +44,11 @@ const Vessels: React.FC = () => {
   const [vessels, setVessels] = useState<Vessel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Table state management (controlled)
+  const [grouping, setGrouping] = useState<GroupingState>([]);
+  const [expanded, setExpanded] = useState<ExpandedState>({});
+  const [currentGroupBy, setCurrentGroupBy] = useState<VesselGroupBy>('none');
+
   // Import state management
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -64,16 +70,35 @@ const Vessels: React.FC = () => {
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
   const [selectedVesselName, setSelectedVesselName] = useState('');
 
-  // Filter vessels based on search query
+  // Filter vessels based on search query and filters
   const filteredVessels = vessels.filter(vessel => {
+    // Search query filter
     const searchQuery = queryState.q.toLowerCase();
-    if (!searchQuery) return true;
+    if (searchQuery) {
+      const matchesSearch = vessel.name?.toLowerCase().includes(searchQuery) ||
+                           vessel.type?.toLowerCase().includes(searchQuery) ||
+                           vessel.imo_number?.toLowerCase().includes(searchQuery) ||
+                           vessel.flag?.toLowerCase().includes(searchQuery) ||
+                           vessel.owner?.toLowerCase().includes(searchQuery);
+      if (!matchesSearch) return false;
+    }
 
-    return vessel.name?.toLowerCase().includes(searchQuery) ||
-           vessel.type?.toLowerCase().includes(searchQuery) ||
-           vessel.imo_number?.toLowerCase().includes(searchQuery) ||
-           vessel.flag?.toLowerCase().includes(searchQuery) ||
-           vessel.owner?.toLowerCase().includes(searchQuery);
+    // Status filter (active/inactive based on invoice count)
+    if (queryState.filters.status) {
+      const hasInvoices = (vessel.invoice_count || 0) > 0;
+      if (queryState.filters.status === 'active' && !hasInvoices) return false;
+      if (queryState.filters.status === 'inactive' && hasInvoices) return false;
+    }
+
+    // Size range filter
+    if (queryState.filters.lengthRange) {
+      const length = vessel.length_ft || 0;
+      if (queryState.filters.lengthRange === 'small' && length >= 100) return false;
+      if (queryState.filters.lengthRange === 'medium' && (length < 100 || length >= 300)) return false;
+      if (queryState.filters.lengthRange === 'large' && length < 300) return false;
+    }
+
+    return true;
   });
 
   // Fetch vessels from API
@@ -108,6 +133,32 @@ const Vessels: React.FC = () => {
   useEffect(() => {
     fetchVessels();
   }, [isAuthenticated, csrfToken]);
+
+  // Initialize grouping from URL on mount only
+  useEffect(() => {
+    const g = queryState.groupBy;
+    setCurrentGroupBy(g); // Initialize local state for badge
+    if (g === 'size') setGrouping(['sizeBucket']);
+    else if (g === 'activity') setGrouping(['activityBucket']);
+    else setGrouping([]);
+  }, []); // Only run once on mount
+
+  // Direct group change handler that updates state + URL
+  const handleGroupByChangeWithState = useCallback((newGroupBy: VesselGroupBy) => {
+    // Update local groupBy state IMMEDIATELY (for badge)
+    setCurrentGroupBy(newGroupBy);
+
+    // Update TanStack Table grouping state
+    if (newGroupBy === 'size') setGrouping(['sizeBucket']);
+    else if (newGroupBy === 'activity') setGrouping(['activityBucket']);
+    else setGrouping([]);
+
+    // Clear expansion when changing modes
+    setExpanded({});
+
+    // Update URL for bookmarking (async, but doesn't affect badge)
+    queryState.set({ groupBy: newGroupBy });
+  }, [queryState]);
 
   // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -452,10 +503,12 @@ const Vessels: React.FC = () => {
     <div className="flex flex-col">
       <VesselsToolbar
         vessels={vessels}
+        currentGroupBy={currentGroupBy}
         onAddClick={() => navigate('/vessels/create')}
         onPrint={handlePrint}
         onImport={() => setShowImportModal(true)}
         onExport={handleExportCSV}
+        onGroupByChange={handleGroupByChangeWithState}
       />
 
       <div>
@@ -482,6 +535,11 @@ const Vessels: React.FC = () => {
           <VesselsTable
             vessels={filteredVessels}
             sort={queryState.sort}
+            groupBy={queryState.groupBy}
+            grouping={grouping}
+            expanded={expanded}
+            onGroupingChange={setGrouping}
+            onExpandedChange={setExpanded}
             onEdit={handleEdit}
             onDelete={handleSingleDelete}
             onBulkDelete={handleBulkDelete}

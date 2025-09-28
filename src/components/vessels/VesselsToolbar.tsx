@@ -8,19 +8,23 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import { ToolbarSelect, ToolbarSelectOption } from '../contacts/ToolbarSelect';
-import { ToolbarMenus } from '../contacts/ToolbarMenus';
+import { VesselsToolbarMenus } from './VesselsToolbarMenus';
 import { ExpandingSearch } from '../contacts/ExpandingSearch';
-import { useVesselsQueryState } from '@/hooks/useVesselsQueryState';
+import { useVesselsQueryState, VesselGroupBy } from '@/hooks/useVesselsQueryState';
 
 interface VesselsToolbarProps {
   // Vessel data for counts
   vessels: any[];
+
+  // Local groupBy state from parent (for instant badge updates)
+  currentGroupBy?: VesselGroupBy;
 
   // Action handlers
   onAddClick?: () => void;
   onPrint?: () => void;
   onImport?: () => void;
   onExport?: () => void;
+  onGroupByChange?: (groupBy: VesselGroupBy) => void;  // NEW: Direct state handler
 
   // Optional styling
   className?: string;
@@ -36,10 +40,12 @@ interface VesselsToolbarProps {
 
 export function VesselsToolbar({
   vessels,
+  currentGroupBy,
   onAddClick,
   onPrint,
   onImport,
   onExport,
+  onGroupByChange: externalHandler,  // NEW
   className = '',
   counts
 }: VesselsToolbarProps) {
@@ -52,6 +58,9 @@ export function VesselsToolbar({
     filters,
     set
   } = useVesselsQueryState();
+
+  // Use local state if provided, otherwise fall back to URL state
+  const activeGroupBy = currentGroupBy ?? groupBy;
 
   // Calculate counts if not provided
   const calculatedCounts = counts || {
@@ -108,7 +117,13 @@ export function VesselsToolbar({
   };
 
   const handleGroupByChange = (newGroupBy: typeof groupBy) => {
-    set({ groupBy: newGroupBy });
+    // Call external handler if provided (updates table state directly)
+    if (externalHandler) {
+      externalHandler(newGroupBy);
+    } else {
+      // Fallback to URL update only
+      set({ groupBy: newGroupBy });
+    }
   };
 
   const handleFiltersChange = (newFilters: typeof filters) => {
@@ -196,8 +211,8 @@ export function VesselsToolbar({
           {/* Right side: Controls */}
           <div className="flex items-center gap-2">
             {/* Group/Filter/Sort menus */}
-            <ToolbarMenus
-              activeGroupBy={groupBy}
+            <VesselsToolbarMenus
+              activeGroupBy={activeGroupBy}
               onGroupByChange={handleGroupByChange}
               activeFilters={filters}
               onFiltersChange={handleFiltersChange}
