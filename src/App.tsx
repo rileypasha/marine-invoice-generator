@@ -13,6 +13,8 @@ import CreateVessel from './pages/CreateVessel'
 import InvoiceView from './pages/InvoiceView'
 import Settings from './pages/Settings'
 import RowActionsLayer from './features/vessels/components/RowActionsLayer'
+import RequestsRowActionsLayer from './features/requests/components/RowActionsLayer'
+import ContactsRowActionsLayer from './features/contacts/components/RowActionsLayer'
 
 const RedirectCustomerEdit = () => {
   const { id } = useParams<{ id: string }>();
@@ -174,6 +176,8 @@ function App() {
             <Route path="/customers/:id/edit" element={<RedirectCustomerEdit />} />
           </Routes>
           <RowActionsLayer />
+          <RequestsRowActionsLayer />
+          <ContactsRowActionsLayer />
         </div>
       </Router>
     </AuthProvider>

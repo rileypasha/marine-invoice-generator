@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Invoices from './Invoices';
@@ -74,7 +74,7 @@ const InvoicesPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const fetchInvoices = async (page = 1, search = '', filterOptions: FilterOptions = {}) => {
+  const fetchInvoices = useCallback(async (page = 1, search = '', filterOptions: FilterOptions = {}) => {
     if (!isAuthenticated || !csrfToken) return;
 
     setIsLoading(true);
@@ -159,7 +159,7 @@ const InvoicesPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isAuthenticated, csrfToken]);
 
   const fetchCustomers = async () => {
     if (!isAuthenticated || !csrfToken) return;
@@ -243,15 +243,15 @@ const InvoicesPage: React.FC = () => {
     setCurrentPage(page);
   };
 
-  const handleEdit = (invoice: Invoice) => {
+  const handleEdit = useCallback((invoice: Invoice) => {
     navigate(`/requests/${invoice.id}/edit`);
-  };
+  }, [navigate]);
 
-  const handleView = (invoice: Invoice) => {
+  const handleView = useCallback((invoice: Invoice) => {
     navigate(`/requests/${invoice.id}`);
-  };
+  }, [navigate]);
 
-  const handleDelete = async (invoice: Invoice) => {
+  const handleDelete = useCallback(async (invoice: Invoice) => {
     if (!isAuthenticated || !csrfToken || !confirm('Are you sure you want to delete this invoice?')) return;
 
     try {
@@ -274,16 +274,16 @@ const InvoicesPage: React.FC = () => {
       console.error('Error deleting invoice:', error);
       alert('Error deleting invoice');
     }
-  };
+  }, [isAuthenticated, csrfToken, fetchInvoices, currentPage, searchTerm, filters]);
 
-  const handlePrint = (invoice: Invoice) => {
+  const handlePrint = useCallback((invoice: Invoice) => {
     // Navigate to invoice view page with print parameter to auto-trigger print
     navigate(`/requests/${invoice.id}?print=true`);
-  };
+  }, [navigate]);
 
-  const handleAddNew = () => {
+  const handleAddNew = useCallback(() => {
     navigate('/requests/new');
-  };
+  }, [navigate]);
 
   return (
     <Invoices

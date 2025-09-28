@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +14,8 @@ import {
   Label
 } from '../components/magic/index';
 import { ContactsTable } from '../components/ContactsTable';
+import { ContactsToolbar } from '../components/contacts/ContactsToolbar';
+import { useContactsQueryState } from '../hooks/useContactsQueryState';
 import { useFileInput } from '../components/hooks/use-file-input';
 
 interface Customer {
@@ -42,10 +44,12 @@ const Customers: React.FC = () => {
   const { isAuthenticated, csrfToken } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // URL-driven state management
+  const queryState = useContactsQueryState();
+
   // State management
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -81,8 +85,8 @@ const Customers: React.FC = () => {
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
 
-  // Fetch all customers from API (client-side pagination)
-  const fetchCustomers = async (search: string = searchQuery) => {
+  // Fetch all customers from API with URL-driven filtering
+  const fetchCustomers = async () => {
     if (!isAuthenticated || !csrfToken) return;
 
     try {
@@ -94,8 +98,13 @@ const Customers: React.FC = () => {
         limit: '1000', // Fetch all customers for client-side pagination
       });
 
-      if (search.trim()) {
-        params.append('search', search.trim());
+      if (queryState.q.trim()) {
+        params.append('search', queryState.q.trim());
+      }
+
+      // Add segment filter
+      if (queryState.segment !== 'all') {
+        params.append('type', queryState.segment);
       }
 
       const response = await fetch(`/api/v1/customers?${params}`, {
@@ -126,18 +135,15 @@ const Customers: React.FC = () => {
     }
   };
 
-  // Load customers on mount
+  // Load customers on mount and when URL state changes
   useEffect(() => {
     fetchCustomers();
-  }, [isAuthenticated, csrfToken]);
+  }, [isAuthenticated, csrfToken, queryState.q, queryState.segment]);
 
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-    fetchCustomers(query);
-  };
+  // Search is now handled by the toolbar component via URL state
 
   // Fetch invoices for a specific customer
-  const fetchCustomerInvoices = async (customerId: string) => {
+  const fetchCustomerInvoices = useCallback(async (customerId: string) => {
     if (!isAuthenticated || !csrfToken) return;
 
     setIsLoadingInvoices(true);
@@ -163,15 +169,15 @@ const Customers: React.FC = () => {
     } finally {
       setIsLoadingInvoices(false);
     }
-  };
+  }, [isAuthenticated, csrfToken]);
 
   // Handle view invoices click
-  const handleViewInvoices = (customerId: string) => {
+  const handleViewInvoices = useCallback((customerId: string) => {
     const customer = customers.find(c => c.id === customerId);
     setSelectedCustomerName(customer?.display_name || 'Unknown Contact');
     setShowInvoiceModal(true);
     fetchCustomerInvoices(customerId);
-  };
+  }, [customers, fetchCustomerInvoices]);
 
   // Close invoice modal
   const closeInvoiceModal = () => {
@@ -181,7 +187,7 @@ const Customers: React.FC = () => {
   };
 
   // Handle new invoice click
-  const handleNewInvoice = (customer: Customer) => {
+  const handleNewInvoice = useCallback((customer: Customer) => {
     // Build query parameters with customer information
     const params = new URLSearchParams({
       customerId: customer.id,
@@ -196,7 +202,7 @@ const Customers: React.FC = () => {
 
     // Navigate to new invoice page with customer data
     navigate(`/requests/new?${params.toString()}`);
-  };
+  }, [navigate]);
 
   // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -248,7 +254,7 @@ const Customers: React.FC = () => {
       if (response.ok) {
         setImportResult(result);
         // Refresh customers list to show newly imported customers
-        await fetchCustomers(searchQuery);
+        await fetchCustomers();
       } else {
         alert(`Import failed: ${result.message}`);
       }
@@ -376,6 +382,58 @@ const Customers: React.FC = () => {
     setIsBulkDeleting(false); // Reset bulk deleting state
   };
 
+  // Memoized callback handlers for ContactsTable
+  const handleEdit = useCallback((id: string) => {
+    navigate(`/contacts/${id}/edit`);
+  }, [navigate]);
+
+  const handleDelete = useCallback((id: string) => {
+    const customer = customers.find(c => c.id === id);
+    console.log('Delete clicked for customer:', { id, customer });
+    setDeleteModal({
+      show: true,
+      customerId: id,
+      customerName: customer?.display_name || 'this contact'
+    });
+  }, [customers]);
+
+  const handleBulkDelete = useCallback((selectedRows: Customer[]) => {
+    setSelectedCustomers(selectedRows);
+    setDeleteModal({
+      show: true,
+      customerId: 'bulk',
+      customerName: `${selectedRows.length} selected client${selectedRows.length === 1 ? '' : 's'}`
+    });
+  }, []);
+
+  const handleBulkExport = useCallback((selectedRows: Customer[]) => {
+    // Create CSV with only selected rows
+    const csvData = selectedRows.map(customer => ({
+      'Contact Name': customer.display_name,
+      'Email Address': customer.email || '',
+      'Phone Number': customer.phone || '',
+      'Address': customer.address_line1 && customer.city
+        ? `${customer.address_line1}, ${customer.city}${customer.state ? `, ${customer.state}` : ''}`
+        : customer.address_line1 || ''
+    }));
+
+    const headers = ['Contact Name', 'Email Address', 'Phone Number', 'Address'];
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `selected_clients_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, []);
+
   // Generate sample CSV for download
   const downloadSampleCSV = () => {
     const sampleData = `Contact Name,Email Address,Phone Number,Address
@@ -395,53 +453,13 @@ const Customers: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Customers Table */}
-      <div>
-        <div className="mb-1">
-          <h2 className="flex items-center gap-2 text-3xl font-semibold">
-            <Users className="h-6 w-6" />
-            Contacts
-          </h2>
-        </div>
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-muted-foreground">Loading contacts...</div>
-          </div>
-        ) : customers.length === 0 ? (
-          <div className="text-center py-8">
-            <svg className="mx-auto h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <div className="text-muted-foreground mb-4">
-              {searchQuery ? 'No contacts found matching your search' : 'No contacts found'}
-            </div>
-            {!searchQuery && (
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button onClick={() => navigate('/contacts/create')}>Add Your First Contact</Button>
-                <Button onClick={() => setShowImportModal(true)} variant="outline">Import from CSV</Button>
-              </div>
-            )}
-            {searchQuery && (
-              <Button onClick={() => navigate('/contacts/create')}>Add Contact</Button>
-            )}
-          </div>
-        ) : (
-          <ContactsTable
+    <>
+      {/* Container for Airtable-style layout without fixed height */}
+      <div className="flex flex-col">
+        {/* Sticky Toolbar */}
+        <ContactsToolbar
             customers={customers}
-            onEdit={(id) => navigate(`/contacts/${id}/edit`)}
-            onDelete={(id) => {
-              const customer = customers.find(c => c.id === id);
-              console.log('Delete clicked for customer:', { id, customer });
-              setDeleteModal({
-                show: true,
-                customerId: id,
-                customerName: customer?.display_name || 'this contact'
-              });
-            }}
             onAddClick={() => navigate('/contacts/create')}
-            onViewInvoices={handleViewInvoices}
-            onNewInvoice={handleNewInvoice}
             onPrint={() => {
               // Add print-specific styles to hide sidebar and format table properly
               const printStyles = document.createElement('style');
@@ -650,46 +668,47 @@ const Customers: React.FC = () => {
               document.body.removeChild(a);
               URL.revokeObjectURL(url);
             }}
-            onBulkDelete={(selectedRows) => {
-              setSelectedCustomers(selectedRows);
-              setDeleteModal({
-                show: true,
-                customerId: 'bulk',
-                customerName: `${selectedRows.length} selected client${selectedRows.length === 1 ? '' : 's'}`
-              });
-            }}
-            onBulkExport={(selectedRows) => {
-              console.log('Bulk export:', selectedRows);
-              // TODO: Implement bulk CSV export functionality
-              // Create CSV with only selected rows
-              const csvData = selectedRows.map(customer => ({
-                'Contact Name': customer.display_name,
-                'Email Address': customer.email || '',
-                'Phone Number': customer.phone || '',
-                'Address': customer.address_line1 && customer.city
-                  ? `${customer.address_line1}, ${customer.city}${customer.state ? `, ${customer.state}` : ''}`
-                  : customer.address_line1 || ''
-              }));
-
-              const headers = ['Contact Name', 'Email Address', 'Phone Number', 'Address'];
-              const csvContent = [
-                headers.join(','),
-                ...csvData.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
-              ].join('\n');
-
-              const blob = new Blob([csvContent], { type: 'text/csv' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `selected_clients_${new Date().toISOString().split('T')[0]}.csv`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-            }}
+            className="px-6"
           />
-        )}
-      </div>
+
+          {/* Content area */}
+          <div className="px-6">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-muted-foreground">Loading contacts...</div>
+              </div>
+            ) : customers.length === 0 ? (
+              <div className="text-center py-8">
+                <svg className="mx-auto h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <div className="text-muted-foreground mb-4">
+                  {queryState.q ? 'No contacts found matching your search' : 'No contacts found'}
+                </div>
+                {!queryState.q && (
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Button onClick={() => navigate('/contacts/create')}>Add Your First Contact</Button>
+                    <Button onClick={() => setShowImportModal(true)} variant="outline">Import from CSV</Button>
+                  </div>
+                )}
+                {queryState.q && (
+                  <Button onClick={() => navigate('/contacts/create')}>Add Contact</Button>
+                )}
+              </div>
+            ) : (
+              <ContactsTable
+            customers={customers}
+            sort={queryState.sort}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onViewInvoices={handleViewInvoices}
+            onNewInvoice={handleNewInvoice}
+            onBulkDelete={handleBulkDelete}
+            onBulkExport={handleBulkExport}
+          />
+            )}
+          </div>
+        </div>
 
       {/* Import Modal */}
       {showImportModal && createPortal(
@@ -930,7 +949,7 @@ const Customers: React.FC = () => {
         </div>,
         document.body
       )}
-    </div>
+    </>
   );
 };
 
