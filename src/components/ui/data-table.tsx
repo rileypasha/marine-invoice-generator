@@ -229,7 +229,7 @@ export function DataTable<TData, TValue>({
         </div>
       )}
       {/* Airtable-style table without card wrapper */}
-      <Table className="w-full table-fixed border-separate border-spacing-0">
+      <Table className="w-full table-fixed border-collapse">
         {colWidths && (
           <colgroup>
             {colWidths.map(col => (
@@ -237,7 +237,7 @@ export function DataTable<TData, TValue>({
             ))}
           </colgroup>
         )}
-        <TableHeader className="sticky top-0 z-20 bg-white border-b border-gray-200">
+        <TableHeader className="sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
@@ -245,7 +245,7 @@ export function DataTable<TData, TValue>({
                 return (
                   <TableHead
                     key={header.id}
-                    className={`text-xs font-medium text-muted-foreground tracking-wide px-6 py-3 md:px-4 xl:px-6 first:pl-6 last:pr-6 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
+                    className={`font-medium text-muted-foreground tracking-wide px-6 py-3 md:px-4 xl:px-6 first:pl-6 last:pr-6 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
                   >
                     {header.isPlaceholder
                       ? null

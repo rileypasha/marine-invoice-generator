@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { gatherInvoiceData } from '../utils/invoiceData';
 import './InvoiceView.css';
 
 interface LineItem {
@@ -153,7 +154,15 @@ const InvoiceView: React.FC = () => {
       }
 
       const data = await response.json();
-      setInvoice(data);
+      const invoiceData = data?.invoice ?? data;
+
+      if (!invoiceData || typeof invoiceData !== 'object') {
+        setInvoice(null);
+        setError('Invalid invoice data received');
+        return;
+      }
+
+      setInvoice(invoiceData);
     } catch (error) {
       console.error('Error fetching invoice:', error);
       setError('Failed to load invoice');
@@ -287,11 +296,9 @@ const InvoiceView: React.FC = () => {
   }
 
   // Parse invoice data
-  const data = invoice.parsedData || {};
-  const vessel = data.vessel || invoice.vessel || {};
-  const customer = data.customer || invoice.customer || {};
-  const scope = data.scope || {};
-  const lineItems = scope.lineItems || [];
+  const { primaryData, scope, lineItems } = gatherInvoiceData<LineItem>(invoice);
+  const vessel = primaryData?.vessel || invoice.vessel || {};
+  const customer = primaryData?.customer || invoice.customer || {};
 
   // Format date
   const invoiceDate = new Date(invoice.savedAt || invoice.createdAt || Date.now()).toLocaleDateString('en-US', {

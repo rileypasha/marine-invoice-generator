@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { gatherInvoiceData } from '../utils/invoiceData';
 import {
   Card,
   CardHeader,
@@ -76,6 +77,29 @@ interface Service {
   isTaxExempt?: boolean;
 }
 
+interface ServiceSnapshot {
+  id: string;
+  description: string;
+  jobType?: string;
+  itemType?: string;
+  quantity: number;
+  rate: number;
+  laborHours: number;
+  otHours: number;
+  manualCost: number | null;
+  taxStatus?: Service['taxStatus'];
+  taxRate?: number;
+  markupType?: Service['markupType'];
+  markupRate?: number;
+  isMarkupExempt: boolean;
+  isTaxExempt: boolean;
+  baseCost: number;
+  markupAmount: number;
+  totalBeforeTax: number;
+  taxAmount: number;
+  total: number;
+}
+
 interface InvoiceData {
   vessel: Vessel;
   customer: Customer;
@@ -86,6 +110,82 @@ interface InvoiceData {
     taxRate?: number;
   };
 }
+
+const toNumber = (value: any, fallback: number): number => {
+  if (value === null || value === undefined || value === '') {
+    return fallback;
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : fallback;
+  }
+  const parsed = parseFloat(String(value));
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const toOptionalNumber = (value: any): number | undefined => {
+  if (value === null || value === undefined || value === '') {
+    return undefined;
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : undefined;
+  }
+  const parsed = parseFloat(String(value));
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const normalizeBoolean = (value: any): boolean | undefined => {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  const normalized = String(value).toLowerCase();
+  if (['true', '1', 'yes', 'y'].includes(normalized)) {
+    return true;
+  }
+  if (['false', '0', 'no', 'n'].includes(normalized)) {
+    return false;
+  }
+  return undefined;
+};
+
+const normalizeTaxStatus = (value: any): Service['taxStatus'] | undefined => {
+  if (!value) {
+    return undefined;
+  }
+  const normalized = String(value).toLowerCase().replace(/[_\s-]/g, '');
+  if (normalized === 'taxable') {
+    return 'taxable';
+  }
+  if (normalized === 'nontaxable') {
+    return 'non-taxable';
+  }
+  if (normalized === 'exempt') {
+    return 'exempt';
+  }
+  return undefined;
+};
+
+const normalizeMarkupType = (value: any): Service['markupType'] | undefined => {
+  if (!value) {
+    return undefined;
+  }
+  const normalized = String(value).toLowerCase().replace(/[_\s]/g, '-');
+  if (normalized === 'preset-2.5' || normalized === 'preset-25' || normalized === 'preset2.5') {
+    return 'preset-2.5';
+  }
+  if (normalized === 'preset-12.5' || normalized === 'preset-125' || normalized === 'preset12.5') {
+    return 'preset-12.5';
+  }
+  if (normalized === 'custom') {
+    return 'custom';
+  }
+  if (normalized === 'exempt') {
+    return 'exempt';
+  }
+  return undefined;
+};
 
 const CreateInvoice: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -121,6 +221,27 @@ const CreateInvoice: React.FC = () => {
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [isWeightFocused, setIsWeightFocused] = useState(false);
   const [isBeamFocused, setIsBeamFocused] = useState(false);
+
+  const roundCurrency = (value: number): number => {
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+    return Math.round((value + Number.EPSILON) * 100) / 100;
+  };
+
+  const roundRate = (value: number): number => {
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+    return Math.round((value + Number.EPSILON) * 10000) / 10000;
+  };
+
+  const toNullableNumber = (value: number | undefined): number | null => {
+    if (value === undefined || value === null) {
+      return null;
+    }
+    return Number.isFinite(value) ? roundCurrency(value) : null;
+  };
 
   // Vessel linking state
   const [availableVessels, setAvailableVessels] = useState<DatabaseVessel[]>([]);
@@ -171,39 +292,156 @@ const CreateInvoice: React.FC = () => {
         const data = await response.json();
         const invoice = data.invoice || data;
 
-        // Convert invoice data to form structure
-        const parsedData = invoice.parsedData || {};
-        const vessel = parsedData.vessel || {};
-        const customer = parsedData.customer || {};
-        const scope = parsedData.scope || {};
+        const { primaryData, scope, lineItems } = gatherInvoiceData<Record<string, any>>(invoice);
+
+        const vesselData = primaryData?.vessel || invoice.vessel || {};
+        const customerData = primaryData?.customer || invoice.customer || {};
+
+        const services: Service[] = lineItems.map((item: Record<string, any>, index: number) => {
+          const quantity = toNumber(item.quantity ?? item.qty ?? 1, 1) || 1;
+          const rate = toNumber(item.rate ?? item.cost ?? item.price ?? 0, 0);
+          const manualCost = toOptionalNumber(item.manualCost ?? item.manual_cost);
+          const total = toNumber(
+            item.total ?? item.cost ?? (quantity * rate),
+            quantity * rate
+          );
+          const laborHours = toOptionalNumber(item.laborHours ?? item.labor_hours ?? item.hours);
+          const otHours = toOptionalNumber(item.otHours ?? item.ot_hours ?? item.overtimeHours);
+          const taxRate = toOptionalNumber(item.taxRate ?? item.tax_rate ?? scope?.taxRate ?? scope?.tax_rate);
+          const markupRate = toOptionalNumber(item.markupRate ?? item.markup_rate ?? scope?.markupRate ?? scope?.markup_rate);
+          const taxStatus = normalizeTaxStatus(item.taxStatus ?? item.tax_status);
+          const markupType = normalizeMarkupType(item.markupType ?? item.markup_type);
+          const isMarkupExempt = normalizeBoolean(item.isMarkupExempt ?? item.markup_exempt);
+          const isTaxExempt = normalizeBoolean(item.isTaxExempt ?? item.tax_exempt);
+
+          const service: Service = {
+            id: item.id ? String(item.id) : `service-${index}`,
+            description: item.description || item.name || '',
+            quantity,
+            rate,
+            total,
+          };
+
+          const jobType = item.jobType ?? item.job_type ?? item.type;
+          if (jobType) {
+            service.jobType = jobType;
+          }
+
+          const itemType = item.itemType ?? item.item_type;
+          if (itemType) {
+            service.itemType = itemType;
+          }
+
+          if (laborHours !== undefined) {
+            service.laborHours = laborHours;
+          }
+
+          if (otHours !== undefined) {
+            service.otHours = otHours;
+          }
+
+          if (manualCost !== undefined) {
+            service.manualCost = manualCost;
+          }
+
+          if (taxStatus) {
+            service.taxStatus = taxStatus;
+          }
+
+          if (taxRate !== undefined) {
+            service.taxRate = taxRate;
+          }
+
+          if (markupType) {
+            service.markupType = markupType;
+          }
+
+          if (markupRate !== undefined) {
+            service.markupRate = markupRate;
+          }
+
+          if (isMarkupExempt !== undefined) {
+            service.isMarkupExempt = isMarkupExempt;
+          }
+
+          if (isTaxExempt !== undefined) {
+            service.isTaxExempt = isTaxExempt;
+          }
+
+          return service;
+        });
+
+        const vesselWeightSource =
+          vesselData.weight ?? invoice.vesselWeight ?? invoice.vessel?.weight_tons ?? '';
+        const vesselBeamSource =
+          vesselData.beam ?? invoice.vesselBeam ?? invoice.vessel?.beam_ft ?? '';
+
+        const resolvedCustomerName =
+          customerData.customerName ||
+          customerData.display_name ||
+          customerData.legal_name ||
+          invoice.customer?.display_name ||
+          invoice.customer?.legal_name ||
+          invoice.customerName ||
+          '';
+
+        const resolvedCustomerEmail =
+          customerData.customerEmail ||
+          customerData.email ||
+          invoice.customer?.email ||
+          invoice.customerEmail ||
+          '';
+
+        const resolvedCustomerPhone =
+          customerData.customerPhone ||
+          customerData.phone ||
+          invoice.customer?.phone ||
+          invoice.customerPhone ||
+          '';
+
+        const resolvedCustomerAddress =
+          customerData.customerAddress ||
+          customerData.address ||
+          invoice.customer?.address ||
+          '';
+
+        const resolvedContactName =
+          customerData.contactName ||
+          customerData.contact_name ||
+          invoice.customer?.contact_name ||
+          invoice.customerName ||
+          '';
 
         setInvoiceData({
           vessel: {
-            name: vessel.name || invoice.vesselName || '',
-            weight: vessel.weight?.toString() || invoice.vesselWeight?.toString() || '',
-            beam: vessel.beam?.toString() || invoice.vesselBeam?.toString() || ''
+            name: vesselData.name || invoice.vessel?.name || invoice.vesselName || '',
+            weight: vesselWeightSource === '' ? '' : vesselWeightSource.toString(),
+            beam: vesselBeamSource === '' ? '' : vesselBeamSource.toString()
           },
           customer: {
-            customerName: customer.customerName || invoice.customerName || '',
-            customerEmail: customer.customerEmail || invoice.customerEmail || '',
-            customerPhone: customer.customerPhone || invoice.customerPhone || '',
-            customerAddress: customer.customerAddress || '',
+            customerName: resolvedCustomerName,
+            customerEmail: resolvedCustomerEmail,
+            customerPhone: resolvedCustomerPhone,
+            customerAddress: resolvedCustomerAddress,
             estimatorName: invoice.userName || '',
-            contactName: customer.contactName || ''
+            contactName: resolvedContactName
           },
-          services: scope.lineItems?.map((item: any, index: number) => ({
-            id: `service-${index}`,
-            description: item.description || '',
-            quantity: item.quantity || 1,
-            rate: item.rate || item.cost || 0,
-            total: item.total || item.cost || 0
-          })) || [],
+          services,
           notes: invoice.notes || '',
           metadata: {
             title: invoice.title || '',
-            taxRate: scope.taxRate || 0
+            taxRate: toNumber(
+              scope?.taxRate ?? scope?.tax_rate ?? invoice.metadata?.taxRate ?? invoice.metadata?.tax_rate ?? 0,
+              0
+            )
           }
         });
+
+        const resolvedCustomerId = customerData.id ?? customerData.customerId ?? invoice.customer?.id ?? '';
+        const resolvedVesselId = vesselData.id ?? invoice.vessel?.id ?? '';
+
+        setSelectedCustomerId(resolvedCustomerId ? String(resolvedCustomerId) : '');
+        setSelectedVesselId(resolvedVesselId ? String(resolvedVesselId) : '');
 
         setHasUnsavedChanges(false);
       } catch (error: any) {
@@ -600,8 +838,166 @@ const CreateInvoice: React.FC = () => {
       return 0;
     }
 
-    const taxRate = service.taxRate || 0.0875; // default 8.75%
+    const defaultTaxRate =
+      invoiceData.metadata.taxRate != null ? invoiceData.metadata.taxRate / 100 : 0.0875;
+    const taxRate = typeof service.taxRate === 'number' ? service.taxRate : defaultTaxRate;
     return totalWithMarkup * taxRate;
+  };
+
+  const buildServiceSnapshot = (service: Service): ServiceSnapshot => {
+    const quantity = Number.isFinite(service.quantity) ? Number(service.quantity) : 1;
+    const rate = Number.isFinite(service.rate) ? Number(service.rate) : 0;
+    const normalizedService: Service = {
+      ...service,
+      quantity,
+      rate,
+    };
+
+    const baseCostRaw = calculateLineItemCost(normalizedService);
+    const baseCost = roundCurrency(baseCostRaw);
+
+    const manualCostValue =
+      normalizedService.manualCost != null && normalizedService.manualCost > 0
+        ? roundCurrency(normalizedService.manualCost)
+        : null;
+
+    const effectiveBaseCost = manualCostValue !== null ? manualCostValue : baseCost;
+    const costWithMarkup = roundCurrency(applyMarkup(effectiveBaseCost, normalizedService));
+    const taxAmountValue = roundCurrency(calculateTax(normalizedService, costWithMarkup));
+
+    return {
+      id: normalizedService.id,
+      description: normalizedService.description?.trim() || '',
+      jobType: normalizedService.jobType || '',
+      itemType: normalizedService.itemType || '',
+      quantity,
+      rate,
+      laborHours: Number.isFinite(normalizedService.laborHours) ? Number(normalizedService.laborHours) : 0,
+      otHours: Number.isFinite(normalizedService.otHours) ? Number(normalizedService.otHours) : 0,
+      manualCost: manualCostValue,
+      taxStatus: normalizedService.taxStatus,
+      taxRate: typeof normalizedService.taxRate === 'number' ? normalizedService.taxRate : undefined,
+      markupType: normalizedService.markupType,
+      markupRate: typeof normalizedService.markupRate === 'number' ? normalizedService.markupRate : undefined,
+      isMarkupExempt: !!normalizedService.isMarkupExempt,
+      isTaxExempt: !!normalizedService.isTaxExempt,
+      baseCost: roundCurrency(effectiveBaseCost),
+      markupAmount: roundCurrency(costWithMarkup - effectiveBaseCost),
+      totalBeforeTax: costWithMarkup,
+      taxAmount: normalizedService.isTaxExempt ? 0 : taxAmountValue,
+      total: roundCurrency(costWithMarkup + (normalizedService.isTaxExempt ? 0 : taxAmountValue)),
+    };
+  };
+
+  const buildInvoiceSubmissionPayload = () => {
+    const serviceSnapshots = invoiceData.services.map(buildServiceSnapshot);
+
+    const baseCostSumRaw = serviceSnapshots.reduce((sum, snapshot) => sum + snapshot.baseCost, 0);
+    const subtotalBeforeTaxRaw = serviceSnapshots.reduce((sum, snapshot) => sum + snapshot.totalBeforeTax, 0);
+    const totalTaxRaw = serviceSnapshots.reduce((sum, snapshot) => sum + snapshot.taxAmount, 0);
+
+    const baseCostSum = roundCurrency(baseCostSumRaw);
+    const subtotalBeforeTax = roundCurrency(subtotalBeforeTaxRaw);
+    const totalTax = roundCurrency(totalTaxRaw);
+    const finalTotal = roundCurrency(subtotalBeforeTax + totalTax);
+    const grossProfit = roundCurrency(subtotalBeforeTax - baseCostSum);
+    const profitPercent = baseCostSum > 0
+      ? roundCurrency((grossProfit / baseCostSum) * 100)
+      : 0;
+    const markupRateValue = baseCostSum > 0
+      ? roundRate((subtotalBeforeTax - baseCostSum) / baseCostSum)
+      : 0;
+
+    const vesselWeightRaw = toOptionalNumber(invoiceData.vessel.weight);
+    const vesselBeamRaw = toOptionalNumber(invoiceData.vessel.beam);
+
+    const structuredData = {
+      vessel: {
+        name: invoiceData.vessel.name || null,
+        weight: toNullableNumber(vesselWeightRaw),
+        beam: toNullableNumber(vesselBeamRaw)
+      },
+      customer: {
+        customerName: invoiceData.customer.customerName || null,
+        customerEmail: invoiceData.customer.customerEmail || null,
+        customerPhone: invoiceData.customer.customerPhone || null
+      },
+      scope: {
+        markupRate: markupRateValue,
+        isTaxable: totalTax > 0,
+        lineItems: serviceSnapshots.map((snapshot) => ({
+          id: snapshot.id,
+          jobType: snapshot.jobType || '',
+          itemType: snapshot.itemType || '',
+          description: snapshot.description,
+          manualCost: snapshot.manualCost,
+          laborHours: snapshot.laborHours || null,
+          otHours: snapshot.otHours || null,
+          cost: snapshot.baseCost,
+          laborCost: snapshot.itemType === 'Labor' ? snapshot.baseCost : null,
+          materialCost: snapshot.itemType === 'Material' ? snapshot.baseCost : null,
+          subcontractorCost: snapshot.itemType === 'Subcontractor' ? snapshot.baseCost : null
+        }))
+      },
+      laborRate: 85,
+      otRate: 127.5
+    };
+
+    const metadataPayload = {
+      ...invoiceData.metadata,
+      taxRate: invoiceData.metadata.taxRate || 0
+    };
+
+    const parsedData = {
+      ...structuredData,
+      scope: {
+        ...structuredData.scope,
+        lineItems: serviceSnapshots.map((snapshot) => ({
+          id: snapshot.id,
+          description: snapshot.description,
+          jobType: snapshot.jobType,
+          itemType: snapshot.itemType,
+          quantity: snapshot.quantity,
+          rate: snapshot.rate,
+          laborHours: snapshot.laborHours,
+          otHours: snapshot.otHours,
+          manualCost: snapshot.manualCost,
+          baseCost: snapshot.baseCost,
+          markupAmount: snapshot.markupAmount,
+          totalBeforeTax: snapshot.totalBeforeTax,
+          taxAmount: snapshot.taxAmount,
+          total: snapshot.total,
+          isMarkupExempt: snapshot.isMarkupExempt,
+          isTaxExempt: snapshot.isTaxExempt,
+          taxStatus: snapshot.taxStatus,
+          markupType: snapshot.markupType,
+          markupRate: snapshot.markupRate
+        })),
+        subtotal: subtotalBeforeTax,
+        taxAmount: totalTax,
+        total: finalTotal
+      },
+      totals: {
+        baseCost: baseCostSum,
+        grossProfit,
+        profitPercent
+      }
+    };
+
+    return {
+      serviceSnapshots,
+      structuredData,
+      metadataPayload,
+      parsedData,
+      totals: {
+        subtotalBeforeTax,
+        totalTax,
+        finalTotal,
+        baseCost: baseCostSum,
+        grossProfit,
+        profitPercent
+      }
+    };
   };
 
   const addService = () => {
@@ -747,47 +1143,37 @@ const CreateInvoice: React.FC = () => {
       const url = isEditMode ? `/api/v1/invoice/${id}` : '/api/v1/invoice/save';
       const method = isEditMode ? 'PUT' : 'POST';
 
+      const {
+        structuredData,
+        metadataPayload,
+        parsedData,
+        totals
+      } = buildInvoiceSubmissionPayload();
+
+      const titleBase = invoiceData.metadata.title?.trim();
+      const defaultTitle = invoiceData.vessel.name
+        ? `Invoice for ${invoiceData.vessel.name}`
+        : 'Invoice Request';
+
       const payload = {
-        title: invoiceData.metadata.title || `Invoice for ${invoiceData.vessel.name}`,
-        vesselId: invoiceData.vessel.id || null,
-        vesselName: invoiceData.vessel.name,
-        vesselWeight: parseFloat(invoiceData.vessel.weight) || 0,
-        vesselBeam: parseFloat(invoiceData.vessel.beam) || 0,
-        customerName: invoiceData.customer.customerName,
-        customerEmail: invoiceData.customer.customerEmail,
-        customerPhone: invoiceData.customer.customerPhone,
+        title: titleBase || defaultTitle,
+        data: structuredData,
+        metadata: metadataPayload,
         notes: invoiceData.notes,
-        // Calculate totals
-        subtotal: invoiceData.services.reduce((sum, service) => sum + service.total, 0),
-        total: invoiceData.services.reduce((sum, service) => sum + service.total, 0) +
-               (invoiceData.metadata.taxRate ?
-                (invoiceData.services.reduce((sum, service) => sum + service.total, 0) * invoiceData.metadata.taxRate / 100) : 0),
-        parsedData: {
-          vessel: {
-            name: invoiceData.vessel.name,
-            weight: parseFloat(invoiceData.vessel.weight) || 0,
-            beam: parseFloat(invoiceData.vessel.beam) || 0
-          },
-          customer: {
-            customerName: invoiceData.customer.customerName,
-            customerEmail: invoiceData.customer.customerEmail,
-            customerPhone: invoiceData.customer.customerPhone,
-            customerAddress: invoiceData.customer.customerAddress
-          },
-          scope: {
-            lineItems: invoiceData.services.map(service => ({
-              description: service.description,
-              quantity: service.quantity,
-              rate: service.rate,
-              cost: service.total
-            })),
-            taxRate: invoiceData.metadata.taxRate,
-            subtotal: invoiceData.services.reduce((sum, service) => sum + service.total, 0),
-            total: invoiceData.services.reduce((sum, service) => sum + service.total, 0) +
-                   (invoiceData.metadata.taxRate ?
-                    (invoiceData.services.reduce((sum, service) => sum + service.total, 0) * invoiceData.metadata.taxRate / 100) : 0)
-          }
-        }
+        customerId: invoiceData.customer.id || null,
+        vesselId: invoiceData.vessel.id || null,
+        customerName: structuredData.customer.customerName,
+        customerEmail: structuredData.customer.customerEmail,
+        customerPhone: structuredData.customer.customerPhone,
+        vesselName: structuredData.vessel.name,
+        vesselWeight: structuredData.vessel.weight,
+        vesselBeam: structuredData.vessel.beam,
+        subtotal: totals.subtotalBeforeTax,
+        taxAmount: totals.totalTax,
+        total: totals.finalTotal,
+        grossProfit: totals.grossProfit,
+        profitPercent: totals.profitPercent,
+        parsedData
       };
 
       const response = await fetch(url, {
@@ -801,8 +1187,18 @@ const CreateInvoice: React.FC = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to ${isEditMode ? 'update' : 'save'} invoice`);
+        const errorText = await response.text();
+        console.error('Invoice save failed:', errorText);
+        let errorMessage = `Failed to ${isEditMode ? 'update' : 'save'} invoice`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData?.message || errorMessage;
+        } catch (parseError) {
+          if (errorText?.trim()) {
+            errorMessage = `${errorMessage}: ${errorText}`;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -911,47 +1307,37 @@ const CreateInvoice: React.FC = () => {
       const url = isEditMode ? `/api/v1/invoice/${id}` : '/api/v1/invoice/save';
       const method = isEditMode ? 'PUT' : 'POST';
 
+      const {
+        structuredData,
+        metadataPayload,
+        parsedData,
+        totals
+      } = buildInvoiceSubmissionPayload();
+
+      const titleBase = invoiceData.metadata.title?.trim();
+      const defaultTitle = invoiceData.vessel.name
+        ? `Invoice for ${invoiceData.vessel.name}`
+        : 'Invoice Request';
+
       const payload = {
-        title: invoiceData.metadata.title || `Invoice for ${invoiceData.vessel.name}`,
-        vesselId: invoiceData.vessel.id || null,
-        vesselName: invoiceData.vessel.name,
-        vesselWeight: parseFloat(invoiceData.vessel.weight) || 0,
-        vesselBeam: parseFloat(invoiceData.vessel.beam) || 0,
-        customerName: invoiceData.customer.customerName,
-        customerEmail: invoiceData.customer.customerEmail,
-        customerPhone: invoiceData.customer.customerPhone,
+        title: titleBase || defaultTitle,
+        data: structuredData,
+        metadata: metadataPayload,
         notes: invoiceData.notes,
-        // Calculate totals
-        subtotal: invoiceData.services.reduce((sum, service) => sum + service.total, 0),
-        total: invoiceData.services.reduce((sum, service) => sum + service.total, 0) +
-               (invoiceData.metadata.taxRate ?
-                (invoiceData.services.reduce((sum, service) => sum + service.total, 0) * invoiceData.metadata.taxRate / 100) : 0),
-        parsedData: {
-          vessel: {
-            name: invoiceData.vessel.name,
-            weight: parseFloat(invoiceData.vessel.weight) || 0,
-            beam: parseFloat(invoiceData.vessel.beam) || 0
-          },
-          customer: {
-            customerName: invoiceData.customer.customerName,
-            customerEmail: invoiceData.customer.customerEmail,
-            customerPhone: invoiceData.customer.customerPhone,
-            customerAddress: invoiceData.customer.customerAddress
-          },
-          scope: {
-            lineItems: invoiceData.services.map(service => ({
-              description: service.description,
-              quantity: service.quantity,
-              rate: service.rate,
-              cost: service.total
-            })),
-            taxRate: invoiceData.metadata.taxRate,
-            subtotal: invoiceData.services.reduce((sum, service) => sum + service.total, 0),
-            total: invoiceData.services.reduce((sum, service) => sum + service.total, 0) +
-                   (invoiceData.metadata.taxRate ?
-                    (invoiceData.services.reduce((sum, service) => sum + service.total, 0) * invoiceData.metadata.taxRate / 100) : 0)
-          }
-        }
+        customerId: invoiceData.customer.id || null,
+        vesselId: invoiceData.vessel.id || null,
+        customerName: structuredData.customer.customerName,
+        customerEmail: structuredData.customer.customerEmail,
+        customerPhone: structuredData.customer.customerPhone,
+        vesselName: structuredData.vessel.name,
+        vesselWeight: structuredData.vessel.weight,
+        vesselBeam: structuredData.vessel.beam,
+        subtotal: totals.subtotalBeforeTax,
+        taxAmount: totals.totalTax,
+        total: totals.finalTotal,
+        grossProfit: totals.grossProfit,
+        profitPercent: totals.profitPercent,
+        parsedData
       };
 
       const response = await fetch(url, {
@@ -965,8 +1351,18 @@ const CreateInvoice: React.FC = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to ${isEditMode ? 'update' : 'save'} invoice`);
+        const errorText = await response.text();
+        console.error('Invoice save & new failed:', errorText);
+        let errorMessage = `Failed to ${isEditMode ? 'update' : 'save'} invoice`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData?.message || errorMessage;
+        } catch (parseError) {
+          if (errorText?.trim()) {
+            errorMessage = `${errorMessage}: ${errorText}`;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
