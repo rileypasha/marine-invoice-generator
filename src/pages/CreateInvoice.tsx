@@ -1961,7 +1961,7 @@ const CreateInvoice: React.FC = () => {
                                 id: selectedVessel.id,
                                 name: selectedVessel.name,
                                 weight: selectedVessel.weight_tons?.toString() || '',
-                                beam: selectedVessel.beam_ft?.toString() || ''
+                                beam: selectedVessel.length_ft?.toString() || ''
                               }
                             }));
                           }
@@ -1969,7 +1969,16 @@ const CreateInvoice: React.FC = () => {
                       }}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Search for a vessel..." />
+                        {selectedVesselId ? (
+                          <div className="flex items-center">
+                            <span>{availableVessels.find(v => v.id === selectedVesselId)?.name}</span>
+                            <svg className="w-4 h-4 ml-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        ) : (
+                          <SelectValue placeholder="Search for a vessel..." />
+                        )}
                       </SelectTrigger>
                       <SelectContent>
                         <div className="p-2">
