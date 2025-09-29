@@ -54,10 +54,11 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
 
     if (existingInvoice) {
       // Update existing invoice instead of creating duplicate
+      const { parsedData, vessel, customer, ...restOfInvoiceData } = invoiceData;
       const updatedInvoice = await prisma.invoice.update({
         where: { id: existingInvoice.id },
         data: {
-          ...invoiceData,
+          ...restOfInvoiceData,
           invoiceNumber,
           status: 'saved', // Always canonical state, never draft
         },
@@ -85,9 +86,10 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
     }
 
     // Create new invoice (canonical, never draft)
+    const { parsedData, vessel, customer, ...restOfInvoiceData } = invoiceData;
     const invoice = await prisma.invoice.create({
       data: {
-        ...invoiceData,
+        ...restOfInvoiceData,
         invoiceNumber,
         userId,
         status: 'saved', // Always canonical state, never draft
@@ -385,10 +387,11 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     const invoiceNumber = invoiceData.invoiceNumber || existingInvoice.invoiceNumber || `INV-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
     // Update the invoice
+    const { parsedData, vessel, customer, ...restOfInvoiceData } = invoiceData;
     const updatedInvoice = await prisma.invoice.update({
       where: { id: invoiceId },
       data: {
-        ...invoiceData,
+        ...restOfInvoiceData,
         invoiceNumber,
         status: 'saved', // Always canonical state, never draft
         userId, // Ensure userId is maintained

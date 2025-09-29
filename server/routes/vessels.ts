@@ -117,6 +117,7 @@ router.get('/search', async (req: VesselRequest, res: Response) => {
         registration_number: true,
         length_ft: true,
         beam_ft: true,
+        weight_tons: true,
         home_port: true,
         owner_name: true,
       },

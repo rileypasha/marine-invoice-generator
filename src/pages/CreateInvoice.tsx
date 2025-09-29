@@ -912,16 +912,6 @@ const CreateInvoice: React.FC = () => {
     const vesselBeamRaw = toOptionalNumber(invoiceData.vessel.beam);
 
     const structuredData = {
-      vessel: {
-        name: invoiceData.vessel.name || null,
-        weight: toNullableNumber(vesselWeightRaw),
-        beam: toNullableNumber(vesselBeamRaw)
-      },
-      customer: {
-        customerName: invoiceData.customer.customerName || null,
-        customerEmail: invoiceData.customer.customerEmail || null,
-        customerPhone: invoiceData.customer.customerPhone || null
-      },
       scope: {
         markupRate: markupRateValue,
         isTaxable: totalTax > 0,
@@ -1002,7 +992,7 @@ const CreateInvoice: React.FC = () => {
 
   const addService = () => {
     const newService: Service = {
-      id: Date.now().toString(),
+      id: `new_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       description: '',
       quantity: 1,
       rate: 0,
@@ -1026,12 +1016,16 @@ const CreateInvoice: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
-  const updateService = (id: string, field: keyof Omit<Service, 'id'>, value: string | number) => {
+  const updateService = (id: string, field: keyof Omit<Service, 'id'>, value: string | number | boolean) => {
     setInvoiceData(prev => ({
       ...prev,
       services: prev.services.map(service => {
         if (service.id === id) {
-          const updated = { ...service, [field]: value };
+          let processedValue = value;
+          if (field === 'isMarkupExempt' || field === 'isTaxExempt') {
+            processedValue = value === true || value === 'true';
+          }
+          const updated = { ...service, [field]: processedValue };
 
           // Apply business rules based on job type
           if (field === 'jobType') {
@@ -1157,17 +1151,17 @@ const CreateInvoice: React.FC = () => {
 
       const payload = {
         title: titleBase || defaultTitle,
-        data: structuredData,
-        metadata: metadataPayload,
+        data: JSON.stringify(structuredData),
+        metadata: JSON.stringify(metadataPayload),
         notes: invoiceData.notes,
         customerId: invoiceData.customer.id || null,
         vesselId: invoiceData.vessel.id || null,
-        customerName: structuredData.customer.customerName,
-        customerEmail: structuredData.customer.customerEmail,
-        customerPhone: structuredData.customer.customerPhone,
-        vesselName: structuredData.vessel.name,
-        vesselWeight: structuredData.vessel.weight,
-        vesselBeam: structuredData.vessel.beam,
+        customerName: invoiceData.customer.customerName,
+        customerEmail: invoiceData.customer.customerEmail,
+        customerPhone: invoiceData.customer.customerPhone,
+        vesselName: invoiceData.vessel.name,
+        vesselWeight: toOptionalNumber(invoiceData.vessel.weight),
+        vesselBeam: toOptionalNumber(invoiceData.vessel.beam),
         subtotal: totals.subtotalBeforeTax,
         taxAmount: totals.totalTax,
         total: totals.finalTotal,
@@ -1204,8 +1198,8 @@ const CreateInvoice: React.FC = () => {
       const result = await response.json();
       setHasUnsavedChanges(false);
 
-      // Navigate to invoice view on success
-      navigate(`/requests/${result.id || result.invoice?.id}`);
+      // Navigate to invoice requests table on success
+      navigate('/requests');
 
     } catch (error: any) {
       console.error('Error saving invoice:', error);
@@ -1321,17 +1315,17 @@ const CreateInvoice: React.FC = () => {
 
       const payload = {
         title: titleBase || defaultTitle,
-        data: structuredData,
-        metadata: metadataPayload,
+        data: JSON.stringify(structuredData),
+        metadata: JSON.stringify(metadataPayload),
         notes: invoiceData.notes,
         customerId: invoiceData.customer.id || null,
         vesselId: invoiceData.vessel.id || null,
-        customerName: structuredData.customer.customerName,
-        customerEmail: structuredData.customer.customerEmail,
-        customerPhone: structuredData.customer.customerPhone,
-        vesselName: structuredData.vessel.name,
-        vesselWeight: structuredData.vessel.weight,
-        vesselBeam: structuredData.vessel.beam,
+        customerName: invoiceData.customer.customerName,
+        customerEmail: invoiceData.customer.customerEmail,
+        customerPhone: invoiceData.customer.customerPhone,
+        vesselName: invoiceData.vessel.name,
+        vesselWeight: toOptionalNumber(invoiceData.vessel.weight),
+        vesselBeam: toOptionalNumber(invoiceData.vessel.beam),
         subtotal: totals.subtotalBeforeTax,
         taxAmount: totals.totalTax,
         total: totals.finalTotal,
