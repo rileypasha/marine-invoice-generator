@@ -27,6 +27,11 @@ interface Vessel {
   monthly_invoice_total?: number;
 }
 
+const formatCurrencyCell = (value?: number | null) => {
+  if (value === undefined || value === null || Number.isNaN(value)) return '';
+  return value.toFixed(2);
+};
+
 interface ImportResult {
   success: boolean;
   imported: number;
@@ -330,10 +335,10 @@ const Vessels: React.FC = () => {
 
   // Generate sample CSV for download
   const downloadSampleCSV = () => {
-    const sampleData = `Vessel Name,Length,Weight
-"MV Ocean Explorer","180","25000"
-"SS Baltic Wave","150","18500"
-"MV Atlantic Star","220","35000"`;
+    const sampleData = `Vessel Name,Length,Weight,Monthly Invoices,Monthly Amount,Total Invoices,Total Amount
+"MV Ocean Explorer","180","25000","2","1250.00","5","3200.00"
+"SS Baltic Wave","150","18500","1","850.00","4","2400.00"
+"MV Atlantic Star","220","35000","3","1750.00","8","5200.00"`;
 
     const blob = new Blob([sampleData], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -353,13 +358,25 @@ const Vessels: React.FC = () => {
       return;
     }
 
-    const headers = ['Vessel', 'Length (ft)', 'Weight (tons)'];
+    const headers = [
+      'Vessel',
+      'Length (ft)',
+      'Weight (tons)',
+      'Monthly Invoices',
+      'Monthly Amount',
+      'Total Invoices',
+      'Total Amount'
+    ];
     const csvContent = [
       headers.join(','),
       ...vessels.map(vessel => [
         vessel.name || '',
         vessel.length_ft || '',
-        vessel.weight_tons || ''
+        vessel.weight_tons || '',
+        vessel.monthly_invoice_count ?? '',
+        formatCurrencyCell(vessel.monthly_invoice_total),
+        vessel.invoice_count ?? '',
+        formatCurrencyCell(vessel.invoice_total)
       ].map(field => `"${field}"`).join(','))
     ].join('\n');
 
@@ -518,13 +535,25 @@ const Vessels: React.FC = () => {
       return;
     }
 
-    const headers = ['Vessel', 'Length (ft)', 'Weight (tons)'];
+    const headers = [
+      'Vessel',
+      'Length (ft)',
+      'Weight (tons)',
+      'Monthly Invoices',
+      'Monthly Amount',
+      'Total Invoices',
+      'Total Amount'
+    ];
     const csvContent = [
       headers.join(','),
       ...selectedRows.map(vessel => [
         vessel.name || '',
         vessel.length_ft || '',
-        vessel.weight_tons || ''
+        vessel.weight_tons || '',
+        vessel.monthly_invoice_count ?? '',
+        formatCurrencyCell(vessel.monthly_invoice_total),
+        vessel.invoice_count ?? '',
+        formatCurrencyCell(vessel.invoice_total)
       ].map(field => `"${field}"`).join(','))
     ].join('\n');
 

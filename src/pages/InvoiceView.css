@@ -286,6 +286,16 @@
 
 /* Print Styles */
 @media print {
+  @page {
+    size: letter portrait;
+    margin: 12mm;
+  }
+
+  html, body {
+    height: auto;
+    zoom: 0.9;
+  }
+
   .invoice-view-container {
     max-width: none;
     margin: 0;
@@ -299,6 +309,8 @@
 
   .invoice-preview {
     box-shadow: none;
+    page-break-after: avoid;
+    page-break-inside: avoid;
   }
 
   .invoice-table {
@@ -370,3 +382,4 @@
     margin-left: 0;
   }
 }
+

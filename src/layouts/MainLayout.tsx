@@ -281,7 +281,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   // Check if current route needs full-width layout (Airtable-style)
   const isFullWidthRoute = () => {
-    return location.pathname === '/contacts' || location.pathname === '/vessels' || location.pathname === '/requests';
+    if (location.pathname === '/contacts' || location.pathname === '/vessels' || location.pathname === '/requests') {
+      return true;
+    }
+
+    if (location.pathname === '/requests/new') {
+      return true;
+    }
+
+    if (location.pathname.startsWith('/requests/') && location.pathname.endsWith('/edit')) {
+      return true;
+    }
+
+    return false;
   };
 
   return (

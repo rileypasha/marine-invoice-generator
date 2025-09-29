@@ -84,16 +84,6 @@ export function PhoneField({
           disabled={disabled}
           labels={customLabels}
           countrySelectComponent={CountrySelect}
-          formatPhoneNumber={(value) => {
-            // Format national numbers with parentheses and dashes for display
-            if (!value) return value;
-            // Clean up the number - remove any non-digits
-            const digits = value.replace(/\D/g, '');
-            // Apply US-style formatting with parentheses and dashes
-            if (digits.length <= 3) return digits;
-            if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-            return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
-          }}
           numberInputProps={{
             className: "bg-transparent border-none outline-none flex-1 pl-1 pr-3 py-2 text-sm placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
           }}

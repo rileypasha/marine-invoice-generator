@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { gatherInvoiceData } from '../utils/invoiceData';
@@ -13,12 +13,14 @@ import {
   Badge,
   Input,
   Label,
-  Textarea,
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
-  SelectItem
+  SelectItem,
+  Avatar,
+  AvatarFallback,
+  Textarea
 } from '../components/magic/index';
 import jsPDF from 'jspdf';
 import { isValidPhoneNumber, parsePhoneNumber } from 'libphonenumber-js';
@@ -84,6 +86,37 @@ interface Service {
   isTaxExempt?: boolean;
 }
 
+interface CommentReply {
+  id: string;
+  author: string;
+  initials: string;
+  text: string;
+  createdAt: string;
+}
+
+interface CommentHighlightRect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+interface InvoiceComment {
+  id: string;
+  author: string;
+  initials: string;
+  text: string;
+  selectionText: string;
+  createdAt: string;
+  highlight: CommentHighlightRect;
+  replies: CommentReply[];
+}
+
+interface PendingSelection {
+  text: string;
+  rect: CommentHighlightRect;
+}
+
 interface ServiceSnapshot {
   id: string;
   description: string;
@@ -115,6 +148,7 @@ interface InvoiceData {
   metadata: {
     title?: string;
     taxRate?: number;
+    comments?: InvoiceComment[];
   };
 }
 
@@ -209,7 +243,7 @@ const CreateInvoice: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const { isAuthenticated, csrfToken } = useAuth();
+  const { isAuthenticated, csrfToken, currentUser } = useAuth();
 
   const isEditMode = !!id;
 
@@ -225,7 +259,7 @@ const CreateInvoice: React.FC = () => {
     },
     services: [],
     notes: '',
-    metadata: { taxRate: 0 }
+    metadata: { taxRate: 0, comments: [] }
   });
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -240,6 +274,12 @@ const CreateInvoice: React.FC = () => {
   const [customerPhoneError, setCustomerPhoneError] = useState('');
   const [focusedCostId, setFocusedCostId] = useState<string | null>(null);
   const restoreAppliedRef = useRef(false);
+  const [comments, setComments] = useState<InvoiceComment[]>([]);
+  const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
+  const [pendingCommentText, setPendingCommentText] = useState('');
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const selectionCardRef = useRef<HTMLDivElement | null>(null);
 
   const roundCurrency = (value: number): number => {
     if (!Number.isFinite(value)) {
@@ -319,6 +359,188 @@ const CreateInvoice: React.FC = () => {
       : rawValue;
   };
 
+  const getInitials = (name: string | undefined | null): string => {
+    if (!name) return 'U';
+    const initials = name
+      .split(' ')
+      .filter(Boolean)
+      .map(part => part[0]?.toUpperCase() || '')
+      .join('');
+    return initials.slice(0, 2) || 'U';
+  };
+
+  const normalizeIncomingComments = (raw: any): InvoiceComment[] => {
+    if (!Array.isArray(raw)) return [];
+
+    return raw.map((comment: any, index: number) => {
+      const authorName = comment.author || comment.authorEmail || 'Unknown User';
+      const replies = Array.isArray(comment.replies)
+        ? comment.replies.map((reply: any, replyIndex: number) => {
+            const replyAuthor = reply.author || reply.authorEmail || 'Unknown User';
+            return {
+              id: reply.id || `restored-reply-${index}-${replyIndex}-${Math.random().toString(36).slice(2, 7)}`,
+              author: replyAuthor,
+              initials: reply.initials || getInitials(replyAuthor),
+              text: reply.text || '',
+              createdAt: reply.createdAt || new Date().toISOString()
+            } as CommentReply;
+          })
+        : [];
+
+      const highlightRaw = comment.highlight || {};
+
+      return {
+        id: comment.id || `restored-comment-${index}-${Math.random().toString(36).slice(2, 7)}`,
+        author: authorName,
+        initials: comment.initials || getInitials(authorName),
+        text: comment.text || '',
+        selectionText: comment.selectionText || '',
+        createdAt: comment.createdAt || new Date().toISOString(),
+        highlight: {
+          top: typeof highlightRaw.top === 'number' ? highlightRaw.top : 0,
+          left: typeof highlightRaw.left === 'number' ? highlightRaw.left : 0,
+          width: typeof highlightRaw.width === 'number' ? highlightRaw.width : 28,
+          height: typeof highlightRaw.height === 'number' ? highlightRaw.height : 24
+        },
+        replies
+      } as InvoiceComment;
+    });
+  };
+
+  const clearTextSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.removeAllRanges) {
+      selection.removeAllRanges();
+    }
+  };
+
+  const handlePreviewMouseUp = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as Node;
+    if (selectionCardRef.current?.contains(target)) {
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      setPendingSelection(null);
+      setPendingCommentText('');
+      return;
+    }
+
+    if (!previewRef.current) return;
+
+    const anchorNode = selection.anchorNode;
+    const focusNode = selection.focusNode;
+    if (!anchorNode || !focusNode) {
+      setPendingSelection(null);
+      setPendingCommentText('');
+      return;
+    }
+
+    if (!previewRef.current.contains(anchorNode) || !previewRef.current.contains(focusNode)) {
+      setPendingSelection(null);
+      setPendingCommentText('');
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!range || range.toString().trim().length === 0) {
+      setPendingSelection(null);
+      setPendingCommentText('');
+      return;
+    }
+
+    const rect = range.getBoundingClientRect();
+    if (!rect || (rect.width === 0 && rect.height === 0)) {
+      setPendingSelection(null);
+      setPendingCommentText('');
+      return;
+    }
+
+    const containerRect = previewRef.current.getBoundingClientRect();
+    const padding = 8;
+    const top = rect.top - containerRect.top + previewRef.current.scrollTop;
+    const left = rect.left - containerRect.left + previewRef.current.scrollLeft;
+    const width = Math.max(rect.width + padding * 2, 36);
+    const height = Math.max(rect.height + padding * 2, 30);
+    const scrollHeight = previewRef.current.scrollHeight;
+    const scrollWidth = previewRef.current.scrollWidth;
+    const maxTop = Math.max(0, scrollHeight - height - 4);
+    const maxLeft = Math.max(0, scrollWidth - width - 4);
+    const highlight: CommentHighlightRect = {
+      top: Math.max(0, Math.min(top - padding, maxTop)),
+      left: Math.max(0, Math.min(left - padding, maxLeft)),
+      width,
+      height,
+    };
+
+    setPendingSelection({
+      text: range.toString().trim(),
+      rect: highlight
+    });
+    setPendingCommentText('');
+  };
+
+  const handleCancelSelection = () => {
+    setPendingSelection(null);
+    setPendingCommentText('');
+    clearTextSelection();
+  };
+
+  const handleCreateComment = () => {
+    if (!pendingSelection) return;
+    const trimmed = pendingCommentText.trim();
+    if (!trimmed) return;
+
+    const authorName = currentUser?.name || currentUser?.email || 'Unknown User';
+    const highlight = {
+      top: pendingSelection.rect.top,
+      left: pendingSelection.rect.left,
+      width: pendingSelection.rect.width || 28,
+      height: pendingSelection.rect.height || 24,
+    };
+
+    const newComment: InvoiceComment = {
+      id: `comment_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      author: authorName,
+      initials: getInitials(authorName),
+      text: trimmed,
+      selectionText: pendingSelection.text,
+      createdAt: new Date().toISOString(),
+      highlight,
+      replies: []
+    };
+
+    setComments(prev => [...prev, newComment]);
+    setPendingSelection(null);
+    setPendingCommentText('');
+    clearTextSelection();
+  };
+
+  const handleAddReply = (commentId: string) => {
+    const draft = replyDrafts[commentId]?.trim();
+    if (!draft) return;
+
+    const authorName = currentUser?.name || currentUser?.email || 'Unknown User';
+    const reply: CommentReply = {
+      id: `reply_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      author: authorName,
+      initials: getInitials(authorName),
+      text: draft,
+      createdAt: new Date().toISOString()
+    };
+
+    setComments(prev => prev.map(comment => {
+      if (comment.id !== commentId) return comment;
+      return {
+        ...comment,
+        replies: [...comment.replies, reply]
+      };
+    }));
+
+    setReplyDrafts(prev => ({ ...prev, [commentId]: '' }));
+  };
+
   const toNullableNumber = (value: number | undefined): number | null => {
     if (value === undefined || value === null) {
       return null;
@@ -364,8 +586,17 @@ const CreateInvoice: React.FC = () => {
               ? normalizeDecimalInput(String(service.manualCost), 2)
               : '')
         }));
+        const normalizedComments = normalizeIncomingComments(restoredInvoiceData.metadata?.comments);
+        restoredInvoiceData.metadata = {
+          ...restoredInvoiceData.metadata,
+          comments: normalizedComments
+        };
 
         setInvoiceData(restoredInvoiceData);
+      }
+
+      if (Array.isArray(restoredFormState.comments)) {
+        setComments(normalizeIncomingComments(restoredFormState.comments));
       }
 
       if (typeof restoredFormState.selectedVesselId === 'string') {
@@ -400,6 +631,35 @@ const CreateInvoice: React.FC = () => {
       console.error('Failed to restore invoice form state:', error);
     }
   }, [isEditMode, location.pathname, location.search, location.state, navigate]);
+
+  useEffect(() => {
+    if (!pendingSelection) return;
+
+    const handleMouseDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (selectionCardRef.current?.contains(target)) return;
+      if (previewRef.current?.contains(target)) return;
+      handleCancelSelection();
+    };
+
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, [pendingSelection]);
+
+  useEffect(() => {
+    setInvoiceData(prev => {
+      if (prev.metadata?.comments === comments) {
+        return prev;
+      }
+      return {
+        ...prev,
+        metadata: {
+          ...prev.metadata,
+          comments,
+        }
+      };
+    });
+  }, [comments]);
 
   // Fetch existing invoice data when in edit mode
   useEffect(() => {
@@ -569,7 +829,8 @@ const CreateInvoice: React.FC = () => {
             taxRate: toNumber(
               scope?.taxRate ?? scope?.tax_rate ?? invoice.metadata?.taxRate ?? invoice.metadata?.tax_rate ?? 0,
               0
-            )
+            ),
+            comments: normalizeIncomingComments(invoice.metadata?.comments)
           }
         });
 
@@ -579,6 +840,9 @@ const CreateInvoice: React.FC = () => {
         setSelectedCustomerId(resolvedCustomerId ? String(resolvedCustomerId) : '');
         setSelectedVesselId(resolvedVesselId ? String(resolvedVesselId) : '');
         setCustomerPhoneError('');
+
+        const existingComments = normalizeIncomingComments(invoice.metadata?.comments);
+        setComments(existingComments);
 
         setHasUnsavedChanges(false);
       } catch (error: any) {
@@ -914,11 +1178,6 @@ const CreateInvoice: React.FC = () => {
     }
   };
 
-  const handleNotesChange = (value: string) => {
-    setInvoiceData(prev => ({ ...prev, notes: value }));
-    setHasUnsavedChanges(true);
-  };
-
   // Calculation functions based on legacy business logic
   const calculateLineItemCost = (service: Service): number => {
     // Priority: manualCost > cost > calculated from hours
@@ -1009,8 +1268,46 @@ const CreateInvoice: React.FC = () => {
     const defaultTaxRate =
       invoiceData.metadata.taxRate != null ? invoiceData.metadata.taxRate / 100 : 0.0875;
     const taxRate = typeof service.taxRate === 'number' ? service.taxRate : defaultTaxRate;
-    return totalWithMarkup * taxRate;
-  };
+   return totalWithMarkup * taxRate;
+ };
+
+  const previewSummary = useMemo(() => {
+    const calculatedServices = invoiceData.services.map(service => {
+      const baseCost = calculateLineItemCost(service);
+      const costWithMarkup = applyMarkup(baseCost, service);
+      const taxAmount = calculateTax(service, costWithMarkup);
+      const markupAmount = roundCurrency(costWithMarkup - baseCost);
+      return {
+        id: service.id,
+        description: service.description || 'Untitled Service',
+        jobType: service.jobType || 'Manual Entry',
+        itemType: service.itemType || 'General',
+        quantity: roundCurrency(service.quantity || 0),
+        baseCost: roundCurrency(baseCost),
+        markupAmount,
+        taxAmount: roundCurrency(taxAmount),
+        totalBeforeTax: roundCurrency(costWithMarkup),
+        total: roundCurrency(costWithMarkup + taxAmount)
+      };
+    });
+
+    const subtotalWithMarkup = calculatedServices.reduce((sum, service) => sum + service.totalBeforeTax, 0);
+    const baseCostTotal = calculatedServices.reduce((sum, service) => sum + service.baseCost, 0);
+    const totalTax = calculatedServices.reduce((sum, service) => sum + service.taxAmount, 0);
+    const finalTotal = subtotalWithMarkup + totalTax;
+    const grossProfit = subtotalWithMarkup - baseCostTotal;
+    const grossProfitPercent = baseCostTotal > 0 ? roundRate((grossProfit / baseCostTotal) * 100) : 0;
+
+    return {
+      services: calculatedServices,
+      baseCostTotal: roundCurrency(baseCostTotal),
+      subtotalWithMarkup: roundCurrency(subtotalWithMarkup),
+      totalTax: roundCurrency(totalTax),
+      finalTotal: roundCurrency(finalTotal),
+      grossProfit: roundCurrency(grossProfit),
+      grossProfitPercent
+    };
+  }, [invoiceData.services, invoiceData.vessel.weight, invoiceData.metadata.taxRate]);
 
   const buildServiceSnapshot = (service: Service): ServiceSnapshot => {
     const quantity = Number.isFinite(service.quantity) ? Number(service.quantity) : 1;
@@ -1319,6 +1616,32 @@ const CreateInvoice: React.FC = () => {
     };
   };
 
+  const selectionCardPosition = pendingSelection
+    ? (() => {
+        if (!pendingSelection) return null;
+        const container = previewRef.current;
+        const estimatedWidth = 312;
+        const estimatedHeight = 220;
+        let left = pendingSelection.rect.left;
+        let top = pendingSelection.rect.top + pendingSelection.rect.height + 12;
+
+        if (container) {
+          const maxLeft = container.scrollLeft + container.clientWidth - estimatedWidth - 16;
+          left = Math.min(left, maxLeft);
+          left = Math.max(container.scrollLeft + 16, left);
+
+          const visibleTop = container.scrollTop;
+          const visibleBottom = visibleTop + container.clientHeight;
+          if (top + estimatedHeight > visibleBottom) {
+            top = Math.max(visibleTop + 16, pendingSelection.rect.top - estimatedHeight - 12);
+          }
+          top = Math.max(container.scrollTop + 16, top);
+        }
+
+        return { top, left };
+      })()
+    : null;
+
   const formValidation = getFormValidation();
 
   const handleSave = async () => {
@@ -1404,90 +1727,6 @@ const CreateInvoice: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handlePreview = () => {
-    // Calculate totals for preview
-    const calculatedServices = invoiceData.services.map(service => {
-      const baseCost = calculateLineItemCost(service);
-      const costWithMarkup = applyMarkup(baseCost, service);
-      const taxAmount = calculateTax(service, costWithMarkup);
-      return {
-        ...service,
-        cost: baseCost,
-        markupAmount: costWithMarkup - baseCost,
-        taxAmount,
-        total: costWithMarkup + taxAmount
-      };
-    });
-
-    const subtotal = calculatedServices.reduce((sum, service) => sum + (service.total - service.taxAmount), 0);
-    const totalTax = calculatedServices.reduce((sum, service) => sum + service.taxAmount, 0);
-    const finalTotal = subtotal + totalTax;
-    const baseCost = calculatedServices.reduce((sum, service) => sum + service.cost, 0);
-    const grossProfit = subtotal - baseCost;
-    const profitPercent = baseCost > 0 ? (grossProfit / baseCost) * 100 : 0;
-
-    // Create preview data structure matching the invoice format
-    const previewData = {
-      previewMode: true,
-      id: 'preview',
-      invoiceNumber: `PREVIEW-${Date.now().toString().slice(-6)}`,
-      title: invoiceData.metadata.title || `Invoice for ${invoiceData.vessel.name}`,
-      status: 'draft',
-      total: finalTotal,
-      subtotal,
-      taxAmount: totalTax,
-      grossProfit,
-      profitPercent,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      savedAt: new Date().toISOString(),
-      userName: invoiceData.customer.estimatorName || 'Current User',
-      vesselId: invoiceData.vessel.id || null,
-      vesselName: invoiceData.vessel.name,
-      vesselWeight: parseFloat(invoiceData.vessel.weight) || 0,
-      vesselBeam: parseFloat(invoiceData.vessel.beam) || 0,
-      customerName: invoiceData.customer.customerName,
-      customerEmail: invoiceData.customer.customerEmail,
-      customerPhone: invoiceData.customer.customerPhone,
-      notes: invoiceData.notes,
-      parsedData: {
-        vessel: {
-          name: invoiceData.vessel.name,
-          weight: parseFloat(invoiceData.vessel.weight) || 0,
-          beam: parseFloat(invoiceData.vessel.beam) || 0
-        },
-        customer: {
-          customerName: invoiceData.customer.customerName,
-          customerEmail: invoiceData.customer.customerEmail,
-          customerPhone: invoiceData.customer.customerPhone,
-          customerAddress: invoiceData.customer.customerAddress
-        },
-        scope: {
-          lineItems: calculatedServices,
-          subtotal,
-          taxAmount: totalTax,
-          total: finalTotal
-        }
-      }
-    };
-
-    // Navigate to preview with the calculated data
-    const formState = {
-      invoiceData: JSON.parse(JSON.stringify(invoiceData)),
-      selectedVesselId,
-      selectedCustomerId,
-      vesselSearchQuery,
-      customerSearchQuery,
-      activeTab,
-      customerPhoneError,
-      returnTo: location.pathname + location.search
-    };
-
-    navigate('/requests/preview', {
-      state: { previewData, formState }
-    });
   };
 
   const handleSaveAndNew = async () => {
@@ -1596,10 +1835,15 @@ const CreateInvoice: React.FC = () => {
       },
       services: [],
       notes: '',
-      metadata: { taxRate: 0 }
+      metadata: { taxRate: 0, comments: [] }
     });
     setHasUnsavedChanges(false);
     setCustomerPhoneError('');
+    setComments([]);
+    setReplyDrafts({});
+    setPendingSelection(null);
+    setPendingCommentText('');
+    setFocusedCostId(null);
   };
 
   const handlePrint = () => {
@@ -1610,19 +1854,20 @@ const CreateInvoice: React.FC = () => {
       const taxAmount = calculateTax(service, costWithMarkup);
       return {
         ...service,
-        cost: baseCost,
-        markupAmount: costWithMarkup - baseCost,
-        taxAmount,
-        total: costWithMarkup + taxAmount
+        cost: roundCurrency(baseCost),
+        markupAmount: roundCurrency(costWithMarkup - baseCost),
+        taxAmount: roundCurrency(taxAmount),
+        totalBeforeTax: roundCurrency(costWithMarkup),
+        total: roundCurrency(costWithMarkup + taxAmount)
       };
     });
 
-    const subtotal = calculatedServices.reduce((sum, service) => sum + (service.total - service.taxAmount), 0);
+    const subtotalWithMarkup = calculatedServices.reduce((sum, service) => sum + service.totalBeforeTax, 0);
     const totalTax = calculatedServices.reduce((sum, service) => sum + service.taxAmount, 0);
-    const finalTotal = subtotal + totalTax;
-    const baseCost = calculatedServices.reduce((sum, service) => sum + service.cost, 0);
-    const grossProfit = subtotal - baseCost;
-    const profitPercent = baseCost > 0 ? (grossProfit / baseCost) * 100 : 0;
+    const finalTotal = subtotalWithMarkup + totalTax;
+    const baseCostTotal = calculatedServices.reduce((sum, service) => sum + service.cost, 0);
+    const grossProfit = subtotalWithMarkup - baseCostTotal;
+    const grossProfitPercent = baseCostTotal > 0 ? roundRate((grossProfit / baseCostTotal) * 100) : 0;
 
     // Create print data structure
     const printData = {
@@ -1704,104 +1949,156 @@ const CreateInvoice: React.FC = () => {
     pdf.setFont('helvetica');
 
     // Header
-    pdf.setFontSize(20);
-    pdf.setTextColor(0, 0, 0);
-    pdf.text('Marine Group', 20, 30);
+    pdf.setFontSize(22);
+    pdf.setTextColor(30, 41, 59);
+    pdf.text('Marine Group', 20, 20);
 
-    pdf.setFontSize(16);
-    pdf.text('Invoice Request Form', 20, 45);
+    pdf.setFontSize(14);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text('Invoice Request Summary', 20, 28);
 
-    pdf.setFontSize(12);
-    pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, 60);
-    pdf.text(`Invoice #: INV-${Date.now().toString().slice(-6)}`, 20, 70);
+    pdf.setFontSize(10);
+    pdf.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 20, 36);
+    pdf.text(`Invoice Ref: INV-${Date.now().toString().slice(-6)}`, 20, 42);
+
+    // Divider
+    pdf.setDrawColor(226, 232, 240);
+    pdf.setLineWidth(0.5);
+    pdf.line(20, 48, 190, 48);
 
     // Vessel Information
-    pdf.setFontSize(14);
-    pdf.setTextColor(0, 0, 0);
-    pdf.text('Vessel Details', 20, 90);
+    let yPos = 60;
+    pdf.setFontSize(12);
+    pdf.setTextColor(30, 41, 59);
+    pdf.text('Summary', 20, yPos);
+
+    yPos += 8;
+    pdf.setFillColor(248, 250, 252);
+    pdf.setDrawColor(226, 232, 240);
+    pdf.roundedRect(20, yPos, 170, 26, 3, 3, 'FD');
+
+    pdf.setFontSize(10);
+    pdf.setTextColor(71, 85, 105);
+    pdf.text('Base Cost', 28, yPos + 8);
+    pdf.text('Subtotal (with markup)', 70, yPos + 8);
+    pdf.text('Tax', 132, yPos + 8);
+    pdf.text('Total', 162, yPos + 8);
 
     pdf.setFontSize(11);
-    pdf.text(`Vessel: ${invoiceData.vessel.name || 'N/A'}`, 20, 105);
-    pdf.text(`Weight: ${invoiceData.vessel.weight || 'N/A'} tons`, 20, 115);
-    pdf.text(`Length: ${invoiceData.vessel.beam || 'N/A'} ft`, 20, 125);
+    pdf.setTextColor(30, 41, 59);
+    pdf.text(formatCurrency(previewSummary.baseCostTotal), 28, yPos + 17);
+    pdf.text(formatCurrency(previewSummary.subtotalWithMarkup), 70, yPos + 17);
+    pdf.text(formatCurrency(previewSummary.totalTax), 132, yPos + 17);
+    pdf.text(formatCurrency(previewSummary.finalTotal), 162, yPos + 17);
+
+    yPos += 38;
+    pdf.setFontSize(10);
+    pdf.setTextColor(30, 41, 59);
+    pdf.text('Gross Profit', 28, yPos);
+    pdf.text('Gross Profit %', 70, yPos);
+    pdf.setFontSize(11);
+    pdf.text(formatCurrency(previewSummary.grossProfit), 28, yPos + 7);
+    pdf.text(`${previewSummary.grossProfitPercent.toFixed(2)}%`, 70, yPos + 7);
+
+    yPos += 18;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(20, yPos, 190, yPos);
+    yPos += 12;
+
+    pdf.setFontSize(12);
+    pdf.text('Vessel & Contact Details', 20, yPos);
+    yPos += 10;
+
+    pdf.setFontSize(10);
+    pdf.text(`Vessel: ${invoiceData.vessel.name || 'N/A'}`, 20, yPos);
+    pdf.text(`Weight: ${invoiceData.vessel.weight || 'N/A'} tons`, 20, yPos + 8);
+    pdf.text(`Length: ${invoiceData.vessel.beam || 'N/A'} ft`, 20, yPos + 16);
+
+    pdf.text(`Contact: ${invoiceData.customer.customerName || 'N/A'}`, 110, yPos);
+    pdf.text(`Email: ${invoiceData.customer.customerEmail || 'N/A'}`, 110, yPos + 8);
+    pdf.text(`Phone: ${invoiceData.customer.customerPhone || 'N/A'}`, 110, yPos + 16);
+    yPos += 28;
+
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(20, yPos, 190, yPos);
+    yPos += 12;
+
+    pdf.setFontSize(12);
+    pdf.text('Services', 20, yPos);
+    yPos += 10;
+
+    const tableColumnX = [20, 60, 90, 120, 140, 160, 178];
+    const tableHeaders = ['Item', 'Type', 'Qty', 'Cost', 'Markup', 'Tax', 'Total'];
+
+    pdf.setFontSize(9);
+    pdf.setTextColor(71, 85, 105);
+    tableHeaders.forEach((header, idx) => {
+      pdf.text(header, tableColumnX[idx], yPos);
+    });
+    yPos += 4;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(20, yPos, 190, yPos);
+    yPos += 6;
 
     // Contact Information
-    pdf.setFontSize(14);
-    pdf.text('Contact Information', 20, 145);
-
-    pdf.setFontSize(11);
-    pdf.text(`Contact: ${invoiceData.customer.customerName || 'N/A'}`, 20, 160);
-    pdf.text(`Email: ${invoiceData.customer.customerEmail || 'N/A'}`, 20, 170);
-    pdf.text(`Phone: ${invoiceData.customer.customerPhone || 'N/A'}`, 20, 180);
-
-    // Services Table
-    let yPos = 200;
-    pdf.setFontSize(14);
-    pdf.text('Services', 20, yPos);
-    yPos += 15;
-
-    // Table headers
     pdf.setFontSize(10);
-    pdf.setTextColor(100, 100, 100);
-    pdf.text('Description', 20, yPos);
-    pdf.text('Type', 80, yPos);
-    pdf.text('Cost', 120, yPos);
-    pdf.text('Markup', 140, yPos);
-    pdf.text('Tax', 160, yPos);
-    pdf.text('Total', 175, yPos);
-
-    // Draw header line
-    pdf.setDrawColor(200, 200, 200);
-    pdf.line(20, yPos + 2, 190, yPos + 2);
-    yPos += 10;
-
-    // Service rows
-    pdf.setTextColor(0, 0, 0);
-    calculatedServices.forEach((service, index) => {
-      const description = (service.description || '').substring(0, 25);
-      const type = (service.jobType || service.itemType || '').substring(0, 15);
-
-      pdf.text(description, 20, yPos);
-      pdf.text(type, 80, yPos);
-      pdf.text(`$${service.cost.toFixed(2)}`, 120, yPos);
-      pdf.text(`$${service.markupAmount.toFixed(2)}`, 140, yPos);
-      pdf.text(`$${service.taxAmount.toFixed(2)}`, 160, yPos);
-      pdf.text(`$${service.total.toFixed(2)}`, 175, yPos);
-
-      yPos += 10;
-
-      // Check if we need a new page
-      if (yPos > 270) {
+    pdf.setTextColor(51, 65, 85);
+    calculatedServices.forEach(service => {
+      if (yPos > 265) {
         pdf.addPage();
         yPos = 30;
+        pdf.setFontSize(9);
+        pdf.setTextColor(71, 85, 105);
+        tableHeaders.forEach((header, idx) => {
+          pdf.text(header, tableColumnX[idx], yPos);
+        });
+        yPos += 4;
+        pdf.setDrawColor(226, 232, 240);
+        pdf.line(20, yPos, 190, yPos);
+        yPos += 6;
+        pdf.setTextColor(51, 65, 85);
       }
+
+      pdf.text((service.description || '').slice(0, 40), tableColumnX[0], yPos);
+      pdf.text((service.jobType || service.itemType || '—').slice(0, 18), tableColumnX[1], yPos);
+      pdf.text(String(roundCurrency(service.quantity || 0)), tableColumnX[2], yPos, { align: 'right' });
+      pdf.text(formatCurrency(service.cost), tableColumnX[3], yPos, { align: 'right' });
+      pdf.text(formatCurrency(service.markupAmount), tableColumnX[4], yPos, { align: 'right' });
+      pdf.text(formatCurrency(service.taxAmount), tableColumnX[5], yPos, { align: 'right' });
+      pdf.text(formatCurrency(service.total), tableColumnX[6], yPos, { align: 'right' });
+
+      yPos += 8;
     });
 
-    // Totals section
-    yPos += 10;
-    pdf.setDrawColor(200, 200, 200);
-    pdf.line(120, yPos, 190, yPos);
+    yPos += 6;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(20, yPos, 190, yPos);
     yPos += 10;
 
     pdf.setFontSize(11);
-    pdf.text(`Subtotal: $${subtotal.toFixed(2)}`, 140, yPos);
-    yPos += 10;
-    pdf.text(`Tax: $${totalTax.toFixed(2)}`, 140, yPos);
+    pdf.setTextColor(30, 41, 59);
+    pdf.text(`Base Cost: ${formatCurrency(baseCostTotal)}`, 120, yPos);
+    yPos += 8;
+    pdf.text(`Subtotal (with markup): ${formatCurrency(subtotalWithMarkup)}`, 120, yPos);
+    yPos += 8;
+    pdf.text(`Tax: ${formatCurrency(totalTax)}`, 120, yPos);
     yPos += 10;
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`Total: $${finalTotal.toFixed(2)}`, 140, yPos);
-    yPos += 15;
+    pdf.text(`Total Due: ${formatCurrency(finalTotal)}`, 120, yPos);
+    yPos += 12;
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Gross Profit: $${grossProfit.toFixed(2)}`, 140, yPos);
-    yPos += 10;
-    pdf.text(`Profit %: ${profitPercent.toFixed(2)}%`, 140, yPos);
+    pdf.text(`Gross Profit: ${formatCurrency(grossProfit)}`, 120, yPos);
+    yPos += 8;
+    pdf.text(`Gross Profit %: ${grossProfitPercent.toFixed(2)}%`, 120, yPos);
 
     // Notes section
     if (invoiceData.notes && invoiceData.notes.trim()) {
-      yPos += 20;
+      yPos += 16;
       pdf.setFontSize(12);
-      pdf.text('Notes:', 20, yPos);
-      yPos += 10;
+      pdf.setTextColor(30, 41, 59);
+      pdf.text('Notes', 20, yPos);
+      yPos += 8;
+      pdf.setTextColor(71, 85, 105);
       pdf.setFontSize(10);
 
       // Split notes into lines
@@ -2077,22 +2374,9 @@ const CreateInvoice: React.FC = () => {
             </Button>
 
             <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePreview}
-              disabled={isLoading}
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              Preview
-            </Button>
-
-            <Button
               onClick={handleSave}
               disabled={isLoading}
-              className={hasUnsavedChanges ? "bg-blue-600 hover:bg-blue-700" : ""}
+              className={`bg-black hover:bg-black/90 ${hasUnsavedChanges ? 'shadow-lg' : ''}`}
             >
               {isLoading ? (
                 <svg className="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2103,18 +2387,18 @@ const CreateInvoice: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                 </svg>
               )}
-              {isEditMode ? 'Update Invoice' : 'Save Invoice'}
+              {isEditMode ? 'Update Invoice' : 'Save Request'}
             </Button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="w-full px-10 py-6">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,6fr)_minmax(300px,1fr)]">
 
           {/* Main Form Area */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6">
             {/* Tabs */}
             <div className="flex gap-1 p-1 bg-muted rounded-lg">
               <TabButton
@@ -2356,7 +2640,7 @@ const CreateInvoice: React.FC = () => {
                       defaultCountry="US"
                       error={customerPhoneError}
                     />
-                    <div className="space-y-2">
+                    <div className="space-y-2 md:-mt-1">
                       <Label htmlFor="customer-address">Address</Label>
                       <div className="relative">
                         <Input
@@ -2469,38 +2753,58 @@ const CreateInvoice: React.FC = () => {
                         service.jobType === 'Agent Services') && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor={`service-labor-hours-${index}`}>Labor Hours</Label>
-                            <Input
-                              id={`service-labor-hours-${index}`}
-                              type="number"
-                              step="0.5"
-                              value={service.laborHours || 0}
-                              onChange={(e) =>
-                                updateService(
-                                  service.id,
-                                  'laborHours',
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
-                              placeholder="0.0"
-                            />
+                            <Label htmlFor={`service-labor-hours-${index}`}>Regular Hours</Label>
+                            <div className="relative">
+                              <Input
+                                id={`service-labor-hours-${index}`}
+                                type="text"
+                                inputMode="decimal"
+                                value={
+                                  service.laborHours !== undefined && service.laborHours !== null && service.laborHours !== 0
+                                    ? service.laborHours.toString()
+                                    : ''
+                                }
+                                onChange={(e) =>
+                                  updateService(
+                                    service.id,
+                                    'laborHours',
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                placeholder="0.0"
+                                className="pr-12"
+                              />
+                              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
+                                hours
+                              </span>
+                            </div>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor={`service-ot-hours-${index}`}>OT Hours</Label>
-                            <Input
-                              id={`service-ot-hours-${index}`}
-                              type="number"
-                              step="0.5"
-                              value={service.otHours || 0}
-                              onChange={(e) =>
-                                updateService(
-                                  service.id,
-                                  'otHours',
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
-                              placeholder="0.0"
-                            />
+                            <Label htmlFor={`service-ot-hours-${index}`}>Overtime Hours</Label>
+                            <div className="relative">
+                              <Input
+                                id={`service-ot-hours-${index}`}
+                                type="text"
+                                inputMode="decimal"
+                                value={
+                                  service.otHours !== undefined && service.otHours !== null && service.otHours !== 0
+                                    ? service.otHours.toString()
+                                    : ''
+                                }
+                                onChange={(e) =>
+                                  updateService(
+                                    service.id,
+                                    'otHours',
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                placeholder="0.0"
+                                className="pr-12"
+                              />
+                              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
+                                hours
+                              </span>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -2691,26 +2995,276 @@ const CreateInvoice: React.FC = () => {
 
             {/* Notes Tab */}
             {activeTab === 'notes' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notes</CardTitle>
+              <Card className="border-none shadow-none">
+                <CardHeader className="px-0">
+                  <CardTitle>Comments & Preview</CardTitle>
                   <CardDescription>
-                    Add any additional notes for this invoice
+                    Highlight the invoice preview to leave contextual comments for collaborators.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <Textarea
-                    value={invoiceData.notes}
-                    onChange={(e) => handleNotesChange(e.target.value)}
-                    rows={6}
-                  />
+                <CardContent className="space-y-6 px-0">
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,6fr)_minmax(300px,1fr)]">
+                    <div
+                      ref={previewRef}
+                      onMouseUp={handlePreviewMouseUp}
+                      className="relative max-h-[70vh] overflow-auto rounded-lg border bg-white p-6 shadow-sm"
+                    >
+                      <div className="space-y-6 text-sm text-slate-700">
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div>
+                            <h2 className="text-lg font-semibold text-slate-900">
+                              {invoiceData.metadata.title?.trim() ||
+                                (invoiceData.vessel.name
+                                  ? `Invoice for ${invoiceData.vessel.name}`
+                                  : 'Invoice Request')}
+                            </h2>
+                            <p className="text-xs text-muted-foreground">Draft preview • {new Date().toLocaleDateString()}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
+                          <div className="space-y-1">
+                            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Vessel</h3>
+                            <p className="font-medium text-slate-800">{invoiceData.vessel.name || 'Not specified'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Weight: {invoiceData.vessel.weight ? `${formatNumberWithSeparators(invoiceData.vessel.weight)} tons` : '—'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Length: {invoiceData.vessel.beam ? `${formatNumberWithSeparators(invoiceData.vessel.beam)} ft` : '—'}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contact</h3>
+                            <p className="font-medium text-slate-800">{invoiceData.customer.customerName || invoiceData.customer.contactName || 'Not assigned'}</p>
+                            <p className="text-xs text-muted-foreground">{invoiceData.customer.customerEmail || '—'}</p>
+                            <p className="text-xs text-muted-foreground">{invoiceData.customer.customerPhone || '—'}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <h3 className="text-sm font-semibold text-slate-800">Services</h3>
+                          <div className="overflow-hidden rounded-lg border border-slate-200">
+                            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                              <span>Item</span>
+                              <span className="text-right">Type</span>
+                              <span className="text-right">Qty</span>
+                              <span className="text-right">Cost</span>
+                              <span className="text-right">Markup</span>
+                              <span className="text-right">Tax</span>
+                              <span className="text-right">Total</span>
+                            </div>
+                            {previewSummary.services.length === 0 ? (
+                              <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                                No services added yet.
+                              </div>
+                            ) : (
+                              previewSummary.services.map(service => (
+                                <div key={service.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm">
+                                  <div>
+                                    <p className="font-medium text-slate-800">{service.description}</p>
+                                    <p className="text-xs text-muted-foreground">{service.jobType}</p>
+                                  </div>
+                                  <div className="text-right text-slate-700">{service.itemType}</div>
+                                  <div className="text-right text-slate-700">{service.quantity}</div>
+                                  <div className="text-right text-slate-700">{formatCurrency(service.baseCost)}</div>
+                                  <div className="text-right text-slate-700">{formatCurrency(service.markupAmount)}</div>
+                                  <div className="text-right text-slate-700">{formatCurrency(service.taxAmount)}</div>
+                                  <div className="text-right font-medium text-slate-900">{formatCurrency(service.total)}</div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
+                          <div className="flex justify-between">
+                            <span>Base Cost</span>
+                            <span className="font-medium text-slate-900">{formatCurrency(previewSummary.baseCostTotal)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Subtotal (with markup)</span>
+                            <span className="font-medium text-slate-900">{formatCurrency(previewSummary.subtotalWithMarkup)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Tax</span>
+                            <span className="font-medium text-slate-900">{formatCurrency(previewSummary.totalTax)}</span>
+                          </div>
+                          <div className="flex justify-between border-t pt-2 text-sm font-semibold text-slate-900">
+                            <span>Total</span>
+                            <span>{formatCurrency(previewSummary.finalTotal)}</span>
+                          </div>
+                          <div className="flex justify-between pt-2">
+                            <span>Gross Profit</span>
+                            <span className="font-medium text-slate-900">{formatCurrency(previewSummary.grossProfit)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Gross Profit %</span>
+                            <span className="font-medium text-slate-900">{previewSummary.grossProfitPercent.toFixed(2)}%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pointer-events-none absolute inset-0 z-10">
+                        {comments.map((comment, index) => {
+                          const width = Math.max(comment.highlight.width, 36);
+                          const height = Math.max(comment.highlight.height, 30);
+                          return (
+                            <React.Fragment key={comment.id}>
+                              <div
+                                className="absolute rounded-md border border-blue-500 bg-blue-500/15"
+                                style={{
+                                  top: comment.highlight.top,
+                                  left: comment.highlight.left,
+                                  width,
+                                  height,
+                                }}
+                              />
+                              <div
+                                className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-blue-500 text-[11px] font-semibold text-white shadow"
+                                style={{
+                                  top: comment.highlight.top,
+                                  left: comment.highlight.left,
+                                }}
+                              >
+                                {index + 1}
+                              </div>
+                            </React.Fragment>
+                          );
+                        })}
+                      </div>
+
+                      {pendingSelection && selectionCardPosition && (
+                        <div
+                          ref={selectionCardRef}
+                          className="absolute z-30 w-72 max-w-[320px] md:w-80"
+                          style={{
+                            top: selectionCardPosition.top,
+                            left: selectionCardPosition.left,
+                          }}
+                        >
+                          <Card className="shadow-xl">
+                            <CardContent className="space-y-3 pt-4">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarFallback>{getInitials(currentUser?.name || currentUser?.email)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    {currentUser?.name || currentUser?.email || 'You'}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Commenting on “{pendingSelection.text.slice(0, 40)}{pendingSelection.text.length > 40 ? '…' : ''}”
+                                  </p>
+                                </div>
+                              </div>
+                              <Textarea
+                                rows={3}
+                                value={pendingCommentText}
+                                onChange={(e) => setPendingCommentText(e.target.value)}
+                                placeholder="Add a comment or mention others with @"
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button type="button" variant="ghost" size="sm" onClick={handleCancelSelection}>
+                                  Cancel
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={handleCreateComment}
+                                  disabled={pendingCommentText.trim().length === 0}
+                                >
+                                  Comment
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-base font-semibold text-slate-800">Comments</h3>
+                        <span className="text-xs text-muted-foreground">{comments.length} open</span>
+                      </div>
+                      {comments.length === 0 ? (
+                        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                          Highlight any portion of the preview on the left to leave a comment.
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {comments.map((comment, index) => (
+                            <div key={comment.id} className="rounded-lg border bg-white p-4 shadow-sm">
+                              <div className="flex items-start gap-3">
+                                <Avatar className="h-9 w-9">
+                                  <AvatarFallback>{comment.initials}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-sm font-semibold text-slate-900">{comment.author}</p>
+                                    <span className="text-xs text-muted-foreground">#{index + 1}</span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    “{comment.selectionText.slice(0, 70)}{comment.selectionText.length > 70 ? '…' : ''}”
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="mt-3 text-sm text-slate-700 whitespace-pre-wrap">{comment.text}</p>
+
+                              {comment.replies.length > 0 && (
+                                <div className="mt-3 space-y-3 border-t pt-3">
+                                  {comment.replies.map(reply => (
+                                    <div key={reply.id} className="flex gap-3">
+                                      <Avatar className="h-8 w-8">
+                                        <AvatarFallback>{reply.initials}</AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                        <p className="text-sm font-semibold text-slate-900">{reply.author}</p>
+                                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{reply.text}</p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              <div className="mt-3 space-y-2">
+                                <Textarea
+                                  rows={2}
+                                  value={replyDrafts[comment.id] ?? ''}
+                                  onChange={(e) => setReplyDrafts(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                                  placeholder="Reply or mention others with @"
+                                />
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setReplyDrafts(prev => ({ ...prev, [comment.id]: '' }))}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => handleAddReply(comment.id)}
+                                    disabled={!replyDrafts[comment.id]?.trim()}
+                                  >
+                                    Reply
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}
           </div>
 
           {/* Summary Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Summary</CardTitle>

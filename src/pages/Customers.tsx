@@ -38,6 +38,11 @@ interface Customer {
   monthly_invoice_total?: number;
 }
 
+const formatCurrencyCell = (value?: number | null) => {
+  if (value === undefined || value === null || Number.isNaN(value)) return '';
+  return value.toFixed(2);
+};
+
 interface ImportResult {
   success: boolean;
   imported: number;
@@ -491,10 +496,14 @@ const Customers: React.FC = () => {
         customer.state,
         customer.postal_code,
         customer.country
-      ].filter(Boolean).join(', ')
+      ].filter(Boolean).join(', '),
+      'Monthly Invoices': customer.monthly_invoice_count ?? '',
+      'Monthly Amount': formatCurrencyCell(customer.monthly_invoice_total),
+      'Total Invoices': customer.invoice_count ?? '',
+      'Total Amount': formatCurrencyCell(customer.invoice_total)
     }));
 
-    const headers = ['Contact Name', 'Email Address', 'Phone Number', 'Address'];
+    const headers = ['Contact Name', 'Email Address', 'Phone Number', 'Address', 'Monthly Invoices', 'Monthly Amount', 'Total Invoices', 'Total Amount'];
     const csvContent = [
       headers.join(','),
       ...csvData.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
@@ -513,10 +522,10 @@ const Customers: React.FC = () => {
 
   // Generate sample CSV for download
   const downloadSampleCSV = () => {
-    const sampleData = `Contact Name,Email Address,Phone Number,Address
-"Acme Corp","contact@acme.com","5551234567","123 Main St, New York, NY 10001"
-"TechStart Inc","info@techstart.com","5555678901","456 Tech Ave, San Francisco, CA 94105"
-"Marine Services","admin@marineservices.com","5559990000","789 Harbor Dr, Miami, FL 33101"`;
+    const sampleData = `Contact Name,Email Address,Phone Number,Address,Monthly Invoices,Monthly Amount,Total Invoices,Total Amount
+"Acme Corp","contact@acme.com","5551234567","123 Main St, New York, NY 10001","3","1450.00","12","5600.00"
+"TechStart Inc","info@techstart.com","5555678901","456 Tech Ave, San Francisco, CA 94105","1","620.00","5","1920.00"
+"Marine Services","admin@marineservices.com","5559990000","789 Harbor Dr, Miami, FL 33101","2","980.00","7","3125.00"`;
 
     const blob = new Blob([sampleData], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -771,10 +780,14 @@ const Customers: React.FC = () => {
                   customer.state,
                   customer.postal_code,
                   customer.country
-                ].filter(Boolean).join(', ')
+                ].filter(Boolean).join(', '),
+                'Monthly Invoices': customer.monthly_invoice_count ?? '',
+                'Monthly Amount': formatCurrencyCell(customer.monthly_invoice_total),
+                'Total Invoices': customer.invoice_count ?? '',
+                'Total Amount': formatCurrencyCell(customer.invoice_total)
               }));
 
-              const headers = ['Contact Name', 'Email Address', 'Phone Number', 'Address'];
+              const headers = ['Contact Name', 'Email Address', 'Phone Number', 'Address', 'Monthly Invoices', 'Monthly Amount', 'Total Invoices', 'Total Amount'];
               const csvContent = [
                 headers.join(','),
                 ...csvData.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
