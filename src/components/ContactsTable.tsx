@@ -31,14 +31,15 @@ import { bucketByActivity, bucketByMonthlyActivity, formatActivityGroupSubtotal,
 // Column width definitions for consistent spacing across all tables
 const CONTACTS_COLS = [
   { id: 'select', w: '4%' },               // Checkbox column
-  { id: 'name', w: '20%' },                // Contact name column
-  { id: 'email', w: '20%' },               // Email column
-  { id: 'phone', w: '14%' },               // Phone column
-  { id: 'monthly_invoices', w: '10%' },    // Monthly invoices count column (centered)
-  { id: 'monthly_total', w: '12%' },       // Monthly total amount column (centered)
-  { id: 'invoices', w: '10%' },            // Total invoices count column (centered)
-  { id: 'total', w: '12%' },               // Total amount column (centered)
-  { id: 'actions', w: '6%' }               // Actions column
+  { id: 'name', w: '15%' },                // Contact name column
+  { id: 'email', w: '15%' },               // Email column
+  { id: 'phone', w: '10%' },               // Phone column
+  { id: 'address', w: '20%' },             // Address column
+  { id: 'monthly_invoices', w: '8%' },    // Monthly invoices count column (centered)
+  { id: 'monthly_total', w: '10%' },       // Monthly total amount column (centered)
+  { id: 'invoices', w: '8%' },            // Total invoices count column (centered)
+  { id: 'total', w: '10%' },               // Total amount column (centered)
+  { id: 'actions', w: '4%' }               // Actions column
 ];
 
 interface Customer {
@@ -50,6 +51,8 @@ interface Customer {
   address_line1?: string;
   city?: string;
   state?: string;
+  postal_code?: string;
+  country?: string;
   created_at: string;
   updated_at: string;
   invoice_count?: number;
@@ -294,6 +297,23 @@ export function ContactsTable({
         return <div className="whitespace-nowrap">{formatPhoneForDisplay(phone)}</div>;
       },
       meta: { width: 'w-32' },
+    },
+    {
+      accessorKey: "address",
+      header: "Address",
+      cell: ({ row }) => {
+        const address = [
+          row.original.address_line1,
+          row.original.city,
+          row.original.state,
+          row.original.postal_code,
+          row.original.country,
+        ]
+          .filter(Boolean)
+          .join(", ");
+        return <div>{address || "-"}</div>;
+      },
+      meta: { width: 'w-64' },
     },
     {
       accessorKey: "monthly_invoice_count",

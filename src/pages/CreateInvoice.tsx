@@ -45,7 +45,10 @@ interface DatabaseCustomer {
   legal_name?: string;
   email?: string;
   phone?: string;
-  address?: string;
+  address_line1?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
 }
 
 interface Customer {
@@ -154,7 +157,7 @@ const normalizeTaxStatus = (value: any): Service['taxStatus'] | undefined => {
   if (!value) {
     return undefined;
   }
-  const normalized = String(value).toLowerCase().replace(/[_\s-]/g, '');
+  const normalized = String(value).toLowerCase().replace(/[_ –-]/g, '');
   if (normalized === 'taxable') {
     return 'taxable';
   }
@@ -171,7 +174,7 @@ const normalizeMarkupType = (value: any): Service['markupType'] | undefined => {
   if (!value) {
     return undefined;
   }
-  const normalized = String(value).toLowerCase().replace(/[_\s]/g, '-');
+  const normalized = String(value).toLowerCase().replace(/[_ ]/g, '-');
   if (normalized === 'preset-2.5' || normalized === 'preset-25' || normalized === 'preset2.5') {
     return 'preset-2.5';
   }
@@ -185,6 +188,16 @@ const normalizeMarkupType = (value: any): Service['markupType'] | undefined => {
     return 'exempt';
   }
   return undefined;
+};
+
+
+
+
+
+const formatAddress = (customer: Partial<DatabaseCustomer>) => {
+  if (!customer) return '';
+  const { address_line1, city, state, postal_code } = customer;
+  return [address_line1, city, state, postal_code].filter(Boolean).join(', ');
 };
 
 const CreateInvoice: React.FC = () => {
@@ -399,11 +412,7 @@ const CreateInvoice: React.FC = () => {
           invoice.customerPhone ||
           '';
 
-        const resolvedCustomerAddress =
-          customerData.customerAddress ||
-          customerData.address ||
-          invoice.customer?.address ||
-          '';
+        const resolvedCustomerAddress = formatAddress(customerData);
 
         const resolvedContactName =
           customerData.contactName ||
@@ -467,7 +476,10 @@ const CreateInvoice: React.FC = () => {
     const legalName = searchParams.get('legalName');
     const email = searchParams.get('email');
     const phone = searchParams.get('phone');
-    const address = searchParams.get('address');
+    const address_line1 = searchParams.get('address_line1');
+    const city = searchParams.get('city');
+    const state = searchParams.get('state');
+    const postal_code = searchParams.get('postal_code');
 
     if (customerId) {
       // Set the selected customer ID to auto-select in the dropdown
@@ -483,7 +495,7 @@ const CreateInvoice: React.FC = () => {
           customerName: legalName || customerName || '',
           customerEmail: email || '',
           customerPhone: phone || '',
-          customerAddress: address || ''
+          customerAddress: formatAddress({ address_line1, city, state, postal_code }) || ''
         }
       }));
     }
@@ -1709,8 +1721,8 @@ const CreateInvoice: React.FC = () => {
     ];
 
     const csvRows = calculatedServices.map(service => [
-      `"${service.description || ''}"`,
-      `"${service.jobType || service.itemType || ''}"`,
+      `"${service.description || ''}"`, 
+      `"${service.jobType || service.itemType || ''}"`, 
       service.laborHours || 0,
       service.otHours || 0,
       service.cost.toFixed(2),
@@ -1737,9 +1749,9 @@ const CreateInvoice: React.FC = () => {
     // Create CSV content
     const csvContent = [
       // Invoice header info
-      `"Invoice for ${invoiceData.vessel.name}"`,
-      `"Contact: ${invoiceData.customer.customerName}"`,
-      `"Date: ${new Date().toLocaleDateString()}"`,
+      `"Invoice for ${invoiceData.vessel.name}"`, 
+      `"Contact: ${invoiceData.customer.customerName}"`, 
+      `"Date: ${new Date().toLocaleDateString()}"`, 
       '',
       csvHeaders.join(','),
       ...csvRows.map(row => row.join(','))
@@ -1772,7 +1784,7 @@ const CreateInvoice: React.FC = () => {
   }) => (
     <button
       onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${ 
         isActive
           ? 'bg-primary text-primary-foreground'
           : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -1806,7 +1818,7 @@ const CreateInvoice: React.FC = () => {
           </div>
           <h2 className="text-lg font-semibold mb-2">Error</h2>
           <p className="text-sm text-muted-foreground mb-4">{error}</p>
-          <Button onClick={() => navigate('/requests')}>
+          <Button onClick={() => navigate('/requests')}> 
             Back to Invoices
           </Button>
         </div>
@@ -1828,7 +1840,7 @@ const CreateInvoice: React.FC = () => {
             )}
             <Badge
               variant="outline"
-              className={`text-xs ${
+              className={`text-xs ${ 
                 formValidation.isComplete
                   ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
                   : "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100"
@@ -2080,7 +2092,7 @@ const CreateInvoice: React.FC = () => {
                                 customerName: selectedCustomer.legal_name || selectedCustomer.display_name || '',
                                 customerEmail: selectedCustomer.email || '',
                                 customerPhone: selectedCustomer.phone ? formatPhoneNumber(selectedCustomer.phone) : '',
-                                customerAddress: selectedCustomer.address || ''
+                                customerAddress: formatAddress(selectedCustomer)
                               }
                             }));
                           }
@@ -2088,7 +2100,16 @@ const CreateInvoice: React.FC = () => {
                       }}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Search for a contact..." />
+                        {selectedCustomerId ? (
+                          <div className="flex items-center">
+                            <span>{availableCustomers.find(c => c.id === selectedCustomerId)?.display_name}</span>
+                            <svg className="w-4 h-4 ml-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        ) : (
+                          <SelectValue placeholder="Search for a contact..." />
+                        )}
                       </SelectTrigger>
                       <SelectContent>
                         <div className="p-2">
@@ -2124,96 +2145,83 @@ const CreateInvoice: React.FC = () => {
                     </Select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="contact-name">Contact Name</Label>
-                      <Input
-                        id="contact-name"
-                        value={invoiceData.customer.contactName}
-                        onChange={(e) => handleCustomerChange('contactName', e.target.value)}
-                        placeholder="Contact name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="customer-name">Company Name</Label>
-                      <Input
-                        id="customer-name"
-                        value={invoiceData.customer.customerName}
-                        onChange={(e) => handleCustomerChange('customerName', e.target.value)}
-                        placeholder="Company name"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="customer-email">Email Address</Label>
-                      <Input
-                        id="customer-email"
-                        type="email"
-                        value={invoiceData.customer.customerEmail}
-                        onChange={(e) => handleCustomerChange('customerEmail', e.target.value)}
-                        placeholder="email@company.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="customer-phone">Phone Number</Label>
-                      <Input
-                        id="customer-phone"
-                        value={invoiceData.customer.customerPhone}
-                        onChange={(e) => handleCustomerChange('customerPhone', e.target.value)}
-                        placeholder="(555) 123-4567"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2 relative">
-                    <Label htmlFor="customer-address">Address</Label>
-                    <Input
-                      id="customer-address"
-                      value={invoiceData.customer.customerAddress}
-                      onChange={(e) => {
-                        handleCustomerChange('customerAddress', e.target.value);
-                        const query = e.target.value;
 
-                        // Clear existing timeout
-                        if (addressTimeoutRef.current) {
-                          clearTimeout(addressTimeoutRef.current);
-                        }
 
-                        if (query.length >= 3) {
-                          // Set new timeout with proper cleanup
-                          addressTimeoutRef.current = setTimeout(() => {
-                            searchAddresses(query);
-                          }, 300);
-                        } else {
-                          setShowAddressSuggestions(false);
-                        }
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="contact-name">Contact Name</Label>
+          <Input
+            id="contact-name"
+            value={invoiceData.customer.contactName}
+            onChange={(e) => handleCustomerChange('contactName', e.target.value)}
+            placeholder="Enter contact name"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="customer-email">Email Address</Label>
+          <Input
+            id="customer-email"
+            type="email"
+            value={invoiceData.customer.customerEmail}
+            onChange={(e) => handleCustomerChange('customerEmail', e.target.value)}
+            placeholder="Enter email address"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="customer-phone">Phone Number</Label>
+          <Input
+            id="customer-phone"
+            value={invoiceData.customer.customerPhone}
+            onChange={(e) => handleCustomerChange('customerPhone', e.target.value)}
+            placeholder="Enter phone number"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="customer-address">Address</Label>
+          <div className="relative">
+            <Input
+              id="customer-address"
+              value={invoiceData.customer.customerAddress}
+              onChange={(e) => {
+                handleCustomerChange('customerAddress', e.target.value);
+                if (addressTimeoutRef.current) {
+                  clearTimeout(addressTimeoutRef.current);
+                }
+                addressTimeoutRef.current = setTimeout(() => {
+                  searchAddresses(e.target.value);
+                }, 300);
+              }}
+              onFocus={() => setShowAddressSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 200)}
+              placeholder="Enter address"
+              autoComplete="off"
+            />
+            {isLoadingAddress && <div className="absolute right-2 top-2"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div></div>}
+            {showAddressSuggestions && addressSuggestions.length > 0 && (
+              <Card className="absolute z-10 w-full mt-1">
+                <CardContent className="p-2">
+                  {addressSuggestions.map((suggestion) => (
+                    <div
+                      key={suggestion.place_id}
+                      className="p-2 hover:bg-muted rounded-md cursor-pointer"
+                      onMouseDown={() => {
+                        handleCustomerChange('customerAddress', suggestion.formatted);
+                        setAddressSuggestions([]);
+                        setShowAddressSuggestions(false);
                       }}
-                      onBlur={() => {
-                        // Hide suggestions after a short delay to allow selection
-                        setTimeout(() => setShowAddressSuggestions(false), 200);
-                      }}
-                      placeholder="Start typing address for suggestions..."
-                    />
-                    {showAddressSuggestions && addressSuggestions.length > 0 && (
-                      <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-48 overflow-y-auto">
-                        {isLoadingAddress && (
-                          <div className="text-sm text-muted-foreground p-2">Loading addresses...</div>
-                        )}
-                        {addressSuggestions.map((suggestion, index) => (
-                          <div
-                            key={index}
-                            className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
-                            onClick={() => {
-                              handleCustomerChange('customerAddress', suggestion.formatted || '');
-                              setShowAddressSuggestions(false);
-                            }}
-                          >
-                            {suggestion.formatted}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                    >
+                      {suggestion.formatted}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
                 </CardContent>
               </Card>
             )}

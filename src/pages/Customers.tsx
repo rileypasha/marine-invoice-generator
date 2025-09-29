@@ -28,6 +28,8 @@ interface Customer {
   address_line1?: string;
   city?: string;
   state?: string;
+  postal_code?: string;
+  country?: string;
   created_at: string;
   updated_at: string;
   invoice_count?: number;
@@ -254,15 +256,21 @@ const Customers: React.FC = () => {
   // Handle new invoice click
   const handleNewInvoice = useCallback((customer: Customer) => {
     // Build query parameters with customer information
+    const addressParts = [
+      customer.address_line1,
+      customer.city,
+      customer.state,
+      customer.postal_code,
+      customer.country
+    ].filter(Boolean);
+
     const params = new URLSearchParams({
       customerId: customer.id,
       customerName: customer.display_name,
       legalName: customer.legal_name || customer.display_name,
       email: customer.email || '',
       phone: customer.phone || '',
-      address: customer.address_line1 && customer.city
-        ? `${customer.address_line1}, ${customer.city}${customer.state ? `, ${customer.state}` : ''}`
-        : customer.address_line1 || ''
+      address: addressParts.join(', ')
     });
 
     // Navigate to new invoice page with customer data
@@ -477,9 +485,13 @@ const Customers: React.FC = () => {
       'Contact Name': customer.display_name,
       'Email Address': customer.email || '',
       'Phone Number': customer.phone || '',
-      'Address': customer.address_line1 && customer.city
-        ? `${customer.address_line1}, ${customer.city}${customer.state ? `, ${customer.state}` : ''}`
-        : customer.address_line1 || ''
+      'Address': [
+        customer.address_line1,
+        customer.city,
+        customer.state,
+        customer.postal_code,
+        customer.country
+      ].filter(Boolean).join(', ')
     }));
 
     const headers = ['Contact Name', 'Email Address', 'Phone Number', 'Address'];
@@ -753,9 +765,13 @@ const Customers: React.FC = () => {
                 'Contact Name': customer.display_name,
                 'Email Address': customer.email || '',
                 'Phone Number': customer.phone || '',
-                'Address': customer.address_line1 && customer.city
-                  ? `${customer.address_line1}, ${customer.city}${customer.state ? `, ${customer.state}` : ''}`
-                  : customer.address_line1 || ''
+                'Address': [
+                  customer.address_line1,
+                  customer.city,
+                  customer.state,
+                  customer.postal_code,
+                  customer.country
+                ].filter(Boolean).join(', ')
               }));
 
               const headers = ['Contact Name', 'Email Address', 'Phone Number', 'Address'];
