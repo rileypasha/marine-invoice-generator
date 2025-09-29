@@ -2001,61 +2001,48 @@ const CreateInvoice: React.FC = () => {
                               setVesselSearchQuery(e.target.value);
                               searchVessels(e.target.value);
                             }}
-                            className="mb-2"
                           />
-                          {isLoadingVessels && (
-                            <div className="text-sm text-muted-foreground p-2">Loading vessels...</div>
-                          )}
-                          {availableVessels.length === 0 && vesselSearchQuery.length >= 2 && !isLoadingVessels && (
-                            <div className="text-sm text-muted-foreground p-2">No vessels found</div>
-                          )}
-                          {availableVessels.map((vessel) => (
-                            <SelectItem key={vessel.id} value={vessel.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{vessel.name}</span>
-                                {vessel.registration_number && (
-                                  <span className="text-xs text-muted-foreground">
-                                    Reg: {vessel.registration_number}
-                                  </span>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))}
                         </div>
+                        {isLoadingVessels ? (
+                          <div className="p-2 text-center">Loading...</div>
+                        ) : (
+                          availableVessels.map(vessel => (
+                            <SelectItem key={vessel.id} value={vessel.id}>
+                              {vessel.name}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="vessel-name">Vessel Name</Label>
-                    <Input
-                      id="vessel-name"
-                      value={invoiceData.vessel.name}
-                      onChange={(e) => handleVesselChange('name', e.target.value)}
-                      placeholder="Enter vessel name"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-weight">Weight</Label>
+                      <Label htmlFor="vessel-name">Vessel Name</Label>
                       <Input
-                        id="vessel-weight"
-                        value={isWeightFocused ? stripSuffix(invoiceData.vessel.weight, ' tons') : formatWithSuffix(invoiceData.vessel.weight, ' tons')}
-                        onChange={(e) => handleVesselChange('weight', e.target.value)}
-                        onFocus={() => setIsWeightFocused(true)}
-                        onBlur={() => setIsWeightFocused(false)}
-                        placeholder=""
+                        id="vessel-name"
+                        value={invoiceData.vessel.name}
+                        onChange={(e) => handleVesselChange('name', e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-beam">Length</Label>
+                      <Label htmlFor="vessel-weight">Vessel Weight (tons)</Label>
+                      <Input
+                        id="vessel-weight"
+                        value={isWeightFocused ? stripSuffix(invoiceData.vessel.weight, ' tons') : formatWithSuffix(invoiceData.vessel.weight, ' tons')}
+                        onFocus={() => setIsWeightFocused(true)}
+                        onBlur={() => setIsWeightFocused(false)}
+                        onChange={(e) => handleVesselChange('weight', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="vessel-beam">Vessel Length (ft)</Label>
                       <Input
                         id="vessel-beam"
                         value={isBeamFocused ? stripSuffix(invoiceData.vessel.beam, ' ft') : formatWithSuffix(invoiceData.vessel.beam, ' ft')}
-                        onChange={(e) => handleVesselChange('beam', e.target.value)}
                         onFocus={() => setIsBeamFocused(true)}
                         onBlur={() => setIsBeamFocused(false)}
-                        placeholder=""
+                        onChange={(e) => handleVesselChange('beam', e.target.value)}
                       />
                     </div>
                   </div>
@@ -2063,35 +2050,36 @@ const CreateInvoice: React.FC = () => {
               </Card>
             )}
 
-            {/* Contact Tab */}
+            {/* Customer Tab */}
             {activeTab === 'customer' && (
               <Card>
                 <CardHeader>
                   <CardTitle>Contact Information</CardTitle>
                   <CardDescription>
-                    Enter contact and customer details
+                    Enter contact details for this invoice
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Link to Existing Customer */}
                   <div className="space-y-2">
-                    <Label htmlFor="customer-link">Link to Existing Contact</Label>
+                    <Label htmlFor="customer-link">Link to an existing contact</Label>
                     <Select
                       value={selectedCustomerId}
                       onValueChange={(value) => {
                         setSelectedCustomerId(value);
-                        if (value && value !== '') {
+                        if (value) {
                           const selectedCustomer = availableCustomers.find(c => c.id === value);
                           if (selectedCustomer) {
+                            console.log('Selected Customer:', selectedCustomer);
                             setInvoiceData(prev => ({
                               ...prev,
                               customer: {
                                 ...prev.customer,
                                 id: selectedCustomer.id,
-                                contactName: selectedCustomer.display_name || '',
-                                customerName: selectedCustomer.legal_name || selectedCustomer.display_name || '',
+                                contactName: selectedCustomer.display_name,
+                                customerName: selectedCustomer.legal_name || selectedCustomer.display_name,
                                 customerEmail: selectedCustomer.email || '',
-                                customerPhone: selectedCustomer.phone ? formatPhoneNumber(selectedCustomer.phone) : '',
+                                customerPhone: selectedCustomer.phone || '',
                                 customerAddress: formatAddress(selectedCustomer)
                               }
                             }));
@@ -2120,108 +2108,85 @@ const CreateInvoice: React.FC = () => {
                               setCustomerSearchQuery(e.target.value);
                               searchCustomers(e.target.value);
                             }}
-                            className="mb-2"
                           />
-                          {isLoadingCustomers && (
-                            <div className="text-sm text-muted-foreground p-2">Loading contacts...</div>
-                          )}
-                          {availableCustomers.length === 0 && customerSearchQuery.length >= 2 && !isLoadingCustomers && (
-                            <div className="text-sm text-muted-foreground p-2">No contacts found</div>
-                          )}
-                          {availableCustomers.map((customer) => (
-                            <SelectItem key={customer.id} value={customer.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{customer.display_name}</span>
-                                {customer.email && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {customer.email}
-                                  </span>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))}
                         </div>
+                        {isLoadingCustomers ? (
+                          <div className="p-2 text-center">Loading...</div>
+                        ) : (
+                          availableCustomers.map(customer => (
+                            <SelectItem key={customer.id} value={customer.id}>
+                              {customer.display_name}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
 
-
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="contact-name">Contact Name</Label>
-          <Input
-            id="contact-name"
-            value={invoiceData.customer.contactName}
-            onChange={(e) => handleCustomerChange('contactName', e.target.value)}
-            placeholder="Enter contact name"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="customer-email">Email Address</Label>
-          <Input
-            id="customer-email"
-            type="email"
-            value={invoiceData.customer.customerEmail}
-            onChange={(e) => handleCustomerChange('customerEmail', e.target.value)}
-            placeholder="Enter email address"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="customer-phone">Phone Number</Label>
-          <Input
-            id="customer-phone"
-            value={invoiceData.customer.customerPhone}
-            onChange={(e) => handleCustomerChange('customerPhone', e.target.value)}
-            placeholder="Enter phone number"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="customer-address">Address</Label>
-          <div className="relative">
-            <Input
-              id="customer-address"
-              value={invoiceData.customer.customerAddress}
-              onChange={(e) => {
-                handleCustomerChange('customerAddress', e.target.value);
-                if (addressTimeoutRef.current) {
-                  clearTimeout(addressTimeoutRef.current);
-                }
-                addressTimeoutRef.current = setTimeout(() => {
-                  searchAddresses(e.target.value);
-                }, 300);
-              }}
-              onFocus={() => setShowAddressSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 200)}
-              placeholder="Enter address"
-              autoComplete="off"
-            />
-            {isLoadingAddress && <div className="absolute right-2 top-2"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div></div>}
-            {showAddressSuggestions && addressSuggestions.length > 0 && (
-              <Card className="absolute z-10 w-full mt-1">
-                <CardContent className="p-2">
-                  {addressSuggestions.map((suggestion) => (
-                    <div
-                      key={suggestion.place_id}
-                      className="p-2 hover:bg-muted rounded-md cursor-pointer"
-                      onMouseDown={() => {
-                        handleCustomerChange('customerAddress', suggestion.formatted);
-                        setAddressSuggestions([]);
-                        setShowAddressSuggestions(false);
-                      }}
-                    >
-                      {suggestion.formatted}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="contact-name">Contact Name</Label>
+                      <Input
+                        id="contact-name"
+                        value={invoiceData.customer.contactName}
+                        onChange={(e) => handleCustomerChange('contactName', e.target.value)}
+                      />
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="customer-email">Email Address</Label>
+                      <Input
+                        id="customer-email"
+                        type="email"
+                        value={invoiceData.customer.customerEmail}
+                        onChange={(e) => handleCustomerChange('customerEmail', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="customer-phone">Phone Number</Label>
+                      <Input
+                        id="customer-phone"
+                        value={invoiceData.customer.customerPhone}
+                        onChange={(e) => handleCustomerChange('customerPhone', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="customer-address">Address</Label>
+                      <div className="relative">
+                        <Input
+                          id="customer-address"
+                          value={invoiceData.customer.customerAddress}
+                          onChange={(e) => {
+                            handleCustomerChange('customerAddress', e.target.value);
+                            if (addressTimeoutRef.current) {
+                              clearTimeout(addressTimeoutRef.current);
+                            }
+                            addressTimeoutRef.current = setTimeout(() => {
+                              searchAddresses(e.target.value);
+                            }, 300);
+                          }}
+                          onFocus={() => setShowAddressSuggestions(true)}
+                          onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 150)}
+                        />
+                        {showAddressSuggestions && addressSuggestions.length > 0 && (
+                          <div className="absolute z-10 w-full bg-background border border-input rounded-md shadow-lg mt-1">
+                            {addressSuggestions.map((suggestion, index) => (
+                              <div
+                                key={index}
+                                className="px-3 py-2 text-sm cursor-pointer hover:bg-muted"
+                                onMouseDown={() => {
+                                  handleCustomerChange('customerAddress', suggestion.formatted);
+                                  setAddressSuggestions([]);
+                                  setShowAddressSuggestions(false);
+                                }}
+                              >
+                                {suggestion.formatted}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -2230,230 +2195,128 @@ const CreateInvoice: React.FC = () => {
             {activeTab === 'services' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Services & Line Items</CardTitle>
+                  <CardTitle>Services</CardTitle>
                   <CardDescription>
-                    Add services, labor, and materials for this invoice
+                    Add services or line items for this invoice
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  {invoiceData.services.map((service) => (
-                    <div key={service.id} className="border rounded-lg p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium">Service Item</h4>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeService(service.id)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                        >
-                          ×
-                        </Button>
-                      </div>
+                <CardContent>
+                  <div className="space-y-4">
+                    {invoiceData.services.map((service, index) => (
+                      <div key={service.id} className="p-4 border rounded-lg relative">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor={`service-desc-${index}`}>Description</Label>
+                            <Textarea
+                              id={`service-desc-${index}`}
+                              value={service.description}
+                              onChange={(e) => updateService(service.id, 'description', e.target.value)}
+                              rows={2}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`service-total-${index}`}>Total</Label>
+                            <Input
+                              id={`service-total-${index}`}
+                              type="number"
+                              value={service.total}
+                              onChange={(e) => updateService(service.id, 'total', parseFloat(e.target.value) || 0)}
+                            />
+                          </div>
+                        </div>
 
-                      {/* Service Type Dropdown */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Service Type *</Label>
-                          <Select
-                            value={service.jobType}
-                            onValueChange={(value) => updateService(service.id, 'jobType', value)}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`service-job-type-${index}`}>Job Type</Label>
+                            <Select
+                              value={service.jobType || ''}
+                              onValueChange={(value) => updateService(service.id, 'jobType', value)}
+                            >
+                              <SelectTrigger> <SelectValue placeholder="Select..." /> </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Agent Services">Agent Services</SelectItem>
+                                <SelectItem value="Clearance Fee">Clearance Fee</SelectItem>
+                                <SelectItem value="Manual Entry">Manual Entry</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {service.jobType === 'Manual Entry' && (
+                            <div className="space-y-2">
+                              <Label htmlFor={`service-item-type-${index}`}>Item Type</Label>
+                              <Select
+                                value={service.itemType || ''}
+                                onValueChange={(value) => updateService(service.id, 'itemType', value)}
+                              >
+                                <SelectTrigger> <SelectValue placeholder="Select..." /> </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Labor">Labor</SelectItem>
+                                  <SelectItem value="Material">Material</SelectItem>
+                                  <SelectItem value="Subcontractor">Subcontractor</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          {(service.itemType === 'Labor' || service.jobType === 'Agent Services') && (
+                            <>
+                              <div className="space-y-2">
+                                <Label htmlFor={`service-labor-hours-${index}`}>Labor Hours</Label>
+                                <Input
+                                  id={`service-labor-hours-${index}`}
+                                  type="number"
+                                  value={service.laborHours || ''}
+                                  onChange={(e) => updateService(service.id, 'laborHours', parseFloat(e.target.value) || 0)}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`service-ot-hours-${index}`}>OT Hours</Label>
+                                <Input
+                                  id={`service-ot-hours-${index}`}
+                                  type="number"
+                                  value={service.otHours || ''}
+                                  onChange={(e) => updateService(service.id, 'otHours', parseFloat(e.target.value) || 0)}
+                                />
+                              </div>
+                            </>
+                          )}
+
+                          {service.jobType === 'Manual Entry' && service.itemType !== 'Labor' && (
+                            <div className="space-y-2">
+                              <Label htmlFor={`service-manual-cost-${index}`}>Manual Cost</Label>
+                              <Input
+                                id={`service-manual-cost-${index}`}
+                                type="number"
+                                value={service.manualCost || ''}
+                                onChange={(e) => updateService(service.id, 'manualCost', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-end mt-4">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeService(service.id)}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select service type..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Manual Entry">Manual Entry</SelectItem>
-                              <SelectItem value="Clearance Fee">Clearance Fee</SelectItem>
-                              <SelectItem value="Pilotage">Pilotage</SelectItem>
-                              <SelectItem value="Car Rental">Car Rental</SelectItem>
-                              <SelectItem value="Trash Removal">Trash Removal</SelectItem>
-                              <SelectItem value="Good Stew">Good Stew</SelectItem>
-                              <SelectItem value="Crew Placement">Crew Placement</SelectItem>
-                              <SelectItem value="Agent Services">Agent Services</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Item Type Dropdown - Only show for Manual Entry */}
-                        {service.jobType === 'Manual Entry' && (
-                          <div className="space-y-2">
-                            <Label>Item Type *</Label>
-                            <Select
-                              value={service.itemType}
-                              onValueChange={(value) => updateService(service.id, 'itemType', value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select item type..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Labor">Labor</SelectItem>
-                                <SelectItem value="Material">Material</SelectItem>
-                                <SelectItem value="Subcontractor">Subcontractor</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Labor Hours Fields - Show for Labor items */}
-                      {((service.jobType === 'Manual Entry' && service.itemType === 'Labor') ||
-                        service.jobType === 'Agent Services') && (
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Labor Hours</Label>
-                            <Input
-                              type="number"
-                              step="0.5"
-                              value={service.laborHours || 0}
-                              onChange={(e) => updateService(service.id, 'laborHours', parseFloat(e.target.value) || 0)}
-                              placeholder="0.0"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>OT Hours</Label>
-                            <Input
-                              type="number"
-                              step="0.5"
-                              value={service.otHours || 0}
-                              onChange={(e) => updateService(service.id, 'otHours', parseFloat(e.target.value) || 0)}
-                              placeholder="0.0"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Manual Cost Field - Show for Material/Subcontractor */}
-                      {((service.jobType === 'Manual Entry' && service.itemType && service.itemType !== 'Labor') ||
-                        (service.jobType && service.jobType !== 'Manual Entry' && service.jobType !== 'Agent Services' && service.jobType !== 'Clearance Fee')) && (
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Cost</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={service.manualCost || 0}
-                              onChange={(e) => updateService(service.id, 'manualCost', parseFloat(e.target.value) || 0)}
-                              placeholder="0.00"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Quantity</Label>
-                            <Input
-                              type="number"
-                              value={service.quantity}
-                              onChange={(e) => updateService(service.id, 'quantity', parseFloat(e.target.value) || 1)}
-                              placeholder="1"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Description */}
-                      <div className="space-y-2">
-                        <Label>Description *</Label>
-                        <Input
-                          value={service.description}
-                          onChange={(e) => updateService(service.id, 'description', e.target.value)}
-                          placeholder="Enter service description..."
-                        />
-                      </div>
-
-                      {/* Tax and Markup Configuration */}
-                      <div className="grid grid-cols-2 gap-4">
-                        {/* Tax Status */}
-                        <div className="space-y-2">
-                          <Label>Tax Status</Label>
-                          {service.jobType === 'Clearance Fee' ? (
-                            <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-                              Non-Taxable (Fixed)
-                            </div>
-                          ) : (
-                            <Select
-                              value={service.taxStatus}
-                              onValueChange={(value) => updateService(service.id, 'taxStatus', value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select Tax Status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="taxable">Taxable (8.75%)</SelectItem>
-                                <SelectItem value="non-taxable">Non-Taxable</SelectItem>
-                                <SelectItem value="exempt">Tax Exempt</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </div>
-
-                        {/* Markup */}
-                        <div className="space-y-2">
-                          <Label>Markup</Label>
-                          {service.jobType === 'Clearance Fee' ? (
-                            <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-                              No Markup (Fixed)
-                            </div>
-                          ) : (
-                            <Select
-                              value={service.markupType}
-                              onValueChange={(value) => updateService(service.id, 'markupType', value)}
-                              disabled={service.isMarkupExempt}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select Markup" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="preset-2.5">2.5%</SelectItem>
-                                <SelectItem value="preset-12.5">12.5%</SelectItem>
-                                <SelectItem value="custom">Custom %</SelectItem>
-                                <SelectItem value="exempt">No Markup</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Remove
+                          </Button>
                         </div>
                       </div>
-
-                      {/* Custom Markup Input */}
-                      {service.markupType === 'custom' && !service.isMarkupExempt && service.jobType !== 'Clearance Fee' && (
-                        <div className="space-y-2">
-                          <Label>Custom Markup (%)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={service.markupRate || 0}
-                            onChange={(e) => updateService(service.id, 'markupRate', parseFloat(e.target.value) || 0)}
-                            placeholder="0.00"
-                          />
-                        </div>
-                      )}
-
-                      {/* Total Display */}
-                      <div className="pt-2 border-t">
-                        <div className="flex justify-between items-center text-sm font-medium">
-                          <span>Line Total:</span>
-                          <span className="text-lg">${service.total.toFixed(2)}</span>
-                        </div>
-
-                        {/* Show exemption badges */}
-                        <div className="flex gap-2 mt-2">
-                          {service.isMarkupExempt && (
-                            <Badge variant="secondary" className="text-xs">No Markup</Badge>
-                          )}
-                          {service.isTaxExempt && (
-                            <Badge variant="secondary" className="text-xs">Tax Exempt</Badge>
-                          )}
-                          {service.jobType === 'Clearance Fee' && (
-                            <Badge variant="outline" className="text-xs">Auto-calculated</Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  <Button onClick={addService} variant="outline" className="w-full">
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v14m-7-7h14" />
-                    </svg>
-                    Add Service
-                  </Button>
+                    ))}
+                  </div>
+                  <div className="mt-6">
+                    <Button onClick={addService} variant="outline">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Add Service
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -2462,206 +2325,88 @@ const CreateInvoice: React.FC = () => {
             {activeTab === 'notes' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Notes & Comments</CardTitle>
+                  <CardTitle>Notes</CardTitle>
                   <CardDescription>
-                    Add additional notes or special instructions
+                    Add any additional notes for this invoice
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Textarea
                     value={invoiceData.notes}
                     onChange={(e) => handleNotesChange(e.target.value)}
-                    placeholder="Additional notes, terms, or special instructions..."
-                    className="min-h-[150px]"
+                    rows={6}
                   />
                 </CardContent>
               </Card>
             )}
           </div>
 
-          {/* Sidebar - Invoice Summary & Actions */}
-          <div className="space-y-6">
-            {/* Invoice Summary */}
+          {/* Summary Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Invoice Summary</CardTitle>
+                <CardTitle>Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Vessel Summary */}
-                {invoiceData.vessel.name && (
-                  <div className="pb-3 border-b">
-                    <div className="text-sm font-medium">Vessel</div>
-                    <div className="text-sm text-muted-foreground">{invoiceData.vessel.name}</div>
-                    {invoiceData.vessel.weight && (
-                      <div className="text-xs text-muted-foreground">
-                        Weight: {invoiceData.vessel.weight} tons
-                      </div>
-                    )}
-                    {invoiceData.vessel.beam && (
-                      <div className="text-xs text-muted-foreground">
-                        Length: {invoiceData.vessel.beam} ft
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Contact Summary */}
-                {invoiceData.customer.customerName && (
-                  <div className="pb-3 border-b">
-                    <div className="text-sm font-medium">Contact</div>
-                    <div className="text-sm text-muted-foreground">{invoiceData.customer.customerName}</div>
-                    {invoiceData.customer.customerEmail && (
-                      <div className="text-xs text-muted-foreground">
-                        {invoiceData.customer.customerEmail}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Financial Summary */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal:</span>
-                    <span>${subtotal.toFixed(2)}</span>
-                  </div>
-                  {taxAmount > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span>Tax ({invoiceData.metadata.taxRate}%):</span>
-                      <span>${taxAmount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-semibold border-t pt-2">
-                    <span>Total:</span>
-                    <span>${total.toFixed(2)}</span>
-                  </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>${subtotal.toFixed(2)}</span>
                 </div>
-
-                <div className="text-xs text-muted-foreground">
-                  {invoiceData.services.length} service{invoiceData.services.length !== 1 ? 's' : ''} added
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Tax</span>
+                  <span>${taxAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-lg">
+                  <span>Total</span>
+                  <span>${total.toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
             <Card>
               <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
+                <CardTitle>Actions</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={handlePrint}
-                  disabled={isLoading || !invoiceData.services.length}
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                  </svg>
-                  Print Invoice
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={handleExportPDF}
-                  disabled={isLoading || !invoiceData.services.length}
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Export PDF
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={handleEmail}
-                  disabled={isLoading || !invoiceData.services.length || !invoiceData.customer.customerEmail}
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Email Invoice
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={handleExportCSV}
-                  disabled={isLoading || !invoiceData.services.length}
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Export CSV
-                </Button>
+              <CardContent className="grid grid-cols-2 gap-2">
+                <Button onClick={handlePrint} variant="outline">Print</Button>
+                <Button onClick={handleExportPDF} variant="outline">Export PDF</Button>
+                <Button onClick={handleEmail} variant="outline">Email</Button>
+                <Button onClick={handleExportCSV} variant="outline">Export CSV</Button>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
 
-      {/* Email Dialog */}
       {showEmailDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Email Invoice</h3>
-
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="emailRecipient">Email Recipient *</Label>
-                  <Input
-                    id="emailRecipient"
-                    type="email"
-                    value={emailRecipient}
-                    onChange={(e) => setEmailRecipient(e.target.value)}
-                    placeholder="customer@example.com"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="emailMessage">Message (Optional)</Label>
-                  <Textarea
-                    id="emailMessage"
-                    value={emailMessage}
-                    onChange={(e) => setEmailMessage(e.target.value)}
-                    placeholder="Add a personal message to include with the invoice..."
-                    rows={4}
-                    className="mt-1"
-                  />
-                </div>
-
-                <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
-                  <strong>Invoice Details:</strong><br />
-                  Vessel: {invoiceData.vessel.name || 'N/A'}<br />
-                  Contact: {invoiceData.customer.customerName || 'N/A'}<br />
-                  Services: {invoiceData.services.length} item(s)
-                </div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold mb-4">Send Invoice Email</h2>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email-recipient">Recipient</Label>
+                <Input
+                  id="email-recipient"
+                  type="email"
+                  value={emailRecipient}
+                  onChange={(e) => setEmailRecipient(e.target.value)}
+                />
               </div>
-
-              <div className="flex gap-3 mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowEmailDialog(false)}
-                  disabled={isEmailSending}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSendEmail}
-                  disabled={isEmailSending || !emailRecipient.trim()}
-                  className="flex-1"
-                >
-                  {isEmailSending ? 'Sending...' : 'Send Email'}
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="email-message">Message</Label>
+                <Textarea
+                  id="email-message"
+                  value={emailMessage}
+                  onChange={(e) => setEmailMessage(e.target.value)}
+                  rows={4}
+                />
               </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" onClick={() => setShowEmailDialog(false)}>Cancel</Button>
+              <Button onClick={handleSendEmail} disabled={isEmailSending}>
+                {isEmailSending ? 'Sending...' : 'Send Email'}
+              </Button>
             </div>
           </div>
         </div>

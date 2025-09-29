@@ -277,6 +277,7 @@ router.get('/search', async (req: CustomerRequest, res: Response) => {
         id: true,
         display_name: true,
         legal_name: true,
+        email: true,
         phone: true,
         address_line1: true,
         city: true,

@@ -17,7 +17,7 @@ test.describe('Invoice Creation Form', () => {
     await page.close();
   });
 
-  test('should automatically import contact address when a contact is selected', async () => {
+  test('should automatically import contact address and email when a contact is selected', async () => {
     // Click on the customer select to open the dropdown
     await page.click('#customer-link');
 
@@ -35,5 +35,11 @@ test.describe('Invoice Creation Form', () => {
 
     // Assert that the address field is not empty
     expect(addressValue).not.toBe('');
+
+    // Get the value of the email field
+    const emailValue = await page.inputValue('#customer-email');
+
+    // Assert that the email field is not empty
+    expect(emailValue).not.toBe('');
   });
 });
