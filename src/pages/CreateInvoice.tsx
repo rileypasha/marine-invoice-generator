@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { gatherInvoiceData } from '../utils/invoiceData';
+import { PhoneField } from '../components/phone/PhoneField';
 import {
   Card,
   CardHeader,
@@ -20,6 +21,7 @@ import {
   SelectItem
 } from '../components/magic/index';
 import jsPDF from 'jspdf';
+import { isValidPhoneNumber, parsePhoneNumber } from 'libphonenumber-js';
 
 interface Vessel {
   name: string;
@@ -65,6 +67,7 @@ interface Service {
   id: string;
   description: string;
   quantity: number;
+  quantityDisplay?: string;
   rate: number;
   total: number;
   jobType?: string;
@@ -72,6 +75,7 @@ interface Service {
   laborHours?: number;
   otHours?: number;
   manualCost?: number;
+  manualCostInput?: string;
   taxStatus?: 'taxable' | 'non-taxable' | 'exempt';
   taxRate?: number;
   markupType?: 'preset-2.5' | 'preset-12.5' | 'custom' | 'exempt';
@@ -204,6 +208,7 @@ const CreateInvoice: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { isAuthenticated, csrfToken } = useAuth();
 
   const isEditMode = !!id;
@@ -232,8 +237,9 @@ const CreateInvoice: React.FC = () => {
   const [emailRecipient, setEmailRecipient] = useState('');
   const [emailMessage, setEmailMessage] = useState('');
   const [isEmailSending, setIsEmailSending] = useState(false);
-  const [isWeightFocused, setIsWeightFocused] = useState(false);
-  const [isBeamFocused, setIsBeamFocused] = useState(false);
+  const [customerPhoneError, setCustomerPhoneError] = useState('');
+  const [focusedCostId, setFocusedCostId] = useState<string | null>(null);
+  const restoreAppliedRef = useRef(false);
 
   const roundCurrency = (value: number): number => {
     if (!Number.isFinite(value)) {
@@ -247,6 +253,70 @@ const CreateInvoice: React.FC = () => {
       return 0;
     }
     return Math.round((value + Number.EPSILON) * 10000) / 10000;
+  };
+
+  const formatCurrency = (value: number): string => {
+    if (!Number.isFinite(value)) {
+      return '$0.00';
+    }
+    return value.toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  const parseCurrencyInput = (value: string): number | null => {
+    if (!value) return null;
+
+    const cleaned = value.replace(/[^0-9.]/g, '');
+    if (!cleaned) return null;
+
+    const [integerPart, decimalPart] = cleaned.split('.');
+    const normalized = integerPart + (decimalPart !== undefined ? `.${decimalPart.slice(0, 2)}` : '');
+    const parsed = parseFloat(normalized);
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+    return roundCurrency(parsed);
+  };
+
+  const normalizeDecimalInput = (value: string, maxDecimals?: number): string => {
+    if (!value) return '';
+
+    const cleaned = value.replace(/[^0-9.]/g, '');
+    const parts = cleaned.split('.');
+    const integerPart = parts.shift() || '';
+    const hadDecimal = cleaned.includes('.');
+    if (!hadDecimal) {
+      return integerPart;
+    }
+
+    const decimalsRaw = parts.join('');
+    const decimals = maxDecimals !== undefined ? decimalsRaw.slice(0, maxDecimals) : decimalsRaw;
+
+    if (decimals.length === 0 && value.endsWith('.')) {
+      return `${integerPart}.`;
+    }
+
+    return decimals.length > 0 ? `${integerPart}.${decimals}` : integerPart;
+  };
+
+  const getManualCostInputValue = (service: Service, isFocused: boolean): string => {
+    const rawValue = service.manualCostInput && service.manualCostInput !== ''
+      ? service.manualCostInput
+      : service.manualCost && service.manualCost !== 0
+        ? normalizeDecimalInput(String(service.manualCost), 2)
+        : '';
+
+    if (isFocused) {
+      return rawValue;
+    }
+
+    return service.manualCost && service.manualCost !== 0
+      ? formatCurrency(service.manualCost)
+      : rawValue;
   };
 
   const toNullableNumber = (value: number | undefined): number | null => {
@@ -273,6 +343,63 @@ const CreateInvoice: React.FC = () => {
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
   const addressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (restoreAppliedRef.current) return;
+    const restoredFormState = (location.state as any)?.restoredFormState;
+    if (!restoredFormState || isEditMode) return;
+
+    try {
+      const restoredInvoiceData: InvoiceData = restoredFormState.invoiceData
+        ? JSON.parse(JSON.stringify(restoredFormState.invoiceData))
+        : null;
+
+      if (restoredInvoiceData) {
+        restoredInvoiceData.services = restoredInvoiceData.services.map((service) => ({
+          ...service,
+          quantityDisplay: service.quantityDisplay ??
+            (service.quantity !== undefined ? normalizeDecimalInput(String(service.quantity)) : ''),
+          manualCostInput: service.manualCostInput ??
+            (service.manualCost && service.manualCost !== 0
+              ? normalizeDecimalInput(String(service.manualCost), 2)
+              : '')
+        }));
+
+        setInvoiceData(restoredInvoiceData);
+      }
+
+      if (typeof restoredFormState.selectedVesselId === 'string') {
+        setSelectedVesselId(restoredFormState.selectedVesselId);
+      }
+
+      if (typeof restoredFormState.selectedCustomerId === 'string') {
+        setSelectedCustomerId(restoredFormState.selectedCustomerId);
+      }
+
+      if (typeof restoredFormState.vesselSearchQuery === 'string') {
+        setVesselSearchQuery(restoredFormState.vesselSearchQuery);
+      }
+
+      if (typeof restoredFormState.customerSearchQuery === 'string') {
+        setCustomerSearchQuery(restoredFormState.customerSearchQuery);
+      }
+
+      if (typeof restoredFormState.activeTab === 'string') {
+        setActiveTab(restoredFormState.activeTab);
+      }
+
+      if (typeof restoredFormState.customerPhoneError === 'string') {
+        setCustomerPhoneError(restoredFormState.customerPhoneError);
+      }
+
+      setHasUnsavedChanges(true);
+      restoreAppliedRef.current = true;
+
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+    } catch (error) {
+      console.error('Failed to restore invoice form state:', error);
+    }
+  }, [isEditMode, location.pathname, location.search, location.state, navigate]);
 
   // Fetch existing invoice data when in edit mode
   useEffect(() => {
@@ -331,6 +458,7 @@ const CreateInvoice: React.FC = () => {
             id: item.id ? String(item.id) : `service-${index}`,
             description: item.description || item.name || '',
             quantity,
+            quantityDisplay: String(quantity),
             rate,
             total,
           };
@@ -353,9 +481,8 @@ const CreateInvoice: React.FC = () => {
             service.otHours = otHours;
           }
 
-          if (manualCost !== undefined) {
-            service.manualCost = manualCost;
-          }
+          service.manualCost = manualCost ?? 0;
+          service.manualCostInput = manualCost != null ? String(manualCost) : '';
 
           if (taxStatus) {
             service.taxStatus = taxStatus;
@@ -430,7 +557,7 @@ const CreateInvoice: React.FC = () => {
           customer: {
             customerName: resolvedCustomerName,
             customerEmail: resolvedCustomerEmail,
-            customerPhone: resolvedCustomerPhone,
+            customerPhone: normalizePhoneNumber(resolvedCustomerPhone),
             customerAddress: resolvedCustomerAddress,
             estimatorName: invoice.userName || '',
             contactName: resolvedContactName
@@ -451,6 +578,7 @@ const CreateInvoice: React.FC = () => {
 
         setSelectedCustomerId(resolvedCustomerId ? String(resolvedCustomerId) : '');
         setSelectedVesselId(resolvedVesselId ? String(resolvedVesselId) : '');
+        setCustomerPhoneError('');
 
         setHasUnsavedChanges(false);
       } catch (error: any) {
@@ -467,7 +595,7 @@ const CreateInvoice: React.FC = () => {
   // Handle query parameters for pre-filling customer data
   useEffect(() => {
     // Only process query params if we're NOT in edit mode (creating a new invoice)
-    if (isEditMode || !searchParams.has('customerId')) {
+    if (isEditMode || restoreAppliedRef.current || !searchParams.has('customerId')) {
       return;
     }
 
@@ -494,17 +622,18 @@ const CreateInvoice: React.FC = () => {
           contactName: customerName || '',
           customerName: legalName || customerName || '',
           customerEmail: email || '',
-          customerPhone: phone || '',
+          customerPhone: normalizePhoneNumber(phone),
           customerAddress: formatAddress({ address_line1, city, state, postal_code }) || ''
         }
       }));
+      setCustomerPhoneError('');
     }
   }, [isEditMode, searchParams]);
 
   // Handle query parameters for pre-filling vessel data
   useEffect(() => {
     // Only process query params if we're NOT in edit mode (creating a new invoice)
-    if (isEditMode || !searchParams.has('vesselId')) {
+    if (isEditMode || restoreAppliedRef.current || !searchParams.has('vesselId')) {
       return;
     }
 
@@ -601,22 +730,53 @@ const CreateInvoice: React.FC = () => {
     };
   }, []);
 
-  // Format phone number as (XXX) XXX-XXXX
-  const formatPhoneNumber = (value: string): string => {
-    const numbers = value.replace(/\D/g, '').slice(0, 10);
-    if (numbers.length <= 3) return numbers;
-    if (numbers.length <= 6) return `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
-    return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6)}`;
+  // Normalize stored phone numbers to E.164 when possible
+  const normalizePhoneNumber = (phone: string | null | undefined): string => {
+    if (!phone) return '';
+    if (phone.startsWith('+')) return phone;
+
+    try {
+      const parsed = parsePhoneNumber(phone, 'US');
+      return parsed ? parsed.format('E.164') : phone;
+    } catch (error) {
+      return phone;
+    }
+  };
+
+  const formatNumberWithSeparators = (value: string): string => {
+    if (!value) return '';
+
+    const normalized = value.replace(/,/g, '').trim();
+    if (normalized === '' || normalized === '-' || normalized === '.' || normalized === '-.') {
+      return normalized;
+    }
+
+    const [integerPart, decimalPart] = normalized.split('.');
+    if (!integerPart || !/^-?\d+$/.test(integerPart)) {
+      return normalized;
+    }
+
+    const formattedInteger = Number(integerPart).toLocaleString('en-US');
+
+    if (decimalPart !== undefined) {
+      return decimalPart.length > 0
+        ? `${formattedInteger}.${decimalPart}`
+        : `${formattedInteger}.`;
+    }
+
+    return formattedInteger;
   };
 
   const handleVesselChange = (field: keyof Vessel, value: string) => {
-    // Strip suffixes before storing the value
+    // Strip suffixes before storing the value to keep raw numbers
     let cleanValue = value;
     if (field === 'weight') {
-      cleanValue = value.replace(' tons', '').trim();
+      cleanValue = value.replace(/\s*tons?$/i, '').trim();
     } else if (field === 'beam') {
-      cleanValue = value.replace(' ft', '').trim();
+      cleanValue = value.replace(/\s*ft$/i, '').trim();
     }
+
+    cleanValue = cleanValue.replace(/,/g, '');
 
     setInvoiceData(prev => ({
       ...prev,
@@ -628,19 +788,6 @@ const CreateInvoice: React.FC = () => {
     if (selectedVesselId) {
       setSelectedVesselId('');
     }
-  };
-
-  // Helper function to format value with suffix for display
-  const formatWithSuffix = (value: string, suffix: string) => {
-    if (!value || value.trim() === '') return '';
-    const cleanValue = value.replace(suffix, '').trim();
-    return cleanValue ? cleanValue + suffix : '';
-  };
-
-  // Helper function to remove suffix for editing
-  const stripSuffix = (value: string, suffix: string) => {
-    if (!value) return '';
-    return value.replace(suffix, '').trim();
   };
 
   // Function to search vessels
@@ -744,18 +891,27 @@ const CreateInvoice: React.FC = () => {
   };
 
   const handleCustomerChange = (field: keyof Customer, value: string) => {
-    let processedValue = value;
+    setInvoiceData(prev => ({
+      ...prev,
+      customer: { ...prev.customer, [field]: value }
+    }));
+    setHasUnsavedChanges(true);
+  };
 
-    // Format phone number automatically
-    if (field === 'customerPhone') {
-      processedValue = formatPhoneNumber(value);
-    }
+  const handleCustomerPhoneChange = (value: string | undefined) => {
+    const phoneValue = value ?? '';
 
     setInvoiceData(prev => ({
       ...prev,
-      customer: { ...prev.customer, [field]: processedValue }
+      customer: { ...prev.customer, customerPhone: phoneValue }
     }));
     setHasUnsavedChanges(true);
+
+    if (phoneValue && !isValidPhoneNumber(phoneValue)) {
+      setCustomerPhoneError('Please enter a valid phone number');
+    } else {
+      setCustomerPhoneError('');
+    }
   };
 
   const handleNotesChange = (value: string) => {
@@ -1007,6 +1163,7 @@ const CreateInvoice: React.FC = () => {
       id: `new_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       description: '',
       quantity: 1,
+      quantityDisplay: '1',
       rate: 0,
       total: 0,
       jobType: '',
@@ -1014,6 +1171,7 @@ const CreateInvoice: React.FC = () => {
       laborHours: 0,
       otHours: 0,
       manualCost: 0,
+      manualCostInput: '',
       taxStatus: undefined,
       taxRate: 0.0875,
       markupType: undefined,
@@ -1033,11 +1191,27 @@ const CreateInvoice: React.FC = () => {
       ...prev,
       services: prev.services.map(service => {
         if (service.id === id) {
-          let processedValue = value;
-          if (field === 'isMarkupExempt' || field === 'isTaxExempt') {
-            processedValue = value === true || value === 'true';
+          const updated: Service = { ...service };
+
+          if (field === 'manualCost') {
+            const stringValue = typeof value === 'string' ? value : String(value ?? '');
+            const normalizedInput = normalizeDecimalInput(stringValue, 2);
+            const parsed = parseCurrencyInput(normalizedInput);
+            updated.manualCostInput = normalizedInput;
+            updated.manualCost = parsed ?? 0;
+          } else if (field === 'quantity') {
+            const stringValue = typeof value === 'string' ? value : String(value ?? '');
+            const normalizedInput = normalizeDecimalInput(stringValue);
+            const parsed = normalizedInput === '' ? NaN : parseFloat(normalizedInput);
+            updated.quantityDisplay = normalizedInput;
+            updated.quantity = Number.isFinite(parsed) ? parsed : 0;
+          } else {
+            let processedValue = value;
+            if (field === 'isMarkupExempt' || field === 'isTaxExempt') {
+              processedValue = value === true || value === 'true';
+            }
+            (updated as any)[field] = processedValue;
           }
-          const updated = { ...service, [field]: processedValue };
 
           // Apply business rules based on job type
           if (field === 'jobType') {
@@ -1046,6 +1220,7 @@ const CreateInvoice: React.FC = () => {
             updated.laborHours = 0;
             updated.otHours = 0;
             updated.manualCost = 0;
+            updated.manualCostInput = '';
 
             // Set exemptions based on job type
             if (value === 'Agent Services') {
@@ -1072,6 +1247,16 @@ const CreateInvoice: React.FC = () => {
           } else if (field === 'itemType' && updated.jobType === 'Manual Entry' && value !== 'Labor') {
             updated.isMarkupExempt = false;
             // Don't set markupType, leave it as undefined
+          }
+
+          if (updated.manualCostInput === undefined || updated.manualCostInput === null) {
+            updated.manualCostInput = updated.manualCost && updated.manualCost !== 0
+              ? normalizeDecimalInput(String(updated.manualCost), 2)
+              : '';
+          }
+
+          if (!updated.quantityDisplay) {
+            updated.quantityDisplay = updated.quantity ? normalizeDecimalInput(String(updated.quantity)) : '';
           }
 
           // Recalculate cost and total based on all inputs
@@ -1289,8 +1474,19 @@ const CreateInvoice: React.FC = () => {
     };
 
     // Navigate to preview with the calculated data
+    const formState = {
+      invoiceData: JSON.parse(JSON.stringify(invoiceData)),
+      selectedVesselId,
+      selectedCustomerId,
+      vesselSearchQuery,
+      customerSearchQuery,
+      activeTab,
+      customerPhoneError,
+      returnTo: location.pathname + location.search
+    };
+
     navigate('/requests/preview', {
-      state: { previewData }
+      state: { previewData, formState }
     });
   };
 
@@ -1403,6 +1599,7 @@ const CreateInvoice: React.FC = () => {
       metadata: { taxRate: 0 }
     });
     setHasUnsavedChanges(false);
+    setCustomerPhoneError('');
   };
 
   const handlePrint = () => {
@@ -2018,7 +2215,7 @@ const CreateInvoice: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-name">Vessel Name</Label>
+                      <Label htmlFor="vessel-name">Vessel</Label>
                       <Input
                         id="vessel-name"
                         value={invoiceData.vessel.name}
@@ -2026,24 +2223,32 @@ const CreateInvoice: React.FC = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-weight">Vessel Weight (tons)</Label>
-                      <Input
-                        id="vessel-weight"
-                        value={isWeightFocused ? stripSuffix(invoiceData.vessel.weight, ' tons') : formatWithSuffix(invoiceData.vessel.weight, ' tons')}
-                        onFocus={() => setIsWeightFocused(true)}
-                        onBlur={() => setIsWeightFocused(false)}
-                        onChange={(e) => handleVesselChange('weight', e.target.value)}
-                      />
+                      <Label htmlFor="vessel-weight">Weight</Label>
+                      <div className="relative">
+                        <Input
+                          id="vessel-weight"
+                          className="pr-12"
+                          value={formatNumberWithSeparators(invoiceData.vessel.weight)}
+                          onChange={(e) => handleVesselChange('weight', e.target.value)}
+                        />
+                        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
+                          tons
+                        </span>
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-beam">Vessel Length (ft)</Label>
-                      <Input
-                        id="vessel-beam"
-                        value={isBeamFocused ? stripSuffix(invoiceData.vessel.beam, ' ft') : formatWithSuffix(invoiceData.vessel.beam, ' ft')}
-                        onFocus={() => setIsBeamFocused(true)}
-                        onBlur={() => setIsBeamFocused(false)}
-                        onChange={(e) => handleVesselChange('beam', e.target.value)}
-                      />
+                      <Label htmlFor="vessel-beam">Length</Label>
+                      <div className="relative">
+                        <Input
+                          id="vessel-beam"
+                          className="pr-12"
+                          value={formatNumberWithSeparators(invoiceData.vessel.beam)}
+                          onChange={(e) => handleVesselChange('beam', e.target.value)}
+                        />
+                        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
+                          ft
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -2079,10 +2284,11 @@ const CreateInvoice: React.FC = () => {
                                 contactName: selectedCustomer.display_name,
                                 customerName: selectedCustomer.legal_name || selectedCustomer.display_name,
                                 customerEmail: selectedCustomer.email || '',
-                                customerPhone: selectedCustomer.phone || '',
+                                customerPhone: normalizePhoneNumber(selectedCustomer.phone),
                                 customerAddress: formatAddress(selectedCustomer)
                               }
                             }));
+                            setCustomerPhoneError('');
                           }
                         }
                       }}
@@ -2141,14 +2347,15 @@ const CreateInvoice: React.FC = () => {
                         onChange={(e) => handleCustomerChange('customerEmail', e.target.value)}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="customer-phone">Phone Number</Label>
-                      <Input
-                        id="customer-phone"
-                        value={invoiceData.customer.customerPhone}
-                        onChange={(e) => handleCustomerChange('customerPhone', e.target.value)}
-                      />
-                    </div>
+                    <PhoneField
+                      name="customer-phone"
+                      label="Phone Number"
+                      value={invoiceData.customer.customerPhone || undefined}
+                      onChange={handleCustomerPhoneChange}
+                      placeholder="Enter phone number"
+                      defaultCountry="US"
+                      error={customerPhoneError}
+                    />
                     <div className="space-y-2">
                       <Label htmlFor="customer-address">Address</Label>
                       <div className="relative">
@@ -2195,128 +2402,289 @@ const CreateInvoice: React.FC = () => {
             {activeTab === 'services' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Services</CardTitle>
+                  <CardTitle>Services & Line Items</CardTitle>
                   <CardDescription>
-                    Add services or line items for this invoice
+                    Add services, labor, and materials for this invoice
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {invoiceData.services.map((service, index) => (
-                      <div key={service.id} className="p-4 border rounded-lg relative">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor={`service-desc-${index}`}>Description</Label>
-                            <Textarea
-                              id={`service-desc-${index}`}
-                              value={service.description}
-                              onChange={(e) => updateService(service.id, 'description', e.target.value)}
-                              rows={2}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor={`service-total-${index}`}>Total</Label>
-                            <Input
-                              id={`service-total-${index}`}
-                              type="number"
-                              value={service.total}
-                              onChange={(e) => updateService(service.id, 'total', parseFloat(e.target.value) || 0)}
-                            />
-                          </div>
+                <CardContent className="space-y-6">
+                  {invoiceData.services.map((service, index) => (
+                    <div key={service.id} className="border rounded-lg p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium">Service Item</h4>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeService(service.id)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        >
+                          ×
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor={`service-job-type-${index}`}>Service Type *</Label>
+                          <Select
+                            value={service.jobType || ''}
+                            onValueChange={(value) => updateService(service.id, 'jobType', value)}
+                          >
+                            <SelectTrigger id={`service-job-type-${index}`}>
+                              <SelectValue placeholder="Select service type..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Manual Entry">Manual Entry</SelectItem>
+                              <SelectItem value="Clearance Fee">Clearance Fee</SelectItem>
+                              <SelectItem value="Pilotage">Pilotage</SelectItem>
+                              <SelectItem value="Car Rental">Car Rental</SelectItem>
+                              <SelectItem value="Trash Removal">Trash Removal</SelectItem>
+                              <SelectItem value="Good Stew">Good Stew</SelectItem>
+                              <SelectItem value="Crew Placement">Crew Placement</SelectItem>
+                              <SelectItem value="Agent Services">Agent Services</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                        {service.jobType === 'Manual Entry' && (
                           <div className="space-y-2">
-                            <Label htmlFor={`service-job-type-${index}`}>Job Type</Label>
+                            <Label htmlFor={`service-item-type-${index}`}>Item Type *</Label>
                             <Select
-                              value={service.jobType || ''}
-                              onValueChange={(value) => updateService(service.id, 'jobType', value)}
+                              value={service.itemType || ''}
+                              onValueChange={(value) => updateService(service.id, 'itemType', value)}
                             >
-                              <SelectTrigger> <SelectValue placeholder="Select..." /> </SelectTrigger>
+                              <SelectTrigger id={`service-item-type-${index}`}>
+                                <SelectValue placeholder="Select item type..." />
+                              </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="Agent Services">Agent Services</SelectItem>
-                                <SelectItem value="Clearance Fee">Clearance Fee</SelectItem>
-                                <SelectItem value="Manual Entry">Manual Entry</SelectItem>
+                                <SelectItem value="Labor">Labor</SelectItem>
+                                <SelectItem value="Material">Material</SelectItem>
+                                <SelectItem value="Subcontractor">Subcontractor</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
+                        )}
+                      </div>
 
-                          {service.jobType === 'Manual Entry' && (
-                            <div className="space-y-2">
-                              <Label htmlFor={`service-item-type-${index}`}>Item Type</Label>
-                              <Select
-                                value={service.itemType || ''}
-                                onValueChange={(value) => updateService(service.id, 'itemType', value)}
-                              >
-                                <SelectTrigger> <SelectValue placeholder="Select..." /> </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Labor">Labor</SelectItem>
-                                  <SelectItem value="Material">Material</SelectItem>
-                                  <SelectItem value="Subcontractor">Subcontractor</SelectItem>
-                                </SelectContent>
-                              </Select>
+                      {((service.jobType === 'Manual Entry' && service.itemType === 'Labor') ||
+                        service.jobType === 'Agent Services') && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`service-labor-hours-${index}`}>Labor Hours</Label>
+                            <Input
+                              id={`service-labor-hours-${index}`}
+                              type="number"
+                              step="0.5"
+                              value={service.laborHours || 0}
+                              onChange={(e) =>
+                                updateService(
+                                  service.id,
+                                  'laborHours',
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              placeholder="0.0"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`service-ot-hours-${index}`}>OT Hours</Label>
+                            <Input
+                              id={`service-ot-hours-${index}`}
+                              type="number"
+                              step="0.5"
+                              value={service.otHours || 0}
+                              onChange={(e) =>
+                                updateService(
+                                  service.id,
+                                  'otHours',
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              placeholder="0.0"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {((service.jobType === 'Manual Entry' &&
+                        service.itemType &&
+                        service.itemType !== 'Labor') ||
+                        (service.jobType &&
+                          service.jobType !== 'Manual Entry' &&
+                          service.jobType !== 'Agent Services' &&
+                          service.jobType !== 'Clearance Fee')) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`service-manual-cost-${index}`}>Cost</Label>
+                            <Input
+                              id={`service-manual-cost-${index}`}
+                              type="text"
+                              inputMode="decimal"
+                              value={getManualCostInputValue(service, focusedCostId === service.id)}
+                              onChange={(e) =>
+                                updateService(
+                                  service.id,
+                                  'manualCost',
+                                  e.target.value
+                                )
+                              }
+                              onFocus={() => setFocusedCostId(service.id)}
+                              onBlur={() => {
+                                setFocusedCostId(null);
+                                updateService(
+                                  service.id,
+                                  'manualCost',
+                                  service.manualCostInput ?? ''
+                                );
+                              }}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`service-quantity-${index}`}>Quantity</Label>
+                            <Input
+                              id={`service-quantity-${index}`}
+                              type="text"
+                              inputMode="decimal"
+                              value={
+                                service.quantityDisplay ??
+                                (service.quantity ? normalizeDecimalInput(String(service.quantity)) : '')
+                              }
+                              onChange={(e) =>
+                                updateService(
+                                  service.id,
+                                  'quantity',
+                                  e.target.value
+                                )
+                              }
+                              onBlur={() => {
+                                if (!service.quantityDisplay) {
+                                  updateService(service.id, 'quantity', '1');
+                                }
+                              }}
+                              placeholder="1"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`service-description-${index}`}>Description *</Label>
+                        <Input
+                          id={`service-description-${index}`}
+                          value={service.description}
+                          onChange={(e) => updateService(service.id, 'description', e.target.value)}
+                          placeholder="Enter service description..."
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor={`service-tax-status-${index}`}>Tax Status</Label>
+                          {service.jobType === 'Clearance Fee' ? (
+                            <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                              Non-Taxable (Fixed)
                             </div>
-                          )}
-
-                          {(service.itemType === 'Labor' || service.jobType === 'Agent Services') && (
-                            <>
-                              <div className="space-y-2">
-                                <Label htmlFor={`service-labor-hours-${index}`}>Labor Hours</Label>
-                                <Input
-                                  id={`service-labor-hours-${index}`}
-                                  type="number"
-                                  value={service.laborHours || ''}
-                                  onChange={(e) => updateService(service.id, 'laborHours', parseFloat(e.target.value) || 0)}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor={`service-ot-hours-${index}`}>OT Hours</Label>
-                                <Input
-                                  id={`service-ot-hours-${index}`}
-                                  type="number"
-                                  value={service.otHours || ''}
-                                  onChange={(e) => updateService(service.id, 'otHours', parseFloat(e.target.value) || 0)}
-                                />
-                              </div>
-                            </>
-                          )}
-
-                          {service.jobType === 'Manual Entry' && service.itemType !== 'Labor' && (
-                            <div className="space-y-2">
-                              <Label htmlFor={`service-manual-cost-${index}`}>Manual Cost</Label>
-                              <Input
-                                id={`service-manual-cost-${index}`}
-                                type="number"
-                                value={service.manualCost || ''}
-                                onChange={(e) => updateService(service.id, 'manualCost', parseFloat(e.target.value) || 0)}
-                              />
-                            </div>
+                          ) : (
+                            <Select
+                              value={service.taxStatus || ''}
+                              onValueChange={(value) => updateService(service.id, 'taxStatus', value)}
+                            >
+                              <SelectTrigger id={`service-tax-status-${index}`}>
+                                <SelectValue placeholder="Select tax status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="taxable">Taxable (8.75%)</SelectItem>
+                                <SelectItem value="non-taxable">Non-Taxable</SelectItem>
+                                <SelectItem value="exempt">Tax Exempt</SelectItem>
+                              </SelectContent>
+                            </Select>
                           )}
                         </div>
-
-                        <div className="flex items-center justify-end mt-4">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeService(service.id)}
-                          >
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            Remove
-                          </Button>
+                        <div className="space-y-2">
+                          <Label htmlFor={`service-markup-${index}`}>Markup</Label>
+                          {service.jobType === 'Clearance Fee' ? (
+                            <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                              No Markup (Fixed)
+                            </div>
+                          ) : (
+                            <Select
+                              value={service.markupType || ''}
+                              onValueChange={(value) => updateService(service.id, 'markupType', value)}
+                              disabled={service.isMarkupExempt}
+                            >
+                              <SelectTrigger id={`service-markup-${index}`}>
+                                <SelectValue placeholder="Select markup" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="preset-2.5">2.5%</SelectItem>
+                                <SelectItem value="preset-12.5">12.5%</SelectItem>
+                                <SelectItem value="custom">Custom %</SelectItem>
+                                <SelectItem value="exempt">No Markup</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                  <div className="mt-6">
-                    <Button onClick={addService} variant="outline">
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                      Add Service
-                    </Button>
-                  </div>
+
+                      {service.markupType === 'custom' &&
+                        !service.isMarkupExempt &&
+                        service.jobType !== 'Clearance Fee' && (
+                          <div className="space-y-2">
+                            <Label htmlFor={`service-markup-rate-${index}`}>Custom Markup (%)</Label>
+                            <Input
+                              id={`service-markup-rate-${index}`}
+                              type="number"
+                              step="0.01"
+                              value={service.markupRate || 0}
+                              onChange={(e) =>
+                                updateService(
+                                  service.id,
+                                  'markupRate',
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              placeholder="0.00"
+                            />
+                          </div>
+                        )}
+
+                      <div className="border-t pt-2">
+                        <div className="flex justify-between items-center text-sm font-medium">
+                          <span>Line Total:</span>
+                          <span className="text-lg">{formatCurrency(service.total)}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {service.isMarkupExempt && (
+                            <Badge variant="secondary" className="text-xs">
+                              No Markup
+                            </Badge>
+                          )}
+                          {service.isTaxExempt && (
+                            <Badge variant="secondary" className="text-xs">
+                              Tax Exempt
+                            </Badge>
+                          )}
+                          {service.jobType === 'Clearance Fee' && (
+                            <Badge variant="outline" className="text-xs">
+                              Auto-calculated
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <Button onClick={addService} variant="outline" className="w-full">
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v14m-7-7h14" />
+                    </svg>
+                    Add Service
+                  </Button>
                 </CardContent>
               </Card>
             )}
@@ -2350,15 +2718,15 @@ const CreateInvoice: React.FC = () => {
               <CardContent className="space-y-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tax</span>
-                  <span>${taxAmount.toFixed(2)}</span>
+                  <span>{formatCurrency(taxAmount)}</span>
                 </div>
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>{formatCurrency(total)}</span>
                 </div>
               </CardContent>
             </Card>

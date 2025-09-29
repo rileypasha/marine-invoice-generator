@@ -97,6 +97,7 @@ const InvoiceView: React.FC = () => {
   // Check if we're in preview mode
   const isPreviewMode = id === 'preview' || location.state?.previewData;
   const previewData = location.state?.previewData;
+  const formState = location.state?.formState;
 
   useEffect(() => {
     // Handle preview mode
@@ -253,8 +254,11 @@ const InvoiceView: React.FC = () => {
   };
 
   const handleBack = () => {
-    if (isPreviewMode) {
-      navigate(-1); // Go back to the create invoice page
+    if (isPreviewMode && formState) {
+      const returnTo = formState.returnTo || '/requests/create';
+      navigate(returnTo, { state: { restoredFormState: formState } });
+    } else if (isPreviewMode) {
+      navigate(-1);
     } else {
       navigate('/requests');
     }
