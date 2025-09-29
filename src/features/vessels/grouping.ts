@@ -42,6 +42,25 @@ export function bucketByActivity(invoice_count?: number): BucketResult {
 }
 
 /**
+ * Categorize vessel by monthly activity level based on monthly invoice count
+ * Monthly activity levels: 0, 1-2, 3-5, ≥6
+ */
+export function bucketByMonthlyActivity(monthly_invoice_count?: number): BucketResult {
+  const count = monthly_invoice_count || 0;
+
+  if (count === 0) {
+    return { key: 'inactive', label: 'Inactive (0 monthly)' };
+  }
+  if (count <= 2) {
+    return { key: 'low', label: 'Low (1–2)' };
+  }
+  if (count <= 5) {
+    return { key: 'medium', label: 'Medium (3–5)' };
+  }
+  return { key: 'high', label: 'High (6+)' };
+}
+
+/**
  * Format currency values for group summaries
  */
 export function formatCurrency(amount?: number): string {

@@ -67,7 +67,7 @@ const SidebarContent = () => {
       icon: <FileText className="text-gray-700 h-4 w-4 flex-shrink-0" />,
     },
     {
-      label: 'People',
+      label: 'Contacts',
       href: '/contacts',
       icon: <User className="text-gray-700 h-4 w-4 flex-shrink-0" />,
     },

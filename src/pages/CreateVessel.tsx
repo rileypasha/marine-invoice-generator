@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Save, Eye, Plus, Ship, ArrowLeft } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { API_ENDPOINTS } from '../config/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -24,6 +26,9 @@ interface Vessel {
 
 const CreateVessel: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEditMode = Boolean(id);
+  const { csrfToken, isAuthenticated, currentUser } = useAuth();
   const [vesselData, setVesselData] = useState<Vessel>({
     name: '',
     weight: '',
@@ -32,20 +37,46 @@ const CreateVessel: React.FC = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [isWeightFocused, setIsWeightFocused] = useState(false);
-  const [isBeamFocused, setIsBeamFocused] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(isEditMode);
 
-  // Helper function to format value with suffix for display
-  const formatWithSuffix = (value: string, suffix: string) => {
-    if (!value || value.trim() === '') return '';
-    const cleanValue = value.replace(suffix, '').trim();
-    return cleanValue ? cleanValue + suffix : '';
-  };
 
-  // Helper function to remove suffix for editing
-  const stripSuffix = (value: string, suffix: string) => {
-    if (!value) return '';
-    return value.replace(suffix, '').trim();
+  // Fetch vessel data when in edit mode
+  useEffect(() => {
+    if (isEditMode && id && isAuthenticated && csrfToken) {
+      fetchVesselData(id);
+    }
+  }, [id, isEditMode, isAuthenticated, csrfToken]);
+
+  const fetchVesselData = async (vesselId: string) => {
+    setIsLoadingData(true);
+    try {
+      const response = await fetch(`${API_ENDPOINTS.VESSELS}/${vesselId}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Map backend snake_case to frontend camelCase
+        setVesselData({
+          id: data.vessel.id,
+          name: data.vessel.name || '',
+          weight: data.vessel.weight_tons?.toString() || '',
+          beam: data.vessel.length_ft?.toString() || '',
+        });
+      } else {
+        console.error('Failed to fetch vessel data');
+        alert('Failed to load vessel data');
+      }
+    } catch (error) {
+      console.error('Error fetching vessel:', error);
+      alert('Error loading vessel data');
+    } finally {
+      setIsLoadingData(false);
+    }
   };
 
   const handleInputChange = (field: keyof Vessel, value: string) => {
@@ -70,42 +101,130 @@ const CreateVessel: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (!isAuthenticated || !csrfToken) {
+      console.error('Not authenticated');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // In a real app, this would save to your API
-      console.log('Saving vessel:', vesselData);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      navigate('/vessels');
+      // Map frontend fields to backend expected fields (camelCase for validation)
+      const vesselPayload = {
+        userId: currentUser?.id,
+        name: vesselData.name.trim(),
+        lengthFt: vesselData.beam ? parseFloat(vesselData.beam) : null,
+        weightTons: vesselData.weight ? parseFloat(vesselData.weight) : null,
+      };
+
+      const method = isEditMode ? 'PUT' : 'POST';
+      const url = isEditMode ? `${API_ENDPOINTS.VESSELS}/${id}` : API_ENDPOINTS.VESSELS;
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include',
+        body: JSON.stringify(vesselPayload)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Vessel saved successfully:', data.vessel);
+        navigate('/vessels');
+      } else {
+        const error = await response.json();
+        console.error('Failed to save vessel:', error);
+
+        // Handle different error response formats
+        let errorMessage = 'Failed to save vessel. Please try again.';
+        if (error.errors && error.errors.length > 0) {
+          // Field-level validation errors
+          const fieldErrors = error.errors.map((err: any) => `${err.field}: ${err.message}`).join(', ');
+          errorMessage = `Validation errors: ${fieldErrors}`;
+        } else if (error.error) {
+          // Single error message from backend
+          errorMessage = error.error;
+        } else if (error.message) {
+          // General error message
+          errorMessage = error.message;
+        }
+
+        alert(errorMessage);
+      }
     } catch (error) {
       console.error('Error saving vessel:', error);
+      alert('Error saving vessel. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSaveAndNew = async () => {
+    if (!isAuthenticated || !csrfToken) {
+      console.error('Not authenticated');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // In a real app, this would save to your API
-      console.log('Saving vessel:', vesselData);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Map frontend fields to backend expected fields (camelCase for validation)
+      const vesselPayload = {
+        userId: currentUser?.id,
+        name: vesselData.name.trim(),
+        lengthFt: vesselData.beam ? parseFloat(vesselData.beam) : null,
+        weightTons: vesselData.weight ? parseFloat(vesselData.weight) : null,
+      };
 
-      // Clear the form for a new vessel
-      setVesselData({
-        name: '',
-        weight: '',
-        beam: '',
-        id: null
+      const method = isEditMode ? 'PUT' : 'POST';
+      const url = isEditMode ? `${API_ENDPOINTS.VESSELS}/${id}` : API_ENDPOINTS.VESSELS;
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include',
+        body: JSON.stringify(vesselPayload)
       });
 
-      // Reset focus states
-      setIsWeightFocused(false);
-      setIsBeamFocused(false);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Vessel saved successfully:', data.vessel);
 
+        // Clear the form for a new vessel
+        setVesselData({
+          name: '',
+          weight: '',
+          beam: '',
+          id: null
+        });
+
+      } else {
+        const error = await response.json();
+        console.error('Failed to save vessel:', error);
+
+        // Handle different error response formats
+        let errorMessage = 'Failed to save vessel. Please try again.';
+        if (error.errors && error.errors.length > 0) {
+          // Field-level validation errors
+          const fieldErrors = error.errors.map((err: any) => `${err.field}: ${err.message}`).join(', ');
+          errorMessage = `Validation errors: ${fieldErrors}`;
+        } else if (error.error) {
+          // Single error message from backend
+          errorMessage = error.error;
+        } else if (error.message) {
+          // General error message
+          errorMessage = error.message;
+        }
+
+        alert(errorMessage);
+      }
     } catch (error) {
       console.error('Error saving vessel:', error);
+      alert('Error saving vessel. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -141,7 +260,9 @@ const CreateVessel: React.FC = () => {
           </Button>
 
           <div className="flex-1 flex justify-center">
-            <h1 className="text-3xl font-bold text-gray-900">Create Vessel</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isEditMode ? 'Edit Vessel' : 'Create Vessel'}
+            </h1>
           </div>
 
           <div className="flex items-center space-x-3">
@@ -196,13 +317,18 @@ const CreateVessel: React.FC = () => {
                         id="vessel-weight"
                         type="text"
                         placeholder=""
-                        value={isWeightFocused ? stripSuffix(vesselData.weight, ' tons') : formatWithSuffix(vesselData.weight, ' tons')}
+                        value={vesselData.weight}
                         onChange={(e) => handleNumericInput(e, 'weight')}
-                        onFocus={() => setIsWeightFocused(true)}
-                        onBlur={() => setIsWeightFocused(false)}
                         disabled={isLoading}
-                        className="pr-12"
+                        className="pr-16"
+                        aria-label="Vessel weight in tons"
                       />
+                      <span
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none select-none"
+                        aria-hidden="true"
+                      >
+                        tons
+                      </span>
                     </div>
                   </div>
 
@@ -214,13 +340,18 @@ const CreateVessel: React.FC = () => {
                         id="vessel-beam"
                         type="text"
                         placeholder=""
-                        value={isBeamFocused ? stripSuffix(vesselData.beam, ' ft') : formatWithSuffix(vesselData.beam, ' ft')}
+                        value={vesselData.beam}
                         onChange={(e) => handleNumericInput(e, 'beam')}
-                        onFocus={() => setIsBeamFocused(true)}
-                        onBlur={() => setIsBeamFocused(false)}
                         disabled={isLoading}
-                        className="pr-8"
+                        className="pr-16"
+                        aria-label="Vessel length in feet"
                       />
+                      <span
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none select-none"
+                        aria-hidden="true"
+                      >
+                        ft
+                      </span>
                     </div>
                   </div>
 
@@ -265,6 +396,15 @@ const CreateVessel: React.FC = () => {
                 </div>
               )}
 
+              {vesselData.name && (
+                <div className="text-sm text-green-600 bg-green-50 p-2 rounded-lg border border-green-200">
+                  <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Vessel name is complete
+                </div>
+              )}
+
               {!vesselData.weight && (
                 <div className="text-sm text-muted-foreground bg-muted/50 p-2 rounded-lg">
                   <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -274,14 +414,15 @@ const CreateVessel: React.FC = () => {
                 </div>
               )}
 
-              {isFormValid && (
+              {vesselData.weight && (
                 <div className="text-sm text-green-600 bg-green-50 p-2 rounded-lg border border-green-200">
                   <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  Vessel information is complete
+                  Weight information is complete
                 </div>
               )}
+
             </CardContent>
           </Card>
 

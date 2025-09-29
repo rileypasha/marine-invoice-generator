@@ -151,17 +151,17 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     accessorKey: "total_amount",
     id: "amount",
     header: () => (
-      <div className="text-right">Amount</div>
+      <div className="text-left">Amount</div>
     ),
     cell: ({ row }) => {
       const invoice = row.original;
       return (
-        <div className="text-right tabular-nums">
+        <div className="text-left tabular-nums">
           {formatCurrency(invoice.total_amount)}
         </div>
       );
     },
-    meta: { width: 'w-32', className: 'text-right' },
+    meta: { width: 'w-32', className: 'text-left' },
   },
   {
     accessorKey: "invoice_date",

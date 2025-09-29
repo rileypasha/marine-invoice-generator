@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { GroupingState, ExpandedState } from '@tanstack/react-table';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +16,7 @@ import {
 } from '../components/magic/index';
 import { ContactsTable } from '../components/ContactsTable';
 import { ContactsToolbar } from '../components/contacts/ContactsToolbar';
-import { useContactsQueryState } from '../hooks/useContactsQueryState';
+import { useContactsQueryState, ContactGroupBy, ContactActivity } from '../hooks/useContactsQueryState';
 import { useFileInput } from '../components/hooks/use-file-input';
 
 interface Customer {
@@ -29,6 +30,10 @@ interface Customer {
   state?: string;
   created_at: string;
   updated_at: string;
+  invoice_count?: number;
+  invoice_total?: number;
+  monthly_invoice_count?: number;
+  monthly_invoice_total?: number;
 }
 
 interface ImportResult {
@@ -50,6 +55,14 @@ const Customers: React.FC = () => {
   // State management
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Table state management (controlled)
+  const [grouping, setGrouping] = useState<GroupingState>([]);
+  const [expanded, setExpanded] = useState<ExpandedState>({});
+  const [currentGroupBy, setCurrentGroupBy] = useState<ContactGroupBy>('none');
+  const [currentActivity, setCurrentActivity] = useState<ContactActivity>('all');
+  const [currentFleet, setCurrentFleet] = useState<string>('all');
+
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -135,10 +148,62 @@ const Customers: React.FC = () => {
     }
   };
 
+  // Filter customers based on search query and filters
+  const filteredCustomers = customers.filter(customer => {
+    // Search query filter
+    const searchQuery = queryState.q.toLowerCase();
+    if (searchQuery) {
+      const matchesSearch = customer.display_name?.toLowerCase().includes(searchQuery) ||
+                           customer.legal_name?.toLowerCase().includes(searchQuery) ||
+                           customer.email?.toLowerCase().includes(searchQuery) ||
+                           customer.phone?.toLowerCase().includes(searchQuery) ||
+                           customer.address_line1?.toLowerCase().includes(searchQuery) ||
+                           customer.city?.toLowerCase().includes(searchQuery) ||
+                           customer.state?.toLowerCase().includes(searchQuery);
+      if (!matchesSearch) return false;
+    }
+
+    // Activity filter (active/inactive based on invoice count)
+    if (queryState.activity && queryState.activity !== 'all') {
+      const hasInvoices = (customer.invoice_count || 0) > 0;
+      if (queryState.activity === 'active' && !hasInvoices) return false;
+      if (queryState.activity === 'inactive' && hasInvoices) return false;
+    }
+
+    // Fleet filter (active/inactive based on monthly invoice count)
+    if (queryState.fleet && queryState.fleet !== 'all') {
+      const hasMonthlyInvoices = (customer.monthly_invoice_count || 0) > 0;
+      if (queryState.fleet === 'active' && !hasMonthlyInvoices) return false;
+      if (queryState.fleet === 'inactive' && hasMonthlyInvoices) return false;
+    }
+
+    // Status filter from filters object (active/inactive based on invoice count)
+    if (queryState.filters.status) {
+      const hasInvoices = (customer.invoice_count || 0) > 0;
+      if (queryState.filters.status === 'active' && !hasInvoices) return false;
+      if (queryState.filters.status === 'inactive' && hasInvoices) return false;
+    }
+
+    return true;
+  });
+
   // Load customers on mount and when URL state changes
   useEffect(() => {
     fetchCustomers();
-  }, [isAuthenticated, csrfToken, queryState.q, queryState.segment]);
+  }, [isAuthenticated, csrfToken, queryState.q, queryState.activity]);
+
+  // Initialize grouping, activity, and fleet from URL on mount only
+  useEffect(() => {
+    const g = queryState.groupBy;
+    const a = queryState.activity;
+    const f = queryState.fleet;
+    setCurrentGroupBy(g); // Initialize local state for badge
+    setCurrentActivity(a); // Initialize local state for dropdown
+    setCurrentFleet(f); // Initialize local state for fleet dropdown
+    if (g === 'activity') setGrouping(['activityBucket']);
+    else if (g === 'monthlyActivity') setGrouping(['monthlyActivityBucket']);
+    else setGrouping([]);
+  }, []); // Only run once on mount
 
   // Search is now handled by the toolbar component via URL state
 
@@ -452,6 +517,41 @@ const Customers: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  // Direct group change handler that updates state + URL
+  const handleGroupByChangeWithState = useCallback((newGroupBy: ContactGroupBy) => {
+    // Update local groupBy state IMMEDIATELY (for badge)
+    setCurrentGroupBy(newGroupBy);
+
+    // Update TanStack Table grouping state
+    if (newGroupBy === 'activity') setGrouping(['activityBucket']);
+    else if (newGroupBy === 'monthlyActivity') setGrouping(['monthlyActivityBucket']);
+    else setGrouping([]);
+
+    // Clear expansion when changing modes
+    setExpanded({});
+
+    // Update URL for bookmarking (async, but doesn't affect badge)
+    queryState.set({ groupBy: newGroupBy });
+  }, [queryState]);
+
+  // Direct activity change handler that updates state + URL
+  const handleActivityChangeWithState = useCallback((newActivity: ContactActivity) => {
+    // Update local activity state IMMEDIATELY (for dropdown)
+    setCurrentActivity(newActivity);
+
+    // Update URL for bookmarking (async, but doesn't affect dropdown)
+    queryState.set({ activity: newActivity });
+  }, [queryState]);
+
+  // Direct fleet change handler that updates state + URL
+  const handleFleetChangeWithState = useCallback((newFleet: string) => {
+    // Update local fleet state IMMEDIATELY (for dropdown)
+    setCurrentFleet(newFleet);
+
+    // Update URL for bookmarking (async, but doesn't affect dropdown)
+    queryState.set({ fleet: newFleet });
+  }, [queryState]);
+
   return (
     <>
       {/* Container for Airtable-style layout without fixed height */}
@@ -459,7 +559,13 @@ const Customers: React.FC = () => {
         {/* Sticky Toolbar */}
         <ContactsToolbar
             customers={customers}
+            currentGroupBy={currentGroupBy}
+            currentActivity={currentActivity}
+            currentFleet={currentFleet}
             onAddClick={() => navigate('/contacts/create')}
+            onGroupByChange={handleGroupByChangeWithState}
+            onActivityChange={handleActivityChangeWithState}
+            onFleetChange={handleFleetChangeWithState}
             onPrint={() => {
               // Add print-specific styles to hide sidebar and format table properly
               const printStyles = document.createElement('style');
@@ -697,8 +803,13 @@ const Customers: React.FC = () => {
               </div>
             ) : (
               <ContactsTable
-            customers={customers}
+            customers={filteredCustomers}
             sort={queryState.sort}
+            groupBy={queryState.groupBy}
+            grouping={grouping}
+            expanded={expanded}
+            onGroupingChange={setGrouping}
+            onExpandedChange={setExpanded}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onViewInvoices={handleViewInvoices}

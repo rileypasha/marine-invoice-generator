@@ -10,7 +10,7 @@ import {
 import { ToolbarSelect, ToolbarSelectOption } from '../contacts/ToolbarSelect';
 import { VesselsToolbarMenus } from './VesselsToolbarMenus';
 import { ExpandingSearch } from '../contacts/ExpandingSearch';
-import { useVesselsQueryState, VesselGroupBy } from '@/hooks/useVesselsQueryState';
+import { useVesselsQueryState, VesselGroupBy, VesselSegment } from '@/hooks/useVesselsQueryState';
 
 interface VesselsToolbarProps {
   // Vessel data for counts

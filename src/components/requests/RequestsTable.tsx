@@ -12,7 +12,7 @@ const REQUESTS_COLS = [
   { id: 'request', w: '18%' }, // Request # column
   { id: 'contact', w: '18%' }, // Contact column
   { id: 'vessel', w: '18%' },  // Vessel column
-  { id: 'amount', w: '12%' },  // Amount column (right-aligned)
+  { id: 'amount', w: '12%' },  // Amount column (left-aligned)
   { id: 'created', w: '12%' }, // Created at column (right-aligned)
   { id: 'modified', w: '12%' }, // Last modified column (right-aligned)
   { id: 'status', w: '10%' },  // Status column (centered)

@@ -374,7 +374,7 @@ const CreateCustomer: React.FC = () => {
           </div>
           <div className="flex-1 flex justify-center">
             <h1 className="text-2xl font-bold text-gray-900">
-              {isEditMode ? 'Edit Contact' : 'Create New Contact'}
+              {isEditMode ? 'Edit Contact' : 'Create Contact'}
             </h1>
           </div>
           <div className="flex items-center space-x-3">
@@ -400,7 +400,7 @@ const CreateCustomer: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <User className="h-5 w-5 mr-2" />
-                Contact Information
+                Contact Directory
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -501,16 +501,25 @@ const CreateCustomer: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               {!customerData.contactName && (
-                <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                <div className="text-sm text-muted-foreground bg-muted/50 p-2 rounded-lg">
                   <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Customer name is required to proceed
+                  Contact name is required to proceed
+                </div>
+              )}
+
+              {customerData.contactName && (
+                <div className="text-sm text-green-600 bg-green-50 p-2 rounded-lg border border-green-200">
+                  <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Contact name entered
                 </div>
               )}
 
               {!customerData.customerEmail && (
-                <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                <div className="text-sm text-muted-foreground bg-muted/50 p-2 rounded-lg">
                   <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -518,8 +527,17 @@ const CreateCustomer: React.FC = () => {
                 </div>
               )}
 
+              {customerData.customerEmail && (
+                <div className="text-sm text-green-600 bg-green-50 p-2 rounded-lg border border-green-200">
+                  <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Email address entered
+                </div>
+              )}
+
               {isFormValid && (
-                <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg border border-green-200">
+                <div className="text-sm text-green-600 bg-green-50 p-2 rounded-lg border border-green-200">
                   <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>

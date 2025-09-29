@@ -50,7 +50,8 @@ function GroupMenu({ activeGroupBy, onGroupByChange }: GroupMenuProps) {
   const groupOptions = [
     { key: 'none' as VesselGroupBy, label: 'No grouping', icon: <Hash className="h-4 w-4" /> },
     { key: 'size' as VesselGroupBy, label: 'By Size', icon: <Ruler className="h-4 w-4" /> },
-    { key: 'activity' as VesselGroupBy, label: 'By Activity', icon: <Activity className="h-4 w-4" /> },
+    { key: 'activity' as VesselGroupBy, label: 'By All Activity', icon: <Activity className="h-4 w-4" /> },
+    { key: 'monthlyActivity' as VesselGroupBy, label: 'By Monthly Activity', icon: <Activity className="h-4 w-4" /> },
   ];
 
   const groupCount = activeGroupBy !== 'none' ? 1 : 0;

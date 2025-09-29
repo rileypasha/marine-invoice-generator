@@ -251,6 +251,36 @@ const CreateInvoice: React.FC = () => {
     }
   }, [isEditMode, searchParams]);
 
+  // Handle query parameters for pre-filling vessel data
+  useEffect(() => {
+    // Only process query params if we're NOT in edit mode (creating a new invoice)
+    if (isEditMode || !searchParams.has('vesselId')) {
+      return;
+    }
+
+    const vesselId = searchParams.get('vesselId');
+    const vesselName = searchParams.get('vesselName');
+    const vesselWeight = searchParams.get('vesselWeight');
+    const vesselLength = searchParams.get('vesselLength');
+
+    if (vesselId) {
+      // Set the selected vessel ID to auto-select in the dropdown
+      setSelectedVesselId(vesselId);
+
+      // Pre-fill the vessel data
+      setInvoiceData(prev => ({
+        ...prev,
+        vessel: {
+          ...prev.vessel,
+          id: vesselId,
+          name: vesselName || '',
+          weight: vesselWeight || '',
+          beam: vesselLength || ''
+        }
+      }));
+    }
+  }, [isEditMode, searchParams]);
+
   // Automatically add/update Clearance Fee based on vessel weight
   useEffect(() => {
     const weight = parseFloat(invoiceData.vessel.weight) || 0;

@@ -10,7 +10,7 @@ import {
 } from '../components/magic/index';
 import { VesselsToolbar } from '../components/vessels/VesselsToolbar';
 import { VesselsTable } from '../components/vessels/VesselsTable';
-import { useVesselsQueryState, VesselGroupBy } from '../hooks/useVesselsQueryState';
+import { useVesselsQueryState, VesselGroupBy, VesselSegment } from '../hooks/useVesselsQueryState';
 
 interface Vessel {
   id: string;
@@ -162,6 +162,7 @@ const Vessels: React.FC = () => {
     setCurrentFleet(f); // Initialize local state for fleet dropdown
     if (g === 'size') setGrouping(['sizeBucket']);
     else if (g === 'activity') setGrouping(['activityBucket']);
+    else if (g === 'monthlyActivity') setGrouping(['monthlyActivityBucket']);
     else setGrouping([]);
   }, []); // Only run once on mount
 
@@ -173,6 +174,7 @@ const Vessels: React.FC = () => {
     // Update TanStack Table grouping state
     if (newGroupBy === 'size') setGrouping(['sizeBucket']);
     else if (newGroupBy === 'activity') setGrouping(['activityBucket']);
+    else if (newGroupBy === 'monthlyActivity') setGrouping(['monthlyActivityBucket']);
     else setGrouping([]);
 
     // Clear expansion when changing modes

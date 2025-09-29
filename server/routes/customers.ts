@@ -481,6 +481,10 @@ router.get('/', async (req: CustomerRequest, res: Response) => {
       ];
     }
 
+    // Calculate current month start date for monthly invoice filtering
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
     const [customers, total] = await Promise.all([
       prisma.customer.findMany({
         where,
@@ -498,22 +502,57 @@ router.get('/', async (req: CustomerRequest, res: Response) => {
           state: true,
           created_at: true,
           updated_at: true,
+          _count: {
+            select: {
+              invoices: true,
+            },
+          },
+          invoices: {
+            select: {
+              total: true,
+              createdAt: true,
+            },
+          },
         },
       }),
       prisma.customer.count({ where }),
     ]);
 
+    // Transform customers to include aggregated invoice data
+    const customersWithInvoiceData = customers.map(customer => {
+      const invoice_count = customer._count.invoices;
+      const invoice_total = customer.invoices.reduce((sum, invoice) => sum + (invoice.total || 0), 0);
+
+      // Calculate monthly aggregations
+      const monthlyInvoices = customer.invoices.filter(invoice =>
+        new Date(invoice.createdAt) >= currentMonthStart
+      );
+      const monthly_invoice_count = monthlyInvoices.length;
+      const monthly_invoice_total = monthlyInvoices.reduce((sum, invoice) => sum + (invoice.total || 0), 0);
+
+      // Remove the temporary fields and add the aggregated ones
+      const { _count, invoices, ...customerData } = customer;
+
+      return {
+        ...customerData,
+        invoice_count,
+        invoice_total,
+        monthly_invoice_count,
+        monthly_invoice_total,
+      };
+    });
+
     logger.info('Customers retrieved successfully', {
       correlationId,
       userId,
-      count: customers.length,
+      count: customersWithInvoiceData.length,
       total,
       page,
       limit,
     });
 
     res.json({
-      customers,
+      customers: customersWithInvoiceData,
       pagination: {
         page: parseInt(page as string),
         limit: parseInt(limit as string),
