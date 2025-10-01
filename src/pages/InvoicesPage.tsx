@@ -302,6 +302,55 @@ const InvoicesPage: React.FC = () => {
     navigate('/requests/new');
   }, [navigate]);
 
+  const handleBulkDelete = useCallback(async (invoices: Invoice[]) => {
+    if (!isAuthenticated || !csrfToken || !confirm(`Are you sure you want to delete ${invoices.length} invoice(s)?`)) return;
+
+    try {
+      const deletePromises = invoices.map(invoice =>
+        fetch(`/api/v1/invoice/${invoice.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
+          },
+          credentials: 'include'
+        })
+      );
+
+      await Promise.all(deletePromises);
+      // Refresh the list
+      fetchInvoices(currentPage, searchTerm, filters);
+    } catch (error) {
+      console.error('Error deleting invoices:', error);
+      alert('Error deleting invoices');
+    }
+  }, [isAuthenticated, csrfToken, fetchInvoices, currentPage, searchTerm, filters]);
+
+  const handleBulkExport = useCallback((invoices: Invoice[]) => {
+    const headers = ['Invoice #', 'Contact', 'Vessel', 'Amount', 'Created At', 'Status'];
+    const csvContent = [
+      headers.join(','),
+      ...invoices.map(invoice => [
+        invoice.invoice_number || `#${invoice.id}`,
+        invoice.customer?.display_name || invoice.customer?.company_name || '',
+        invoice.vessel?.name || '',
+        invoice.total_amount || '0',
+        invoice.invoice_date ? new Date(invoice.invoice_date).toLocaleDateString() : '',
+        invoice.status || 'requested'
+      ].map(field => `"${field}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `invoices-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
+
   return (
     <Invoices
       invoices={invoices}
@@ -310,6 +359,8 @@ const InvoicesPage: React.FC = () => {
       onView={handleView}
       onPrint={handlePrint}
       onAddNew={handleAddNew}
+      onBulkDelete={handleBulkDelete}
+      onBulkExport={handleBulkExport}
       onSearch={handleSearch}
       searchTerm={searchTerm}
       isLoading={isLoading}
