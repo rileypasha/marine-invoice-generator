@@ -43,7 +43,7 @@ const DEFAULT_STATE: RequestsQueryState = {
   view: 'list',
   q: '',
   groupBy: 'none',
-  sort: { field: 'invoice_date', direction: 'desc' },
+  sort: { field: 'updated_at', direction: 'desc' },
   filters: {}
 };
 
