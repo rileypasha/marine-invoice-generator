@@ -229,8 +229,8 @@ export function DataTable<TData, TValue>({
         </div>
       )}
       {/* Airtable-style table without card wrapper - wrapped for mobile horizontal scroll */}
-      <div className="overflow-x-auto -mx-4 md:mx-0">
-        <div className="min-w-[800px] md:min-w-0">
+      <div className="overflow-x-auto">
+        <div className="min-w-[1200px] md:min-w-0">
           <Table className="w-full table-fixed border-collapse">
             {colWidths && (
               <colgroup>

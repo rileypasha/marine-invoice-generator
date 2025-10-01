@@ -78,7 +78,7 @@ export function RequestsToolbar({
     <div className={`sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 ${className}`}>
       <div>
         {/* Row 1: Title + Overflow Menu + New Invoice Button */}
-        <div className="flex items-center justify-between py-2 pt-3 px-4 md:px-6">
+        <div className="flex items-center justify-between py-2 pt-3 px-2 md:px-6">
           <div className="flex items-center gap-2">
             <h2 className="flex items-center gap-2 text-xl md:text-2xl font-semibold">
               <FileText className="h-4 w-4 md:h-5 md:w-5" />
@@ -132,7 +132,7 @@ export function RequestsToolbar({
         </div>
 
         {/* Row 2: Month Selector + Controls + Search */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 py-2 px-4 md:px-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 py-2 px-2 md:px-6">
           {/* Left side: Month selector (dropdown on mobile, tabs on desktop) */}
           <div className="flex items-center gap-2">
             {/* Mobile: Dropdown */}

@@ -238,9 +238,9 @@ const MainContent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div
-      className=""
+      className="ml-0 md:ml-auto"
       style={{
-        marginLeft: open ? '220px' : '56px'
+        marginLeft: typeof window !== 'undefined' && window.innerWidth >= 768 ? (open ? '220px' : '56px') : '0'
       }}
     >
       {children}
