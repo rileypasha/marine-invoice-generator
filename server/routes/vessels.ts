@@ -360,10 +360,12 @@ router.post('/', async (req: VesselRequest, res: Response) => {
     const vessel = await prisma.vessel.create({
       data: {
         id: randomUUID(),
-        userId: vesselData.userId,
         name: vesselData.name,
         length_ft: vesselData.lengthFt,
         weight_tons: vesselData.weightTons,
+        user: {
+          connect: { id: vesselData.userId }
+        },
         // Don't include updated_at - let Prisma handle it automatically
       },
     });
