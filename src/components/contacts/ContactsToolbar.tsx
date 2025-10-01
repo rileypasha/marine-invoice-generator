@@ -171,10 +171,10 @@ export function ContactsToolbar({
     <div className={`sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 ${className}`}>
       <div>
         {/* Row 1: Title + Overflow Menu + Add Contact */}
-        <div className="flex items-center justify-between py-2 pt-3 px-0">
+        <div className="flex items-center justify-between py-2 pt-3 px-4 md:px-0">
           <div className="flex items-center gap-2">
-            <h2 className="flex items-center gap-2 text-2xl font-semibold">
-              <Users className="h-5 w-5" />
+            <h2 className="flex items-center gap-2 text-xl md:text-2xl font-semibold">
+              <Users className="h-4 w-4 md:h-5 md:w-5" />
               Contacts
             </h2>
           </div>
@@ -217,13 +217,14 @@ export function ContactsToolbar({
               className="h-8 px-3 text-xs transition-none !bg-black !text-white hover:!bg-gray-800"
             >
               <Plus className="h-3 w-3 mr-1" />
-              Add Contact
+              <span className="hidden sm:inline">Add Contact</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </div>
         </div>
 
         {/* Row 2: Toolbar Selects + Controls + Search */}
-        <div className="flex items-center justify-between py-2 px-0">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 py-2 px-4 md:px-0">
           {/* Left side: Dropdown selects */}
           <div className="flex items-center gap-2">
             <ToolbarSelect

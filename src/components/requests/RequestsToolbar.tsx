@@ -7,6 +7,13 @@ import {
   DropdownMenuTrigger,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ExpandingSearch } from '../contacts/ExpandingSearch';
 import { useRequestsQueryState } from '@/hooks/useRequestsQueryState';
@@ -71,11 +78,12 @@ export function RequestsToolbar({
     <div className={`sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 ${className}`}>
       <div>
         {/* Row 1: Title + Overflow Menu + New Invoice Button */}
-        <div className="flex items-center justify-between py-2 pt-3 px-6">
+        <div className="flex items-center justify-between py-2 pt-3 px-4 md:px-6">
           <div className="flex items-center gap-2">
-            <h2 className="flex items-center gap-2 text-2xl font-semibold">
-              <FileText className="h-5 w-5" />
-              Invoice Requests
+            <h2 className="flex items-center gap-2 text-xl md:text-2xl font-semibold">
+              <FileText className="h-4 w-4 md:h-5 md:w-5" />
+              <span className="hidden sm:inline">Invoice Requests</span>
+              <span className="sm:hidden">Invoices</span>
             </h2>
           </div>
 
@@ -117,24 +125,44 @@ export function RequestsToolbar({
               className="h-8 px-3 text-xs transition-none !bg-black !text-white hover:!bg-gray-800"
             >
               <Plus className="h-3 w-3 mr-1" />
-              New Invoice
+              <span className="hidden sm:inline">New Invoice</span>
+              <span className="sm:hidden">New</span>
             </Button>
           </div>
         </div>
 
-        {/* Row 2: Month Tabs + Controls + Search */}
-        <div className="flex items-center justify-between py-2 px-6">
-          {/* Left side: Month tabs */}
-          <div className="flex items-center">
-            <Tabs value={month} onValueChange={handleMonthChange}>
-              <TabsList>
-                {monthOptions.map((option) => (
-                  <TabsTrigger key={option.value} value={option.value}>
-                    {option.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+        {/* Row 2: Month Selector + Controls + Search */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 py-2 px-4 md:px-6">
+          {/* Left side: Month selector (dropdown on mobile, tabs on desktop) */}
+          <div className="flex items-center gap-2">
+            {/* Mobile: Dropdown */}
+            <div className="md:hidden w-full">
+              <Select value={month} onValueChange={handleMonthChange}>
+                <SelectTrigger className="w-full h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Desktop: Tabs */}
+            <div className="hidden md:flex">
+              <Tabs value={month} onValueChange={handleMonthChange}>
+                <TabsList>
+                  {monthOptions.map((option) => (
+                    <TabsTrigger key={option.value} value={option.value}>
+                      {option.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
 
           {/* Right side: Controls */}
