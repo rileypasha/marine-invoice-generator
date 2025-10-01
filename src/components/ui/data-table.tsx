@@ -158,7 +158,7 @@ export function DataTable<TData, TValue>({
                 {selectedRows.length} item{selectedRows.length === 1 ? '' : 's'} selected
               </span>
             </div>
-            <div className="flex items-center gap-2 pr-24">
+            <div className="flex items-center gap-2 pr-64">
               <Button
                 variant="outline"
                 size="sm"
