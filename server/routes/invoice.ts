@@ -9,6 +9,7 @@ import { createAuditService } from '../services/audit.service';
 import { createChangeRequestService } from '../services/changeRequest.service';
 import { nullToUndefined } from '../utils/normalize';
 import { isChangeRequested } from '../utils/status';
+import { notifyNewInvoice, notifyChangeRequested, notifyApproved } from '../services/email.service';
 
 const router = Router();
 
@@ -136,9 +137,16 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
         ? providedIdRaw
         : randomUUID();
     console.log('[Invoice Save] Creating new invoice with userName:', user?.name);
+
+    // Ensure data field contains JSON stringified invoice data
+    const dataField = typeof restOfInvoiceData.data === 'string'
+      ? restOfInvoiceData.data
+      : JSON.stringify(restOfInvoiceData.lineItems || []);
+
     const invoice = await prisma.invoice.create({
       data: {
         ...restOfInvoiceData,
+        data: dataField,
         invoiceNumber,
         userId,
         userName: user?.name || null,
@@ -168,6 +176,22 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
       invoiceId: invoice.id,
       idempotencyKey,
       total: invoice.total,
+    });
+
+    // Send email notification for new invoice (async, don't block response)
+    notifyNewInvoice({
+      invoiceNumber: invoice.invoiceNumber || undefined,
+      title: invoice.title,
+      customerName: invoice.customerName || undefined,
+      vesselName: invoice.vesselName || undefined,
+      total: invoice.total,
+      createdBy: invoice.userName || invoice.userEmail || 'Unknown',
+      url: `${process.env.APP_URL || 'http://localhost:3000'}/requests/${invoice.id}`,
+    }).catch(err => {
+      logger.error('Failed to send new invoice notification', {
+        error: err.message,
+        invoiceId: invoice.id,
+      });
     });
 
     res.status(200).json({
@@ -224,21 +248,7 @@ router.get('/:id', async (req: InvoiceRequest, res: Response) => {
       });
     }
 
-    // Check ownership
-    if (invoice.userId !== userId) {
-      logger.warn('Unauthorized invoice access attempt', {
-        correlationId,
-        userId,
-        invoiceId,
-        ownerId: invoice.userId,
-      });
-
-      return res.status(403).json({
-        code: 'FORBIDDEN',
-        message: 'You do not have access to this invoice',
-        correlationId,
-      });
-    }
+    // Note: Removed ownership check - all authenticated users can view all invoices
 
     logger.info('Invoice retrieved successfully', {
       correlationId,
@@ -289,9 +299,8 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
   try {
     const skip = (Number(page) - 1) * Number(limit);
 
-    // Build where clause with tenant isolation
+    // Build where clause - show all invoices to all users
     const where: any = {
-      userId,
       status: { not: 'draft' }, // Exclude legacy draft records
     };
 
@@ -367,15 +376,15 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
       modifiedByUserEmail: invoice.modifiedByUserEmail || invoice.user?.email || invoice.userEmail || null,
     }));
 
-    // Calculate stats
+    // Calculate stats - show all invoices stats
     const stats = await prisma.invoice.groupBy({
       by: ['status'],
-      where: { userId },
+      where: { status: { not: 'draft' } },
       _count: { status: true },
     });
 
     const statsMap = {
-      total: await prisma.invoice.count({ where: { userId } }),
+      total: await prisma.invoice.count({ where: { status: { not: 'draft' } } }),
       requested: 0,
       change_requested: 0,
       approved: 0,
@@ -450,16 +459,15 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
       });
     }
 
-    // Check if invoice exists and user owns it
-    const existingInvoice = await prisma.invoice.findFirst({
+    // Check if invoice exists
+    const existingInvoice = await prisma.invoice.findUnique({
       where: {
         id: invoiceId,
-        userId,
       },
     });
 
     if (!existingInvoice) {
-      logger.warn('Invoice not found or access denied', {
+      logger.warn('Invoice not found', {
         correlationId,
         userId,
         invoiceId,
@@ -467,10 +475,12 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
 
       return res.status(404).json({
         code: 'INVOICE_NOT_FOUND',
-        message: 'Invoice not found or you do not have access to it',
+        message: 'Invoice not found',
         correlationId,
       });
     }
+
+    // Note: Removed ownership check - all authenticated users can update all invoices
 
     // Generate invoice number if not provided (keep existing if available)
     const invoiceNumber = invoiceData.invoiceNumber || existingInvoice.invoiceNumber || `INV-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
@@ -571,6 +581,43 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
       invoiceId: updatedInvoice.id,
       total: updatedInvoice.total,
     });
+
+    // Send email notification if status changed to change_requested
+    if (statusChangingToChangeRequested) {
+      notifyChangeRequested({
+        invoiceNumber: updatedInvoice.invoiceNumber || undefined,
+        title: updatedInvoice.title,
+        customerName: updatedInvoice.customerName || undefined,
+        vesselName: updatedInvoice.vesselName || undefined,
+        total: updatedInvoice.total,
+        createdBy: updatedInvoice.modifiedByUserName || updatedInvoice.userName || 'Unknown',
+        url: `${process.env.APP_URL || 'http://localhost:3000'}/requests/${updatedInvoice.id}`,
+      }).catch(err => {
+        logger.error('Failed to send change request notification', {
+          error: err.message,
+          invoiceId: updatedInvoice.id,
+        });
+      });
+    }
+
+    // Send email notification if status changed to approved
+    const statusChangingToApproved = oldStatus !== 'approved' && newStatus === 'approved';
+    if (statusChangingToApproved) {
+      notifyApproved({
+        invoiceNumber: updatedInvoice.invoiceNumber || undefined,
+        title: updatedInvoice.title,
+        customerName: updatedInvoice.customerName || undefined,
+        vesselName: updatedInvoice.vesselName || undefined,
+        total: updatedInvoice.total,
+        createdBy: updatedInvoice.modifiedByUserName || updatedInvoice.userName || 'Unknown',
+        url: `${process.env.APP_URL || 'http://localhost:3000'}/requests/${updatedInvoice.id}`,
+      }).catch(err => {
+        logger.error('Failed to send approval notification on status change', {
+          error: err.message,
+          invoiceId: updatedInvoice.id,
+        });
+      });
+    }
 
     res.status(200).json({
       id: updatedInvoice.id,
@@ -784,16 +831,15 @@ router.patch('/:id', async (req: InvoiceRequest, res: Response) => {
   try {
     const invoiceData = req.body;
 
-    // Check if invoice exists and user owns it
-    const existingInvoice = await prisma.invoice.findFirst({
+    // Check if invoice exists
+    const existingInvoice = await prisma.invoice.findUnique({
       where: {
         id: invoiceId,
-        userId,
       },
     });
 
     if (!existingInvoice) {
-      logger.warn('Invoice not found or access denied', {
+      logger.warn('Invoice not found', {
         correlationId,
         userId,
         invoiceId,
@@ -801,10 +847,12 @@ router.patch('/:id', async (req: InvoiceRequest, res: Response) => {
 
       return res.status(404).json({
         code: 'INVOICE_NOT_FOUND',
-        message: 'Invoice not found or you do not have access to it',
+        message: 'Invoice not found',
         correlationId,
       });
     }
+
+    // Note: Removed ownership check - all authenticated users can create versions of all invoices
 
     // Fetch user data for actor information
     const user = await prisma.user.findUnique({
@@ -868,6 +916,8 @@ router.patch('/:id', async (req: InvoiceRequest, res: Response) => {
         invoiceId,
         userId,
       });
+
+      // Note: Approval email notification is sent after invoice update (lines 617-633)
     }
 
     // CASE 3: Saves WHILE status is 'change_requested'
@@ -1128,18 +1178,17 @@ router.post('/:id/approve', async (req: InvoiceRequest, res: Response) => {
   const invoiceId = req.params.id;
 
   try {
-    // Check ownership
+    // Check if invoice exists (any authenticated user can approve)
     const invoice = await prisma.invoice.findFirst({
       where: {
         id: invoiceId,
-        userId,
       },
     });
 
     if (!invoice) {
       return res.status(404).json({
         code: 'INVOICE_NOT_FOUND',
-        message: 'Invoice not found or you do not have access to it',
+        message: 'Invoice not found',
         correlationId,
       });
     }
@@ -1188,6 +1237,22 @@ router.post('/:id/approve', async (req: InvoiceRequest, res: Response) => {
       userId,
       invoiceId,
       revisionNumber: latestRevision.revisionNumber,
+    });
+
+    // Send email notification for approval
+    notifyApproved({
+      invoiceNumber: invoice.invoiceNumber || undefined,
+      title: invoice.title,
+      customerName: invoice.customerName || undefined,
+      vesselName: invoice.vesselName || undefined,
+      total: invoice.total,
+      createdBy: user?.name || user?.email || 'Unknown',
+      url: `${process.env.APP_URL || 'http://localhost:3000'}/requests/${invoiceId}`,
+    }).catch(err => {
+      logger.error('Failed to send approval notification', {
+        error: err.message,
+        invoiceId,
+      });
     });
 
     res.json({
@@ -1278,3 +1343,4 @@ router.get('/:id/diff/:fromVersion/:toVersion', async (req: InvoiceRequest, res:
 });
 
 export default router;
+
