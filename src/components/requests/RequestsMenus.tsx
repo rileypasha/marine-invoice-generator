@@ -35,7 +35,7 @@ function ToolbarMenuButtonWithBadge({ label, count, ariaLabel, children }: Toolb
           <CountBadge count={count} />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-48">
+      <DropdownMenuContent align="end" className="w-48">
         {children}
       </DropdownMenuContent>
     </DropdownMenu>
