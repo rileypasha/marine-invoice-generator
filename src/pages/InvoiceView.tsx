@@ -655,20 +655,62 @@ const InvoiceView: React.FC = () => {
 
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-slate-800">Services</h3>
-                    <div className="overflow-hidden rounded-lg border border-slate-200">
-                      <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                        <span>Item</span>
-                        <span className="text-right">Cost</span>
-                        <span className="text-right">Markup</span>
-                        <span className="text-right">Tax</span>
-                        <span className="text-right">Total</span>
-                      </div>
-                      {servicesSummary.services.length === 0 ? (
+                    <div className="overflow-x-auto rounded-lg border border-slate-200">
+                      <div className="min-w-[600px]">
+                        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          <span>Item</span>
+                          <span className="text-right">Cost</span>
+                          <span className="text-right">Markup</span>
+                          <span className="text-right">Tax</span>
+                          <span className="text-right">Total</span>
+                        </div>
+                      {servicesSummary.services.length === 0 && baselineLineItems.length === 0 ? (
                         <div className="px-4 py-6 text-center text-sm text-muted-foreground">
                           No services recorded for this invoice.
                         </div>
                       ) : (
-                        servicesSummary.services.map((service, index) => {
+                        <>
+                          {/* Show deleted items first (items in baseline but not in current) */}
+                          {baselineLineItems
+                            .filter((baselineItem: any) => !servicesSummary.services.some(s => s.id === baselineItem.id))
+                            .map((deletedItem: any, index: number) => {
+                              const shouldShowRowDiff = invoice.status === 'change_requested' &&
+                                invoice.diff &&
+                                Array.isArray(invoice.diff) &&
+                                invoice.diff.length > 0;
+
+                              return (
+                                <div
+                                  key={deletedItem.id}
+                                  className={cn(
+                                    'grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm',
+                                    shouldShowRowDiff && 'border-l-4 bg-red-50 border-red-500 opacity-75'
+                                  )}
+                                >
+                                  <div className="pr-4">
+                                    <p className="font-medium text-red-600 line-through">
+                                      {deletedItem.description || 'Untitled Service'}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground line-through">{deletedItem.type}</p>
+                                  </div>
+                                  <span className="text-right text-red-600 line-through">
+                                    $0.00
+                                  </span>
+                                  <span className="text-right text-red-600 line-through">
+                                    $0.00
+                                  </span>
+                                  <span className="text-right text-red-600 line-through">
+                                    $0.00
+                                  </span>
+                                  <span className="text-right font-medium text-red-600 line-through">
+                                    $0.00
+                                  </span>
+                                </div>
+                              );
+                            })}
+
+                          {/* Show current items */}
+                          {servicesSummary.services.map((service, index) => {
                           // Only show diff indicators when status is 'change_requested' AND we have a valid diff
                           const shouldShowRowDiff = invoice.status === 'change_requested' &&
                             invoice.diff &&
@@ -752,8 +794,10 @@ const InvoiceView: React.FC = () => {
                               </span>
                             </div>
                           );
-                        })
+                        })}
+                        </>
                       )}
+                      </div>
                     </div>
                   </div>
 
