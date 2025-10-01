@@ -136,9 +136,28 @@ export function hasLineItemChanges(diff?: DiffIndex): boolean {
 
 /**
  * Helper: Get line item operation by index
+ * Checks both /lineItems/{index} and /services/- paths
  */
 export function getLineItemOp(diff: DiffIndex, index: number): PatchOperation | undefined {
-  return diff.get(`/lineItems/${index}`);
+  // First check the specific index path
+  const lineItemOp = diff.get(`/lineItems/${index}`);
+  if (lineItemOp) {
+    return lineItemOp;
+  }
+
+  // Check for services array path (backend uses /services/-)
+  const servicesOp = diff.get(`/services/${index}`);
+  if (servicesOp) {
+    return servicesOp;
+  }
+
+  // Check for wildcard path (new items use /services/-)
+  const wildcardOp = diff.get('/services/-');
+  if (wildcardOp) {
+    return wildcardOp;
+  }
+
+  return undefined;
 }
 
 /**

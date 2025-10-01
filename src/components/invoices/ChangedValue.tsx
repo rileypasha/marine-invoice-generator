@@ -50,6 +50,8 @@ export interface ChangedValueProps {
   label?: string;
   /** Optional className override */
   className?: string;
+  /** Force highlight as new item (for array items where parent knows it's new) */
+  isNewItem?: boolean;
 }
 
 /**
@@ -83,9 +85,17 @@ export function ChangedValue({
   renderMode = 'inline',
   label,
   className,
+  isNewItem,
 }: ChangedValueProps) {
   // Only show diff if status indicates change requested (handles both variants) and diff exists
   const shouldShowDiff = isChangeRequested(status) && diff && diff.size > 0;
+
+  // If the parent indicates this is a new item, show it as added
+  if (shouldShowDiff && isNewItem) {
+    return (
+      <AddedValue value={value} renderMode={renderMode} className={className} />
+    );
+  }
 
   if (!shouldShowDiff) {
     return <>{value}</>;

@@ -22,6 +22,7 @@ import { buildDiffIndex, ChangedValue, DiffIndex } from '../components/invoices/
 import { getLineItemOp } from '../components/invoices/LineItemsDiff';
 import { cn } from '../lib/utils';
 import { convertFieldDeltaToPatch, isFieldDeltaFormat } from '../utils/diffConverter';
+import { PatchOperation } from '../types/diff.types';
 
 interface LineItem {
   id?: string;
@@ -159,6 +160,55 @@ const formatDateTime = (value?: string | null): string => {
 const truncate = (value: string, length: number) => {
   if (value.length <= length) return value;
   return `${value.slice(0, length)}…`;
+};
+
+/**
+ * Helper: Reconstruct baseline data by reversing diff operations
+ */
+const reconstructBaseline = (currentData: any, diff: PatchOperation[]): any => {
+  const baseline = JSON.parse(JSON.stringify(currentData));
+
+  // Group operations - we only need array-level add/remove operations
+  const processedArrayPaths = new Set<string>();
+
+  for (const operation of diff) {
+    const pathParts = operation.path.split('/').filter(p => p !== '');
+
+    if (operation.op === 'add') {
+      // Check if this is an array item add (e.g., /services/-)
+      if (pathParts.length >= 2 && pathParts[pathParts.length - 1] === '-') {
+        const arrayPath = pathParts.slice(0, -1).join('/');
+        if (!processedArrayPaths.has(arrayPath)) {
+          processedArrayPaths.add(arrayPath);
+
+          // Navigate to the array
+          let current = baseline;
+          for (const part of pathParts.slice(0, -1)) {
+            current = current[part];
+          }
+
+          if (Array.isArray(current) && current.length > 0) {
+            // Remove last item from array
+            current.pop();
+          }
+        }
+      }
+    } else if (operation.op === 'replace' && operation.oldValue !== undefined) {
+      // If something was replaced, restore old value
+      let current = baseline;
+      for (let i = 0; i < pathParts.length - 1; i++) {
+        const part = pathParts[i];
+        current = current[part];
+        if (!current) break;
+      }
+      if (current) {
+        const lastPart = pathParts[pathParts.length - 1];
+        current[lastPart] = operation.oldValue;
+      }
+    }
+  }
+
+  return baseline;
 };
 
 const InvoiceView: React.FC = () => {
@@ -318,6 +368,31 @@ const InvoiceView: React.FC = () => {
 
     return index;
   }, [invoice?.diff]);
+
+  // Reconstruct baseline line items from diff
+  const baselineLineItems = useMemo(() => {
+    if (!invoice?.diff || !Array.isArray(invoice.diff) || invoice.diff.length === 0) {
+      return lineItems;
+    }
+
+    // Check if diff needs conversion
+    let diffData = invoice.diff;
+    if (isFieldDeltaFormat(diffData)) {
+      diffData = convertFieldDeltaToPatch(diffData);
+    }
+
+    // Reconstruct the baseline by reversing diff operations
+    const gatherData = gatherInvoiceData<LineItem>(invoice);
+    const baseline = reconstructBaseline({ services: gatherData.lineItems }, diffData);
+
+    console.log('[InvoiceView] Baseline line items:', {
+      current: lineItems.length,
+      baseline: baseline.services?.length || 0,
+      baselineIds: baseline.services?.map((s: any) => s.id)
+    });
+
+    return baseline.services || [];
+  }, [invoice, lineItems]);
 
   const servicesSummary = useMemo(() => {
     try {
@@ -594,9 +669,27 @@ const InvoiceView: React.FC = () => {
                         </div>
                       ) : (
                         servicesSummary.services.map((service, index) => {
-                          const itemDiffOp = invoice.status === 'change_requested' && diffIndex
-                            ? getLineItemOp(diffIndex, index)
-                            : undefined;
+                          // Only show diff indicators when status is 'change_requested' AND we have a valid diff
+                          const shouldShowRowDiff = invoice.status === 'change_requested' &&
+                            invoice.diff &&
+                            Array.isArray(invoice.diff) &&
+                            invoice.diff.length > 0 &&
+                            diffIndex &&
+                            diffIndex.size > 0;
+
+                          if (index === 0) {
+                            console.log(`[InvoiceView] shouldShowRowDiff: status="${invoice.status}", hasDiff=${!!invoice.diff}, diffLength=${invoice.diff?.length}, diffIndexSize=${diffIndex.size}, shouldShowRowDiff=${shouldShowRowDiff}`);
+                          }
+
+                          // Check if this item is new by comparing against baseline
+                          // Only mark as new if we should show diffs and the item doesn't exist in baseline
+                          const isNewItem = shouldShowRowDiff &&
+                            service.id &&
+                            !baselineLineItems.some((item: any) => item.id === service.id);
+
+                          // For row-level highlighting, only show if item is actually new
+                          // Don't use getLineItemOp because /services/- wildcard applies to all items
+                          const itemDiffOp = isNewItem ? { op: 'add' as const } : undefined;
 
                           return (
                             <div
@@ -616,6 +709,7 @@ const InvoiceView: React.FC = () => {
                                     value={service.description}
                                     diff={diffIndex}
                                     status={invoice.status}
+                                    isNewItem={isNewItem}
                                   />
                                 </p>
                                 <p className="text-xs text-muted-foreground">{service.type}</p>
@@ -626,6 +720,7 @@ const InvoiceView: React.FC = () => {
                                   value={formatCurrency(service.cost)}
                                   diff={diffIndex}
                                   status={invoice.status}
+                                  isNewItem={isNewItem}
                                 />
                               </span>
                               <span className="text-right">
@@ -634,6 +729,7 @@ const InvoiceView: React.FC = () => {
                                   value={formatCurrency(service.markupAmount)}
                                   diff={diffIndex}
                                   status={invoice.status}
+                                  isNewItem={isNewItem}
                                 />
                               </span>
                               <span className="text-right">
@@ -642,6 +738,7 @@ const InvoiceView: React.FC = () => {
                                   value={formatCurrency(service.taxAmount)}
                                   diff={diffIndex}
                                   status={invoice.status}
+                                  isNewItem={isNewItem}
                                 />
                               </span>
                               <span className="text-right font-medium text-slate-900">
@@ -650,6 +747,7 @@ const InvoiceView: React.FC = () => {
                                   value={formatCurrency(service.total)}
                                   diff={diffIndex}
                                   status={invoice.status}
+                                  isNewItem={isNewItem}
                                 />
                               </span>
                             </div>
