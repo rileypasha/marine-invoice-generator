@@ -17,6 +17,11 @@ model User {
   createdAt        DateTime          @default(now()) @map("createdAt")
   updatedAt        DateTime          @default(now()) @updatedAt @map("updatedAt")
   password         String?
+  avatarUrl        String?            @map("avatarUrl")
+  // Email notification preferences (values: 'none', 'own', 'all')
+  notifyOnNewInvoice     String        @default("none") @map("notifyOnNewInvoice")
+  notifyOnChangeRequest  String        @default("none") @map("notifyOnChangeRequest")
+  notifyOnApproval       String        @default("none") @map("notifyOnApproval")
   invoices         Invoice[]
   vessels          Vessel[]
   invoiceRevisions InvoiceRevision[]

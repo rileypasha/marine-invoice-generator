@@ -9,7 +9,7 @@ import {
   CardContent,
   Button
 } from '../components/magic/index';
-import { Settings as SettingsIcon, User, Shield, Bell, Database, LogOut, X } from 'lucide-react';
+import { Settings as SettingsIcon, User, Bell, LogOut, X, Upload, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const API_BASE_URL = '/api/v1';
@@ -22,20 +22,44 @@ interface NotificationPreferences {
   notifyOnChangeRequest: NotificationScope;
 }
 
+interface ProfileData {
+  name: string;
+  email: string;
+  avatarFile?: File | null;
+}
+
 const Settings: React.FC = () => {
-  const { logout, csrfToken } = useAuth();
+  const { logout, csrfToken, currentUser, checkAuth } = useAuth();
   const navigate = useNavigate();
-  const [showModal, setShowModal] = useState<'created' | 'changed' | 'approved' | null>(null);
+  const [showModal, setShowModal] = useState<'created' | 'changed' | 'approved' | 'profile' | 'password' | null>(null);
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     notifyOnNewInvoice: 'none',
     notifyOnApproval: 'none',
     notifyOnChangeRequest: 'none'
   });
+  const [profileData, setProfileData] = useState<ProfileData>({
+    name: '',
+    email: '',
+    avatarFile: null
+  });
   const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
 
   useEffect(() => {
     fetchPreferences();
-  }, []);
+    if (currentUser) {
+      setProfileData({
+        name: currentUser.name || '',
+        email: currentUser.email || '',
+        avatarFile: null
+      });
+    }
+  }, [currentUser]);
 
   const fetchPreferences = async () => {
     try {
@@ -119,6 +143,110 @@ const Settings: React.FC = () => {
   const getCurrentValue = (type: 'created' | 'changed' | 'approved'): NotificationScope => {
     return preferences[getPreferenceKey(type)];
   };
+
+  const updatePassword = async () => {
+    if (!csrfToken) {
+      setNotification({ type: 'error', message: 'Session expired. Please refresh the page and try again.' });
+      setTimeout(() => setNotification(null), 5000);
+      return;
+    }
+
+    // Validate passwords
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setNotification({ type: 'error', message: 'All fields are required.' });
+      setTimeout(() => setNotification(null), 5000);
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setNotification({ type: 'error', message: 'New passwords do not match.' });
+      setTimeout(() => setNotification(null), 5000);
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setNotification({ type: 'error', message: 'New password must be at least 8 characters long.' });
+      setTimeout(() => setNotification(null), 5000);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/settings/password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+
+      if (response.ok) {
+        setShowModal(null);
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setNotification({ type: 'success', message: 'Password updated successfully!' });
+        setTimeout(() => setNotification(null), 5000);
+      } else {
+        const error = await response.json();
+        setNotification({ type: 'error', message: error.message || 'Failed to update password. Please try again.' });
+        setTimeout(() => setNotification(null), 5000);
+      }
+    } catch (error) {
+      console.error('Failed to update password:', error);
+      setNotification({ type: 'error', message: 'Failed to update password. Please try again.' });
+      setTimeout(() => setNotification(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateProfile = async () => {
+    if (!csrfToken) {
+      setNotification({ type: 'error', message: 'Session expired. Please refresh the page and try again.' });
+      setTimeout(() => setNotification(null), 5000);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('name', profileData.name);
+      formData.append('email', profileData.email);
+      if (profileData.avatarFile) {
+        formData.append('avatar', profileData.avatarFile);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/settings/profile`, {
+        method: 'PUT',
+        headers: {
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include',
+        body: formData
+      });
+
+      if (response.ok) {
+        await checkAuth(); // Refresh user data
+        setShowModal(null);
+        setNotification({ type: 'success', message: 'Profile updated successfully!' });
+        setTimeout(() => setNotification(null), 5000);
+      } else {
+        const error = await response.json();
+        setNotification({ type: 'error', message: error.message || 'Failed to update profile. Please try again.' });
+        setTimeout(() => setNotification(null), 5000);
+      }
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      setNotification({ type: 'error', message: 'Failed to update profile. Please try again.' });
+      setTimeout(() => setNotification(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -151,14 +279,19 @@ const Settings: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setShowModal('profile')}
+              >
                 Profile Information
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setShowModal('password')}
+              >
                 Change Password
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                Email Preferences
               </Button>
               <Button
                 variant="outline"
@@ -167,32 +300,6 @@ const Settings: React.FC = () => {
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Security Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Shield className="h-5 w-5 mr-2" />
-              Security
-            </CardTitle>
-            <CardDescription>
-              Configure security and access settings
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
-                Two-Factor Authentication
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                Session Management
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                API Keys
               </Button>
             </div>
           </CardContent>
@@ -238,53 +345,211 @@ const Settings: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* System Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Database className="h-5 w-5 mr-2" />
-              System
-            </CardTitle>
-            <CardDescription>
-              Configure system-wide settings
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
-                Data Export
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                Backup Settings
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                System Logs
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Coming Soon Notice */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-8">
-            <SettingsIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Settings Configuration</h3>
-            <p className="text-gray-500 mb-4">
-              Detailed settings configuration is coming soon. This page will allow you to customize
-              your Marine Group experience and manage system preferences.
-            </p>
-            <Button variant="outline">
-              Request Feature
-            </Button>
+      {/* Profile Edit Modal */}
+      {showModal === 'profile' && createPortal(
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999,
+            margin: 0,
+            padding: 0
+          }}
+          onClick={() => setShowModal(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-semibold">Edit Profile</h3>
+              <button
+                onClick={() => setShowModal(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={profileData.name}
+                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter your name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={profileData.email}
+                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter your email"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Profile Picture
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <Upload className="h-4 w-4 mr-2" />
+                      <span className="text-sm">Choose Image</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setProfileData({ ...profileData, avatarFile: file });
+                          }
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                    {profileData.avatarFile && (
+                      <span className="text-sm text-gray-600">
+                        {profileData.avatarFile.name}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Upload an image for your profile picture (optional)
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowModal(null)}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={updateProfile}
+                  disabled={loading}
+                  className="bg-black hover:bg-gray-800 text-white"
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>,
+        document.body
+      )}
+
+      {/* Change Password Modal */}
+      {showModal === 'password' && createPortal(
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999,
+            margin: 0,
+            padding: 0
+          }}
+          onClick={() => setShowModal(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-semibold">Change Password</h3>
+              <button
+                onClick={() => setShowModal(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter current password"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter new password (min 8 characters)"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Confirm new password"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowModal(null);
+                    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  }}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={updatePassword}
+                  disabled={loading}
+                  className="bg-black hover:bg-gray-800 text-white"
+                >
+                  {loading ? 'Updating...' : 'Update Password'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Notification Preference Modal */}
-      {showModal && createPortal(
+      {(showModal === 'created' || showModal === 'changed' || showModal === 'approved') && createPortal(
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
           style={{
@@ -374,6 +639,48 @@ const Settings: React.FC = () => {
                 Close
               </Button>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Success/Error Notification */}
+      {notification && createPortal(
+        <div
+          className="fixed top-4 right-4 z-[10000] animate-slide-in"
+          style={{
+            animation: 'slideIn 0.3s ease-out'
+          }}
+        >
+          <div
+            className={`flex items-center gap-3 px-6 py-4 rounded-lg shadow-lg min-w-[300px] ${
+              notification.type === 'success'
+                ? 'bg-green-50 border border-green-200'
+                : 'bg-red-50 border border-red-200'
+            }`}
+          >
+            {notification.type === 'success' ? (
+              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+            ) : (
+              <XCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            )}
+            <span
+              className={`text-sm font-medium ${
+                notification.type === 'success' ? 'text-green-800' : 'text-red-800'
+              }`}
+            >
+              {notification.message}
+            </span>
+            <button
+              onClick={() => setNotification(null)}
+              className={`ml-auto flex-shrink-0 ${
+                notification.type === 'success'
+                  ? 'text-green-600 hover:text-green-800'
+                  : 'text-red-600 hover:text-red-800'
+              }`}
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </div>,
         document.body

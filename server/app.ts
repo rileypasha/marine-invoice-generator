@@ -14,6 +14,7 @@ import authRoutes from './routes/auth';
 import customerRoutes from './routes/customers';
 import vesselRoutes from './routes/vessels';
 import geoRoutes from './routes/geo';
+import settingsRoutes from './routes/settings';
 
 /**
  * Enhanced compression middleware with intelligent content detection
@@ -92,6 +93,13 @@ app.use(bodyParser.urlencoded({
   extended: true,
   limit: NETWORK.REQUEST_SIZE_LIMIT,
   parameterLimit: 1000 // Prevent parameter pollution
+}));
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day cache for uploaded files
+  }
 }));
 
 // Serve static files from built React app (before CORS to avoid blocking)
@@ -202,6 +210,12 @@ app.use('/api/v1/vessels',
 app.use('/api/geo',
   requireAuth,
   geoRoutes
+);
+
+app.use('/api/v1/settings',
+  requireAuth,
+  csrfProtection,
+  settingsRoutes
 );
 
 // API 404 handler - ensures API routes return JSON errors, not HTML pages
