@@ -4,6 +4,7 @@
   "description": "Auth-aware invoice management system with offline support",
   "main": "dist/server/app.js",
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "vite",
     "dev:server": "nodemon --watch server --ext ts --exec ts-node server/app.ts",
     "dev:client": "vite",
