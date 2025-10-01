@@ -25,8 +25,27 @@ export default function RequestsRowActionsLayer() {
 
   if (!open || !pos || !handlers || rowId == null) return null;
 
+  // Adjust position to prevent overflow
+  const menuWidth = 150; // Approximate width of the menu
+  const menuHeight = 160; // Approximate height of the menu (4 items)
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  let adjustedLeft = pos.left;
+  let adjustedTop = pos.top;
+
+  // Check if menu overflows right edge
+  if (pos.left + menuWidth > viewportWidth) {
+    adjustedLeft = viewportWidth - menuWidth - 10; // 10px padding from edge
+  }
+
+  // Check if menu overflows bottom edge
+  if (pos.top + menuHeight > viewportHeight) {
+    adjustedTop = viewportHeight - menuHeight - 10; // 10px padding from edge
+  }
+
   const style: React.CSSProperties = {
-    position:'absolute', top: pos.top, left: pos.left, zIndex: 1000,
+    position:'absolute', top: adjustedTop, left: adjustedLeft, zIndex: 1000,
     display: 'flex', flexDirection: 'column', background:'white', border:'1px solid rgba(0,0,0,0.08)',
     borderRadius: 8, boxShadow:'0 8px 24px rgba(0,0,0,0.12)', padding: 6
   };
