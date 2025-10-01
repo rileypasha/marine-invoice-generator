@@ -284,6 +284,7 @@ const CreateInvoice: React.FC = () => {
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [pendingCommentText, setPendingCommentText] = useState('');
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [deletedItemsCount, setDeletedItemsCount] = useState(0);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const selectionCardRef = useRef<HTMLDivElement | null>(null);
 
@@ -830,6 +831,22 @@ const CreateInvoice: React.FC = () => {
     } : undefined;
   };
 
+  // Helper function to get classes for deleted fields
+  const getDeletedFieldClasses = (isDeleted: boolean): string => {
+    return isDeleted ? '!bg-red-50 !border-red-500 !border-2 font-bold !text-red-600' : '';
+  };
+
+  // Helper function to get inline styles for deleted fields
+  const getDeletedFieldStyles = (isDeleted: boolean): React.CSSProperties | undefined => {
+    return isDeleted ? {
+      backgroundColor: '#fef2f2',
+      borderColor: '#ef4444',
+      borderWidth: '2px',
+      color: '#dc2626',
+      fontWeight: 700
+    } : undefined;
+  };
+
   useEffect(() => {
     if (restoreAppliedRef.current) return;
     const restoredFormState = (location.state as any)?.restoredFormState;
@@ -1093,6 +1110,11 @@ const CreateInvoice: React.FC = () => {
 
           if (isTaxExempt !== undefined) {
             service.isTaxExempt = isTaxExempt;
+          }
+
+          // Preserve deleted flag
+          if (item._deleted) {
+            service._deleted = true;
           }
 
           return service;
@@ -1704,7 +1726,21 @@ const CreateInvoice: React.FC = () => {
  };
 
   const previewSummary = useMemo(() => {
-    const calculatedServices = invoiceData.services.map(service => {
+    console.log('[previewSummary] Recalculating...', {
+      totalServices: invoiceData.services.length,
+      deletedCount: invoiceData.services.filter(s => s._deleted).length,
+      deletedItemsCount
+    });
+
+    const calculatedServices = invoiceData.services
+      .filter(service => {
+        const isDeleted = !!service._deleted;
+        if (isDeleted) {
+          console.log('[previewSummary] Filtering out deleted service:', service.id, service.description);
+        }
+        return !isDeleted;
+      })
+      .map(service => {
       const baseCost = calculateLineItemCost(service);
       const costWithMarkup = applyMarkup(baseCost, service);
       const taxAmount = calculateTax(service, costWithMarkup);
@@ -1730,6 +1766,13 @@ const CreateInvoice: React.FC = () => {
     const grossProfit = subtotalWithMarkup - baseCostTotal;
     const grossProfitPercent = baseCostTotal > 0 ? roundRate((grossProfit / baseCostTotal) * 100) : 0;
 
+    console.log('[previewSummary] Final totals:', {
+      calculatedServicesCount: calculatedServices.length,
+      subtotalWithMarkup: roundCurrency(subtotalWithMarkup),
+      totalTax: roundCurrency(totalTax),
+      finalTotal: roundCurrency(finalTotal)
+    });
+
     return {
       services: calculatedServices,
       baseCostTotal: roundCurrency(baseCostTotal),
@@ -1739,7 +1782,11 @@ const CreateInvoice: React.FC = () => {
       grossProfit: roundCurrency(grossProfit),
       grossProfitPercent
     };
-  }, [invoiceData.services, invoiceData.vessel.weight, invoiceData.metadata.taxRate]);
+  }, [
+    invoiceData.services,
+    invoiceData.vessel.weight,
+    invoiceData.metadata.taxRate
+  ]);
 
   const buildServiceSnapshot = (service: Service): ServiceSnapshot => {
     const quantity = Number.isFinite(service.quantity) ? Number(service.quantity) : 1;
@@ -1787,11 +1834,15 @@ const CreateInvoice: React.FC = () => {
   };
 
   const buildInvoiceSubmissionPayload = () => {
-    const serviceSnapshots = invoiceData.services.map(buildServiceSnapshot);
+    // Build snapshots for ALL services (including deleted)
+    const allServiceSnapshots = invoiceData.services.map(buildServiceSnapshot);
 
-    const baseCostSumRaw = serviceSnapshots.reduce((sum, snapshot) => sum + snapshot.baseCost, 0);
-    const subtotalBeforeTaxRaw = serviceSnapshots.reduce((sum, snapshot) => sum + snapshot.totalBeforeTax, 0);
-    const totalTaxRaw = serviceSnapshots.reduce((sum, snapshot) => sum + snapshot.taxAmount, 0);
+    // Calculate totals only from non-deleted services
+    const activeSnapshots = allServiceSnapshots.filter((_, index) => !invoiceData.services[index]._deleted);
+
+    const baseCostSumRaw = activeSnapshots.reduce((sum, snapshot) => sum + snapshot.baseCost, 0);
+    const subtotalBeforeTaxRaw = activeSnapshots.reduce((sum, snapshot) => sum + snapshot.totalBeforeTax, 0);
+    const totalTaxRaw = activeSnapshots.reduce((sum, snapshot) => sum + snapshot.taxAmount, 0);
 
     const baseCostSum = roundCurrency(baseCostSumRaw);
     const subtotalBeforeTax = roundCurrency(subtotalBeforeTaxRaw);
@@ -1812,7 +1863,7 @@ const CreateInvoice: React.FC = () => {
       scope: {
         markupRate: markupRateValue,
         isTaxable: totalTax > 0,
-        lineItems: serviceSnapshots.map((snapshot) => ({
+        lineItems: allServiceSnapshots.map((snapshot, index) => ({
           id: snapshot.id,
           jobType: snapshot.jobType || '',
           itemType: snapshot.itemType || '',
@@ -1829,7 +1880,8 @@ const CreateInvoice: React.FC = () => {
           markupType: snapshot.markupType,
           markupRate: snapshot.markupRate,
           isMarkupExempt: snapshot.isMarkupExempt,
-          isTaxExempt: snapshot.isTaxExempt
+          isTaxExempt: snapshot.isTaxExempt,
+          _deleted: invoiceData.services[index]._deleted || false
         }))
       },
       laborRate: 85,
@@ -1845,7 +1897,7 @@ const CreateInvoice: React.FC = () => {
       ...structuredData,
       scope: {
         ...structuredData.scope,
-        lineItems: serviceSnapshots.map((snapshot) => ({
+        lineItems: allServiceSnapshots.map((snapshot, index) => ({
           id: snapshot.id,
           description: snapshot.description,
           jobType: snapshot.jobType,
@@ -1864,7 +1916,8 @@ const CreateInvoice: React.FC = () => {
           isTaxExempt: snapshot.isTaxExempt,
           taxStatus: snapshot.taxStatus,
           markupType: snapshot.markupType,
-          markupRate: snapshot.markupRate
+          markupRate: snapshot.markupRate,
+          _deleted: invoiceData.services[index]._deleted || false
         })),
         subtotal: subtotalBeforeTax,
         taxAmount: totalTax,
@@ -1878,7 +1931,7 @@ const CreateInvoice: React.FC = () => {
     };
 
     return {
-      serviceSnapshots,
+      serviceSnapshots: allServiceSnapshots,
       structuredData,
       metadataPayload,
       parsedData,
@@ -2011,8 +2064,13 @@ const CreateInvoice: React.FC = () => {
   const removeService = (id: string) => {
     setInvoiceData(prev => ({
       ...prev,
-      services: prev.services.filter(service => service.id !== id)
+      services: prev.services.map(service =>
+        service.id === id
+          ? { ...service, _deleted: true }
+          : service
+      )
     }));
+    setDeletedItemsCount(prev => prev + 1);
     setHasUnsavedChanges(true);
   };
 
@@ -2880,7 +2938,9 @@ const CreateInvoice: React.FC = () => {
   };
 
   // Calculate totals
-  const subtotal = invoiceData.services.reduce((sum, service) => sum + service.total, 0);
+  const subtotal = invoiceData.services
+    .filter(service => !service._deleted)
+    .reduce((sum, service) => sum + service.total, 0);
   const taxAmount = invoiceData.metadata.taxRate ? (subtotal * invoiceData.metadata.taxRate / 100) : 0;
   const total = subtotal + taxAmount;
 
@@ -3321,7 +3381,16 @@ const CreateInvoice: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {invoiceData.services.map((service, index) => {
+                  {invoiceData.services
+                    .filter(service => {
+                      // If approved, filter out deleted items
+                      if (invoiceStatus === 'approved' && service._deleted) {
+                        return false;
+                      }
+                      return true;
+                    })
+                    .map((service, index) => {
+                    const isDeleted = service._deleted;
                     const isLaborHoursEntry =
                       service.jobType === 'Manual Entry' && service.itemType === 'Labor';
                     const isAgentServices = service.jobType === 'Agent Services';
@@ -3336,29 +3405,44 @@ const CreateInvoice: React.FC = () => {
                         service.jobType !== 'Clearance Fee');
 
                     return (
-                      <div key={service.id} className="border rounded-lg p-4 space-y-4">
+                      <div
+                        key={service.id}
+                        className={cn(
+                          "border rounded-lg p-4 space-y-4",
+                          isDeleted && "bg-red-50 border-red-300 opacity-75"
+                        )}
+                      >
                         <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-medium">Service Item</h4>
+                          <h4 className={cn("text-sm font-medium", isDeleted && "text-red-600 line-through")}>
+                            {isDeleted ? "Deleted Service Item" : "Service Item"}
+                          </h4>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => removeService(service.id)}
                             className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                            disabled={isDeleted}
                           >
                             ×
                           </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", isDeleted && "pointer-events-none opacity-60")}>
                           <div className="space-y-2">
-                            <Label htmlFor={`service-job-type-${index}`}>Service Type *</Label>
+                            <Label htmlFor={`service-job-type-${index}`} className={isDeleted ? "line-through text-red-600" : ""}>Service Type *</Label>
                             <Select
                               value={service.jobType || ''}
                               onValueChange={(value) => updateService(service.id, 'jobType', value)}
+                              disabled={isDeleted}
                             >
                               <SelectTrigger
                                 id={`service-job-type-${index}`}
-                                className={cn(getChangedFieldClasses(`/services/${index}/jobType`, ['services', index, 'jobType']))}
+                                className={cn(
+                                  isDeleted
+                                    ? getDeletedFieldClasses(isDeleted)
+                                    : getChangedFieldClasses(`/services/${index}/jobType`, ['services', index, 'jobType'])
+                                )}
+                                style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                               >
                                 <SelectValue placeholder="Select service type..." />
                               </SelectTrigger>
@@ -3480,8 +3564,12 @@ const CreateInvoice: React.FC = () => {
                                   );
                                 }}
                                 placeholder="0.00"
-                                className={cn(getChangedFieldClasses(`/services/${index}/manualCost`, ['services', index, 'manualCost']))}
-                                style={getChangedFieldStyles(`/services/${index}/manualCost`, ['services', index, 'manualCost'])}
+                                className={cn(
+                                  isDeleted
+                                    ? getDeletedFieldClasses(isDeleted)
+                                    : getChangedFieldClasses(`/services/${index}/manualCost`, ['services', index, 'manualCost'])
+                                )}
+                                style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/manualCost`, ['services', index, 'manualCost'])}
                               />
                             </div>
                             <div className="space-y-2">
@@ -3505,8 +3593,12 @@ const CreateInvoice: React.FC = () => {
                                   }
                                 }}
                                 placeholder="1"
-                                className={cn(getChangedFieldClasses(`/services/${index}/quantity`, ['services', index, 'quantity']))}
-                                style={getChangedFieldStyles(`/services/${index}/quantity`, ['services', index, 'quantity'])}
+                                className={cn(
+                                  isDeleted
+                                    ? getDeletedFieldClasses(isDeleted)
+                                    : getChangedFieldClasses(`/services/${index}/quantity`, ['services', index, 'quantity'])
+                                )}
+                                style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/quantity`, ['services', index, 'quantity'])}
                               />
                             </div>
                           </div>
@@ -3519,8 +3611,12 @@ const CreateInvoice: React.FC = () => {
                             value={service.description}
                             onChange={(e) => updateService(service.id, 'description', e.target.value)}
                             placeholder="Enter service description..."
-                            className={cn(getChangedFieldClasses(`/services/${index}/description`, ['services', index, 'description']))}
-                            style={getChangedFieldStyles(`/services/${index}/description`, ['services', index, 'description'])}
+                            className={cn(
+                              isDeleted
+                                ? getDeletedFieldClasses(isDeleted)
+                                : getChangedFieldClasses(`/services/${index}/description`, ['services', index, 'description'])
+                            )}
+                            style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/description`, ['services', index, 'description'])}
                           />
                         </div>
 
@@ -3540,7 +3636,12 @@ const CreateInvoice: React.FC = () => {
                                   >
                                     <SelectTrigger
                                       id={`service-tax-status-${index}`}
-                                      className={cn(getChangedFieldClasses(`/services/${index}/taxStatus`, ['services', index, 'taxStatus']))}
+                                      className={cn(
+                                        isDeleted
+                                          ? getDeletedFieldClasses(isDeleted)
+                                          : getChangedFieldClasses(`/services/${index}/taxStatus`, ['services', index, 'taxStatus'])
+                                      )}
+                                      style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                                     >
                                       <SelectValue placeholder="Select">
                                         {service.taxStatus === 'taxable' && 'Taxable (8.75%)'}
@@ -3571,7 +3672,12 @@ const CreateInvoice: React.FC = () => {
                                   >
                                     <SelectTrigger
                                       id={`service-markup-${index}`}
-                                      className={cn(getChangedFieldClasses(`/services/${index}/markupType`, ['services', index, 'markupType']))}
+                                      className={cn(
+                                        isDeleted
+                                          ? getDeletedFieldClasses(isDeleted)
+                                          : getChangedFieldClasses(`/services/${index}/markupType`, ['services', index, 'markupType'])
+                                      )}
+                                      style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                                     >
                                       <SelectValue placeholder="Select">
                                         {service.markupType === 'preset-2.5' && '2.5%'}
@@ -3788,8 +3894,13 @@ const CreateInvoice: React.FC = () => {
 
                       <div className="pointer-events-none absolute inset-0 z-10">
                         {comments.map((comment, index) => {
-                          const width = Math.max(comment.highlight.width, 36);
-                          const height = Math.max(comment.highlight.height, 30);
+                          // Skip rendering highlight if highlight data is missing or invalid
+                          if (!comment.highlight || typeof comment.highlight.top !== 'number' || typeof comment.highlight.left !== 'number') {
+                            return null;
+                          }
+
+                          const width = Math.max(comment.highlight.width || 36, 36);
+                          const height = Math.max(comment.highlight.height || 30, 30);
                           return (
                             <React.Fragment key={comment.id}>
                               <div
