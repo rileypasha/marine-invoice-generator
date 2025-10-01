@@ -2998,19 +2998,19 @@ const CreateInvoice: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header Bar */}
       <div className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-6">
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <h1 className="text-lg font-semibold text-foreground">
+        <div className="mx-auto flex h-auto min-h-14 w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:h-14 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground sm:gap-3">
+            <h1 className="text-base font-semibold text-foreground sm:text-lg">
               {isEditMode ? 'Edit Invoice' : 'New Invoice'}
             </h1>
             {hasUnsavedChanges && (
               <Badge variant="secondary" className="text-xs">
-                Unsaved Changes
+                Unsaved
               </Badge>
             )}
             <Badge
               variant="outline"
-              className={`text-xs ${ 
+              className={`text-xs ${
                 formValidation.isComplete
                   ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
                   : "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100"
@@ -3021,16 +3021,20 @@ const CreateInvoice: React.FC = () => {
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  Invoice information is complete
+                  <span className="hidden sm:inline">Complete</span>
+                  <span className="sm:hidden">✓</span>
                 </span>
               ) : (
                 <span className="flex items-center gap-1">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
-                  Missing: {formValidation.missingFields.slice(0, 2).join(", ")}
-                  {formValidation.missingFields.length > 2 &&
-                    ` +${formValidation.missingFields.length - 2} more`}
+                  <span className="hidden sm:inline">
+                    Missing: {formValidation.missingFields.slice(0, 2).join(", ")}
+                    {formValidation.missingFields.length > 2 &&
+                      ` +${formValidation.missingFields.length - 2} more`}
+                  </span>
+                  <span className="sm:hidden">{formValidation.missingFields.length} missing</span>
                 </span>
               )}
             </Badge>
@@ -3042,41 +3046,43 @@ const CreateInvoice: React.FC = () => {
               size="sm"
               onClick={handleSaveAndNew}
               disabled={isLoading || !formValidation.isComplete}
+              className="hidden sm:flex"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
               </svg>
-              Save & New
+              <span className="hidden sm:inline">Save & New</span>
             </Button>
 
             <Button
               onClick={handleSave}
               disabled={isLoading}
-              className={`bg-black hover:bg-black/90 ${hasUnsavedChanges ? 'shadow-lg' : ''}`}
+              className={`flex-1 sm:flex-initial bg-black hover:bg-black/90 ${hasUnsavedChanges ? 'shadow-lg' : ''}`}
+              size="sm"
             >
               {isLoading ? (
-                <svg className="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               ) : (
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                 </svg>
               )}
-              {isEditMode ? 'Update Invoice' : 'Save Request'}
+              <span>{isEditMode ? 'Update' : 'Save'}</span>
             </Button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="w-full px-6 py-6">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-[minmax(0,6fr)_minmax(320px,1fr)]">
+      <div className="w-full px-4 py-4 sm:px-6 sm:py-6">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-[minmax(0,6fr)_minmax(320px,1fr)]">
 
           {/* Main Form Area */}
           <div className="space-y-6">
             {/* Tabs */}
-            <div className="flex gap-1 p-1 bg-muted rounded-lg">
+            <div className="flex gap-1 p-1 bg-muted rounded-lg overflow-x-auto scrollbar-hide">
               <TabButton
                 id="vessel"
                 label="Vessel"
@@ -3829,23 +3835,62 @@ const CreateInvoice: React.FC = () => {
 
                         <div className="space-y-3">
                           <h3 className="text-sm font-semibold text-slate-800">Services</h3>
-                          <div className="overflow-hidden rounded-lg border border-slate-200">
-                            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                              <span>Item</span>
-                              <span className="text-right">Type</span>
-                              <span className="text-right">Qty</span>
-                              <span className="text-right">Cost</span>
-                              <span className="text-right">Markup</span>
-                              <span className="text-right">Tax</span>
-                              <span className="text-right">Total</span>
+                          {previewSummary.services.length === 0 ? (
+                            <div className="rounded-lg border border-slate-200 px-4 py-6 text-center text-sm text-muted-foreground">
+                              No services added yet.
                             </div>
-                            {previewSummary.services.length === 0 ? (
-                              <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                                No services added yet.
+                          ) : (
+                            <>
+                              {/* Mobile: Card Layout */}
+                              <div className="space-y-3 md:hidden">
+                                {previewSummary.services.map((service, index) => (
+                                  <div key={service.id} className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
+                                    <div>
+                                      <p className={cn("font-medium text-sm", isFieldInBackendDiff(`/services/${index}/description`) ? 'text-green-600 font-semibold' : 'text-slate-800')}>{service.description}</p>
+                                      <p className={cn("text-xs text-muted-foreground", isFieldInBackendDiff(`/services/${index}/jobType`) && 'text-green-600 font-semibold')}>{service.jobType}</p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                      <div>
+                                        <span className="text-slate-500">Type:</span>
+                                        <span className={cn("ml-1 text-slate-700", isFieldInBackendDiff(`/services/${index}/itemType`) && 'text-green-600 font-semibold')}>{service.itemType}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Qty:</span>
+                                        <span className={cn("ml-1 text-slate-700", isFieldInBackendDiff(`/services/${index}/quantity`) && 'text-green-600 font-semibold')}>{service.quantity}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Cost:</span>
+                                        <span className={cn("ml-1 text-slate-700", isFieldInBackendDiff(`/services/${index}/manualCost`) && 'text-green-600 font-semibold')}>{formatCurrency(service.baseCost)}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Markup:</span>
+                                        <span className={cn("ml-1 text-slate-700", isFieldInBackendDiff(`/services/${index}/markupType`) && 'text-green-600 font-semibold')}>{formatCurrency(service.markupAmount)}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Tax:</span>
+                                        <span className={cn("ml-1 text-slate-700", isFieldInBackendDiff(`/services/${index}/taxStatus`) && 'text-green-600 font-semibold')}>{formatCurrency(service.taxAmount)}</span>
+                                      </div>
+                                      <div className="font-medium">
+                                        <span className="text-slate-500">Total:</span>
+                                        <span className="ml-1 text-slate-900">{formatCurrency(service.total)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                            ) : (
-                              previewSummary.services.map((service, index) => {
-                                return (
+
+                              {/* Desktop: Table Layout */}
+                              <div className="hidden md:block overflow-hidden rounded-lg border border-slate-200">
+                                <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                  <span>Item</span>
+                                  <span className="text-right">Type</span>
+                                  <span className="text-right">Qty</span>
+                                  <span className="text-right">Cost</span>
+                                  <span className="text-right">Markup</span>
+                                  <span className="text-right">Tax</span>
+                                  <span className="text-right">Total</span>
+                                </div>
+                                {previewSummary.services.map((service, index) => (
                                   <div key={service.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm">
                                     <div>
                                       <p className={cn("font-medium", isFieldInBackendDiff(`/services/${index}/description`) ? 'text-green-600 font-semibold' : 'text-slate-800')}>{service.description}</p>
@@ -3858,10 +3903,10 @@ const CreateInvoice: React.FC = () => {
                                     <div className={cn("text-right text-slate-700", isFieldInBackendDiff(`/services/${index}/taxStatus`) && 'text-green-600 font-semibold')}>{formatCurrency(service.taxAmount)}</div>
                                     <div className="text-right font-medium text-slate-900">{formatCurrency(service.total)}</div>
                                   </div>
-                                );
-                              })
-                            )}
-                          </div>
+                                ))}
+                              </div>
+                            </>
+                          )}
                         </div>
 
                         <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
