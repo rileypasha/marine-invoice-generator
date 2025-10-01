@@ -152,13 +152,13 @@ export function DataTable<TData, TValue>({
           </>
         ) : (
           <>
-            <div className="flex items-center flex-1 pl-6">
+            <div className="flex items-center pl-6">
               {title && <div className="mr-4">{title}</div>}
               <span className="text-sm font-medium">
                 {selectedRows.length} item{selectedRows.length === 1 ? '' : 's'} selected
               </span>
             </div>
-            <div className="flex items-center gap-2 pr-64">
+            <div className="flex items-center gap-2 ml-auto pr-6">
               <Button
                 variant="outline"
                 size="sm"
