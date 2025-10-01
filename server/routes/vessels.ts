@@ -199,45 +199,40 @@ router.get('/', async (req: VesselRequest, res: Response) => {
           owner_name: true,
           created_at: true,
           updated_at: true,
-          _count: {
-            select: {
-              invoices: true,
-            },
-          },
-          invoices: {
-            select: {
-              total: true,
-              createdAt: true,
-            },
-          },
         },
       }),
       prisma.vessel.count({ where }),
     ]);
 
-    // Transform vessels to include aggregated invoice data
-    const vesselsWithInvoiceData = vessels.map(vessel => {
-      const invoice_count = vessel._count.invoices;
-      const invoice_total = vessel.invoices.reduce((sum, invoice) => sum + (invoice.total || 0), 0);
+    // Transform vessels to include aggregated invoice data using separate queries
+    const vesselsWithInvoiceData = await Promise.all(
+      vessels.map(async vessel => {
+        // Get all-time counts and totals
+        const [allTimeStats, monthlyStats] = await Promise.all([
+          prisma.invoice.aggregate({
+            where: { vesselId: vessel.id },
+            _count: { id: true },
+            _sum: { total: true },
+          }),
+          prisma.invoice.aggregate({
+            where: {
+              vesselId: vessel.id,
+              createdAt: { gte: currentMonthStart },
+            },
+            _count: { id: true },
+            _sum: { total: true },
+          }),
+        ]);
 
-      // Calculate monthly aggregations
-      const monthlyInvoices = vessel.invoices.filter(invoice =>
-        new Date(invoice.createdAt) >= currentMonthStart
-      );
-      const monthly_invoice_count = monthlyInvoices.length;
-      const monthly_invoice_total = monthlyInvoices.reduce((sum, invoice) => sum + (invoice.total || 0), 0);
-
-      // Remove the temporary fields and add the aggregated ones
-      const { _count, invoices, ...vesselData } = vessel;
-
-      return {
-        ...vesselData,
-        invoice_count,
-        invoice_total,
-        monthly_invoice_count,
-        monthly_invoice_total,
-      };
-    });
+        return {
+          ...vessel,
+          invoice_count: allTimeStats._count.id || 0,
+          invoice_total: allTimeStats._sum.total || 0,
+          monthly_invoice_count: monthlyStats._count.id || 0,
+          monthly_invoice_total: monthlyStats._sum.total || 0,
+        };
+      })
+    );
 
     logger.info('Vessels retrieved successfully', {
       correlationId,
