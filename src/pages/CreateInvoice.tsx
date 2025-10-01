@@ -3800,28 +3800,28 @@ const CreateInvoice: React.FC = () => {
                         <div className="grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
                           <div className="space-y-1">
                             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Vessel</h3>
-                            <p className={cn("font-medium", isFieldInDiff('/vesselName') ? 'text-green-600 font-semibold' : 'text-slate-800')}>
+                            <p className={cn("font-medium", isFieldInBackendDiff('/vesselName') ? 'text-green-600 font-semibold' : 'text-slate-800')}>
                               {invoiceData.vessel.name || 'Not specified'}
                             </p>
-                            <p className={cn("text-xs", isFieldInDiff('/vesselWeight') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
+                            <p className={cn("text-xs", isFieldInBackendDiff('/vesselWeight') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
                               Weight: {invoiceData.vessel.weight ? `${formatNumberWithSeparators(invoiceData.vessel.weight)} tons` : '—'}
                             </p>
-                            <p className={cn("text-xs", isFieldInDiff('/vesselBeam') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
+                            <p className={cn("text-xs", isFieldInBackendDiff('/vesselBeam') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
                               Length: {invoiceData.vessel.beam ? `${formatNumberWithSeparators(invoiceData.vessel.beam)} ft` : '—'}
                             </p>
                           </div>
                           <div className="space-y-1">
                             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contact</h3>
-                            <p className={cn("font-medium", isFieldInDiff('/customerName') ? 'text-green-600 font-semibold' : 'text-slate-800')}>
+                            <p className={cn("font-medium", isFieldInBackendDiff('/customerName') ? 'text-green-600 font-semibold' : 'text-slate-800')}>
                               {invoiceData.customer.customerName || invoiceData.customer.contactName || 'Not assigned'}
                             </p>
-                            <p className={cn("text-xs", isFieldInDiff('/customerEmail') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
+                            <p className={cn("text-xs", isFieldInBackendDiff('/customerEmail') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
                               {invoiceData.customer.customerEmail || '—'}
                             </p>
-                            <p className={cn("text-xs", isFieldInDiff('/customerPhone') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
+                            <p className={cn("text-xs", isFieldInBackendDiff('/customerPhone') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
                               {invoiceData.customer.customerPhone || '—'}
                             </p>
-                            <p className={cn("text-xs", isFieldInDiff('/customerAddress') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
+                            <p className={cn("text-xs", isFieldInBackendDiff('/customerAddress') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
                               {invoiceData.customer.customerAddress || '—'}
                             </p>
                           </div>
@@ -3848,14 +3848,14 @@ const CreateInvoice: React.FC = () => {
                                 return (
                                   <div key={service.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm">
                                     <div>
-                                      <p className={cn("font-medium", isFieldInDiff(`/services/${index}/description`) ? 'text-green-600 font-semibold' : 'text-slate-800')}>{service.description}</p>
-                                      <p className={cn("text-xs text-muted-foreground", isFieldInDiff(`/services/${index}/jobType`) && 'text-green-600 font-semibold')}>{service.jobType}</p>
+                                      <p className={cn("font-medium", isFieldInBackendDiff(`/services/${index}/description`) ? 'text-green-600 font-semibold' : 'text-slate-800')}>{service.description}</p>
+                                      <p className={cn("text-xs text-muted-foreground", isFieldInBackendDiff(`/services/${index}/jobType`) && 'text-green-600 font-semibold')}>{service.jobType}</p>
                                     </div>
-                                    <div className={cn("text-right text-slate-700", isFieldInDiff(`/services/${index}/itemType`) && 'text-green-600 font-semibold')}>{service.itemType}</div>
-                                    <div className={cn("text-right text-slate-700", isFieldInDiff(`/services/${index}/quantity`) && 'text-green-600 font-semibold')}>{service.quantity}</div>
-                                    <div className={cn("text-right text-slate-700", isFieldInDiff(`/services/${index}/manualCost`) && 'text-green-600 font-semibold')}>{formatCurrency(service.baseCost)}</div>
-                                    <div className={cn("text-right text-slate-700", isFieldInDiff(`/services/${index}/markupType`) && 'text-green-600 font-semibold')}>{formatCurrency(service.markupAmount)}</div>
-                                    <div className={cn("text-right text-slate-700", isFieldInDiff(`/services/${index}/taxStatus`) && 'text-green-600 font-semibold')}>{formatCurrency(service.taxAmount)}</div>
+                                    <div className={cn("text-right text-slate-700", isFieldInBackendDiff(`/services/${index}/itemType`) && 'text-green-600 font-semibold')}>{service.itemType}</div>
+                                    <div className={cn("text-right text-slate-700", isFieldInBackendDiff(`/services/${index}/quantity`) && 'text-green-600 font-semibold')}>{service.quantity}</div>
+                                    <div className={cn("text-right text-slate-700", isFieldInBackendDiff(`/services/${index}/manualCost`) && 'text-green-600 font-semibold')}>{formatCurrency(service.baseCost)}</div>
+                                    <div className={cn("text-right text-slate-700", isFieldInBackendDiff(`/services/${index}/markupType`) && 'text-green-600 font-semibold')}>{formatCurrency(service.markupAmount)}</div>
+                                    <div className={cn("text-right text-slate-700", isFieldInBackendDiff(`/services/${index}/taxStatus`) && 'text-green-600 font-semibold')}>{formatCurrency(service.taxAmount)}</div>
                                     <div className="text-right font-medium text-slate-900">{formatCurrency(service.total)}</div>
                                   </div>
                                 );
