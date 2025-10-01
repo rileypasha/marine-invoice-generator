@@ -17,6 +17,8 @@ interface Invoice {
   vessel?: {
     name?: string;
   };
+  userName?: string;
+  modifiedByUserName?: string;
   total_amount?: number;
   invoice_date?: string;
   updated_at?: string;
@@ -91,6 +93,39 @@ const Invoices: React.FC<InvoicesProps> = ({
   // Apply status filters
   const filteredData = useMemo(() => {
     let result = filteredBySearch;
+
+    // Apply contact filter
+    if (filters.contact) {
+      const contactLower = filters.contact.toLowerCase();
+      result = result.filter(invoice =>
+        invoice.customer?.display_name?.toLowerCase().includes(contactLower) ||
+        invoice.customer?.company_name?.toLowerCase().includes(contactLower)
+      );
+    }
+
+    // Apply vessel filter
+    if (filters.vessel) {
+      const vesselLower = filters.vessel.toLowerCase();
+      result = result.filter(invoice =>
+        invoice.vessel?.name?.toLowerCase().includes(vesselLower)
+      );
+    }
+
+    // Apply createdBy filter
+    if (filters.createdBy) {
+      const createdByLower = filters.createdBy.toLowerCase();
+      result = result.filter(invoice =>
+        invoice.userName?.toLowerCase().includes(createdByLower)
+      );
+    }
+
+    // Apply modifiedBy filter
+    if (filters.modifiedBy) {
+      const modifiedByLower = filters.modifiedBy.toLowerCase();
+      result = result.filter(invoice =>
+        invoice.modifiedByUserName?.toLowerCase().includes(modifiedByLower)
+      );
+    }
 
     // Apply status filter
     if (filters.status) {
