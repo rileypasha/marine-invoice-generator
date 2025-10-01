@@ -2,7 +2,19 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { gatherInvoiceData } from '../utils/invoiceData';
+import {
+  InvoiceComment,
+  CommentReply,
+  CommentHighlightRect,
+  getInitials,
+  normalizeInvoiceComments
+} from '../utils/invoiceComments';
 import { PhoneField } from '../components/phone/PhoneField';
+import { buildDiffIndex, ChangedValue, DiffIndex, getDelta } from '../components/invoices/ChangedValue';
+import { PatchOperation } from '../types/diff.types';
+import { cn } from '../lib/utils';
+import { isChangeRequested } from '../utils/status';
+import { convertFieldDeltaToPatch, isFieldDeltaFormat } from '../utils/diffConverter';
 import {
   Card,
   CardHeader,
@@ -84,32 +96,6 @@ interface Service {
   markupRate?: number;
   isMarkupExempt?: boolean;
   isTaxExempt?: boolean;
-}
-
-interface CommentReply {
-  id: string;
-  author: string;
-  initials: string;
-  text: string;
-  createdAt: string;
-}
-
-interface CommentHighlightRect {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-}
-
-interface InvoiceComment {
-  id: string;
-  author: string;
-  initials: string;
-  text: string;
-  selectionText: string;
-  createdAt: string;
-  highlight: CommentHighlightRect;
-  replies: CommentReply[];
 }
 
 interface PendingSelection {
@@ -247,6 +233,14 @@ const CreateInvoice: React.FC = () => {
 
   const isEditMode = !!id;
 
+  // Debug logging for route params
+  console.log('[CreateInvoice] Component mounted/updated', {
+    id,
+    isEditMode,
+    pathname: location.pathname,
+    isAuthenticated
+  });
+
   const [invoiceData, setInvoiceData] = useState<InvoiceData>({
     vessel: { name: '', weight: '', beam: '' },
     customer: {
@@ -273,8 +267,20 @@ const CreateInvoice: React.FC = () => {
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [customerPhoneError, setCustomerPhoneError] = useState('');
   const [focusedCostId, setFocusedCostId] = useState<string | null>(null);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [secondAttachedFile, setSecondAttachedFile] = useState<File | null>(null);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [originalInvoiceStatus, setOriginalInvoiceStatus] = useState<string | null>(null);
+  const [statusChangedToChangeRequested, setStatusChangedToChangeRequested] = useState(false);
+  const [attachmentData, setAttachmentData] = useState<{ url: string; name: string; type: string } | null>(null);
+  const [secondAttachmentData, setSecondAttachmentData] = useState<{ url: string; name: string; type: string } | null>(null);
+  const [isFirstAttachmentNew, setIsFirstAttachmentNew] = useState(false);
+  const [isSecondAttachmentNew, setIsSecondAttachmentNew] = useState(false);
   const restoreAppliedRef = useRef(false);
   const [comments, setComments] = useState<InvoiceComment[]>([]);
+  const [invoiceDiff, setInvoiceDiff] = useState<PatchOperation[] | null>(null);
+  const [invoiceStatus, setInvoiceStatus] = useState<string | null>(null);
+  const originalInvoiceDataRef = useRef<any>(null);
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [pendingCommentText, setPendingCommentText] = useState('');
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
@@ -357,54 +363,6 @@ const CreateInvoice: React.FC = () => {
     return service.manualCost && service.manualCost !== 0
       ? formatCurrency(service.manualCost)
       : rawValue;
-  };
-
-  const getInitials = (name: string | undefined | null): string => {
-    if (!name) return 'U';
-    const initials = name
-      .split(' ')
-      .filter(Boolean)
-      .map(part => part[0]?.toUpperCase() || '')
-      .join('');
-    return initials.slice(0, 2) || 'U';
-  };
-
-  const normalizeIncomingComments = (raw: any): InvoiceComment[] => {
-    if (!Array.isArray(raw)) return [];
-
-    return raw.map((comment: any, index: number) => {
-      const authorName = comment.author || comment.authorEmail || 'Unknown User';
-      const replies = Array.isArray(comment.replies)
-        ? comment.replies.map((reply: any, replyIndex: number) => {
-            const replyAuthor = reply.author || reply.authorEmail || 'Unknown User';
-            return {
-              id: reply.id || `restored-reply-${index}-${replyIndex}-${Math.random().toString(36).slice(2, 7)}`,
-              author: replyAuthor,
-              initials: reply.initials || getInitials(replyAuthor),
-              text: reply.text || '',
-              createdAt: reply.createdAt || new Date().toISOString()
-            } as CommentReply;
-          })
-        : [];
-
-      const highlightRaw = comment.highlight || {};
-
-      return {
-        id: comment.id || `restored-comment-${index}-${Math.random().toString(36).slice(2, 7)}`,
-        author: authorName,
-        initials: comment.initials || getInitials(authorName),
-        text: comment.text || '',
-        selectionText: comment.selectionText || '',
-        createdAt: comment.createdAt || new Date().toISOString(),
-        highlight: {
-          top: typeof highlightRaw.top === 'number' ? highlightRaw.top : 0,
-          left: typeof highlightRaw.left === 'number' ? highlightRaw.left : 0,
-          width: typeof highlightRaw.width === 'number' ? highlightRaw.width : 28,
-          height: typeof highlightRaw.height === 'number' ? highlightRaw.height : 24
-        },
-        replies
-      } as InvoiceComment;
-    });
   };
 
   const clearTextSelection = () => {
@@ -541,6 +499,85 @@ const CreateInvoice: React.FC = () => {
     setReplyDrafts(prev => ({ ...prev, [commentId]: '' }));
   };
 
+  const renderCommentsPanel = (className = '') => (
+    <div className={className}>
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-semibold text-slate-800">Comments</h3>
+        <span className="text-xs text-muted-foreground">{comments.length} open</span>
+      </div>
+      {comments.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+          Highlight any portion of the preview on the left to leave a comment.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {comments.map((comment, index) => (
+            <div key={comment.id} className="rounded-lg border bg-white p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <Avatar className="h-9 w-9">
+                  <AvatarFallback>{comment.initials}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-slate-900">{comment.author}</p>
+                    <span className="text-xs text-muted-foreground">#{index + 1}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    “{comment.selectionText.slice(0, 70)}{comment.selectionText.length > 70 ? '…' : ''}”
+                  </p>
+                </div>
+              </div>
+              <p className="mt-3 text-sm text-slate-700 whitespace-pre-wrap">{comment.text}</p>
+
+              {comment.replies.length > 0 && (
+                <div className="mt-3 space-y-3 border-t pt-3">
+                  {comment.replies.map(reply => (
+                    <div key={reply.id} className="flex gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>{reply.initials}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{reply.author}</p>
+                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{reply.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-3 space-y-2">
+                <Textarea
+                  rows={2}
+                  value={replyDrafts[comment.id] ?? ''}
+                  onChange={(e) => setReplyDrafts(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                  placeholder="Reply or mention others with @"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setReplyDrafts(prev => ({ ...prev, [comment.id]: '' }))}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleAddReply(comment.id)}
+                    disabled={!replyDrafts[comment.id]?.trim()}
+                  >
+                    Reply
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   const toNullableNumber = (value: number | undefined): number | null => {
     if (value === undefined || value === null) {
       return null;
@@ -566,6 +603,233 @@ const CreateInvoice: React.FC = () => {
   const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
   const addressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Build diff index for change tracking visualization
+  const diffIndex: DiffIndex = useMemo(() => {
+    return buildDiffIndex(invoiceDiff);
+  }, [invoiceDiff]);
+
+  // Helper: Check if invoice has change requested status
+  const hasChangeRequestedStatus = useMemo(() => {
+    return isChangeRequested(invoiceStatus);
+  }, [invoiceStatus]);
+
+  // Helper: Check if a field has changed based on client-side comparison
+  const hasFieldChangedClientSide = (currentValue: any, path: string[]): boolean => {
+    if (!originalInvoiceDataRef.current || !isEditMode) {
+      return false;
+    }
+
+    let originalValue: any = originalInvoiceDataRef.current;
+    for (const key of path) {
+      if (originalValue === null || originalValue === undefined) {
+        return false;
+      }
+      if (!(key in originalValue)) {
+        // New item (e.g., new line item)
+        const isArrayIndex = typeof key === 'number' || !isNaN(Number(key));
+        if (isArrayIndex && Array.isArray(originalValue)) {
+          return true;
+        }
+        return false;
+      }
+      originalValue = originalValue[key];
+    }
+
+    const normalizedCurrent = currentValue === '' || currentValue === null || currentValue === undefined ? '' : String(currentValue).trim();
+    const normalizedOriginal = originalValue === '' || originalValue === null || originalValue === undefined ? '' : String(originalValue).trim();
+
+    return normalizedCurrent !== normalizedOriginal && normalizedCurrent !== '';
+  };
+
+  // Helper: Reconstruct baseline data by reversing diff operations
+  const reconstructBaseline = (currentData: any, diff: PatchOperation[]): any => {
+    const baseline = JSON.parse(JSON.stringify(currentData));
+
+    console.log('[reconstructBaseline] Starting reconstruction with diff operations:', diff.map(d => ({ path: d.path, op: d.op })));
+
+    // Group operations - we only need array-level add/remove operations
+    // Field-level operations within added items can be ignored
+    const processedArrayPaths = new Set<string>();
+
+    // Process diff operations in reverse to reconstruct baseline
+    for (const operation of diff) {
+      const pathParts = operation.path.split('/').filter(p => p !== '');
+      console.log('[reconstructBaseline] Processing operation:', { path: operation.path, op: operation.op, pathParts });
+
+      if (operation.op === 'add') {
+        // Check if this is an array item add (e.g., /services/-)
+        if (pathParts.length >= 2 && pathParts[pathParts.length - 1] === '-') {
+          const arrayPath = pathParts.slice(0, -1).join('/');
+          if (!processedArrayPaths.has(arrayPath)) {
+            processedArrayPaths.add(arrayPath);
+
+            // Navigate to the array
+            let current = baseline;
+            for (const part of pathParts.slice(0, -1)) {
+              current = current[part];
+            }
+
+            if (Array.isArray(current) && current.length > 0) {
+              // Remove last item from array
+              const removed = current.pop();
+              console.log('[reconstructBaseline] Removed array item:', { arrayPath, itemId: removed?.id, itemDescription: removed?.description });
+            }
+          }
+        }
+        // Ignore field-level adds within array items (e.g., /services/-/id)
+      } else if (operation.op === 'replace' && operation.oldValue !== undefined) {
+        // If something was replaced, restore old value
+        let current = baseline;
+        for (let i = 0; i < pathParts.length - 1; i++) {
+          const part = pathParts[i];
+          current = current[part];
+          if (!current) break;
+        }
+        if (current) {
+          const lastPart = pathParts[pathParts.length - 1];
+          current[lastPart] = operation.oldValue;
+          console.log('[reconstructBaseline] Restored replaced value:', { path: operation.path, oldValue: operation.oldValue });
+        }
+      }
+    }
+
+    console.log('[reconstructBaseline] Baseline after reconstruction:', {
+      servicesCount: baseline.services?.length,
+      serviceIds: baseline.services?.map((s: any) => ({ id: s.id, description: s.description }))
+    });
+
+    return baseline;
+  };
+
+  // Helper: Check if a field is in backend diff
+  const isFieldInBackendDiff = (path: string, arrayPath?: string[]): boolean => {
+    console.log('[isFieldInBackendDiff] Called:', { path, arrayPath, hasChangeRequestedStatus, diffIndexSize: diffIndex?.size });
+
+    if (!hasChangeRequestedStatus || !diffIndex || diffIndex.size === 0) {
+      console.log('[isFieldInBackendDiff] Early return - no diff data');
+      return false;
+    }
+
+    // For array item fields, check if the item exists in the original data
+    // If the item is new (not in original), highlight all its fields
+    if (/\/\d+\//.test(path) && arrayPath && arrayPath.length >= 2) {
+      const arrayName = arrayPath[0]; // e.g., 'services'
+      const itemIndex = parseInt(arrayPath[1], 10); // e.g., 0, 1, 2
+
+      console.log('[isFieldInBackendDiff] Array item check:', {
+        path,
+        arrayName,
+        itemIndex,
+        arrayPathLength: arrayPath.length,
+        fullArrayPath: arrayPath,
+        hasOriginalData: !!originalInvoiceDataRef.current,
+        isEditMode
+      });
+
+      // Get the current item - only use first two elements (arrayName, index)
+      const itemPath = arrayPath.slice(0, 2);
+      console.log('[isFieldInBackendDiff] Getting item with path:', itemPath);
+      const currentItem = getValueFromPath(itemPath);
+      console.log('[isFieldInBackendDiff] Current item:', { currentItem, hasId: !!currentItem?.id });
+
+      if (!currentItem || !currentItem.id) {
+        console.log('[isFieldInBackendDiff] No current item or ID');
+        return false;
+      }
+
+      // Check if this item exists in the original data
+      if (originalInvoiceDataRef.current && isEditMode) {
+        const originalArray = originalInvoiceDataRef.current[arrayName];
+        console.log('[isFieldInBackendDiff] Original array:', {
+          originalArray: originalArray?.map((item: any) => ({ id: item.id, description: item.description })),
+          isArray: Array.isArray(originalArray)
+        });
+
+        if (Array.isArray(originalArray)) {
+          // Check if any item in the original array has this ID
+          const existsInOriginal = originalArray.some((item: any) => item.id === currentItem.id);
+          console.log('[isFieldInBackendDiff] ID match check:', {
+            currentId: currentItem.id,
+            originalIds: originalArray.map((item: any) => item.id),
+            existsInOriginal
+          });
+
+          if (!existsInOriginal) {
+            // This is a new item, highlight all its fields
+            console.log('[isFieldInBackendDiff] ✅ New array item detected - HIGHLIGHTING:', { path, itemId: currentItem.id });
+            return true;
+          } else {
+            console.log('[isFieldInBackendDiff] ❌ Existing item - NOT highlighting:', { path, itemId: currentItem.id });
+          }
+        }
+      } else {
+        console.log('[isFieldInBackendDiff] No original data or not in edit mode:', {
+          hasOriginalData: !!originalInvoiceDataRef.current,
+          isEditMode
+        });
+      }
+
+      return false; // Existing item, don't highlight from backend diff
+    }
+
+    // Try exact match for non-array fields
+    const delta = getDelta(diffIndex, path);
+    if (delta && (delta.op === 'add' || delta.op === 'replace')) {
+      console.log('[isFieldInBackendDiff] ✅ Exact match found - HIGHLIGHTING:', { path, op: delta.op });
+      return true;
+    }
+
+    console.log('[isFieldInBackendDiff] ❌ No match - NOT highlighting:', path);
+    return false;
+  };
+
+  // Helper: Check if a field should be highlighted (combines both approaches)
+  const isFieldHighlighted = (jsonPointerPath: string, arrayPath?: string[]): boolean => {
+    console.log('[isFieldHighlighted] Called with:', { jsonPointerPath, arrayPath, hasChangeRequestedStatus, diffIndexSize: diffIndex?.size });
+
+    // Check backend diff first (for saved changes)
+    if (isFieldInBackendDiff(jsonPointerPath, arrayPath)) {
+      console.log('[isFieldHighlighted] Backend diff match!', jsonPointerPath);
+      return true;
+    }
+
+    // Check client-side changes (for active editing)
+    if (arrayPath && hasFieldChangedClientSide(getValueFromPath(arrayPath), arrayPath)) {
+      console.log('[isFieldHighlighted] Client-side change match!', arrayPath);
+      return true;
+    }
+
+    return false;
+  };
+
+  // Helper: Get current value from invoice data using array path
+  const getValueFromPath = (path: string[]): any => {
+    let value: any = invoiceData;
+    for (const key of path) {
+      if (value === null || value === undefined) return undefined;
+      value = value[key];
+    }
+    return value;
+  };
+
+  // Helper function to get styling classes for changed fields
+  const getChangedFieldClasses = (jsonPointerPath: string, arrayPath?: string[]): string => {
+    const isChanged = isFieldHighlighted(jsonPointerPath, arrayPath);
+    return isChanged ? '!bg-green-50 !border-green-500 !border-2 font-semibold !text-green-900' : '';
+  };
+
+  // Helper function to get inline styles for changed fields
+  const getChangedFieldStyles = (jsonPointerPath: string, arrayPath?: string[]): React.CSSProperties | undefined => {
+    const isChanged = isFieldHighlighted(jsonPointerPath, arrayPath);
+    return isChanged ? {
+      backgroundColor: '#f0fdf4',
+      borderColor: '#22c55e',
+      borderWidth: '2px',
+      color: '#14532d',
+      fontWeight: 600
+    } : undefined;
+  };
+
   useEffect(() => {
     if (restoreAppliedRef.current) return;
     const restoredFormState = (location.state as any)?.restoredFormState;
@@ -586,7 +850,7 @@ const CreateInvoice: React.FC = () => {
               ? normalizeDecimalInput(String(service.manualCost), 2)
               : '')
         }));
-        const normalizedComments = normalizeIncomingComments(restoredInvoiceData.metadata?.comments);
+        const normalizedComments = normalizeInvoiceComments(restoredInvoiceData.metadata?.comments);
         restoredInvoiceData.metadata = {
           ...restoredInvoiceData.metadata,
           comments: normalizedComments
@@ -596,7 +860,7 @@ const CreateInvoice: React.FC = () => {
       }
 
       if (Array.isArray(restoredFormState.comments)) {
-        setComments(normalizeIncomingComments(restoredFormState.comments));
+        setComments(normalizeInvoiceComments(restoredFormState.comments));
       }
 
       if (typeof restoredFormState.selectedVesselId === 'string') {
@@ -663,17 +927,29 @@ const CreateInvoice: React.FC = () => {
 
   // Fetch existing invoice data when in edit mode
   useEffect(() => {
-    if (!isEditMode || !isAuthenticated || !csrfToken || !id) {
+    console.log('[CreateInvoice] useEffect triggered', { isEditMode, isAuthenticated, id });
+
+    // Don't do anything if not in edit mode or no id
+    if (!isEditMode || !id) {
+      console.log('[CreateInvoice] Skipping fetch - not edit mode or no id:', { isEditMode, id });
       setIsFetchingData(false);
       return;
     }
+
+    // Wait for auth to be ready
+    if (!isAuthenticated) {
+      console.log('[CreateInvoice] Waiting for authentication...');
+      return;
+    }
+
+    console.log('[CreateInvoice] Fetching invoice data for id:', id);
 
     const fetchInvoiceData = async () => {
       try {
         const response = await fetch(`/api/v1/invoice/${id}`, {
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken
+            ...(csrfToken && { 'X-CSRF-Token': csrfToken })
           },
           credentials: 'include'
         });
@@ -690,9 +966,46 @@ const CreateInvoice: React.FC = () => {
         }
 
         const data = await response.json();
-        const invoice = data.invoice || data;
+        const invoice = data.data || data.invoice || data;
+
+        console.log('[CreateInvoice] Response from backend:', data);
+        console.log('[CreateInvoice] Extracted invoice:', invoice);
+        console.log('Attachment fields:', {
+          attachmentUrl: invoice.attachmentUrl,
+          attachmentName: invoice.attachmentName,
+          attachmentType: invoice.attachmentType,
+          secondAttachmentUrl: invoice.secondAttachmentUrl,
+          secondAttachmentName: invoice.secondAttachmentName,
+          secondAttachmentType: invoice.secondAttachmentType
+        });
+
+        // Store diff and status for change tracking
+        let diffData = data.diff || invoice.diff;
+        console.log('[CreateInvoice] Raw diff data:', { diff: diffData, status: invoice.status });
+
+        // Check if diff needs conversion from FieldDelta to PatchOperation
+        if (isFieldDeltaFormat(diffData)) {
+          console.log('[CreateInvoice] Converting FieldDelta to PatchOperation');
+          diffData = convertFieldDeltaToPatch(diffData);
+          console.log('[CreateInvoice] Converted diff:', diffData);
+        }
+
+        setInvoiceDiff(diffData || null);
+        setInvoiceStatus(invoice.status || null);
+
+        if (diffData && Array.isArray(diffData)) {
+          console.log('[CreateInvoice] Diff items:', diffData.map((d: any) => ({ path: d.path, op: d.op, value: d.value })));
+        }
 
         const { primaryData, scope, lineItems } = gatherInvoiceData<Record<string, any>>(invoice);
+
+        console.log('[CreateInvoice] After gatherInvoiceData:', {
+          primaryData,
+          scope,
+          lineItems,
+          invoiceCustomer: invoice.customer,
+          invoiceCustomerAddress: invoice.customerAddress
+        });
 
         const vesselData = primaryData?.vessel || invoice.vessel || {};
         const customerData = primaryData?.customer || invoice.customer || {};
@@ -713,6 +1026,20 @@ const CreateInvoice: React.FC = () => {
           const markupType = normalizeMarkupType(item.markupType ?? item.markup_type);
           const isMarkupExempt = normalizeBoolean(item.isMarkupExempt ?? item.markup_exempt);
           const isTaxExempt = normalizeBoolean(item.isTaxExempt ?? item.tax_exempt);
+
+          console.log('[CreateInvoice] Service item processing:', {
+            index,
+            description: item.description,
+            rawTaxStatus: item.taxStatus,
+            rawTaxStatusAlt: item.tax_status,
+            normalizedTaxStatus: taxStatus,
+            rawMarkupType: item.markupType,
+            rawMarkupTypeAlt: item.markup_type,
+            normalizedMarkupType: markupType,
+            rawIsMarkupExempt: item.isMarkupExempt,
+            rawMarkupExemptAlt: item.markup_exempt,
+            normalizedIsMarkupExempt: isMarkupExempt
+          });
 
           const service: Service = {
             id: item.id ? String(item.id) : `service-${index}`,
@@ -799,7 +1126,19 @@ const CreateInvoice: React.FC = () => {
           invoice.customerPhone ||
           '';
 
-        const resolvedCustomerAddress = formatAddress(customerData);
+        // Try multiple sources for address
+        const resolvedCustomerAddress =
+          formatAddress(customerData) ||
+          formatAddress(invoice.customer || {}) ||
+          invoice.customerAddress ||
+          '';
+
+        console.log('[CreateInvoice] Address resolution:', {
+          fromCustomerData: formatAddress(customerData),
+          fromInvoiceCustomer: formatAddress(invoice.customer || {}),
+          fromInvoiceField: invoice.customerAddress,
+          resolved: resolvedCustomerAddress
+        });
 
         const resolvedContactName =
           customerData.contactName ||
@@ -808,7 +1147,7 @@ const CreateInvoice: React.FC = () => {
           invoice.customerName ||
           '';
 
-        setInvoiceData({
+        const loadedInvoiceData = {
           vessel: {
             name: vesselData.name || invoice.vessel?.name || invoice.vesselName || '',
             weight: vesselWeightSource === '' ? '' : vesselWeightSource.toString(),
@@ -830,19 +1169,72 @@ const CreateInvoice: React.FC = () => {
               scope?.taxRate ?? scope?.tax_rate ?? invoice.metadata?.taxRate ?? invoice.metadata?.tax_rate ?? 0,
               0
             ),
-            comments: normalizeIncomingComments(invoice.metadata?.comments)
+            comments: normalizeInvoiceComments(invoice.metadata?.comments)
           }
-        });
+        };
 
-        const resolvedCustomerId = customerData.id ?? customerData.customerId ?? invoice.customer?.id ?? '';
-        const resolvedVesselId = vesselData.id ?? invoice.vessel?.id ?? '';
+        setInvoiceData(loadedInvoiceData);
+
+        // Store original data for client-side change tracking
+        // If there's a diff, reconstruct the baseline by reversing the diff operations
+        if (diffData && Array.isArray(diffData) && diffData.length > 0) {
+          originalInvoiceDataRef.current = reconstructBaseline(loadedInvoiceData, diffData);
+          console.log('[CreateInvoice] originalInvoiceDataRef set from reconstructed baseline:', {
+            hasServices: !!originalInvoiceDataRef.current?.services,
+            servicesCount: originalInvoiceDataRef.current?.services?.length,
+            serviceIds: originalInvoiceDataRef.current?.services?.map((s: any) => ({ id: s.id, description: s.description }))
+          });
+        } else {
+          originalInvoiceDataRef.current = JSON.parse(JSON.stringify(loadedInvoiceData));
+          console.log('[CreateInvoice] originalInvoiceDataRef set from current data (no diff):', {
+            hasServices: !!originalInvoiceDataRef.current?.services,
+            servicesCount: originalInvoiceDataRef.current?.services?.length,
+            serviceIds: originalInvoiceDataRef.current?.services?.map((s: any) => ({ id: s.id, description: s.description }))
+          });
+        }
+
+        const resolvedCustomerId = customerData.id ?? customerData.customerId ?? invoice.customer?.id ?? invoice.customerId ?? '';
+        const resolvedVesselId = vesselData.id ?? invoice.vessel?.id ?? invoice.vesselId ?? '';
+
+        console.log('[CreateInvoice] Resolved IDs:', {
+          customerId: resolvedCustomerId,
+          vesselId: resolvedVesselId,
+          invoiceCustomerId: invoice.customerId,
+          invoiceVesselId: invoice.vesselId
+        });
 
         setSelectedCustomerId(resolvedCustomerId ? String(resolvedCustomerId) : '');
         setSelectedVesselId(resolvedVesselId ? String(resolvedVesselId) : '');
         setCustomerPhoneError('');
 
-        const existingComments = normalizeIncomingComments(invoice.metadata?.comments);
+        const existingComments = normalizeInvoiceComments(invoice.metadata?.comments);
         setComments(existingComments);
+
+        // Store original invoice status
+        setOriginalInvoiceStatus(invoice.status || null);
+
+        // Load attachment data from database
+        if (invoice.attachmentUrl && invoice.attachmentName && invoice.attachmentType) {
+          setAttachmentData({
+            url: invoice.attachmentUrl,
+            name: invoice.attachmentName,
+            type: invoice.attachmentType
+          });
+          // Set file state to show attachment in UI (using a mock File object for display purposes)
+          setAttachedFile(new File([], invoice.attachmentName, { type: invoice.attachmentType }));
+          setIsFirstAttachmentNew(false); // Mark as existing attachment, not new
+        }
+
+        if (invoice.secondAttachmentUrl && invoice.secondAttachmentName && invoice.secondAttachmentType) {
+          setSecondAttachmentData({
+            url: invoice.secondAttachmentUrl,
+            name: invoice.secondAttachmentName,
+            type: invoice.secondAttachmentType
+          });
+          setSecondAttachedFile(new File([], invoice.secondAttachmentName, { type: invoice.secondAttachmentType }));
+          setIsSecondAttachmentNew(false); // Mark as existing attachment, not new
+          setStatusChangedToChangeRequested(true);
+        }
 
         setHasUnsavedChanges(false);
       } catch (error: any) {
@@ -854,7 +1246,47 @@ const CreateInvoice: React.FC = () => {
     };
 
     fetchInvoiceData();
-  }, [isEditMode, isAuthenticated, csrfToken, id]);
+  }, [isEditMode, isAuthenticated, id]);
+
+  // Detect changes to approved invoices and trigger status change to "change_requested"
+  useEffect(() => {
+    // Only run if we're in edit mode, have original status, and it was approved
+    if (!isEditMode || !originalInvoiceStatus || originalInvoiceStatus !== 'approved') {
+      return;
+    }
+
+    // If already changed status, don't check again
+    if (statusChangedToChangeRequested) {
+      return;
+    }
+
+    // Check if there are unsaved changes (form has been modified)
+    if (hasUnsavedChanges && isAuthenticated && csrfToken && id) {
+      // Automatically update status to "change_requested"
+      const updateStatus = async () => {
+        try {
+          const response = await fetch(`/api/v1/invoice/${id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': csrfToken
+            },
+            credentials: 'include',
+            body: JSON.stringify({ status: 'change_requested' })
+          });
+
+          if (response.ok) {
+            setStatusChangedToChangeRequested(true);
+            console.log('Invoice status changed to change_requested');
+          }
+        } catch (error) {
+          console.error('Error updating invoice status:', error);
+        }
+      };
+
+      updateStatus();
+    }
+  }, [hasUnsavedChanges, isEditMode, originalInvoiceStatus, statusChangedToChangeRequested, isAuthenticated, csrfToken, id]);
 
   // Handle query parameters for pre-filling customer data
   useEffect(() => {
@@ -1391,7 +1823,13 @@ const CreateInvoice: React.FC = () => {
           cost: snapshot.baseCost,
           laborCost: snapshot.itemType === 'Labor' ? snapshot.baseCost : null,
           materialCost: snapshot.itemType === 'Material' ? snapshot.baseCost : null,
-          subcontractorCost: snapshot.itemType === 'Subcontractor' ? snapshot.baseCost : null
+          subcontractorCost: snapshot.itemType === 'Subcontractor' ? snapshot.baseCost : null,
+          taxStatus: snapshot.taxStatus,
+          taxRate: snapshot.taxRate,
+          markupType: snapshot.markupType,
+          markupRate: snapshot.markupRate,
+          isMarkupExempt: snapshot.isMarkupExempt,
+          isTaxExempt: snapshot.isTaxExempt
         }))
       },
       laborRate: 85,
@@ -1679,6 +2117,7 @@ const CreateInvoice: React.FC = () => {
         customerName: invoiceData.customer.customerName,
         customerEmail: invoiceData.customer.customerEmail,
         customerPhone: invoiceData.customer.customerPhone,
+        customerAddress: invoiceData.customer.customerAddress,
         vesselName: invoiceData.vessel.name,
         vesselWeight: toOptionalNumber(invoiceData.vessel.weight),
         vesselBeam: toOptionalNumber(invoiceData.vessel.beam),
@@ -1687,7 +2126,19 @@ const CreateInvoice: React.FC = () => {
         total: totals.finalTotal,
         grossProfit: totals.grossProfit,
         profitPercent: totals.profitPercent,
-        parsedData
+        parsedData,
+        // Only set status to 'approved' if a NEW attachment is being added
+        ...((isFirstAttachmentNew || isSecondAttachmentNew) && { status: 'approved' }),
+        ...(attachmentData && {
+          attachmentUrl: attachmentData.url,
+          attachmentName: attachmentData.name,
+          attachmentType: attachmentData.type
+        }),
+        ...(secondAttachmentData && {
+          secondAttachmentUrl: secondAttachmentData.url,
+          secondAttachmentName: secondAttachmentData.name,
+          secondAttachmentType: secondAttachmentData.type
+        })
       };
 
       const response = await fetch(url, {
@@ -1875,7 +2326,6 @@ const CreateInvoice: React.FC = () => {
       id: 'print',
       invoiceNumber: `PRINT-${Date.now().toString().slice(-6)}`,
       title: invoiceData.metadata.title || `Invoice for ${invoiceData.vessel.name}`,
-      status: 'draft',
       total: finalTotal,
       subtotal,
       taxAmount: totalTax,
@@ -2187,6 +2637,170 @@ const CreateInvoice: React.FC = () => {
     }
   };
 
+  const handleFileAttachment = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type (PDF, images)
+      const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please select a PDF or image file (PNG, JPEG)');
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        alert('File size must be less than 10MB');
+        return;
+      }
+
+      setAttachedFile(file);
+      setIsFirstAttachmentNew(true); // Mark as new attachment
+
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result as string;
+        setAttachmentData({
+          url: base64Data,
+          name: file.name,
+          type: file.type
+        });
+
+        // Automatically update status to "approved" when file is attached in edit mode
+        if (isEditMode && id && isAuthenticated && csrfToken) {
+          try {
+            setIsUploadingFile(true);
+
+            const response = await fetch(`/api/v1/invoice/${id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+              },
+              credentials: 'include',
+              body: JSON.stringify({
+                status: 'approved',
+                attachmentUrl: base64Data,
+                attachmentName: file.name,
+                attachmentType: file.type
+              })
+            });
+
+            if (response.ok) {
+              console.log('Invoice status updated to approved');
+            }
+          } catch (error) {
+            console.error('Error updating invoice status:', error);
+          } finally {
+            setIsUploadingFile(false);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveAttachment = () => {
+    setAttachedFile(null);
+    setAttachmentData(null);
+    setIsFirstAttachmentNew(false);
+  };
+
+  const handleSecondFileAttachment = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type (PDF, images)
+      const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please select a PDF or image file (PNG, JPEG)');
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        alert('File size must be less than 10MB');
+        return;
+      }
+
+      setSecondAttachedFile(file);
+      setIsSecondAttachmentNew(true); // Mark as new attachment
+
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result as string;
+        setSecondAttachmentData({
+          url: base64Data,
+          name: file.name,
+          type: file.type
+        });
+
+        // Automatically update status to "approved" when second file is attached
+        if (isEditMode && id && isAuthenticated && csrfToken) {
+          try {
+            setIsUploadingFile(true);
+
+            const response = await fetch(`/api/v1/invoice/${id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+              },
+              credentials: 'include',
+              body: JSON.stringify({
+                status: 'approved',
+                secondAttachmentUrl: base64Data,
+                secondAttachmentName: file.name,
+                secondAttachmentType: file.type
+              })
+            });
+
+            if (response.ok) {
+              console.log('Invoice status updated to approved');
+            }
+          } catch (error) {
+            console.error('Error updating invoice status:', error);
+          } finally {
+            setIsUploadingFile(false);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveSecondAttachment = () => {
+    setSecondAttachedFile(null);
+    setSecondAttachmentData(null);
+    setIsSecondAttachmentNew(false);
+  };
+
+  const handleViewAttachment = (attachmentData: { url: string; name: string; type: string }) => {
+    try {
+      // Convert base64 to blob
+      const base64Data = attachmentData.url.split(',')[1]; // Remove data:mime;base64, prefix
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: attachmentData.type });
+
+      // Create object URL and open in new tab
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank', 'noopener,noreferrer');
+
+      // Clean up object URL after a delay
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+    } catch (error) {
+      console.error('Error viewing attachment:', error);
+      alert('Failed to view attachment');
+    }
+  };
+
   const handleExportCSV = () => {
     // Calculate totals for CSV export
     const calculatedServices = invoiceData.services.map(service => {
@@ -2324,9 +2938,11 @@ const CreateInvoice: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header Bar */}
       <div className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
-        <div className="container flex h-14 items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-lg font-semibold">{isEditMode ? 'Edit Invoice' : 'New Invoice'}</h1>
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-6">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <h1 className="text-lg font-semibold text-foreground">
+              {isEditMode ? 'Edit Invoice' : 'New Invoice'}
+            </h1>
             {hasUnsavedChanges && (
               <Badge variant="secondary" className="text-xs">
                 Unsaved Changes
@@ -2394,8 +3010,8 @@ const CreateInvoice: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="w-full px-10 py-6">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,6fr)_minmax(300px,1fr)]">
+      <div className="w-full px-6 py-6">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-[minmax(0,6fr)_minmax(320px,1fr)]">
 
           {/* Main Form Area */}
           <div className="space-y-6">
@@ -2504,6 +3120,8 @@ const CreateInvoice: React.FC = () => {
                         id="vessel-name"
                         value={invoiceData.vessel.name}
                         onChange={(e) => handleVesselChange('name', e.target.value)}
+                        className={cn(getChangedFieldClasses('/vesselName', ['vessel', 'name']))}
+                        style={getChangedFieldStyles('/vesselName', ['vessel', 'name'])}
                       />
                     </div>
                     <div className="space-y-2">
@@ -2511,7 +3129,8 @@ const CreateInvoice: React.FC = () => {
                       <div className="relative">
                         <Input
                           id="vessel-weight"
-                          className="pr-12"
+                          className={cn('pr-12', getChangedFieldClasses('/vesselWeight', ['vessel', 'weight']))}
+                          style={getChangedFieldStyles('/vesselWeight', ['vessel', 'weight'])}
                           value={formatNumberWithSeparators(invoiceData.vessel.weight)}
                           onChange={(e) => handleVesselChange('weight', e.target.value)}
                         />
@@ -2525,7 +3144,8 @@ const CreateInvoice: React.FC = () => {
                       <div className="relative">
                         <Input
                           id="vessel-beam"
-                          className="pr-12"
+                          className={cn('pr-12', getChangedFieldClasses('/vesselBeam', ['vessel', 'beam']))}
+                          style={getChangedFieldStyles('/vesselBeam', ['vessel', 'beam'])}
                           value={formatNumberWithSeparators(invoiceData.vessel.beam)}
                           onChange={(e) => handleVesselChange('beam', e.target.value)}
                         />
@@ -2620,6 +3240,8 @@ const CreateInvoice: React.FC = () => {
                         id="contact-name"
                         value={invoiceData.customer.contactName}
                         onChange={(e) => handleCustomerChange('contactName', e.target.value)}
+                        className={cn(getChangedFieldClasses('/contactName', ['customer', 'contactName']))}
+                        style={getChangedFieldStyles('/contactName', ['customer', 'contactName'])}
                       />
                     </div>
                     <div className="space-y-2">
@@ -2629,17 +3251,22 @@ const CreateInvoice: React.FC = () => {
                         type="email"
                         value={invoiceData.customer.customerEmail}
                         onChange={(e) => handleCustomerChange('customerEmail', e.target.value)}
+                        className={cn(getChangedFieldClasses('/customerEmail', ['customer', 'customerEmail']))}
+                        style={getChangedFieldStyles('/customerEmail', ['customer', 'customerEmail'])}
                       />
                     </div>
-                    <PhoneField
-                      name="customer-phone"
-                      label="Phone Number"
-                      value={invoiceData.customer.customerPhone || undefined}
-                      onChange={handleCustomerPhoneChange}
-                      placeholder="Enter phone number"
-                      defaultCountry="US"
-                      error={customerPhoneError}
-                    />
+                    <div className="space-y-2">
+                      <PhoneField
+                        name="customer-phone"
+                        label="Phone Number"
+                        value={invoiceData.customer.customerPhone || undefined}
+                        onChange={handleCustomerPhoneChange}
+                        placeholder="Enter phone number"
+                        defaultCountry="US"
+                        error={customerPhoneError}
+                        className={cn(getChangedFieldClasses('/customerPhone', ['customer', 'customerPhone']))}
+                      />
+                    </div>
                     <div className="space-y-2 md:-mt-1">
                       <Label htmlFor="customer-address">Address</Label>
                       <div className="relative">
@@ -2657,6 +3284,8 @@ const CreateInvoice: React.FC = () => {
                           }}
                           onFocus={() => setShowAddressSuggestions(true)}
                           onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 150)}
+                          className={cn(getChangedFieldClasses('/customerAddress', ['customer', 'customerAddress']))}
+                          style={getChangedFieldStyles('/customerAddress', ['customer', 'customerAddress'])}
                         />
                         {showAddressSuggestions && addressSuggestions.length > 0 && (
                           <div className="absolute z-10 w-full bg-background border border-input rounded-md shadow-lg mt-1">
@@ -2692,291 +3321,327 @@ const CreateInvoice: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {invoiceData.services.map((service, index) => (
-                    <div key={service.id} className="border rounded-lg p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium">Service Item</h4>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeService(service.id)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                        >
-                          ×
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor={`service-job-type-${index}`}>Service Type *</Label>
-                          <Select
-                            value={service.jobType || ''}
-                            onValueChange={(value) => updateService(service.id, 'jobType', value)}
-                          >
-                            <SelectTrigger id={`service-job-type-${index}`}>
-                              <SelectValue placeholder="Select service type..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Manual Entry">Manual Entry</SelectItem>
-                              <SelectItem value="Clearance Fee">Clearance Fee</SelectItem>
-                              <SelectItem value="Pilotage">Pilotage</SelectItem>
-                              <SelectItem value="Car Rental">Car Rental</SelectItem>
-                              <SelectItem value="Trash Removal">Trash Removal</SelectItem>
-                              <SelectItem value="Good Stew">Good Stew</SelectItem>
-                              <SelectItem value="Crew Placement">Crew Placement</SelectItem>
-                              <SelectItem value="Agent Services">Agent Services</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {service.jobType === 'Manual Entry' && (
-                          <div className="space-y-2">
-                            <Label htmlFor={`service-item-type-${index}`}>Item Type *</Label>
-                            <Select
-                              value={service.itemType || ''}
-                              onValueChange={(value) => updateService(service.id, 'itemType', value)}
-                            >
-                              <SelectTrigger id={`service-item-type-${index}`}>
-                                <SelectValue placeholder="Select item type..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Labor">Labor</SelectItem>
-                                <SelectItem value="Material">Material</SelectItem>
-                                <SelectItem value="Subcontractor">Subcontractor</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                      </div>
-
-                      {((service.jobType === 'Manual Entry' && service.itemType === 'Labor') ||
-                        service.jobType === 'Agent Services') && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor={`service-labor-hours-${index}`}>Regular Hours</Label>
-                            <div className="relative">
-                              <Input
-                                id={`service-labor-hours-${index}`}
-                                type="text"
-                                inputMode="decimal"
-                                value={
-                                  service.laborHours !== undefined && service.laborHours !== null && service.laborHours !== 0
-                                    ? service.laborHours.toString()
-                                    : ''
-                                }
-                                onChange={(e) =>
-                                  updateService(
-                                    service.id,
-                                    'laborHours',
-                                    parseFloat(e.target.value) || 0
-                                  )
-                                }
-                                placeholder="0.0"
-                                className="pr-12"
-                              />
-                              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
-                                hours
-                              </span>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor={`service-ot-hours-${index}`}>Overtime Hours</Label>
-                            <div className="relative">
-                              <Input
-                                id={`service-ot-hours-${index}`}
-                                type="text"
-                                inputMode="decimal"
-                                value={
-                                  service.otHours !== undefined && service.otHours !== null && service.otHours !== 0
-                                    ? service.otHours.toString()
-                                    : ''
-                                }
-                                onChange={(e) =>
-                                  updateService(
-                                    service.id,
-                                    'otHours',
-                                    parseFloat(e.target.value) || 0
-                                  )
-                                }
-                                placeholder="0.0"
-                                className="pr-12"
-                              />
-                              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
-                                hours
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {((service.jobType === 'Manual Entry' &&
+                  {invoiceData.services.map((service, index) => {
+                    const isLaborHoursEntry =
+                      service.jobType === 'Manual Entry' && service.itemType === 'Labor';
+                    const isAgentServices = service.jobType === 'Agent Services';
+                    const shouldHideTaxAndMarkup = isLaborHoursEntry || isAgentServices;
+                    const shouldShowManualCostInputs =
+                      (service.jobType === 'Manual Entry' &&
                         service.itemType &&
                         service.itemType !== 'Labor') ||
-                        (service.jobType &&
-                          service.jobType !== 'Manual Entry' &&
-                          service.jobType !== 'Agent Services' &&
-                          service.jobType !== 'Clearance Fee')) && (
+                      (service.jobType &&
+                        service.jobType !== 'Manual Entry' &&
+                        service.jobType !== 'Agent Services' &&
+                        service.jobType !== 'Clearance Fee');
+
+                    return (
+                      <div key={service.id} className="border rounded-lg p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-medium">Service Item</h4>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeService(service.id)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                          >
+                            ×
+                          </Button>
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor={`service-manual-cost-${index}`}>Cost</Label>
-                            <Input
-                              id={`service-manual-cost-${index}`}
-                              type="text"
-                              inputMode="decimal"
-                              value={getManualCostInputValue(service, focusedCostId === service.id)}
-                              onChange={(e) =>
-                                updateService(
-                                  service.id,
-                                  'manualCost',
-                                  e.target.value
-                                )
-                              }
-                              onFocus={() => setFocusedCostId(service.id)}
-                              onBlur={() => {
-                                setFocusedCostId(null);
-                                updateService(
-                                  service.id,
-                                  'manualCost',
-                                  service.manualCostInput ?? ''
-                                );
-                              }}
-                              placeholder="0.00"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor={`service-quantity-${index}`}>Quantity</Label>
-                            <Input
-                              id={`service-quantity-${index}`}
-                              type="text"
-                              inputMode="decimal"
-                              value={
-                                service.quantityDisplay ??
-                                (service.quantity ? normalizeDecimalInput(String(service.quantity)) : '')
-                              }
-                              onChange={(e) =>
-                                updateService(
-                                  service.id,
-                                  'quantity',
-                                  e.target.value
-                                )
-                              }
-                              onBlur={() => {
-                                if (!service.quantityDisplay) {
-                                  updateService(service.id, 'quantity', '1');
-                                }
-                              }}
-                              placeholder="1"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="space-y-2">
-                        <Label htmlFor={`service-description-${index}`}>Description *</Label>
-                        <Input
-                          id={`service-description-${index}`}
-                          value={service.description}
-                          onChange={(e) => updateService(service.id, 'description', e.target.value)}
-                          placeholder="Enter service description..."
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor={`service-tax-status-${index}`}>Tax Status</Label>
-                          {service.jobType === 'Clearance Fee' ? (
-                            <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-                              Non-Taxable (Fixed)
-                            </div>
-                          ) : (
+                            <Label htmlFor={`service-job-type-${index}`}>Service Type *</Label>
                             <Select
-                              value={service.taxStatus || ''}
-                              onValueChange={(value) => updateService(service.id, 'taxStatus', value)}
+                              value={service.jobType || ''}
+                              onValueChange={(value) => updateService(service.id, 'jobType', value)}
                             >
-                              <SelectTrigger id={`service-tax-status-${index}`}>
-                                <SelectValue placeholder="Select tax status" />
+                              <SelectTrigger
+                                id={`service-job-type-${index}`}
+                                className={cn(getChangedFieldClasses(`/services/${index}/jobType`, ['services', index, 'jobType']))}
+                              >
+                                <SelectValue placeholder="Select service type..." />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="taxable">Taxable (8.75%)</SelectItem>
-                                <SelectItem value="non-taxable">Non-Taxable</SelectItem>
-                                <SelectItem value="exempt">Tax Exempt</SelectItem>
+                                <SelectItem value="Manual Entry">Manual Entry</SelectItem>
+                                <SelectItem value="Clearance Fee">Clearance Fee</SelectItem>
+                                <SelectItem value="Pilotage">Pilotage</SelectItem>
+                                <SelectItem value="Car Rental">Car Rental</SelectItem>
+                                <SelectItem value="Trash Removal">Trash Removal</SelectItem>
+                                <SelectItem value="Good Stew">Good Stew</SelectItem>
+                                <SelectItem value="Crew Placement">Crew Placement</SelectItem>
+                                <SelectItem value="Agent Services">Agent Services</SelectItem>
                               </SelectContent>
                             </Select>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor={`service-markup-${index}`}>Markup</Label>
-                          {service.jobType === 'Clearance Fee' ? (
-                            <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-                              No Markup (Fixed)
-                            </div>
-                          ) : (
-                            <Select
-                              value={service.markupType || ''}
-                              onValueChange={(value) => updateService(service.id, 'markupType', value)}
-                              disabled={service.isMarkupExempt}
-                            >
-                              <SelectTrigger id={`service-markup-${index}`}>
-                                <SelectValue placeholder="Select markup" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="preset-2.5">2.5%</SelectItem>
-                                <SelectItem value="preset-12.5">12.5%</SelectItem>
-                                <SelectItem value="custom">Custom %</SelectItem>
-                                <SelectItem value="exempt">No Markup</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </div>
-                      </div>
+                          </div>
 
-                      {service.markupType === 'custom' &&
-                        !service.isMarkupExempt &&
-                        service.jobType !== 'Clearance Fee' && (
-                          <div className="space-y-2">
-                            <Label htmlFor={`service-markup-rate-${index}`}>Custom Markup (%)</Label>
-                            <Input
-                              id={`service-markup-rate-${index}`}
-                              type="number"
-                              step="0.01"
-                              value={service.markupRate || 0}
-                              onChange={(e) =>
-                                updateService(
-                                  service.id,
-                                  'markupRate',
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
-                              placeholder="0.00"
-                            />
+                          {service.jobType === 'Manual Entry' && (
+                            <div className="space-y-2">
+                              <Label htmlFor={`service-item-type-${index}`}>Item Type *</Label>
+                              <Select
+                                value={service.itemType || ''}
+                                onValueChange={(value) => updateService(service.id, 'itemType', value)}
+                              >
+                                <SelectTrigger id={`service-item-type-${index}`}>
+                                  <SelectValue placeholder="Select item type..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Labor">Labor</SelectItem>
+                                  <SelectItem value="Material">Material</SelectItem>
+                                  <SelectItem value="Subcontractor">Subcontractor</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
+
+                        {(isLaborHoursEntry || isAgentServices) && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor={`service-labor-hours-${index}`}>Regular Hours</Label>
+                              <div className="relative">
+                                <Input
+                                  id={`service-labor-hours-${index}`}
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={
+                                    service.laborHours !== undefined &&
+                                    service.laborHours !== null &&
+                                    service.laborHours !== 0
+                                      ? service.laborHours.toString()
+                                      : ''
+                                  }
+                                  onChange={(e) =>
+                                    updateService(
+                                      service.id,
+                                      'laborHours',
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                  placeholder="0.0"
+                                  className="pr-12"
+                                />
+                                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
+                                  hours
+                                </span>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`service-ot-hours-${index}`}>Overtime Hours</Label>
+                              <div className="relative">
+                                <Input
+                                  id={`service-ot-hours-${index}`}
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={
+                                    service.otHours !== undefined &&
+                                    service.otHours !== null &&
+                                    service.otHours !== 0
+                                      ? service.otHours.toString()
+                                      : ''
+                                  }
+                                  onChange={(e) =>
+                                    updateService(
+                                      service.id,
+                                      'otHours',
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                  placeholder="0.0"
+                                  className="pr-12"
+                                />
+                                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
+                                  hours
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         )}
 
-                      <div className="border-t pt-2">
-                        <div className="flex justify-between items-center text-sm font-medium">
-                          <span>Line Total:</span>
-                          <span className="text-lg">{formatCurrency(service.total)}</span>
+                        {shouldShowManualCostInputs && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor={`service-manual-cost-${index}`}>Cost</Label>
+                              <Input
+                                id={`service-manual-cost-${index}`}
+                                type="text"
+                                inputMode="decimal"
+                                value={getManualCostInputValue(service, focusedCostId === service.id)}
+                                onChange={(e) =>
+                                  updateService(service.id, 'manualCost', e.target.value)
+                                }
+                                onFocus={() => setFocusedCostId(service.id)}
+                                onBlur={() => {
+                                  setFocusedCostId(null);
+                                  updateService(
+                                    service.id,
+                                    'manualCost',
+                                    service.manualCostInput ?? ''
+                                  );
+                                }}
+                                placeholder="0.00"
+                                className={cn(getChangedFieldClasses(`/services/${index}/manualCost`, ['services', index, 'manualCost']))}
+                                style={getChangedFieldStyles(`/services/${index}/manualCost`, ['services', index, 'manualCost'])}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`service-quantity-${index}`}>Quantity</Label>
+                              <Input
+                                id={`service-quantity-${index}`}
+                                type="text"
+                                inputMode="decimal"
+                                value={
+                                  service.quantityDisplay ??
+                                  (service.quantity
+                                    ? normalizeDecimalInput(String(service.quantity))
+                                    : '')
+                                }
+                                onChange={(e) =>
+                                  updateService(service.id, 'quantity', e.target.value)
+                                }
+                                onBlur={() => {
+                                  if (!service.quantityDisplay) {
+                                    updateService(service.id, 'quantity', '1');
+                                  }
+                                }}
+                                placeholder="1"
+                                className={cn(getChangedFieldClasses(`/services/${index}/quantity`, ['services', index, 'quantity']))}
+                                style={getChangedFieldStyles(`/services/${index}/quantity`, ['services', index, 'quantity'])}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <Label htmlFor={`service-description-${index}`}>Description *</Label>
+                          <Input
+                            id={`service-description-${index}`}
+                            value={service.description}
+                            onChange={(e) => updateService(service.id, 'description', e.target.value)}
+                            placeholder="Enter service description..."
+                            className={cn(getChangedFieldClasses(`/services/${index}/description`, ['services', index, 'description']))}
+                            style={getChangedFieldStyles(`/services/${index}/description`, ['services', index, 'description'])}
+                          />
                         </div>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {service.isMarkupExempt && (
-                            <Badge variant="secondary" className="text-xs">
-                              No Markup
-                            </Badge>
-                          )}
-                          {service.isTaxExempt && (
-                            <Badge variant="secondary" className="text-xs">
-                              Tax Exempt
-                            </Badge>
-                          )}
-                          {service.jobType === 'Clearance Fee' && (
-                            <Badge variant="outline" className="text-xs">
-                              Auto-calculated
-                            </Badge>
-                          )}
+
+                        {!shouldHideTaxAndMarkup && (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor={`service-tax-status-${index}`}>Tax Status</Label>
+                                {service.jobType === 'Clearance Fee' ? (
+                                  <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                                    Non-Taxable (Fixed)
+                                  </div>
+                                ) : (
+                                  <Select
+                                    value={service.taxStatus || ''}
+                                    onValueChange={(value) => updateService(service.id, 'taxStatus', value)}
+                                  >
+                                    <SelectTrigger
+                                      id={`service-tax-status-${index}`}
+                                      className={cn(getChangedFieldClasses(`/services/${index}/taxStatus`, ['services', index, 'taxStatus']))}
+                                    >
+                                      <SelectValue placeholder="Select">
+                                        {service.taxStatus === 'taxable' && 'Taxable (8.75%)'}
+                                        {service.taxStatus === 'non-taxable' && 'Non-Taxable'}
+                                        {service.taxStatus === 'exempt' && 'Tax Exempt'}
+                                        {!service.taxStatus && 'Select'}
+                                      </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="taxable">Taxable (8.75%)</SelectItem>
+                                      <SelectItem value="non-taxable">Non-Taxable</SelectItem>
+                                      <SelectItem value="exempt">Tax Exempt</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`service-markup-${index}`}>Markup</Label>
+                                {service.jobType === 'Clearance Fee' ? (
+                                  <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                                    No Markup (Fixed)
+                                  </div>
+                                ) : (
+                                  <Select
+                                    value={service.markupType || ''}
+                                    onValueChange={(value) => updateService(service.id, 'markupType', value)}
+                                    disabled={service.isMarkupExempt}
+                                  >
+                                    <SelectTrigger
+                                      id={`service-markup-${index}`}
+                                      className={cn(getChangedFieldClasses(`/services/${index}/markupType`, ['services', index, 'markupType']))}
+                                    >
+                                      <SelectValue placeholder="Select">
+                                        {service.markupType === 'preset-2.5' && '2.5%'}
+                                        {service.markupType === 'preset-12.5' && '12.5%'}
+                                        {service.markupType === 'custom' && 'Custom %'}
+                                        {service.markupType === 'exempt' && 'No Markup'}
+                                        {!service.markupType && 'Select'}
+                                      </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="preset-2.5">2.5%</SelectItem>
+                                      <SelectItem value="preset-12.5">12.5%</SelectItem>
+                                      <SelectItem value="custom">Custom %</SelectItem>
+                                      <SelectItem value="exempt">No Markup</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
+                            </div>
+
+                            {service.markupType === 'custom' &&
+                              !service.isMarkupExempt &&
+                              service.jobType !== 'Clearance Fee' && (
+                                <div className="space-y-2">
+                                  <Label htmlFor={`service-markup-rate-${index}`}>Custom Markup (%)</Label>
+                                  <Input
+                                    id={`service-markup-rate-${index}`}
+                                    type="number"
+                                    step="0.01"
+                                    value={service.markupRate || 0}
+                                    onChange={(e) =>
+                                      updateService(
+                                        service.id,
+                                        'markupRate',
+                                        parseFloat(e.target.value) || 0
+                                      )
+                                    }
+                                    placeholder="0.00"
+                                  />
+                                </div>
+                              )}
+                          </>
+                        )}
+
+                        <div className="border-t pt-2">
+                          <div className="flex justify-between items-center text-sm font-medium">
+                            <span>Line Total:</span>
+                            <span className="text-lg">{formatCurrency(service.total)}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {service.isMarkupExempt && (
+                              <Badge variant="secondary" className="text-xs">
+                                No Markup
+                              </Badge>
+                            )}
+                            {service.isTaxExempt && (
+                              <Badge variant="secondary" className="text-xs">
+                                Tax Exempt
+                              </Badge>
+                            )}
+                            {service.jobType === 'Clearance Fee' && (
+                              <Badge variant="outline" className="text-xs">
+                                Auto-calculated
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   <Button onClick={addService} variant="outline" className="w-full">
                     <svg
@@ -3003,14 +3668,18 @@ const CreateInvoice: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 px-0">
-                  <div className="grid gap-6 lg:grid-cols-[minmax(0,6fr)_minmax(300px,1fr)]">
-                    <div
-                      ref={previewRef}
-                      onMouseUp={handlePreviewMouseUp}
-                      className="relative max-h-[70vh] overflow-auto rounded-lg border bg-white p-6 shadow-sm"
-                    >
-                      <div className="space-y-6 text-sm text-slate-700">
-                        <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="relative">
+                    {renderCommentsPanel(
+                      'hidden lg:flex lg:flex-col lg:gap-4 lg:absolute lg:left-0 lg:top-0 lg:-translate-x-[calc(100%+1.5rem)] lg:w-72 lg:max-h-[70vh] lg:overflow-y-auto lg:rounded-lg lg:border lg:bg-white lg:p-4 lg:shadow-sm'
+                    )}
+                    <div className="flex flex-col gap-6">
+                      <div
+                        ref={previewRef}
+                        onMouseUp={handlePreviewMouseUp}
+                        className="relative max-h-[70vh] overflow-auto rounded-lg border bg-white p-6 shadow-sm"
+                      >
+                        <div className="space-y-6 text-sm text-slate-700">
+                          <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
                             <h2 className="text-lg font-semibold text-slate-900">
                               {invoiceData.metadata.title?.trim() ||
@@ -3025,19 +3694,30 @@ const CreateInvoice: React.FC = () => {
                         <div className="grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
                           <div className="space-y-1">
                             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Vessel</h3>
-                            <p className="font-medium text-slate-800">{invoiceData.vessel.name || 'Not specified'}</p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className={cn("font-medium", isFieldInDiff('/vesselName') ? 'text-green-600 font-semibold' : 'text-slate-800')}>
+                              {invoiceData.vessel.name || 'Not specified'}
+                            </p>
+                            <p className={cn("text-xs", isFieldInDiff('/vesselWeight') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
                               Weight: {invoiceData.vessel.weight ? `${formatNumberWithSeparators(invoiceData.vessel.weight)} tons` : '—'}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className={cn("text-xs", isFieldInDiff('/vesselBeam') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
                               Length: {invoiceData.vessel.beam ? `${formatNumberWithSeparators(invoiceData.vessel.beam)} ft` : '—'}
                             </p>
                           </div>
                           <div className="space-y-1">
                             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contact</h3>
-                            <p className="font-medium text-slate-800">{invoiceData.customer.customerName || invoiceData.customer.contactName || 'Not assigned'}</p>
-                            <p className="text-xs text-muted-foreground">{invoiceData.customer.customerEmail || '—'}</p>
-                            <p className="text-xs text-muted-foreground">{invoiceData.customer.customerPhone || '—'}</p>
+                            <p className={cn("font-medium", isFieldInDiff('/customerName') ? 'text-green-600 font-semibold' : 'text-slate-800')}>
+                              {invoiceData.customer.customerName || invoiceData.customer.contactName || 'Not assigned'}
+                            </p>
+                            <p className={cn("text-xs", isFieldInDiff('/customerEmail') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
+                              {invoiceData.customer.customerEmail || '—'}
+                            </p>
+                            <p className={cn("text-xs", isFieldInDiff('/customerPhone') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
+                              {invoiceData.customer.customerPhone || '—'}
+                            </p>
+                            <p className={cn("text-xs", isFieldInDiff('/customerAddress') ? 'text-green-600 font-semibold' : 'text-muted-foreground')}>
+                              {invoiceData.customer.customerAddress || '—'}
+                            </p>
                           </div>
                         </div>
 
@@ -3058,20 +3738,22 @@ const CreateInvoice: React.FC = () => {
                                 No services added yet.
                               </div>
                             ) : (
-                              previewSummary.services.map(service => (
-                                <div key={service.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm">
-                                  <div>
-                                    <p className="font-medium text-slate-800">{service.description}</p>
-                                    <p className="text-xs text-muted-foreground">{service.jobType}</p>
+                              previewSummary.services.map((service, index) => {
+                                return (
+                                  <div key={service.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm">
+                                    <div>
+                                      <p className={cn("font-medium", isFieldInDiff(`/services/${index}/description`) ? 'text-green-600 font-semibold' : 'text-slate-800')}>{service.description}</p>
+                                      <p className={cn("text-xs text-muted-foreground", isFieldInDiff(`/services/${index}/jobType`) && 'text-green-600 font-semibold')}>{service.jobType}</p>
+                                    </div>
+                                    <div className={cn("text-right text-slate-700", isFieldInDiff(`/services/${index}/itemType`) && 'text-green-600 font-semibold')}>{service.itemType}</div>
+                                    <div className={cn("text-right text-slate-700", isFieldInDiff(`/services/${index}/quantity`) && 'text-green-600 font-semibold')}>{service.quantity}</div>
+                                    <div className={cn("text-right text-slate-700", isFieldInDiff(`/services/${index}/manualCost`) && 'text-green-600 font-semibold')}>{formatCurrency(service.baseCost)}</div>
+                                    <div className={cn("text-right text-slate-700", isFieldInDiff(`/services/${index}/markupType`) && 'text-green-600 font-semibold')}>{formatCurrency(service.markupAmount)}</div>
+                                    <div className={cn("text-right text-slate-700", isFieldInDiff(`/services/${index}/taxStatus`) && 'text-green-600 font-semibold')}>{formatCurrency(service.taxAmount)}</div>
+                                    <div className="text-right font-medium text-slate-900">{formatCurrency(service.total)}</div>
                                   </div>
-                                  <div className="text-right text-slate-700">{service.itemType}</div>
-                                  <div className="text-right text-slate-700">{service.quantity}</div>
-                                  <div className="text-right text-slate-700">{formatCurrency(service.baseCost)}</div>
-                                  <div className="text-right text-slate-700">{formatCurrency(service.markupAmount)}</div>
-                                  <div className="text-right text-slate-700">{formatCurrency(service.taxAmount)}</div>
-                                  <div className="text-right font-medium text-slate-900">{formatCurrency(service.total)}</div>
-                                </div>
-                              ))
+                                );
+                              })
                             )}
                           </div>
                         </div>
@@ -3180,82 +3862,8 @@ const CreateInvoice: React.FC = () => {
                           </Card>
                         </div>
                       )}
-                    </div>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-base font-semibold text-slate-800">Comments</h3>
-                        <span className="text-xs text-muted-foreground">{comments.length} open</span>
                       </div>
-                      {comments.length === 0 ? (
-                        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                          Highlight any portion of the preview on the left to leave a comment.
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {comments.map((comment, index) => (
-                            <div key={comment.id} className="rounded-lg border bg-white p-4 shadow-sm">
-                              <div className="flex items-start gap-3">
-                                <Avatar className="h-9 w-9">
-                                  <AvatarFallback>{comment.initials}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 space-y-1">
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-sm font-semibold text-slate-900">{comment.author}</p>
-                                    <span className="text-xs text-muted-foreground">#{index + 1}</span>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground">
-                                    “{comment.selectionText.slice(0, 70)}{comment.selectionText.length > 70 ? '…' : ''}”
-                                  </p>
-                                </div>
-                              </div>
-                              <p className="mt-3 text-sm text-slate-700 whitespace-pre-wrap">{comment.text}</p>
-
-                              {comment.replies.length > 0 && (
-                                <div className="mt-3 space-y-3 border-t pt-3">
-                                  {comment.replies.map(reply => (
-                                    <div key={reply.id} className="flex gap-3">
-                                      <Avatar className="h-8 w-8">
-                                        <AvatarFallback>{reply.initials}</AvatarFallback>
-                                      </Avatar>
-                                      <div>
-                                        <p className="text-sm font-semibold text-slate-900">{reply.author}</p>
-                                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{reply.text}</p>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              <div className="mt-3 space-y-2">
-                                <Textarea
-                                  rows={2}
-                                  value={replyDrafts[comment.id] ?? ''}
-                                  onChange={(e) => setReplyDrafts(prev => ({ ...prev, [comment.id]: e.target.value }))}
-                                  placeholder="Reply or mention others with @"
-                                />
-                                <div className="flex justify-end gap-2">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setReplyDrafts(prev => ({ ...prev, [comment.id]: '' }))}
-                                  >
-                                    Cancel
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    onClick={() => handleAddReply(comment.id)}
-                                    disabled={!replyDrafts[comment.id]?.trim()}
-                                  >
-                                    Reply
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {renderCommentsPanel('flex flex-col gap-4 lg:hidden')}
                     </div>
                   </div>
                 </CardContent>
@@ -3284,6 +3892,187 @@ const CreateInvoice: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {isEditMode && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Attach Invoice</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Show read-only original attachment when re-approving */}
+                  {statusChangedToChangeRequested && attachedFile ? (
+                    <div className="space-y-2">
+                      <Label>Original Invoice</Label>
+                      <div className="flex items-center justify-between p-3 bg-muted rounded-md">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <svg className="w-5 h-5 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          {attachmentData ? (
+                            <button
+                              onClick={() => handleViewAttachment(attachmentData)}
+                              className="text-sm truncate text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
+                            >
+                              {attachedFile.name}
+                            </button>
+                          ) : (
+                            <span className="text-sm truncate">{attachedFile.name}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {attachmentData && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewAttachment(attachmentData)}
+                              className="flex-shrink-0"
+                              title="View attachment"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Original approved invoice (read-only)
+                      </p>
+                    </div>
+                  ) : (
+                    /* Show file input for new uploads */
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="invoice-attachment">Upload File</Label>
+                        <Input
+                          id="invoice-attachment"
+                          type="file"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          onChange={handleFileAttachment}
+                          disabled={isUploadingFile}
+                          className="cursor-pointer"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Accepted formats: PDF, PNG, JPEG (max 10MB)
+                        </p>
+                      </div>
+
+                      {attachedFile && (
+                        <div className="flex items-center justify-between p-3 bg-muted rounded-md">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <svg className="w-5 h-5 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            {attachmentData ? (
+                              <button
+                                onClick={() => handleViewAttachment(attachmentData)}
+                                className="text-sm truncate text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
+                              >
+                                {attachedFile.name}
+                              </button>
+                            ) : (
+                              <span className="text-sm truncate">{attachedFile.name}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {attachmentData && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewAttachment(attachmentData)}
+                                className="flex-shrink-0"
+                                title="View attachment"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleRemoveAttachment}
+                              className="flex-shrink-0"
+                              title="Remove attachment"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {statusChangedToChangeRequested && attachedFile && (
+                    <div className="space-y-2 pt-4 border-t">
+                      <Label htmlFor="second-invoice-attachment">Updated Invoice</Label>
+                      <Input
+                        id="second-invoice-attachment"
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg"
+                        onChange={handleSecondFileAttachment}
+                        disabled={isUploadingFile}
+                        className="cursor-pointer"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Upload revised invoice (PDF, PNG, JPEG - max 10MB)
+                      </p>
+
+                      {secondAttachedFile && (
+                        <div className="flex items-center justify-between p-3 bg-muted rounded-md">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <svg className="w-5 h-5 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            {secondAttachmentData ? (
+                              <button
+                                onClick={() => handleViewAttachment(secondAttachmentData)}
+                                className="text-sm truncate text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
+                              >
+                                {secondAttachedFile.name}
+                              </button>
+                            ) : (
+                              <span className="text-sm truncate">{secondAttachedFile.name}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {secondAttachmentData && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewAttachment(secondAttachmentData)}
+                                className="flex-shrink-0"
+                                title="View attachment"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleRemoveSecondAttachment}
+                              className="flex-shrink-0"
+                              title="Remove attachment"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>

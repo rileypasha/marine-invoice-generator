@@ -16,10 +16,16 @@ interface Invoice {
   vessel?: {
     name?: string;
   };
+  user?: {
+    name?: string;
+    email?: string;
+  };
+  userName?: string;
+  modifiedByUserName?: string;
   total_amount?: number;
   invoice_date?: string;
   updated_at?: string;
-  status?: 'saved' | 'draft' | 'submitted';
+  status?: 'requested' | 'change_requested' | 'approved';
 }
 
 interface InvoiceTableActionsProps {
@@ -45,21 +51,21 @@ const formatCurrency = (amount?: number) => {
 
 const getStatusBadge = (status?: string) => {
   const statusConfig = {
-    saved: {
-      className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-      label: 'Saved'
+    requested: {
+      className: 'bg-blue-400 text-white dark:bg-blue-500 dark:text-white',
+      label: 'Requested'
     },
-    draft: {
-      className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-      label: 'Draft'
+    change_requested: {
+      className: 'bg-purple-400 text-white dark:bg-purple-500 dark:text-white',
+      label: 'Change Requested'
     },
-    submitted: {
-      className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-      label: 'Submitted'
+    approved: {
+      className: 'bg-green-400 text-white dark:bg-green-500 dark:text-white',
+      label: 'Approved'
     }
   };
 
-  const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+  const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.requested;
 
   return (
     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.className}`}>
@@ -164,6 +170,23 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     meta: { width: 'w-32', className: 'text-left' },
   },
   {
+    accessorKey: "user.name",
+    id: "created_by",
+    header: () => (
+      <div className="text-left">Created by</div>
+    ),
+    cell: ({ row }) => {
+      const invoice = row.original;
+      const userName = invoice.user?.name || invoice.userName || '-';
+      return (
+        <div className="text-sm text-gray-600 text-left truncate min-w-0 max-w-full">
+          {userName}
+        </div>
+      );
+    },
+    meta: { width: 'w-32' },
+  },
+  {
     accessorKey: "invoice_date",
     id: "created_at",
     header: () => (
@@ -174,6 +197,23 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
       return (
         <div className="text-sm text-gray-600 text-right tabular-nums">
           {formatDate(invoice.invoice_date)}
+        </div>
+      );
+    },
+    meta: { width: 'w-32' },
+  },
+  {
+    accessorKey: "modifiedByUserName",
+    id: "modified_by",
+    header: () => (
+      <div className="text-left">Modified by</div>
+    ),
+    cell: ({ row }) => {
+      const invoice = row.original;
+      const modifiedBy = invoice.modifiedByUserName || '-';
+      return (
+        <div className="text-sm text-gray-600 text-left truncate min-w-0 max-w-full">
+          {modifiedBy}
         </div>
       );
     },

@@ -25,12 +25,16 @@ interface ApiInvoice {
   id: string;
   invoiceNumber?: string;
   title: string;
-  status: 'saved' | 'draft' | 'submitted';
+  status: 'requested' | 'change_requested' | 'approved';
   total: number;
   createdAt: string;
   updatedAt: string;
   customerName?: string;
   vesselName?: string;
+  userName?: string;
+  userEmail?: string;
+  modifiedByUserName?: string;
+  modifiedByUserEmail?: string;
   customer?: {
     id: string;
     display_name: string;
@@ -39,6 +43,10 @@ interface ApiInvoice {
   vessel?: {
     id: string;
     name: string;
+  };
+  user?: {
+    name?: string;
+    email?: string;
   };
 }
 
@@ -53,10 +61,16 @@ interface Invoice {
   vessel?: {
     name?: string;
   };
+  user?: {
+    name?: string;
+    email?: string;
+  };
+  userName?: string;
+  modifiedByUserName?: string;
   total_amount?: number;
   invoice_date?: string;
   updated_at?: string;
-  status?: 'saved' | 'draft' | 'submitted';
+  status?: 'requested' | 'change_requested' | 'approved';
 }
 
 const InvoicesPage: React.FC = () => {
@@ -65,7 +79,7 @@ const InvoicesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [stats, setStats] = useState({ total: 0, saved: 0, drafts: 0, submitted: 0 });
+  const [stats, setStats] = useState({ total: 0, requested: 0, change_requested: 0, approved: 0 });
   const [filters, setFilters] = useState<FilterOptions>({});
   const [availableCustomers, setAvailableCustomers] = useState<Customer[]>([]);
   const [availableVessels, setAvailableVessels] = useState<Vessel[]>([]);
@@ -134,6 +148,9 @@ const InvoicesPage: React.FC = () => {
         vessel: {
           name: apiInvoice.vessel?.name || apiInvoice.vesselName
         },
+        user: apiInvoice.user,
+        userName: apiInvoice.userName,
+        modifiedByUserName: apiInvoice.modifiedByUserName,
         total_amount: apiInvoice.total,
         invoice_date: apiInvoice.createdAt,
         updated_at: apiInvoice.updatedAt,
@@ -146,16 +163,16 @@ const InvoicesPage: React.FC = () => {
 
       // Calculate stats from the invoices
       const total = transformedInvoices.length;
-      const saved = transformedInvoices.filter(i => i.status === 'saved').length;
-      const drafts = transformedInvoices.filter(i => i.status === 'draft').length;
-      const submitted = transformedInvoices.filter(i => i.status === 'submitted').length;
+      const requested = transformedInvoices.filter(i => i.status === 'requested').length;
+      const change_requested = transformedInvoices.filter(i => i.status === 'change_requested').length;
+      const approved = transformedInvoices.filter(i => i.status === 'approved').length;
 
-      setStats({ total, saved, drafts, submitted });
+      setStats({ total, requested, change_requested, approved });
 
     } catch (error) {
       console.error('Error fetching invoices:', error);
       setInvoices([]);
-      setStats({ total: 0, saved: 0, drafts: 0, submitted: 0 });
+      setStats({ total: 0, requested: 0, change_requested: 0, approved: 0 });
     } finally {
       setIsLoading(false);
     }

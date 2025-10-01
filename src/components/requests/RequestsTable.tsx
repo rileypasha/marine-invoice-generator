@@ -8,14 +8,16 @@ import { useRequestsRowActionsStore } from "@/features/requests/state/rowActions
 
 // Column width definitions for consistent spacing across all tables
 const REQUESTS_COLS = [
-  { id: 'select', w: '4%' },   // Checkbox column
-  { id: 'request', w: '18%' }, // Request # column
-  { id: 'contact', w: '18%' }, // Contact column
-  { id: 'vessel', w: '18%' },  // Vessel column
-  { id: 'amount', w: '12%' },  // Amount column (left-aligned)
-  { id: 'created', w: '12%' }, // Created at column (right-aligned)
-  { id: 'modified', w: '12%' }, // Last modified column (right-aligned)
-  { id: 'status', w: '10%' },  // Status column (centered)
+  { id: 'select', w: '3%' },   // Checkbox column
+  { id: 'request', w: '14%' }, // Request # column
+  { id: 'contact', w: '14%' }, // Contact column
+  { id: 'vessel', w: '14%' },  // Vessel column
+  { id: 'amount', w: '9%' },   // Amount column (left-aligned)
+  { id: 'createdBy', w: '11%' }, // Created by column
+  { id: 'created', w: '9%' },  // Created at column (right-aligned)
+  { id: 'modifiedBy', w: '11%' }, // Modified by column
+  { id: 'modified', w: '9%' }, // Last modified column (right-aligned)
+  { id: 'status', w: '9%' },   // Status column (centered)
   { id: 'actions', w: '6%' }   // Actions column
 ];
 
@@ -30,10 +32,16 @@ interface Invoice {
   vessel?: {
     name?: string;
   };
+  user?: {
+    name?: string;
+    email?: string;
+  };
+  userName?: string;
+  modifiedByUserName?: string;
   total_amount?: number;
   invoice_date?: string;
   updated_at?: string;
-  status?: 'saved' | 'draft' | 'submitted';
+  status?: 'requested' | 'change_requested' | 'approved';
 }
 
 interface RequestsTableProps {
@@ -154,6 +162,12 @@ export function RequestsTable({
       className: 'text-right'
     },
     {
+      key: 'created_by',
+      header: 'Created By',
+      render: (request: Invoice) => request?.user?.name || request?.userName || '-',
+      width: 'w-28'
+    },
+    {
       key: 'invoice_date',
       header: 'Created At',
       render: (request: Invoice) => {
@@ -163,15 +177,21 @@ export function RequestsTable({
       width: 'w-28'
     },
     {
+      key: 'modified_by',
+      header: 'Modified By',
+      render: (request: Invoice) => request?.modifiedByUserName || '-',
+      width: 'w-28'
+    },
+    {
       key: 'status',
       header: 'Status',
       render: (request: Invoice) => {
         const statusMap = {
-          saved: 'Saved',
-          draft: 'Draft',
-          submitted: 'Submitted'
+          requested: 'Requested',
+          change_requested: 'Change Requested',
+          approved: 'Approved'
         };
-        return statusMap[request.status as keyof typeof statusMap] || 'Draft';
+        return statusMap[request.status as keyof typeof statusMap] || 'Requested';
       },
       width: 'w-20'
     }

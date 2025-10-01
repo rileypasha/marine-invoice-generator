@@ -1,10 +1,21 @@
 import { Router, Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 import { logger } from '../utils/logger';
 // import { generateServerIdempotencyKey } from '../middleware/idempotency'; // Unused import
 import { prisma } from '../db/client';
 import nodemailer from 'nodemailer';
+import { createVersioningService } from '../services/versioning.service';
+import { createAuditService } from '../services/audit.service';
+import { createChangeRequestService } from '../services/changeRequest.service';
+import { nullToUndefined } from '../utils/normalize';
+import { isChangeRequested } from '../utils/status';
 
 const router = Router();
+
+// Initialize services
+const versioningService = createVersioningService(prisma);
+const auditService = createAuditService(prisma);
+const changeRequestService = createChangeRequestService(prisma);
 
 interface InvoiceRequest extends Request {
   userId?: string;
@@ -41,30 +52,64 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
     // Generate invoice number if not provided
     const invoiceNumber = invoiceData.invoiceNumber || `INV-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
+    const providedIdRaw =
+      typeof invoiceData.id === 'string' ? invoiceData.id.trim() : invoiceData.id;
+
     // Check for existing invoice for idempotency (by ID if provided)
     let existingInvoice = null;
-    if (invoiceData.id) {
+    if (typeof providedIdRaw === 'string' && providedIdRaw.length > 0) {
       existingInvoice = await prisma.invoice.findFirst({
         where: {
-          id: invoiceData.id,
+          id: providedIdRaw,
           userId,
         },
       });
     }
 
+    // Fetch user name to populate userName field
+    console.log('[Invoice Save] Fetching user data for userId:', userId);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+    console.log('[Invoice Save] User data fetched:', user);
+
+    const {
+      id: _ignoredInvoiceId,
+      parsedData,
+      vessel,
+      customer,
+      ...restOfInvoiceData
+    } = invoiceData;
+
+    if (Object.prototype.hasOwnProperty.call(restOfInvoiceData, 'id')) {
+      delete (restOfInvoiceData as Record<string, unknown>).id;
+    }
+
     if (existingInvoice) {
       // Update existing invoice instead of creating duplicate
-      const { parsedData, vessel, customer, ...restOfInvoiceData } = invoiceData;
+      console.log('[Invoice Save] Updating invoice with modifiedByUserName:', user?.name);
       const updatedInvoice = await prisma.invoice.update({
         where: { id: existingInvoice.id },
         data: {
           ...restOfInvoiceData,
           invoiceNumber,
-          status: 'saved', // Always canonical state, never draft
+          userId,
+          modifiedByUserId: userId,
+          modifiedByUserName: user?.name || null,
+          modifiedByUserEmail: user?.email || null,
+          status: invoiceData.status || 'change_requested',
+          attachmentUrl: invoiceData.attachmentUrl || existingInvoice.attachmentUrl,
+          attachmentName: invoiceData.attachmentName || existingInvoice.attachmentName,
+          attachmentType: invoiceData.attachmentType || existingInvoice.attachmentType,
+          secondAttachmentUrl: invoiceData.secondAttachmentUrl || existingInvoice.secondAttachmentUrl,
+          secondAttachmentName: invoiceData.secondAttachmentName || existingInvoice.secondAttachmentName,
+          secondAttachmentType: invoiceData.secondAttachmentType || existingInvoice.secondAttachmentType,
         },
         include: {
           customer: { select: { display_name: true, legal_name: true } },
           vessel: { select: { name: true } },
+          user: { select: { name: true, email: true } },
         },
       });
 
@@ -86,17 +131,34 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
     }
 
     // Create new invoice (canonical, never draft)
-    const { parsedData, vessel, customer, ...restOfInvoiceData } = invoiceData;
+    const invoiceId =
+      typeof providedIdRaw === 'string' && providedIdRaw.length > 0
+        ? providedIdRaw
+        : randomUUID();
+    console.log('[Invoice Save] Creating new invoice with userName:', user?.name);
     const invoice = await prisma.invoice.create({
       data: {
         ...restOfInvoiceData,
         invoiceNumber,
         userId,
-        status: 'saved', // Always canonical state, never draft
+        userName: user?.name || null,
+        userEmail: user?.email || null,
+        modifiedByUserId: userId,
+        modifiedByUserName: user?.name || null,
+        modifiedByUserEmail: user?.email || null,
+        status: 'requested',
+        attachmentUrl: invoiceData.attachmentUrl || null,
+        attachmentName: invoiceData.attachmentName || null,
+        attachmentType: invoiceData.attachmentType || null,
+        secondAttachmentUrl: invoiceData.secondAttachmentUrl || null,
+        secondAttachmentName: invoiceData.secondAttachmentName || null,
+        secondAttachmentType: invoiceData.secondAttachmentType || null,
+        id: invoiceId,
       },
       include: {
         customer: { select: { display_name: true, legal_name: true } },
         vessel: { select: { name: true } },
+        user: { select: { name: true, email: true } },
       },
     });
 
@@ -184,7 +246,23 @@ router.get('/:id', async (req: InvoiceRequest, res: Response) => {
       invoiceId,
     });
 
-    res.json({ invoice, correlationId });
+    // Add diff if status indicates change requested (handles both variants)
+    let diff = null;
+    if (isChangeRequested(invoice.status)) {
+      diff = await changeRequestService.getCurrentDiff(invoiceId);
+      logger.info('Diff retrieved for change requested invoice', {
+        correlationId,
+        invoiceId,
+        hasDiff: !!diff,
+        diffLength: diff ? diff.length : 0,
+      });
+    }
+
+    res.json({
+      data: invoice,
+      diff,
+      correlationId
+    });
 
   } catch (error: any) {
     logger.error('Failed to retrieve invoice', {
@@ -264,7 +342,7 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
       }
     }
 
-    const [invoices, total] = await Promise.all([
+    const [rawInvoices, total] = await Promise.all([
       prisma.invoice.findMany({
         where,
         skip,
@@ -273,10 +351,21 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
         include: {
           customer: { select: { display_name: true, legal_name: true } },
           vessel: { select: { name: true } },
+          user: { select: { name: true, email: true } },
         },
       }),
       prisma.invoice.count({ where }),
     ]);
+
+    // Transform invoices to ensure userName and modifiedByUserName are populated from user relation if missing
+    const invoices = rawInvoices.map(invoice => ({
+      ...invoice,
+      userName: invoice.userName || invoice.user?.name || null,
+      userEmail: invoice.userEmail || invoice.user?.email || null,
+      // For existing invoices without modifiedByUserName, use the creator's name as fallback
+      modifiedByUserName: invoice.modifiedByUserName || invoice.user?.name || invoice.userName || null,
+      modifiedByUserEmail: invoice.modifiedByUserEmail || invoice.user?.email || invoice.userEmail || null,
+    }));
 
     // Calculate stats
     const stats = await prisma.invoice.groupBy({
@@ -287,15 +376,15 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
 
     const statsMap = {
       total: await prisma.invoice.count({ where: { userId } }),
-      saved: 0,
-      drafts: 0,
-      submitted: 0,
+      requested: 0,
+      change_requested: 0,
+      approved: 0,
     };
 
     stats.forEach(stat => {
-      if (stat.status === 'saved') statsMap.saved = stat._count.status;
-      if (stat.status === 'draft') statsMap.drafts = stat._count.status;
-      if (stat.status === 'submitted') statsMap.submitted = stat._count.status;
+      if (stat.status === 'requested') statsMap.requested = stat._count.status;
+      if (stat.status === 'change_requested') statsMap.change_requested = stat._count.status;
+      if (stat.status === 'approved') statsMap.approved = stat._count.status;
     });
 
     logger.info('Invoices retrieved successfully', {
@@ -386,6 +475,45 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     // Generate invoice number if not provided (keep existing if available)
     const invoiceNumber = invoiceData.invoiceNumber || existingInvoice.invoiceNumber || `INV-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
+    // Determine new status
+    const newStatus = invoiceData.status || 'change_requested';
+    const oldStatus = existingInvoice.status;
+    const statusChangingToChangeRequested = newStatus === 'change_requested' && oldStatus !== 'change_requested';
+    const statusRemainsChangeRequested = newStatus === 'change_requested' && oldStatus === 'change_requested';
+
+    // Check if a baseline snapshot exists for this invoice
+    const hasExistingSnapshot = existingInvoice.changeRequestSnapshot != null;
+
+    // If no baseline snapshot exists (for old invoices created before this feature),
+    // capture one now using the current state BEFORE applying new changes
+    if (!hasExistingSnapshot && statusChangingToChangeRequested) {
+      logger.info('No baseline snapshot exists, capturing current state as baseline', {
+        correlationId,
+        invoiceId,
+        oldStatus,
+        newStatus,
+      });
+
+      const snapshotData = typeof existingInvoice.data === 'string'
+        ? JSON.parse(existingInvoice.data)
+        : existingInvoice.data;
+
+      // Log what we're capturing as baseline
+      const lineItemCount = snapshotData?.scope?.lineItems?.length || 0;
+      logger.info('Capturing baseline snapshot', {
+        correlationId,
+        invoiceId,
+        lineItemCount,
+        lineItems: snapshotData?.scope?.lineItems?.map((li: any) => li.description) || [],
+      });
+
+      await changeRequestService.captureSnapshot(
+        invoiceId,
+        snapshotData,
+        userId
+      );
+    }
+
     // Update the invoice
     const { parsedData, vessel, customer, ...restOfInvoiceData } = invoiceData;
     const updatedInvoice = await prisma.invoice.update({
@@ -393,14 +521,49 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
       data: {
         ...restOfInvoiceData,
         invoiceNumber,
-        status: 'saved', // Always canonical state, never draft
+        status: newStatus,
         userId, // Ensure userId is maintained
+        attachmentUrl: invoiceData.attachmentUrl !== undefined ? invoiceData.attachmentUrl : existingInvoice.attachmentUrl,
+        attachmentName: invoiceData.attachmentName !== undefined ? invoiceData.attachmentName : existingInvoice.attachmentName,
+        attachmentType: invoiceData.attachmentType !== undefined ? invoiceData.attachmentType : existingInvoice.attachmentType,
+        secondAttachmentUrl: invoiceData.secondAttachmentUrl !== undefined ? invoiceData.secondAttachmentUrl : existingInvoice.secondAttachmentUrl,
+        secondAttachmentName: invoiceData.secondAttachmentName !== undefined ? invoiceData.secondAttachmentName : existingInvoice.secondAttachmentName,
+        secondAttachmentType: invoiceData.secondAttachmentType !== undefined ? invoiceData.secondAttachmentType : existingInvoice.secondAttachmentType,
       },
       include: {
         customer: { select: { display_name: true, legal_name: true } },
         vessel: { select: { name: true } },
       },
     });
+
+    // If invoice is (or just became) 'change_requested', compute and store the diff
+    if (statusChangingToChangeRequested || statusRemainsChangeRequested) {
+      logger.info('Computing diff for change request', {
+        correlationId,
+        invoiceId,
+        statusChangingToChangeRequested,
+        statusRemainsChangeRequested,
+      });
+
+      // Parse the data field if it's a string (from Prisma JSON field)
+      const currentStateData = typeof updatedInvoice.data === 'string'
+        ? JSON.parse(updatedInvoice.data)
+        : updatedInvoice.data;
+
+      // Log what we're comparing
+      const currentLineItemCount = currentStateData?.scope?.lineItems?.length || 0;
+      logger.info('Computing diff - current state', {
+        correlationId,
+        invoiceId,
+        currentLineItemCount,
+        currentLineItems: currentStateData?.scope?.lineItems?.map((li: any) => li.description) || [],
+      });
+
+      await changeRequestService.recomputeDiff(
+        invoiceId,
+        currentStateData // The NEW state after update (parsed object)
+      );
+    }
 
     logger.info('Invoice updated successfully', {
       correlationId,
@@ -603,6 +766,512 @@ router.post('/email', async (req: InvoiceRequest, res: Response) => {
     res.status(500).json({
       code: 'EMAIL_SEND_FAILED',
       message: 'Failed to send invoice email',
+      correlationId,
+    });
+  }
+});
+
+// ============================================
+// VERSION TRACKING & DIFF ENDPOINTS
+// ============================================
+
+// PATCH /api/v1/invoice/:id - Create new version with diff tracking
+router.patch('/:id', async (req: InvoiceRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+  const userId = req.userId!;
+  const invoiceId = req.params.id;
+
+  try {
+    const invoiceData = req.body;
+
+    // Check if invoice exists and user owns it
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        userId,
+      },
+    });
+
+    if (!existingInvoice) {
+      logger.warn('Invoice not found or access denied', {
+        correlationId,
+        userId,
+        invoiceId,
+      });
+
+      return res.status(404).json({
+        code: 'INVOICE_NOT_FOUND',
+        message: 'Invoice not found or you do not have access to it',
+        correlationId,
+      });
+    }
+
+    // Fetch user data for actor information
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+
+    // Create version with diff tracking
+    const actorInfo = {
+      id: userId,
+      email: user?.email || 'unknown@example.com',
+      name: nullToUndefined(user?.name),
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    };
+
+    const versionResult = await versioningService.createVersion(
+      invoiceId,
+      invoiceData,
+      actorInfo,
+      req.body.changeSummary
+    );
+
+    // Change request tracking logic
+    const newStatus = invoiceData.status || existingInvoice.status;
+    const oldStatus = existingInvoice.status;
+
+    // CASE 1: Status changing TO 'change_requested'
+    if (isChangeRequested(newStatus) && !isChangeRequested(oldStatus)) {
+      await changeRequestService.captureSnapshot(invoiceId, invoiceData, userId);
+
+      await prisma.invoice.update({
+        where: { id: invoiceId },
+        data: { status: 'change_requested' },
+      });
+
+      await auditService.logStatusChanged(
+        invoiceId,
+        actorInfo,
+        oldStatus,
+        'change_requested'
+      );
+
+      logger.info('Change request snapshot captured', {
+        correlationId,
+        invoiceId,
+        userId,
+        oldStatus,
+        newStatus,
+      });
+    }
+
+    // CASE 2: Status changing TO 'approved' WITH attachmentUrl present
+    if (newStatus === 'approved' &&
+        isChangeRequested(oldStatus) &&
+        invoiceData.attachmentUrl) {
+      await changeRequestService.clearChangeRequest(invoiceId);
+
+      logger.info('Change request tracking cleared on approval', {
+        correlationId,
+        invoiceId,
+        userId,
+      });
+    }
+
+    // CASE 3: Saves WHILE status is 'change_requested'
+    if (isChangeRequested(oldStatus) && isChangeRequested(newStatus)) {
+      await changeRequestService.recomputeDiff(invoiceId, invoiceData);
+
+      logger.info('Change request diff recomputed', {
+        correlationId,
+        invoiceId,
+        userId,
+      });
+    }
+
+    // Log audit event if new version was created
+    if (!versionResult.isNoOp) {
+      await auditService.logVersionCreated(
+        invoiceId,
+        actorInfo,
+        versionResult.revision.revisionNumber,
+        versionResult.revision.changeCount
+      );
+
+      // Update invoice status if changed (and not already handled above)
+      if (newStatus !== oldStatus && !isChangeRequested(oldStatus)) {
+        await prisma.invoice.update({
+          where: { id: invoiceId },
+          data: { status: newStatus },
+        });
+
+        await auditService.logStatusChanged(
+          invoiceId,
+          actorInfo,
+          oldStatus,
+          newStatus
+        );
+      }
+    }
+
+    logger.info('Version created successfully', {
+      correlationId,
+      userId,
+      invoiceId,
+      revisionNumber: versionResult.revision.revisionNumber,
+      isNoOp: versionResult.isNoOp,
+    });
+
+    res.status(200).json({
+      revision: versionResult.revision,
+      diff: versionResult.diff,
+      isNoOp: versionResult.isNoOp,
+      message: versionResult.isNoOp
+        ? 'No changes detected'
+        : 'Version created successfully',
+      correlationId,
+    });
+  } catch (error: any) {
+    logger.error('Failed to create version', {
+      error: error.message,
+      correlationId,
+      userId,
+      invoiceId,
+    });
+
+    res.status(500).json({
+      code: 'VERSION_CREATE_FAILED',
+      message: 'Failed to create version',
+      correlationId,
+    });
+  }
+});
+
+// GET /api/v1/invoice/:id/diff - Get active diff for change-requested invoice
+router.get('/:id/diff', async (req: InvoiceRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+  const userId = req.userId!;
+  const invoiceId = req.params.id;
+
+  try {
+    // Check ownership
+    const invoice = await prisma.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        userId,
+      },
+    });
+
+    if (!invoice) {
+      return res.status(404).json({
+        code: 'INVOICE_NOT_FOUND',
+        message: 'Invoice not found or you do not have access to it',
+        correlationId,
+      });
+    }
+
+    // Get active diff
+    const activeDiff = await versioningService.getActiveDiff(invoiceId);
+
+    logger.info('Active diff retrieved', {
+      correlationId,
+      userId,
+      invoiceId,
+      hasDiff: !!activeDiff,
+    });
+
+    res.json({
+      diff: activeDiff,
+      correlationId,
+    });
+  } catch (error: any) {
+    logger.error('Failed to retrieve active diff', {
+      error: error.message,
+      correlationId,
+      userId,
+      invoiceId,
+    });
+
+    res.status(500).json({
+      code: 'DIFF_RETRIEVAL_FAILED',
+      message: 'Failed to retrieve active diff',
+      correlationId,
+    });
+  }
+});
+
+// GET /api/v1/invoice/:id/history - Get version history with pagination
+router.get('/:id/history', async (req: InvoiceRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+  const userId = req.userId!;
+  const invoiceId = req.params.id;
+  const { limit = 50, offset = 0 } = req.query;
+
+  try {
+    // Check ownership
+    const invoice = await prisma.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        userId,
+      },
+    });
+
+    if (!invoice) {
+      return res.status(404).json({
+        code: 'INVOICE_NOT_FOUND',
+        message: 'Invoice not found or you do not have access to it',
+        correlationId,
+      });
+    }
+
+    // Get version history
+    const history = await versioningService.getVersionHistory(invoiceId, {
+      limit: Number(limit),
+      offset: Number(offset),
+    });
+
+    // Get total count
+    const totalVersions = await versioningService.getVersionCount(invoiceId);
+
+    logger.info('Version history retrieved', {
+      correlationId,
+      userId,
+      invoiceId,
+      count: history.length,
+      total: totalVersions,
+    });
+
+    res.json({
+      history,
+      pagination: {
+        limit: Number(limit),
+        offset: Number(offset),
+        total: totalVersions,
+      },
+      correlationId,
+    });
+  } catch (error: any) {
+    logger.error('Failed to retrieve version history', {
+      error: error.message,
+      correlationId,
+      userId,
+      invoiceId,
+    });
+
+    res.status(500).json({
+      code: 'HISTORY_RETRIEVAL_FAILED',
+      message: 'Failed to retrieve version history',
+      correlationId,
+    });
+  }
+});
+
+// GET /api/v1/invoice/:id/version/:revisionNumber - Get specific revision
+router.get('/:id/version/:revisionNumber', async (req: InvoiceRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+  const userId = req.userId!;
+  const invoiceId = req.params.id;
+  const revisionNumber = parseInt(req.params.revisionNumber, 10);
+
+  try {
+    // Check ownership
+    const invoice = await prisma.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        userId,
+      },
+    });
+
+    if (!invoice) {
+      return res.status(404).json({
+        code: 'INVOICE_NOT_FOUND',
+        message: 'Invoice not found or you do not have access to it',
+        correlationId,
+      });
+    }
+
+    // Get specific revision
+    const revision = await versioningService.getRevision(invoiceId, revisionNumber);
+
+    if (!revision) {
+      return res.status(404).json({
+        code: 'REVISION_NOT_FOUND',
+        message: 'Revision not found',
+        correlationId,
+      });
+    }
+
+    logger.info('Revision retrieved', {
+      correlationId,
+      userId,
+      invoiceId,
+      revisionNumber,
+    });
+
+    res.json({
+      revision,
+      correlationId,
+    });
+  } catch (error: any) {
+    logger.error('Failed to retrieve revision', {
+      error: error.message,
+      correlationId,
+      userId,
+      invoiceId,
+      revisionNumber,
+    });
+
+    res.status(500).json({
+      code: 'REVISION_RETRIEVAL_FAILED',
+      message: 'Failed to retrieve revision',
+      correlationId,
+    });
+  }
+});
+
+// POST /api/v1/invoice/:id/approve - Mark invoice as approved and clear diffs
+router.post('/:id/approve', async (req: InvoiceRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+  const userId = req.userId!;
+  const invoiceId = req.params.id;
+
+  try {
+    // Check ownership
+    const invoice = await prisma.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        userId,
+      },
+    });
+
+    if (!invoice) {
+      return res.status(404).json({
+        code: 'INVOICE_NOT_FOUND',
+        message: 'Invoice not found or you do not have access to it',
+        correlationId,
+      });
+    }
+
+    // Get latest revision number
+    const latestRevision = await prisma.invoiceRevision.findFirst({
+      where: { invoiceId },
+      orderBy: { revisionNumber: 'desc' },
+    });
+
+    if (!latestRevision) {
+      return res.status(400).json({
+        code: 'NO_REVISIONS',
+        message: 'No revisions found for this invoice',
+        correlationId,
+      });
+    }
+
+    // Fetch user data for actor information
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+
+    const actorInfo = {
+      id: userId,
+      email: user?.email || 'unknown@example.com',
+      name: nullToUndefined(user?.name),
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    };
+
+    // Mark version as approved
+    await versioningService.markVersionAsApproved(invoiceId, latestRevision.revisionNumber);
+
+    // Log audit event
+    await auditService.logInvoiceApproved(
+      invoiceId,
+      actorInfo,
+      latestRevision.revisionNumber,
+      req.body.attachmentUrl
+    );
+
+    logger.info('Invoice approved successfully', {
+      correlationId,
+      userId,
+      invoiceId,
+      revisionNumber: latestRevision.revisionNumber,
+    });
+
+    res.json({
+      message: 'Invoice approved successfully',
+      revisionNumber: latestRevision.revisionNumber,
+      correlationId,
+    });
+  } catch (error: any) {
+    logger.error('Failed to approve invoice', {
+      error: error.message,
+      correlationId,
+      userId,
+      invoiceId,
+    });
+
+    res.status(500).json({
+      code: 'APPROVAL_FAILED',
+      message: 'Failed to approve invoice',
+      correlationId,
+    });
+  }
+});
+
+// GET /api/v1/invoice/:id/diff/:fromVersion/:toVersion - Get diff between specific versions
+router.get('/:id/diff/:fromVersion/:toVersion', async (req: InvoiceRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+  const userId = req.userId!;
+  const invoiceId = req.params.id;
+  const fromVersion = parseInt(req.params.fromVersion, 10);
+  const toVersion = parseInt(req.params.toVersion, 10);
+
+  try {
+    // Check ownership
+    const invoice = await prisma.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        userId,
+      },
+    });
+
+    if (!invoice) {
+      return res.status(404).json({
+        code: 'INVOICE_NOT_FOUND',
+        message: 'Invoice not found or you do not have access to it',
+        correlationId,
+      });
+    }
+
+    // Get diff between versions
+    const diff = await versioningService.getDiffBetweenVersions(invoiceId, fromVersion, toVersion);
+
+    if (!diff) {
+      return res.status(404).json({
+        code: 'DIFF_NOT_FOUND',
+        message: 'Diff not found between specified versions',
+        correlationId,
+      });
+    }
+
+    logger.info('Diff between versions retrieved', {
+      correlationId,
+      userId,
+      invoiceId,
+      fromVersion,
+      toVersion,
+    });
+
+    res.json({
+      diff,
+      correlationId,
+    });
+  } catch (error: any) {
+    logger.error('Failed to retrieve diff between versions', {
+      error: error.message,
+      correlationId,
+      userId,
+      invoiceId,
+      fromVersion,
+      toVersion,
+    });
+
+    res.status(500).json({
+      code: 'DIFF_RETRIEVAL_FAILED',
+      message: 'Failed to retrieve diff between versions',
       correlationId,
     });
   }

@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows"]
 }
 
 datasource db {
@@ -8,16 +9,17 @@ datasource db {
 }
 
 model User {
-  id        String    @id
-  email     String    @unique
-  name      String?
-  role      String    @default("standard")
-  apiKey    String?   @unique @map("apiKey")
-  createdAt DateTime  @default(now()) @map("createdAt")
-  updatedAt DateTime  @default(now()) @updatedAt @map("updatedAt")
-  password  String?
-  invoices  Invoice[]
-  vessels   Vessel[]
+  id               String            @id
+  email            String            @unique
+  name             String?
+  role             String            @default("standard")
+  apiKey           String?           @unique @map("apiKey")
+  createdAt        DateTime          @default(now()) @map("createdAt")
+  updatedAt        DateTime          @default(now()) @updatedAt @map("updatedAt")
+  password         String?
+  invoices         Invoice[]
+  vessels          Vessel[]
+  invoiceRevisions InvoiceRevision[]
 
   @@map("User")
 }
@@ -26,18 +28,22 @@ model Invoice {
   id                String             @id
   invoiceNumber     String?            @map("invoiceNumber")
   title             String
-  status            String             @default("saved")
+  status            String             @default("requested")
   data              String
   metadata          String?
   userId            String?            @map("userId")
   userName          String?
   userEmail         String?
+  modifiedByUserId  String?            @map("modifiedByUserId")
+  modifiedByUserName String?           @map("modifiedByUserName")
+  modifiedByUserEmail String?          @map("modifiedByUserEmail")
   vesselName        String?
   vesselWeight      Float?
   vesselBeam        Float?
   customerName      String?            @map("customerName")
   customerEmail     String?            @map("customerEmail")
   customerPhone     String?
+  customerAddress   String?            @map("customerAddress")
   subtotal          Float              @default(0)
   taxAmount         Float              @default(0)
   total             Float              @default(0)
@@ -55,17 +61,29 @@ model Invoice {
   lastMasterViewAt  DateTime?
   customerId        String?            @map("customerId")
   vesselId          String?            @map("vesselId")
+  attachmentUrl     String?
+  attachmentName    String?
+  attachmentType    String?
+  secondAttachmentUrl String?
+  secondAttachmentName String?
+  secondAttachmentType String?
+  changeRequestSnapshot Json?             @map("changeRequestSnapshot")
+  changeRequestDiff     Json?             @map("changeRequestDiff")
+  changeRequestedAt     DateTime?         @map("changeRequestedAt")
+  changeRequestedBy     String?           @map("changeRequestedBy")
   customer          Customer?          @relation(fields: [customerId], references: [id])
   user              User?              @relation(fields: [userId], references: [id])
   vessel            Vessel?            @relation(fields: [vesselId], references: [id])
   InvoiceRevision   InvoiceRevision[]
   InvoiceSubmission InvoiceSubmission?
   MasterChangeView  MasterChangeView[]
+  InvoiceDiff       InvoiceDiff[]
 
   @@index([customerName])
   @@index([status, savedAt])
   @@index([userEmail])
   @@index([vesselId])
+  @@index([status])
   @@map("Invoice")
 }
 
@@ -141,12 +159,24 @@ model InvoiceRevision {
   revisionNumber   Int
   payloadJson      Json
   actorEmail       String
+  actorId          String?            @map("actorId")
+  actorName        String?            @map("actorName")
+  ipAddress        String?            @map("ipAddress")
+  userAgent        String?            @map("userAgent")
   createdAt        DateTime           @default(now())
   changeSummary    String?
-  Invoice          Invoice            @relation(fields: [invoiceId], references: [id])
+  patch            Json?              // RFC-6902 JSON Patch array
+  summaryJson      Json?              // Structured change summary
+  changeCount      Int                @default(0)
+  Invoice          Invoice            @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  actor            User?              @relation(fields: [actorId], references: [id])
   MasterChangeView MasterChangeView[]
+  diffsAsFrom      InvoiceDiff[]      @relation("FromRevision")
+  diffsAsTo        InvoiceDiff[]      @relation("ToRevision")
 
+  @@unique([invoiceId, revisionNumber])
   @@index([invoiceId, createdAt(sort: Desc)])
+  @@index([actorId])
 }
 
 model InvoiceSubmission {
@@ -172,4 +202,28 @@ model MasterChangeView {
 
   @@unique([invoiceId, latestRevisionId, masterEmail])
   @@index([invoiceId])
+}
+
+// RFC-6902 JSON Patch diffs between invoice revisions
+model InvoiceDiff {
+  id              String          @id
+  invoiceId       String          @map("invoiceId")
+  fromRevisionId  String          @map("fromRevisionId")
+  toRevisionId    String          @map("toRevisionId")
+  fromVersion     Int             // Denormalized for quick queries
+  toVersion       Int             // Denormalized for quick queries
+  patch           Json            // RFC-6902 JSON Patch array
+  summary         Json            // Structured field-level change summary
+  changeCount     Int             @default(0) // Number of operations in patch
+  createdAt       DateTime        @default(now()) @map("createdAt")
+
+  // Relations
+  invoice         Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  fromRevision    InvoiceRevision @relation("FromRevision", fields: [fromRevisionId], references: [id])
+  toRevision      InvoiceRevision @relation("ToRevision", fields: [toRevisionId], references: [id])
+
+  @@unique([invoiceId, fromVersion, toVersion])
+  @@index([invoiceId, createdAt(sort: Desc)])
+  @@index([toRevisionId])
+  @@map("InvoiceDiff")
 }
