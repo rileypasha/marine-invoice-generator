@@ -109,25 +109,33 @@ function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
 
   const applyContactFilter = () => {
     if (contactInput.trim()) {
+      console.log('[Filter] Applying contact filter:', contactInput.trim());
       handleFilterChange('contact', contactInput.trim());
+      setContactInput(''); // Clear input after applying
     }
   };
 
   const applyVesselFilter = () => {
     if (vesselInput.trim()) {
+      console.log('[Filter] Applying vessel filter:', vesselInput.trim());
       handleFilterChange('vessel', vesselInput.trim());
+      setVesselInput('');
     }
   };
 
   const applyCreatedByFilter = () => {
     if (createdByInput.trim()) {
+      console.log('[Filter] Applying createdBy filter:', createdByInput.trim());
       handleFilterChange('createdBy', createdByInput.trim());
+      setCreatedByInput('');
     }
   };
 
   const applyModifiedByFilter = () => {
     if (modifiedByInput.trim()) {
+      console.log('[Filter] Applying modifiedBy filter:', modifiedByInput.trim());
       handleFilterChange('modifiedBy', modifiedByInput.trim());
+      setModifiedByInput('');
     }
   };
 
@@ -163,7 +171,10 @@ function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
       count={filterCount}
       ariaLabel={ariaLabel}
     >
-      <div className="w-80 max-h-96 overflow-y-auto">
+      <div
+        className="w-80 max-h-96 overflow-y-auto"
+        onKeyDown={(e) => e.stopPropagation()}
+      >
         <DropdownMenuLabel>Filter requests</DropdownMenuLabel>
         <DropdownMenuSeparator />
 
