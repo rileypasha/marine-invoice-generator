@@ -228,16 +228,18 @@ export function DataTable<TData, TValue>({
           </div>
         </div>
       )}
-      {/* Airtable-style table without card wrapper */}
-      <Table className="w-full table-fixed border-collapse">
-        {colWidths && (
-          <colgroup>
-            {colWidths.map(col => (
-              <col key={col.id} style={{ width: col.w }} />
-            ))}
-          </colgroup>
-        )}
-        <TableHeader className="sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
+      {/* Airtable-style table without card wrapper - wrapped for mobile horizontal scroll */}
+      <div className="overflow-x-auto -mx-4 md:mx-0">
+        <div className="min-w-[800px] md:min-w-0">
+          <Table className="w-full table-fixed border-collapse">
+            {colWidths && (
+              <colgroup>
+                {colWidths.map(col => (
+                  <col key={col.id} style={{ width: col.w }} />
+                ))}
+              </colgroup>
+            )}
+            <TableHeader className="sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
@@ -297,6 +299,8 @@ export function DataTable<TData, TValue>({
           )}
         </TableBody>
       </Table>
+        </div>
+      </div>
     </div>
   )
 }
