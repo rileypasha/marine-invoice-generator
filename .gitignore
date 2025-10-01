@@ -42,3 +42,6 @@ coverage/
 # Temp files
 tmp/
 temp/
+
+# Uploaded files (stored on Render disk)
+uploads/
