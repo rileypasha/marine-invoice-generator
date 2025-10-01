@@ -74,6 +74,22 @@ function GroupMenu({ activeGroupBy, onGroupByChange }: GroupMenuProps) {
           <span className="ml-2">{option.label}</span>
         </DropdownMenuItem>
       ))}
+
+      {activeGroupBy !== 'none' && (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onGroupByChange('none');
+            }}
+            className="text-red-600"
+          >
+            Clear grouping
+          </DropdownMenuItem>
+        </>
+      )}
     </ToolbarMenuButtonWithBadge>
   );
 }
