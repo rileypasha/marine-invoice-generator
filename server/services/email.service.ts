@@ -78,7 +78,10 @@ async function sendEmail(options: EmailOptions): Promise<boolean> {
 }
 
 // Get all users who should be notified for a given event type
-async function getUsersToNotify(eventType: 'new_invoice' | 'change_request' | 'approval'): Promise<Array<{ email: string; name: string }>> {
+async function getUsersToNotify(
+  eventType: 'new_invoice' | 'change_request' | 'approval',
+  invoiceCreatorId?: string
+): Promise<Array<{ email: string; name: string }>> {
   const columnMap = {
     new_invoice: 'notifyOnNewInvoice',
     change_request: 'notifyOnChangeRequest',
@@ -89,14 +92,25 @@ async function getUsersToNotify(eventType: 'new_invoice' | 'change_request' | 'a
 
   try {
     const result = await query(
-      `SELECT email, name FROM "User" WHERE "${column}" = true AND email IS NOT NULL`,
+      `SELECT id, email, name, "${column}" as scope FROM "User" WHERE "${column}" IN ('own', 'all') AND email IS NOT NULL`,
       []
     );
 
-    return result.rows.map(row => ({
-      email: row.email,
-      name: row.name || row.email,
-    }));
+    return result.rows
+      .filter(row => {
+        // Filter based on notification scope
+        if (row.scope === 'all') {
+          return true; // Notify for all invoices
+        }
+        if (row.scope === 'own' && invoiceCreatorId) {
+          return row.id === invoiceCreatorId; // Only notify if they created the invoice
+        }
+        return false;
+      })
+      .map(row => ({
+        email: row.email,
+        name: row.name || row.email,
+      }));
   } catch (error: any) {
     logger.error('Failed to get users to notify', {
       error: error.message,
@@ -114,11 +128,12 @@ interface InvoiceData {
   vesselName?: string;
   total: number;
   createdBy: string;
+  createdById?: string;
   url: string;
 }
 
 async function notifyNewInvoice(invoiceData: InvoiceData): Promise<void> {
-  const users = await getUsersToNotify('new_invoice');
+  const users = await getUsersToNotify('new_invoice', invoiceData.createdById);
 
   if (users.length === 0) {
     logger.info('No users to notify for new invoice');
@@ -182,7 +197,7 @@ View invoice: ${invoiceData.url}
 }
 
 async function notifyChangeRequested(invoiceData: InvoiceData): Promise<void> {
-  const users = await getUsersToNotify('change_request');
+  const users = await getUsersToNotify('change_request', invoiceData.createdById);
 
   if (users.length === 0) {
     logger.info('No users to notify for change request');
@@ -241,7 +256,18 @@ View invoice: ${invoiceData.url}
 }
 
 async function notifyApproved(invoiceData: InvoiceData): Promise<void> {
-  const users = await getUsersToNotify('approval');
+  logger.info('notifyApproved called', {
+    invoiceNumber: invoiceData.invoiceNumber,
+    createdById: invoiceData.createdById,
+  });
+
+  const users = await getUsersToNotify('approval', invoiceData.createdById);
+
+  logger.info('Users to notify for approval', {
+    count: users.length,
+    users: users.map(u => ({ email: u.email, name: u.name })),
+    invoiceCreatorId: invoiceData.createdById,
+  });
 
   if (users.length === 0) {
     logger.info('No users to notify for approval');

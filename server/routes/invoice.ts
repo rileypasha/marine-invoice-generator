@@ -186,6 +186,7 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
       vesselName: invoice.vesselName || undefined,
       total: invoice.total,
       createdBy: invoice.userName || invoice.userEmail || 'Unknown',
+      createdById: invoice.userId || undefined,
       url: `${process.env.APP_URL || 'http://localhost:3000'}/requests/${invoice.id}`,
     }).catch(err => {
       logger.error('Failed to send new invoice notification', {
@@ -491,6 +492,16 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     const statusChangingToChangeRequested = newStatus === 'change_requested' && oldStatus !== 'change_requested';
     const statusRemainsChangeRequested = newStatus === 'change_requested' && oldStatus === 'change_requested';
 
+    logger.info('Invoice update status analysis', {
+      correlationId,
+      invoiceId,
+      oldStatus,
+      newStatus,
+      statusChangingToChangeRequested,
+      statusRemainsChangeRequested,
+      createdById: existingInvoice.userId,
+    });
+
     // Check if a baseline snapshot exists for this invoice
     const hasExistingSnapshot = existingInvoice.changeRequestSnapshot != null;
 
@@ -532,7 +543,7 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
         ...restOfInvoiceData,
         invoiceNumber,
         status: newStatus,
-        userId, // Ensure userId is maintained
+        userId: existingInvoice.userId, // Preserve original creator's ID
         attachmentUrl: invoiceData.attachmentUrl !== undefined ? invoiceData.attachmentUrl : existingInvoice.attachmentUrl,
         attachmentName: invoiceData.attachmentName !== undefined ? invoiceData.attachmentName : existingInvoice.attachmentName,
         attachmentType: invoiceData.attachmentType !== undefined ? invoiceData.attachmentType : existingInvoice.attachmentType,
@@ -582,8 +593,16 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
       total: updatedInvoice.total,
     });
 
-    // Send email notification if status changed to change_requested
-    if (statusChangingToChangeRequested) {
+    // Send email notification if invoice is in change_requested status (either just changed to it OR modified while in it)
+    if (statusChangingToChangeRequested || statusRemainsChangeRequested) {
+      logger.info('Sending change request notification', {
+        correlationId,
+        invoiceId: updatedInvoice.id,
+        statusChangingToChangeRequested,
+        statusRemainsChangeRequested,
+        createdById: updatedInvoice.userId,
+      });
+
       notifyChangeRequested({
         invoiceNumber: updatedInvoice.invoiceNumber || undefined,
         title: updatedInvoice.title,
@@ -591,6 +610,7 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
         vesselName: updatedInvoice.vesselName || undefined,
         total: updatedInvoice.total,
         createdBy: updatedInvoice.modifiedByUserName || updatedInvoice.userName || 'Unknown',
+        createdById: updatedInvoice.userId || undefined,
         url: `${process.env.APP_URL || 'http://localhost:3000'}/requests/${updatedInvoice.id}`,
       }).catch(err => {
         logger.error('Failed to send change request notification', {
@@ -603,6 +623,14 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     // Send email notification if status changed to approved
     const statusChangingToApproved = oldStatus !== 'approved' && newStatus === 'approved';
     if (statusChangingToApproved) {
+      logger.info('Sending approval notification', {
+        correlationId,
+        invoiceId: updatedInvoice.id,
+        oldStatus,
+        newStatus,
+        createdById: updatedInvoice.userId,
+      });
+
       notifyApproved({
         invoiceNumber: updatedInvoice.invoiceNumber || undefined,
         title: updatedInvoice.title,
@@ -610,6 +638,7 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
         vesselName: updatedInvoice.vesselName || undefined,
         total: updatedInvoice.total,
         createdBy: updatedInvoice.modifiedByUserName || updatedInvoice.userName || 'Unknown',
+        createdById: updatedInvoice.userId || undefined,
         url: `${process.env.APP_URL || 'http://localhost:3000'}/requests/${updatedInvoice.id}`,
       }).catch(err => {
         logger.error('Failed to send approval notification on status change', {
@@ -1247,6 +1276,7 @@ router.post('/:id/approve', async (req: InvoiceRequest, res: Response) => {
       vesselName: invoice.vesselName || undefined,
       total: invoice.total,
       createdBy: user?.name || user?.email || 'Unknown',
+      createdById: invoice.userId || undefined,
       url: `${process.env.APP_URL || 'http://localhost:3000'}/requests/${invoiceId}`,
     }).catch(err => {
       logger.error('Failed to send approval notification', {

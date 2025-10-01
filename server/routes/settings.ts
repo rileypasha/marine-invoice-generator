@@ -10,6 +10,8 @@ interface SettingsRequest extends Request {
   correlationId?: string;
 }
 
+type NotificationScope = 'none' | 'own' | 'all';
+
 // GET /api/v1/settings/notifications - Get user notification preferences
 router.get('/notifications', async (req: SettingsRequest, res: Response) => {
   const correlationId = req.correlationId!;
@@ -37,9 +39,9 @@ router.get('/notifications', async (req: SettingsRequest, res: Response) => {
     });
 
     res.json({
-      notifyOnNewInvoice: settings.notifyOnNewInvoice || false,
-      notifyOnChangeRequest: settings.notifyOnChangeRequest || false,
-      notifyOnApproval: settings.notifyOnApproval || false,
+      notifyOnNewInvoice: settings.notifyOnNewInvoice || 'none',
+      notifyOnChangeRequest: settings.notifyOnChangeRequest || 'none',
+      notifyOnApproval: settings.notifyOnApproval || 'none',
       correlationId,
     });
 
@@ -64,16 +66,33 @@ router.put('/notifications', async (req: SettingsRequest, res: Response) => {
   const userId = req.userId!;
   const { notifyOnNewInvoice, notifyOnChangeRequest, notifyOnApproval } = req.body;
 
+  logger.info('Received notification preference update request', {
+    correlationId,
+    userId,
+    body: req.body,
+    notifyOnNewInvoice,
+    notifyOnChangeRequest,
+    notifyOnApproval
+  });
+
   try {
     // Validate input
+    const validScopes: NotificationScope[] = ['none', 'own', 'all'];
     if (
-      typeof notifyOnNewInvoice !== 'boolean' ||
-      typeof notifyOnChangeRequest !== 'boolean' ||
-      typeof notifyOnApproval !== 'boolean'
+      !validScopes.includes(notifyOnNewInvoice) ||
+      !validScopes.includes(notifyOnChangeRequest) ||
+      !validScopes.includes(notifyOnApproval)
     ) {
+      logger.error('Invalid notification preference values', {
+        correlationId,
+        notifyOnNewInvoice,
+        notifyOnChangeRequest,
+        notifyOnApproval,
+        validScopes
+      });
       return res.status(400).json({
         code: 'INVALID_INPUT',
-        message: 'All notification preferences must be boolean values',
+        message: 'All notification preferences must be one of: none, own, all',
         correlationId,
       });
     }
