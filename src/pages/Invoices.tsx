@@ -144,6 +144,52 @@ const Invoices: React.FC<InvoicesProps> = ({
     return result;
   }, [filteredBySearch, filters]);
 
+  // Group invoices by the selected groupBy field
+  const groupedInvoices = useMemo(() => {
+    if (groupBy === 'none') {
+      return [{ group: 'All Invoices', invoices: filteredData }];
+    }
+
+    const groups: Record<string, Invoice[]> = {};
+
+    filteredData.forEach(invoice => {
+      let groupKey = 'Unknown';
+
+      switch (groupBy) {
+        case 'contact':
+          groupKey = invoice.customer?.display_name || invoice.customer?.company_name || 'Unknown Contact';
+          break;
+        case 'vessel':
+          groupKey = invoice.vessel?.name || 'Unknown Vessel';
+          break;
+        case 'createdBy':
+          groupKey = invoice.userName || 'Unknown User';
+          break;
+        case 'modifiedBy':
+          groupKey = invoice.modifiedByUserName || 'Unknown User';
+          break;
+        case 'status':
+          const statusMap = {
+            requested: 'Requested',
+            change_requested: 'Change Requested',
+            approved: 'Approved'
+          };
+          groupKey = statusMap[invoice.status as keyof typeof statusMap] || 'Unknown Status';
+          break;
+      }
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(invoice);
+    });
+
+    // Convert to array and sort alphabetically
+    return Object.entries(groups)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([group, invoices]) => ({ group, invoices }));
+  }, [filteredData, groupBy]);
+
   // Handle action callbacks
   const handleAddClick = useCallback(() => {
     if (onAddNew) {
@@ -358,16 +404,26 @@ const Invoices: React.FC<InvoicesProps> = ({
             </div>
           </div>
         ) : (
-          <RequestsTable
-            requests={filteredData}
-            sort={sort}
-            onEdit={handleEdit}
-            onDelete={onDelete}
-            onBulkDelete={onBulkDelete}
-            onBulkExport={onBulkExport}
-            onView={onView}
-            onPrint={onPrint}
-          />
+          <div className="space-y-6">
+            {groupedInvoices.map(({ group, invoices }) => (
+              <RequestsTable
+                key={group}
+                requests={invoices}
+                sort={sort}
+                onEdit={handleEdit}
+                onDelete={onDelete}
+                onBulkDelete={onBulkDelete}
+                onBulkExport={onBulkExport}
+                onView={onView}
+                onPrint={onPrint}
+                title={groupBy !== 'none' ? (
+                  <h3 className="text-lg font-semibold text-gray-900 px-6 py-3 bg-gray-50 border-b border-gray-200">
+                    {group} ({invoices.length})
+                  </h3>
+                ) : undefined}
+              />
+            ))}
+          </div>
         )}
       </div>
 

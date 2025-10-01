@@ -2,7 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useCallback, useMemo } from 'react';
 
 export type RequestView = 'list' | 'grid' | 'gallery';
-export type RequestGroupBy = 'contact' | 'vessel' | 'status' | 'none';
+export type RequestGroupBy = 'contact' | 'vessel' | 'status' | 'createdBy' | 'modifiedBy' | 'none';
 export type SortDirection = 'asc' | 'desc';
 
 export interface RequestSort {

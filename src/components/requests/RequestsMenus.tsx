@@ -52,6 +52,8 @@ function GroupMenu({ activeGroupBy, onGroupByChange }: GroupMenuProps) {
     { key: 'none' as RequestGroupBy, label: 'No grouping', icon: <Hash className="h-4 w-4" /> },
     { key: 'contact' as RequestGroupBy, label: 'Contact', icon: <Users className="h-4 w-4" /> },
     { key: 'vessel' as RequestGroupBy, label: 'Vessel', icon: <Ship className="h-4 w-4" /> },
+    { key: 'createdBy' as RequestGroupBy, label: 'Created By', icon: <UserCog className="h-4 w-4" /> },
+    { key: 'modifiedBy' as RequestGroupBy, label: 'Modified By', icon: <UserCog className="h-4 w-4" /> },
     { key: 'status' as RequestGroupBy, label: 'Status', icon: <Receipt className="h-4 w-4" /> },
   ];
 
