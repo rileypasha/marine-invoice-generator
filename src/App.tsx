@@ -146,11 +146,13 @@ function App() {
           <Router>
             <RoutePrefetcher />
             {/* <OfflineBanner /> */}
-            <div className="app-scroll">
-              {/* <RouteErrorBoundary> */}
-                <Suspense fallback={<PageLoader />}>
-                  <FloatingInstallButton />
-                  <Routes>
+            <>
+              <div className="safe-top" />
+              <div className="app-scroll">
+                {/* <RouteErrorBoundary> */}
+                  <Suspense fallback={<PageLoader />}>
+                    <FloatingInstallButton />
+                    <Routes>
               <Route
                 path="/"
                 element={
@@ -298,9 +300,10 @@ function App() {
               <Route path="/clients/:id/edit" element={<RedirectCustomerEdit />} />
               <Route path="/customers/:id/edit" element={<RedirectCustomerEdit />} />
                   </Routes>
-                </Suspense>
-              {/* </RouteErrorBoundary> */}
-            </div>
+                  </Suspense>
+                {/* </RouteErrorBoundary> */}
+              </div>
+            </>
           </Router>
         </AuthProvider>
       </QueryClientProvider>

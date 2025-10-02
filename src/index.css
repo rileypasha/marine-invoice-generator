@@ -4,32 +4,55 @@
 
 /* Mobile PWA: Prevent white background during pull-to-refresh */
 @layer base {
+  /* Ensure the entire painting surface is black */
+  :root, html, body, #root {
+    background: #000;
+  }
+
   html, body {
     height: 100%;
     margin: 0;
-    background: #000;
   }
 
   body {
     overflow: hidden; /* Lock document scroll */
   }
 
-  /* App-level scroller */
+  /* App-level scroller (the only thing that scrolls) */
   .app-scroll {
-    height: 100dvh;              /* Stable mobile viewport height */
-    overflow: auto;              /* Scroll here, not document */
-    overscroll-behavior: contain; /* Stop pull-to-refresh bounce */
-    -webkit-overflow-scrolling: touch;
-    background: #fff;            /* White for app content */
+    height: 100dvh;
+    overflow: auto;
+    overscroll-behavior: contain; /* Android/Chrome */
+    -webkit-overflow-scrolling: touch; /* iOS smooth scroll */
+    background: #000;
   }
 
+  /* Sticky header inside the scroller */
   .app-header {
     position: sticky;
     top: 0;
     z-index: 1000;
     background: #000;
     color: #fff;
-    padding-top: env(safe-area-inset-top);
+    padding-top: env(safe-area-inset-top); /* content safety */
+  }
+
+  /* Paint the status bar area even during iOS rubber-band */
+  .safe-top {
+    position: fixed;
+    inset: 0 auto auto 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background: #000;
+    z-index: 2000;
+    pointer-events: none; /* purely visual */
+  }
+
+  /* Fallback for older iOS (env(...) may be 0) — keep it invisible */
+  @supports not (height: env(safe-area-inset-top)) {
+    .safe-top {
+      height: 0;
+    }
   }
 }
 
