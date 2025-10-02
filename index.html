@@ -52,20 +52,26 @@
         box-sizing: border-box;
       }
 
+      html, body {
+        height: 100%;
+        margin: 0;
+        background: #000;
+      }
+
       body {
         font-family: var(--font-sans);
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         text-rendering: optimizeLegibility;
-        /* Prevent layout shift during font load */
         font-size: 16px;
         line-height: 1.5;
+        overflow: hidden; /* Lock document scroll */
       }
 
       /* Prevent flash of unstyled content */
       #root {
-        min-height: 100vh;
-        background-color: #ffffff;
+        height: 100%;
+        background-color: #000;
       }
 
       /* Loading spinner styles - prevent CLS */

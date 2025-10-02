@@ -146,7 +146,7 @@ function App() {
           <Router>
             <RoutePrefetcher />
             {/* <OfflineBanner /> */}
-            <div className="App">
+            <div className="app-scroll">
               {/* <RouteErrorBoundary> */}
                 <Suspense fallback={<PageLoader />}>
                   <FloatingInstallButton />
