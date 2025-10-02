@@ -6,7 +6,7 @@ import { queryClient } from './lib/react-query'
 import EmployeeLoginPortal from './components/EmployeeLoginPortal'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import MainLayout from './layouts/MainLayout'
-// import { InstallPrompt } from './components/pwa/InstallPrompt'
+import { InstallPrompt } from './components/pwa/InstallPrompt'
 // import { ChunkErrorBoundary, RouteErrorBoundary } from './components/ErrorBoundary'
 // import { initPerformanceMonitoring } from './utils/performance-monitoring'
 import { useRequestsRowActionsStore } from './features/requests/state/rowActions.store'
@@ -149,7 +149,7 @@ function App() {
             <div className="App">
               {/* <RouteErrorBoundary> */}
                 <Suspense fallback={<PageLoader />}>
-                  {/* <InstallPrompt /> */}
+                  <InstallPrompt />
                   <Routes>
               <Route
                 path="/"
