@@ -35,48 +35,60 @@
     }
   }
 
-  /* Fixed header that accounts for safe area */
-  .app-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 3000; /* above everything */
-    background: #000;
-    color: #fff;
-    padding-top: env(safe-area-inset-top);
-    min-height: calc(var(--header-h) + env(safe-area-inset-top));
-    display: flex;
-    align-items: flex-end; /* place inner row below inset */
+  /* Fixed header that accounts for safe area - MOBILE ONLY */
+  @media (max-width: 767px) {
+    .app-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 3000; /* above everything */
+      background: #000;
+      color: #fff;
+      padding-top: env(safe-area-inset-top);
+      min-height: calc(var(--header-h) + env(safe-area-inset-top));
+      display: flex;
+      align-items: flex-end; /* place inner row below inset */
+    }
+
+    /* Inner row that holds title/menu */
+    .app-header__row {
+      height: var(--header-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0 12px;
+    }
+
+    /* Burger menu positioned BELOW the inset */
+    .app-menu-btn {
+      position: absolute;
+      top: calc(env(safe-area-inset-top) + 8px);
+      right: 12px;
+    }
+
+    /* Content scroll area padded under the fixed header */
+    .app-content {
+      height: 100dvh;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      background: #000;
+      padding-top: calc(var(--header-h) + env(safe-area-inset-top));
+      position: relative;
+      z-index: 1; /* below header */
+    }
   }
 
-  /* Inner row that holds title/menu */
-  .app-header__row {
-    height: var(--header-h);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding: 0 12px;
-  }
-
-  /* Burger menu positioned BELOW the inset */
-  .app-menu-btn {
-    position: absolute;
-    top: calc(env(safe-area-inset-top) + 8px);
-    right: 12px;
-  }
-
-  /* Content scroll area padded under the fixed header */
-  .app-content {
-    height: 100dvh;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    background: #000;
-    padding-top: calc(var(--header-h) + env(safe-area-inset-top));
-    position: relative;
-    z-index: 1; /* below header */
+  /* Desktop - no padding, regular scroll */
+  @media (min-width: 768px) {
+    .app-content {
+      height: 100vh;
+      overflow: visible;
+      background: #fff;
+      padding-top: 0;
+    }
   }
 }
 
