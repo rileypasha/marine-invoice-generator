@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Invoices from './Invoices';
@@ -75,18 +75,20 @@ interface Invoice {
 
 const InvoicesPage: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [rawInvoices, setRawInvoices] = useState<ApiInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [stats, setStats] = useState({ total: 0, requested: 0, change_requested: 0, approved: 0 });
-  const [filters, setFilters] = useState<FilterOptions>({});
-  const [availableCustomers, setAvailableCustomers] = useState<Customer[]>([]);
-  const [availableVessels, setAvailableVessels] = useState<Vessel[]>([]);
-
   const { isAuthenticated, csrfToken } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  // Initialize filters from URL on mount
+  const [filters, setFilters] = useState<FilterOptions>(() => {
+    const customerIdFromUrl = new URLSearchParams(window.location.search).get('customer_id');
+    return customerIdFromUrl ? { customerId: customerIdFromUrl } : {};
+  });
 
   const fetchInvoices = useCallback(async (page = 1, search = '', filterOptions: FilterOptions = {}) => {
     if (!isAuthenticated || !csrfToken) return;
@@ -136,115 +138,70 @@ const InvoicesPage: React.FC = () => {
 
       const data = await response.json();
 
-      // Transform API response to match component interface
-      const transformedInvoices: Invoice[] = (data.invoices || []).map((apiInvoice: ApiInvoice) => ({
-        id: apiInvoice.id,
-        invoice_number: apiInvoice.invoiceNumber || `#${apiInvoice.id.substring(0, 8)}`,
-        customer: {
-          display_name: apiInvoice.customer?.display_name || apiInvoice.customerName,
-          company_name: apiInvoice.customer?.legal_name,
-          contact_name: undefined
-        },
-        vessel: {
-          name: apiInvoice.vessel?.name || apiInvoice.vesselName
-        },
-        user: apiInvoice.user,
-        userName: apiInvoice.userName,
-        modifiedByUserName: apiInvoice.modifiedByUserName,
-        total_amount: apiInvoice.total,
-        invoice_date: apiInvoice.createdAt,
-        updated_at: apiInvoice.updatedAt,
-        status: apiInvoice.status
-      }));
-
-      setInvoices(transformedInvoices);
+      // Store raw API data - transformation happens in useMemo
+      setRawInvoices(data.invoices || []);
       setCurrentPage(data.pagination?.page || 1);
       setTotalPages(data.pagination?.totalPages || 1);
 
-      // Calculate stats from the invoices
-      const total = transformedInvoices.length;
-      const requested = transformedInvoices.filter(i => i.status === 'requested').length;
-      const change_requested = transformedInvoices.filter(i => i.status === 'change_requested').length;
-      const approved = transformedInvoices.filter(i => i.status === 'approved').length;
-
-      setStats({ total, requested, change_requested, approved });
-
     } catch (error) {
       console.error('Error fetching invoices:', error);
-      setInvoices([]);
-      setStats({ total: 0, requested: 0, change_requested: 0, approved: 0 });
+      setRawInvoices([]);
     } finally {
       setIsLoading(false);
     }
   }, [isAuthenticated, csrfToken]);
 
-  const fetchCustomers = async () => {
+  // Memoize transformation to prevent re-computation on every render
+  const transformedInvoices = useMemo(() => {
+    return rawInvoices.map((apiInvoice) => ({
+      id: apiInvoice.id,
+      invoice_number: apiInvoice.invoiceNumber || `#${apiInvoice.id.substring(0, 8)}`,
+      customer: {
+        display_name: apiInvoice.customer?.display_name || apiInvoice.customerName,
+        company_name: apiInvoice.customer?.legal_name,
+        contact_name: undefined
+      },
+      vessel: {
+        name: apiInvoice.vessel?.name || apiInvoice.vesselName
+      },
+      user: apiInvoice.user,
+      userName: apiInvoice.userName,
+      modifiedByUserName: apiInvoice.modifiedByUserName,
+      total_amount: apiInvoice.total,
+      invoice_date: apiInvoice.createdAt,
+      updated_at: apiInvoice.updatedAt,
+      status: apiInvoice.status
+    }));
+  }, [rawInvoices]);
+
+  // Memoize stats calculation
+  const stats = useMemo(() => {
+    const total = transformedInvoices.length;
+    const requested = transformedInvoices.filter(i => i.status === 'requested').length;
+    const change_requested = transformedInvoices.filter(i => i.status === 'change_requested').length;
+    const approved = transformedInvoices.filter(i => i.status === 'approved').length;
+    return { total, requested, change_requested, approved };
+  }, [transformedInvoices]);
+
+  // Fetch invoices when page, search, or filters change
+  useEffect(() => {
     if (!isAuthenticated || !csrfToken) return;
 
-    try {
-      const response = await fetch('/api/v1/customers', {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
-        },
-        credentials: 'include'
-      });
+    let cancelled = false;
 
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableCustomers(data.customers || []);
+    const doFetch = async () => {
+      if (!cancelled) {
+        await fetchInvoices(currentPage, searchTerm, filters);
       }
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-    }
-  };
+    };
 
-  const fetchVessels = async () => {
-    if (!isAuthenticated || !csrfToken) return;
+    doFetch();
 
-    try {
-      const response = await fetch('/api/v1/vessels', {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
-        },
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableVessels(data.vessels || []);
-      }
-    } catch (error) {
-      console.error('Error fetching vessels:', error);
-    }
-  };
-
-  useEffect(() => {
-    if (isAuthenticated && csrfToken) {
-      fetchCustomers();
-      fetchVessels();
-    }
-  }, [isAuthenticated, csrfToken]);
-
-  useEffect(() => {
-    fetchInvoices(currentPage, searchTerm, filters);
-  }, [isAuthenticated, csrfToken, currentPage, searchTerm, filters]);
-
-  // Apply customer filter from URL parameter when availableCustomers is loaded
-  useEffect(() => {
-    const customerIdFromUrl = searchParams.get('customer_id');
-    if (customerIdFromUrl && availableCustomers.length > 0) {
-      // Check if the customer exists in the available customers
-      const customerExists = availableCustomers.some(customer => customer.id === customerIdFromUrl);
-      if (customerExists) {
-        setFilters(prevFilters => ({
-          ...prevFilters,
-          customerId: customerIdFromUrl
-        }));
-      }
-    }
-  }, [searchParams, availableCustomers]);
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, searchTerm, filters]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -353,7 +310,7 @@ const InvoicesPage: React.FC = () => {
 
   return (
     <Invoices
-      invoices={invoices}
+      invoices={transformedInvoices}
       onEdit={handleEdit}
       onDelete={handleDelete}
       onView={handleView}
@@ -361,17 +318,10 @@ const InvoicesPage: React.FC = () => {
       onAddNew={handleAddNew}
       onBulkDelete={handleBulkDelete}
       onBulkExport={handleBulkExport}
-      onSearch={handleSearch}
-      searchTerm={searchTerm}
       isLoading={isLoading}
-      stats={stats}
       currentPage={currentPage}
       totalPages={totalPages}
       onPageChange={handlePageChange}
-      filters={filters}
-      onFiltersChange={handleFiltersChange}
-      availableCustomers={availableCustomers}
-      availableVessels={availableVessels}
     />
   );
 };

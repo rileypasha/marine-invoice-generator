@@ -203,7 +203,19 @@ export function getSecurityConfig(): SecurityConfig {
   const configs: Record<string, SecurityConfig> = {
     development: {
       sessionSecret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
-      corsOrigins: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004', 'http://localhost:3005'],
+      corsOrigins: [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:3002',
+        'http://localhost:3003',
+        'http://localhost:3004',
+        'http://localhost:3005',
+        // Vite preview ports
+        'http://localhost:4173',
+        'http://localhost:4174',
+        'http://localhost:4175',
+        'http://localhost:4176',
+      ],
       trustProxy: false,
     },
     production: {

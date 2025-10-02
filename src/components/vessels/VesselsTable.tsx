@@ -12,7 +12,6 @@ import {
   flexRender
 } from "@tanstack/react-table";
 import { Checkbox as TableCheckbox } from "@/components/ui/checkbox";
-import { PaginatedPrintTable } from "@/components/ui/paginated-print-table";
 import {
   SimpleTable as Table,
   SimpleTableBody as TableBody,
@@ -159,47 +158,6 @@ export function VesselsTable({
       onViewInvoices(vessel);
     }
   }, [onViewInvoices]);
-
-  // Print columns definition - includes ALL columns
-  const printColumns = [
-    { key: 'name' as keyof Vessel, header: 'Vessel' },
-    {
-      key: 'length_ft' as keyof Vessel,
-      header: 'Length',
-      render: (value: any) => value ? `${value} ft` : '-'
-    },
-    {
-      key: 'weight_tons' as keyof Vessel,
-      header: 'Weight',
-      render: (value: any) => value ? `${value} tons` : '-'
-    },
-    {
-      key: 'monthly_invoice_count' as keyof Vessel,
-      header: 'Monthly Invoices',
-      render: (value: any) => value || 0
-    },
-    {
-      key: 'monthly_invoice_total' as keyof Vessel,
-      header: 'Monthly Amount',
-      render: (value: any) => (value || 0).toLocaleString('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      })
-    },
-    {
-      key: 'invoice_count' as keyof Vessel,
-      header: 'Total Invoices',
-      render: (value: any) => value || 0
-    },
-    {
-      key: 'invoice_total' as keyof Vessel,
-      header: 'Total Amount',
-      render: (value: any) => (value || 0).toLocaleString('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      })
-    }
-  ];
 
   // Define columns for DataTable - wrapped in useMemo to prevent recreation on every render
   const columns: ColumnDef<Vessel>[] = useMemo(() => [
@@ -585,12 +543,6 @@ export function VesselsTable({
         </div>
       </div>
 
-      {/* Print-only paginated table */}
-      <PaginatedPrintTable
-        columns={printColumns}
-        rows={sortedVessels}
-        approxRowsPerPage={26}
-      />
     </>
   )
 }

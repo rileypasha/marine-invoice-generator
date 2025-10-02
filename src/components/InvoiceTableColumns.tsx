@@ -36,36 +36,42 @@ interface InvoiceTableActionsProps {
   openRowActions?: (args: {rowId: string|number; pos: {top: number; left: number}; handlers: any}) => void;
 }
 
+// Create formatters once outside component to prevent recreation on every render
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD'
+});
+
+const dateFormatter = new Intl.DateTimeFormat('en-US');
+
 const formatDate = (dateString?: string) => {
   if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString();
+  return dateFormatter.format(new Date(dateString));
 };
 
 const formatCurrency = (amount?: number) => {
   if (!amount) return '$0.00';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(amount);
+  return currencyFormatter.format(amount);
 };
 
-const getStatusBadge = (status?: string) => {
-  const statusConfig = {
-    requested: {
-      className: 'bg-blue-400 text-white dark:bg-blue-500 dark:text-white',
-      label: 'Requested'
-    },
-    change_requested: {
-      className: 'bg-purple-400 text-white dark:bg-purple-500 dark:text-white',
-      label: 'Change Requested'
-    },
-    approved: {
-      className: 'bg-green-400 text-white dark:bg-green-500 dark:text-white',
-      label: 'Approved'
-    }
-  };
+// Hoist status config outside to prevent recreation
+const STATUS_CONFIG = {
+  requested: {
+    className: 'bg-blue-400 text-white dark:bg-blue-500 dark:text-white',
+    label: 'Requested'
+  },
+  change_requested: {
+    className: 'bg-purple-400 text-white dark:bg-purple-500 dark:text-white',
+    label: 'Change Requested'
+  },
+  approved: {
+    className: 'bg-green-400 text-white dark:bg-green-500 dark:text-white',
+    label: 'Approved'
+  }
+} as const;
 
-  const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.requested;
+const getStatusBadge = (status?: string) => {
+  const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.requested;
 
   return (
     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.className}`}>

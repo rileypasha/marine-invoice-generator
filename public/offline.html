@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline - Marine Group</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      padding: 48px 32px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    .icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      background: #f1f5f9;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon svg {
+      width: 40px;
+      height: 40px;
+      color: #64748b;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 12px;
+    }
+
+    p {
+      font-size: 16px;
+      color: #64748b;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .retry-button {
+      background: #0284c7;
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .retry-button:hover {
+      background: #0369a1;
+    }
+
+    .retry-button:active {
+      transform: scale(0.98);
+    }
+
+    .status {
+      margin-top: 24px;
+      padding: 12px;
+      background: #f8fafc;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .status.online {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .checking {
+      animation: pulse 2s infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="1" y1="1" x2="23" y2="23"></line>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+        <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+        <line x1="12" y1="20" x2="12.01" y2="20"></line>
+      </svg>
+    </div>
+
+    <h1>You're Offline</h1>
+    <p>
+      It looks like you've lost your internet connection. Don't worry—some features
+      might still work with cached data. Try reconnecting to get the full experience.
+    </p>
+
+    <button class="retry-button" onclick="location.reload()">
+      Try Again
+    </button>
+
+    <div class="status" id="status">
+      Checking connection...
+    </div>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+
+    function updateStatus() {
+      if (navigator.onLine) {
+        statusEl.textContent = 'Connection restored! Reloading...';
+        statusEl.classList.add('online');
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        statusEl.textContent = 'Still offline. Checking again...';
+        statusEl.classList.add('checking');
+      }
+    }
+
+    // Check connection every 3 seconds
+    setInterval(updateStatus, 3000);
+
+    // Also listen for online event
+    window.addEventListener('online', () => {
+      statusEl.textContent = 'Connection restored! Reloading...';
+      statusEl.classList.add('online');
+      setTimeout(() => location.reload(), 1000);
+    });
+
+    // Initial check
+    updateStatus();
+  </script>
+</body>
+</html>

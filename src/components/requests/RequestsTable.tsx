@@ -1,7 +1,6 @@
 import React, { useMemo, useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
 import { DataTable } from "@/components/ui/data-table";
-import { PaginatedPrintTable } from "@/components/ui/paginated-print-table";
 import { createInvoiceColumns } from "@/components/InvoiceTableColumns";
 import { RequestSort } from "@/hooks/useRequestsQueryState";
 import { useRequestsRowActionsStore } from "@/features/requests/state/rowActions.store";
@@ -128,99 +127,14 @@ export function RequestsTable({
     openRowActions
   }), [onView, onEdit, handleEditWrapper, onPrint, onDelete, openRowActions]);
 
-  // Create print columns (simplified for printing)
-  const printColumns = [
-    {
-      key: 'invoice_number',
-      header: 'Invoice #',
-      render: (request: Invoice) => request.invoice_number || `#${request.id}`,
-      width: 'w-24'
-    },
-    {
-      key: 'customer',
-      header: 'Contact',
-      render: (request: Invoice) => request.customer?.display_name || request.customer?.company_name || '-',
-      width: 'w-32'
-    },
-    {
-      key: 'vessel',
-      header: 'Vessel',
-      render: (request: Invoice) => request.vessel?.name || '-',
-      width: 'w-28'
-    },
-    {
-      key: 'total_amount',
-      header: 'Amount',
-      render: (request: Invoice) => {
-        const amount = request.total_amount || 0;
-        return new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD'
-        }).format(amount);
-      },
-      width: 'w-24',
-      className: 'text-right'
-    },
-    {
-      key: 'created_by',
-      header: 'Created By',
-      render: (request: Invoice) => request?.user?.name || request?.userName || '-',
-      width: 'w-28'
-    },
-    {
-      key: 'invoice_date',
-      header: 'Created At',
-      render: (request: Invoice) => {
-        if (!request.invoice_date) return '-';
-        return new Date(request.invoice_date).toLocaleDateString();
-      },
-      width: 'w-28'
-    },
-    {
-      key: 'modified_by',
-      header: 'Modified By',
-      render: (request: Invoice) => request?.modifiedByUserName || '-',
-      width: 'w-28'
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (request: Invoice) => {
-        const statusMap = {
-          requested: 'Requested',
-          change_requested: 'Change Requested',
-          approved: 'Approved'
-        };
-        return statusMap[request.status as keyof typeof statusMap] || 'Requested';
-      },
-      width: 'w-20'
-    }
-  ];
-
   return (
-    <>
-      {/* Screen-only interactive table with Airtable-style layout */}
-      <div className="screen-only">
-        <div>
-          <div>
-            <DataTable
-              columns={columns}
-              data={sortedRequests}
-              onBulkDelete={onBulkDelete}
-              onBulkExport={onBulkExport}
-              title={title}
-              colWidths={REQUESTS_COLS}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Print-only paginated table */}
-      <PaginatedPrintTable
-        columns={printColumns}
-        rows={sortedRequests}
-        approxRowsPerPage={26}
-      />
-    </>
+    <DataTable
+      columns={columns}
+      data={sortedRequests}
+      onBulkDelete={onBulkDelete}
+      onBulkExport={onBulkExport}
+      title={title}
+      colWidths={REQUESTS_COLS}
+    />
   )
 }

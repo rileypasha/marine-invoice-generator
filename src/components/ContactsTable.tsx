@@ -14,7 +14,6 @@ import {
 } from "@tanstack/react-table";
 import { parsePhoneNumber } from 'libphonenumber-js';
 import { Checkbox as TableCheckbox } from "@/components/ui/checkbox";
-import { PaginatedPrintTable } from "@/components/ui/paginated-print-table";
 import {
   SimpleTable as Table,
   SimpleTableBody as TableBody,
@@ -636,12 +635,6 @@ export function ContactsTable({
         </div>
       </div>
 
-      {/* Print-only paginated table */}
-      <PaginatedPrintTable
-        columns={printColumns}
-        rows={normalizeContacts(sortedCustomers as ContactIn[])}
-        approxRowsPerPage={26}
-      />
     </>
   );
 }

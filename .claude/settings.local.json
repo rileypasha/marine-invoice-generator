@@ -101,7 +101,11 @@
       "Read(//c/Users/riley/AppData/Roaming/Claude/**)",
       "Bash(npx:*)",
       "Bash(psql:*)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(claude mcp list:*)",
+      "Bash(npm pkg set:*)",
+      "SlashCommand(/sc:implement \"Fix white-on-white font color accessibility issues across PWA UI\" --persona-frontend --persona-qa --magic --tdd)",
+      "SlashCommand(/sc:implement:*)"
     ],
     "deny": [],
     "ask": [],

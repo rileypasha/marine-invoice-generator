@@ -1,0 +1,323 @@
+name: PWA Tests CI
+
+on:
+  push:
+    branches: [main, develop, react-tw3-vite]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:unit -- --ci --coverage
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/lcov.info
+          flags: unit
+          name: unit-coverage
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run integration tests
+        run: npm run test:integration -- --ci
+
+  pwa-tests:
+    name: PWA E2E Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build app
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npm run start &
+          npx wait-on http://localhost:3000 -t 60000
+
+      - name: Run PWA tests
+        run: npm run test:pwa
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: pwa-test-results
+          path: playwright-report/
+          retention-days: 7
+
+  accessibility-tests:
+    name: Accessibility Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build app
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npm run start &
+          npx wait-on http://localhost:3000 -t 60000
+
+      - name: Run accessibility tests
+        run: npm run test:a11y
+
+      - name: Upload a11y results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: a11y-test-results
+          path: playwright-report/
+          retention-days: 7
+
+  lighthouse-tests:
+    name: Lighthouse Performance & PWA
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npm run start &
+          npx wait-on http://localhost:3000 -t 60000
+
+      - name: Run Lighthouse CI
+        run: npm run test:lighthouse
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          retention-days: 7
+
+  visual-regression:
+    name: Visual Regression Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build app
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npm run start &
+          npx wait-on http://localhost:3000 -t 60000
+
+      - name: Run visual regression tests
+        run: npm run test:visual
+
+      - name: Upload visual diffs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: visual-regression-diffs
+          path: test-results/
+          retention-days: 7
+
+  performance-budgets:
+    name: Performance Budget Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build app
+        run: npm run build
+
+      - name: Check bundle size
+        run: |
+          SIZE=$(du -sb dist/assets/js/*.js | awk '{s+=$1} END {print s}')
+          MAX_SIZE=$((500 * 1024))  # 500KB max
+          if [ "$SIZE" -gt "$MAX_SIZE" ]; then
+            echo "Bundle size $SIZE exceeds budget of $MAX_SIZE"
+            exit 1
+          fi
+
+      - name: Start server
+        run: |
+          npm run start &
+          npx wait-on http://localhost:3000 -t 60000
+
+      - name: Run performance tests
+        run: npm run test:performance
+
+  offline-tests:
+    name: Offline Functionality Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build app
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npm run start &
+          npx wait-on http://localhost:3000 -t 60000
+
+      - name: Run offline tests
+        run: npm run test:offline
+
+  mobile-tests:
+    name: Mobile Navigation & UI Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build app
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npm run start &
+          npx wait-on http://localhost:3000 -t 60000
+
+      - name: Run mobile tests
+        run: npm run test:mobile
+
+  test-summary:
+    name: Test Summary
+    needs: [unit-tests, integration-tests, pwa-tests, accessibility-tests, lighthouse-tests, visual-regression, performance-budgets, offline-tests, mobile-tests]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          echo "All test suites completed"
+          if [ "${{ needs.unit-tests.result }}" != "success" ] ||
+             [ "${{ needs.integration-tests.result }}" != "success" ] ||
+             [ "${{ needs.pwa-tests.result }}" != "success" ] ||
+             [ "${{ needs.accessibility-tests.result }}" != "success" ] ||
+             [ "${{ needs.lighthouse-tests.result }}" != "success" ]; then
+            echo "Some tests failed"
+            exit 1
+          fi
+          echo "All critical tests passed"

@@ -514,35 +514,44 @@ router.get('/', async (req: CustomerRequest, res: Response) => {
       prisma.customer.count({ where }),
     ]);
 
-    // Transform customers to include aggregated invoice data using separate queries
-    const customersWithInvoiceData = await Promise.all(
-      customers.map(async customer => {
-        // Get all-time counts and totals
-        const [allTimeStats, monthlyStats] = await Promise.all([
-          prisma.invoice.aggregate({
-            where: { customerId: customer.id },
-            _count: { id: true },
-            _sum: { total: true },
-          }),
-          prisma.invoice.aggregate({
-            where: {
-              customerId: customer.id,
-              createdAt: { gte: currentMonthStart },
-            },
-            _count: { id: true },
-            _sum: { total: true },
-          }),
-        ]);
+    // Get aggregated invoice stats for ALL customers in a single query
+    const customerIds = customers.map(c => c.id);
 
-        return {
-          ...customer,
-          invoice_count: allTimeStats._count.id || 0,
-          invoice_total: allTimeStats._sum.total || 0,
-          monthly_invoice_count: monthlyStats._count.id || 0,
-          monthly_invoice_total: monthlyStats._sum.total || 0,
-        };
-      })
-    );
+    const [allTimeStats, monthlyStats] = await Promise.all([
+      prisma.invoice.groupBy({
+        by: ['customerId'],
+        where: { customerId: { in: customerIds } },
+        _count: { id: true },
+        _sum: { total: true },
+      }),
+      prisma.invoice.groupBy({
+        by: ['customerId'],
+        where: {
+          customerId: { in: customerIds },
+          createdAt: { gte: currentMonthStart },
+        },
+        _count: { id: true },
+        _sum: { total: true },
+      }),
+    ]);
+
+    // Create lookup maps for O(1) access
+    const allTimeMap = new Map(allTimeStats.map(stat => [stat.customerId, stat]));
+    const monthlyMap = new Map(monthlyStats.map(stat => [stat.customerId, stat]));
+
+    // Transform customers with aggregated data
+    const customersWithInvoiceData = customers.map(customer => {
+      const allTime = allTimeMap.get(customer.id);
+      const monthly = monthlyMap.get(customer.id);
+
+      return {
+        ...customer,
+        invoice_count: allTime?._count.id || 0,
+        invoice_total: allTime?._sum.total || 0,
+        monthly_invoice_count: monthly?._count.id || 0,
+        monthly_invoice_total: monthly?._sum.total || 0,
+      };
+    });
 
     logger.info('Customers retrieved successfully', {
       correlationId,

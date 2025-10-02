@@ -204,35 +204,44 @@ router.get('/', async (req: VesselRequest, res: Response) => {
       prisma.vessel.count({ where }),
     ]);
 
-    // Transform vessels to include aggregated invoice data using separate queries
-    const vesselsWithInvoiceData = await Promise.all(
-      vessels.map(async vessel => {
-        // Get all-time counts and totals
-        const [allTimeStats, monthlyStats] = await Promise.all([
-          prisma.invoice.aggregate({
-            where: { vesselId: vessel.id },
-            _count: { id: true },
-            _sum: { total: true },
-          }),
-          prisma.invoice.aggregate({
-            where: {
-              vesselId: vessel.id,
-              createdAt: { gte: currentMonthStart },
-            },
-            _count: { id: true },
-            _sum: { total: true },
-          }),
-        ]);
+    // Get aggregated invoice stats for ALL vessels in a single query
+    const vesselIds = vessels.map(v => v.id);
 
-        return {
-          ...vessel,
-          invoice_count: allTimeStats._count.id || 0,
-          invoice_total: allTimeStats._sum.total || 0,
-          monthly_invoice_count: monthlyStats._count.id || 0,
-          monthly_invoice_total: monthlyStats._sum.total || 0,
-        };
-      })
-    );
+    const [allTimeStats, monthlyStats] = await Promise.all([
+      prisma.invoice.groupBy({
+        by: ['vesselId'],
+        where: { vesselId: { in: vesselIds } },
+        _count: { id: true },
+        _sum: { total: true },
+      }),
+      prisma.invoice.groupBy({
+        by: ['vesselId'],
+        where: {
+          vesselId: { in: vesselIds },
+          createdAt: { gte: currentMonthStart },
+        },
+        _count: { id: true },
+        _sum: { total: true },
+      }),
+    ]);
+
+    // Create lookup maps for O(1) access
+    const allTimeMap = new Map(allTimeStats.map(stat => [stat.vesselId, stat]));
+    const monthlyMap = new Map(monthlyStats.map(stat => [stat.vesselId, stat]));
+
+    // Transform vessels with aggregated data
+    const vesselsWithInvoiceData = vessels.map(vessel => {
+      const allTime = allTimeMap.get(vessel.id);
+      const monthly = monthlyMap.get(vessel.id);
+
+      return {
+        ...vessel,
+        invoice_count: allTime?._count.id || 0,
+        invoice_total: allTime?._sum.total || 0,
+        monthly_invoice_count: monthly?._count.id || 0,
+        monthly_invoice_total: monthly?._sum.total || 0,
+      };
+    });
 
     logger.info('Vessels retrieved successfully', {
       correlationId,

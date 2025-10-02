@@ -1,0 +1,80 @@
+{
+  "name": "Marine Group Global Services",
+  "short_name": "Marine Group",
+  "description": "Invoice and request management for marine services",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0284c7",
+  "background_color": "#ffffff",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "View Requests",
+      "short_name": "Requests",
+      "description": "View all invoice requests",
+      "url": "/requests",
+      "icons": [
+        {
+          "src": "/icons/shortcut-requests.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "View Contacts",
+      "short_name": "Contacts",
+      "description": "View all contacts",
+      "url": "/contacts",
+      "icons": [
+        {
+          "src": "/icons/shortcut-contacts.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "View Vessels",
+      "short_name": "Vessels",
+      "description": "View all vessels",
+      "url": "/vessels",
+      "icons": [
+        {
+          "src": "/icons/shortcut-vessels.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
+}

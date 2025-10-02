@@ -54,6 +54,32 @@ module.exports = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      spacing: {
+        'safe-top': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+        'safe-left': 'env(safe-area-inset-left)',
+        'safe-right': 'env(safe-area-inset-right)',
+      },
+      minHeight: {
+        'touch': '44px',
+        'touch-large': '48px',
+      },
+      minWidth: {
+        'touch': '44px',
+        'touch-large': '48px',
+      },
+      fontSize: {
+        'base-mobile': ['16px', { lineHeight: '1.5' }],
+      },
+      animation: {
+        'skeleton': 'skeleton-loading 1.5s infinite',
+      },
+      keyframes: {
+        'skeleton-loading': {
+          '0%': { backgroundPosition: '-200px 0' },
+          '100%': { backgroundPosition: 'calc(200px + 100%) 0' },
+        },
+      },
     },
   },
   plugins: [],

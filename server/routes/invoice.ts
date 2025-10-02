@@ -352,7 +352,8 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
       }
     }
 
-    const [rawInvoices, total] = await Promise.all([
+    // Execute all queries in parallel for maximum performance
+    const [rawInvoices, total, stats] = await Promise.all([
       prisma.invoice.findMany({
         where,
         skip,
@@ -365,6 +366,12 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
         },
       }),
       prisma.invoice.count({ where }),
+      // Calculate stats in parallel instead of sequential
+      prisma.invoice.groupBy({
+        by: ['status'],
+        where: { status: { not: 'draft' } },
+        _count: { status: true },
+      }),
     ]);
 
     // Transform invoices to ensure userName and modifiedByUserName are populated from user relation if missing
@@ -377,15 +384,9 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
       modifiedByUserEmail: invoice.modifiedByUserEmail || invoice.user?.email || invoice.userEmail || null,
     }));
 
-    // Calculate stats - show all invoices stats
-    const stats = await prisma.invoice.groupBy({
-      by: ['status'],
-      where: { status: { not: 'draft' } },
-      _count: { status: true },
-    });
-
+    // Build stats map from groupBy results (no additional query needed)
     const statsMap = {
-      total: await prisma.invoice.count({ where: { status: { not: 'draft' } } }),
+      total: stats.reduce((sum, stat) => sum + stat._count.status, 0),
       requested: 0,
       change_requested: 0,
       approved: 0,

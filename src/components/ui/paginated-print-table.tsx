@@ -42,13 +42,13 @@ interface PaginatedPrintTableProps<T> {
  *   approxRowsPerPage={26}
  * />
  */
-export function PaginatedPrintTable<T>({
+function PaginatedPrintTableComponent<T>({
   columns,
   rows,
   approxRowsPerPage = 25,
   className = ""
 }: PaginatedPrintTableProps<T>) {
-  const pages = chunk(rows, approxRowsPerPage)
+  const pages = React.useMemo(() => chunk(rows, approxRowsPerPage), [rows, approxRowsPerPage])
 
   if (pages.length === 0) {
     return null
@@ -57,7 +57,7 @@ export function PaginatedPrintTable<T>({
   return (
     <div className={`print-only ${className}`}>
       {pages.map((page, pageIndex) => (
-        <div key={pageIndex}>
+        <div key={`page-${pageIndex}`}>
           <table className="w-full border-collapse print:table">
             <thead className="print:table-header-group">
               <tr className="print:table-row">
@@ -72,8 +72,10 @@ export function PaginatedPrintTable<T>({
               </tr>
             </thead>
             <tbody className="print:table-row-group">
-              {page.map((row, rowIndex) => (
-                <tr key={rowIndex} className="print:table-row">
+              {page.map((row, rowIndex) => {
+                const rowId = (row as any).id || `row-${pageIndex}-${rowIndex}`;
+                return (
+                <tr key={rowId} className="print:table-row">
                   {columns.map((col) => (
                     <td
                       key={String(col.key)}
@@ -86,7 +88,7 @@ export function PaginatedPrintTable<T>({
                     </td>
                   ))}
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
           {/* Page break after each table except the last */}
@@ -98,3 +100,5 @@ export function PaginatedPrintTable<T>({
     </div>
   )
 }
+
+export const PaginatedPrintTable = React.memo(PaginatedPrintTableComponent) as <T>(props: PaginatedPrintTableProps<T>) => JSX.Element | null
