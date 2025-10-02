@@ -1,11 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { X, Download, Share } from 'lucide-react';
+import { X, Share } from 'lucide-react';
 import { isPWA, isIOS, canInstall } from '@/utils/pwa';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
+
+// Custom Marine Group Logo Icon
+const MarineGroupIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M250 120C194.772 120 150 164.772 150 220C150 275.228 194.772 320 250 320C305.228 320 350 275.228 350 220C350 164.772 305.228 120 250 120ZM250 140C294.183 140 330 175.817 330 220C330 264.183 294.183 300 250 300C205.817 300 170 264.183 170 220C170 175.817 205.817 140 250 140Z" fill="currentColor"/>
+    <path d="M220 200L250 170L280 200L250 230L220 200Z" fill="#38BDF8"/>
+    <path d="M200 280H300V380H200V280Z" fill="currentColor"/>
+    <path d="M220 300H240V360H220V300Z" fill="#0C4A6E"/>
+    <path d="M260 300H280V360H260V300Z" fill="#0C4A6E"/>
+    <circle cx="250" cy="220" r="15" fill="#38BDF8"/>
+    <path d="M235 250L250 235L265 250" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
 
 const DISMISS_STORAGE_KEY = 'pwa-install-dismissed';
 const DISMISS_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
@@ -127,7 +140,7 @@ export function InstallPrompt() {
 
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 p-2 bg-white/20 rounded-lg">
-            <Download className="h-6 w-6" />
+            <MarineGroupIcon />
           </div>
           <div className="flex-1">
             <h3 className="font-semibold text-base mb-1">Install App</h3>
