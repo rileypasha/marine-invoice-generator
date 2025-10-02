@@ -116,7 +116,7 @@ export const MobileSidebar = ({
       {/* Fixed header with hamburger */}
       <div
         className={cn(
-          "fixed top-0 left-0 right-0 md:hidden bg-black border-b border-gray-800 z-50 flex items-center px-4"
+          "fixed top-0 left-0 right-0 md:hidden bg-black z-50 flex items-center px-4"
         )}
         style={{
           height: '56px',
