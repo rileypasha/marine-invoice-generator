@@ -75,7 +75,7 @@ const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
         <CardHeader className="text-center pb-6">
           <div className="flex justify-center mb-4">
             <img
-              src="/newlogo.png"
+              src="/color_logo.svg"
               alt="Marine Group Logo"
               className="w-16 h-16 object-contain"
             />
