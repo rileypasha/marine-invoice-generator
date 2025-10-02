@@ -135,7 +135,7 @@ export const MobileSidebar = ({
 
         {/* Logo */}
         <img
-          src="/bw_logo.svg"
+          src="/logo_white.svg"
           alt="Global Invoicing"
           className="h-8 w-8"
         />
