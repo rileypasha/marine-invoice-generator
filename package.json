@@ -112,7 +112,9 @@
     "typescript": "^5.1.6",
     "vite": "^7.1.7",
     "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-pwa": "^1.0.3",
     "winston": "^3.8.2",
+    "workbox-window": "^7.3.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
@@ -146,10 +148,8 @@
     "supertest": "^6.3.3",
     "ts-jest": "^29.1.1",
     "ts-loader": "^9.4.4",
-    "vite-plugin-pwa": "^1.0.3",
     "webpack": "^5.88.1",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1",
-    "workbox-window": "^7.3.0"
+    "webpack-dev-server": "^4.15.1"
   }
 }
