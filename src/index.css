@@ -35,7 +35,7 @@
     }
   }
 
-  /* Fixed header that accounts for safe area - MOBILE ONLY */
+  /* Fixed translucent header extending into status bar - MOBILE ONLY */
   @media (max-width: 767px) {
     .app-header {
       position: fixed;
@@ -43,7 +43,9 @@
       left: 0;
       right: 0;
       z-index: 3000; /* above everything */
-      background: #000;
+      background: rgba(0, 0, 0, 0.85); /* translucent black */
+      backdrop-filter: blur(10px) saturate(180%);
+      -webkit-backdrop-filter: blur(10px) saturate(180%);
       color: #fff;
       padding-top: env(safe-area-inset-top);
       min-height: calc(var(--header-h) + env(safe-area-inset-top));
