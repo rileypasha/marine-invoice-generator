@@ -576,7 +576,8 @@ const Vessels: React.FC = () => {
 
 
   return (
-    <div className="flex flex-col">
+    <div className="h-full flex flex-col">
+      {/* Sticky Toolbar */}
       <VesselsToolbar
         vessels={vessels}
         currentGroupBy={currentGroupBy}
@@ -591,7 +592,8 @@ const Vessels: React.FC = () => {
         onFleetChange={handleFleetChangeWithState}
       />
 
-      <div>
+      {/* Table Content */}
+      <div className="flex-1 overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="text-muted-foreground">Loading vessels...</div>

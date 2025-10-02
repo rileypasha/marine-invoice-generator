@@ -581,7 +581,7 @@ const Customers: React.FC = () => {
   return (
     <>
       {/* Container for Airtable-style layout without fixed height */}
-      <div className="flex flex-col">
+      <div className="h-full flex flex-col">
         {/* Sticky Toolbar */}
         <ContactsToolbar
             customers={customers}
@@ -812,7 +812,7 @@ const Customers: React.FC = () => {
           />
 
           {/* Content area */}
-          <div>
+          <div className="flex-1 overflow-hidden">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="text-muted-foreground">Loading contacts...</div>
