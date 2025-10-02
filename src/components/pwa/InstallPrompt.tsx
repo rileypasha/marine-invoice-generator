@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Share } from 'lucide-react';
 import { isPWA, isIOS, canInstall } from '@/utils/pwa';
+import { IOSInstallModal } from './IOSInstallModal';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -26,6 +27,7 @@ const DISMISS_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [showIOSModal, setShowIOSModal] = useState(false);
 
   useEffect(() => {
     // Don't show if already installed as PWA
@@ -88,41 +90,50 @@ export function InstallPrompt() {
     setShowPrompt(false);
   };
 
+  const handleIOSInstallClick = () => {
+    setShowIOSModal(true);
+  };
+
   if (!showPrompt) {
     return null;
   }
 
-  // iOS install instructions - Floating button
+  // iOS install - Show floating button that opens modal
   if (isIOS() && !deferredPrompt) {
     return (
-      <div className="fixed bottom-6 right-6 z-50 max-w-sm animate-slide-up">
-        <div className="bg-gradient-to-br from-sky-600 to-sky-500 text-white rounded-2xl shadow-2xl p-4">
-          <button
-            onClick={handleDismiss}
-            className="absolute -top-2 -right-2 p-1.5 bg-white text-sky-600 hover:bg-gray-100 rounded-full shadow-lg transition-colors"
-            aria-label="Dismiss install prompt"
-          >
-            <X className="h-4 w-4" />
-          </button>
+      <>
+        {showIOSModal && <IOSInstallModal onClose={() => setShowIOSModal(false)} />}
 
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 p-2 bg-white/20 rounded-lg">
-              <Share className="h-6 w-6" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-base mb-1">Install App</h3>
-              <p className="text-xs text-white/90 mb-2">
-                Quick access and offline use
-              </p>
-              <ol className="text-xs text-white/90 space-y-1 list-decimal list-inside">
-                <li>Tap Share button in Safari</li>
-                <li>Tap "Add to Home Screen"</li>
-                <li>Tap "Add"</li>
-              </ol>
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm animate-slide-up">
+          <div className="bg-gradient-to-br from-sky-600 to-sky-500 text-white rounded-2xl shadow-2xl p-4">
+            <button
+              onClick={handleDismiss}
+              className="absolute -top-2 -right-2 p-1.5 bg-white text-sky-600 hover:bg-gray-100 rounded-full shadow-lg transition-colors"
+              aria-label="Dismiss install prompt"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 p-2 bg-white/20 rounded-lg">
+                <MarineGroupIcon />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-base mb-1">Install App</h3>
+                <p className="text-xs text-white/90 mb-3">
+                  Quick access and offline use
+                </p>
+                <button
+                  onClick={handleIOSInstallClick}
+                  className="w-full px-3 py-1.5 text-sm bg-white text-sky-600 font-medium rounded-lg hover:bg-white/90 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-sky-600"
+                >
+                  Install
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
