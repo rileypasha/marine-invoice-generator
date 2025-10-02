@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main circular button - flat, no shadows -->
+  <circle cx="28" cy="28" r="24" 
+          fill="#000000"/>
+  
+  <!-- Install/Download icon -->
+  <g transform="translate(28, 28)">
+    <!-- Arrow shaft -->
+    <line x1="0" y1="-10" x2="0" y2="4" 
+          stroke="white" 
+          stroke-width="3" 
+          stroke-linecap="round"/>
+    
+    <!-- Arrow head -->
+    <polyline points="-5,0 0,5 5,0" 
+              stroke="white" 
+              stroke-width="3" 
+              stroke-linecap="round" 
+              stroke-linejoin="round"
+              fill="none"/>
+    
+    <!-- Base line (platform) -->
+    <line x1="-7" y1="11" x2="7" y2="11" 
+          stroke="white" 
+          stroke-width="3" 
+          stroke-linecap="round"/>
+  </g>
+</svg>
