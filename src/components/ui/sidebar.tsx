@@ -116,7 +116,7 @@ export const MobileSidebar = ({
       {/* Fixed header with hamburger */}
       <div
         className={cn(
-          "fixed top-0 left-0 right-0 md:hidden bg-black z-50 flex items-center px-4"
+          "fixed top-0 left-0 right-0 md:hidden bg-black z-50 flex items-center justify-between px-4"
         )}
         style={{
           height: '56px',
@@ -132,6 +132,16 @@ export const MobileSidebar = ({
         >
           <Menu className="h-6 w-6" />
         </button>
+
+        {/* Logo */}
+        <img
+          src="/bw_logo.svg"
+          alt="Global Invoicing"
+          className="h-8 w-8"
+        />
+
+        {/* Spacer to keep logo centered */}
+        <div className="w-10"></div>
       </div>
 
       {/* Slide-out menu */}
