@@ -138,6 +138,7 @@ export const MobileSidebar = ({
           src="/logo_white.svg"
           alt="Global Invoicing"
           className="h-8 w-8"
+          style={{ marginTop: '4px' }}
         />
 
         {/* Spacer to keep logo centered */}
