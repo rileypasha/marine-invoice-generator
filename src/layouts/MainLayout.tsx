@@ -130,7 +130,7 @@ const SidebarContent = () => {
               onClick={toggleSidebar}
               onMouseEnter={handleExpandButtonMouseEnter}
               onMouseLeave={handleExpandButtonMouseLeave}
-              className="absolute pl-3 pr-4 py-2 ml-0 rounded-lg hover:bg-gray-50 z-30"
+              className="absolute pl-3 pr-4 py-2 ml-0 rounded-lg hover:bg-gray-50 z-10"
               style={{
                 left: '1px'
               }}
@@ -181,7 +181,7 @@ const SidebarContent = () => {
                   style: { marginLeft: '8px' }
                 })
               }}
-              className={`pl-1 pr-2 py-2 ml-0 rounded-lg transition-colors duration-300 ${
+              className={`pl-1 pr-2 py-2 ml-0 rounded-lg relative z-20 transition-colors duration-300 ${
                 isActive(link.href)
                   ? 'bg-gray-100 text-gray-900'
                   : 'hover:bg-gray-50 text-gray-600'
@@ -205,7 +205,7 @@ const SidebarContent = () => {
               style: { marginLeft: '8px' }
             })
           }}
-          className={`pl-1 pr-2 py-2 ml-0 rounded-lg transition-colors duration-300 ${
+          className={`pl-1 pr-2 py-2 ml-0 rounded-lg relative z-20 transition-colors duration-300 ${
             isActive(settingsLink.href)
               ? 'bg-gray-100 text-gray-900'
               : 'hover:bg-gray-50 text-gray-600'

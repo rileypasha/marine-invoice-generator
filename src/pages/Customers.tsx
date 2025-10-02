@@ -16,6 +16,7 @@ import {
 } from '../components/magic/index';
 import { ContactsTable } from '../components/ContactsTable';
 import { ContactsToolbar } from '../components/contacts/ContactsToolbar';
+import { Pagination } from '../components/ui/pagination';
 import { useContactsQueryState, ContactGroupBy, ContactActivity } from '../hooks/useContactsQueryState';
 import { useFileInput } from '../components/hooks/use-file-input';
 
@@ -62,6 +63,8 @@ const Customers: React.FC = () => {
   // State management
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Table state management (controlled)
   const [grouping, setGrouping] = useState<GroupingState>([]);
@@ -114,8 +117,8 @@ const Customers: React.FC = () => {
 
       // Build query parameters - fetch all customers at once
       const params = new URLSearchParams({
-        page: '1',
-        limit: '1000', // Fetch all customers for client-side pagination
+        page: currentPage.toString(),
+        limit: '25', // Server-side pagination
       });
 
       if (queryState.q.trim()) {
@@ -142,8 +145,10 @@ const Customers: React.FC = () => {
         // Update total count for header display
         if (data.pagination) {
           setTotalCustomers(data.pagination.total);
+          setTotalPages(data.pagination.totalPages || 1);
         } else {
           setTotalCustomers(data.customers?.length || 0);
+          setTotalPages(1);
         }
       } else {
         console.error('Failed to fetch customers');
@@ -197,7 +202,7 @@ const Customers: React.FC = () => {
   // Load customers on mount and when URL state changes
   useEffect(() => {
     fetchCustomers();
-  }, [isAuthenticated, csrfToken, queryState.q, queryState.activity, queryState.fleet]);
+  }, [isAuthenticated, csrfToken, queryState.q, queryState.activity, queryState.fleet, currentPage]);
 
   // Initialize grouping, activity, and fleet from URL on mount only
   useEffect(() => {
@@ -830,7 +835,7 @@ const Customers: React.FC = () => {
                   <Button onClick={() => navigate('/contacts/create')}>Add Contact</Button>
                 )}
               </div>
-            ) : (
+            ) : (<>
               <ContactsTable
             customers={filteredCustomers}
             sort={queryState.sort}
@@ -846,6 +851,12 @@ const Customers: React.FC = () => {
             onBulkDelete={handleBulkDelete}
             onBulkExport={handleBulkExport}
           />
+          <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+              </>
             )}
           </div>
         </div>

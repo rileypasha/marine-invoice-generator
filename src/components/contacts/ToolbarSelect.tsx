@@ -41,7 +41,7 @@ export function ToolbarSelect({
       <DropdownMenuTrigger asChild>
         <button
           className={`
-            inline-flex items-center gap-1.5 h-8 px-3 text-sm
+            inline-flex items-center gap-1.5 h-8 px-3 text-sm text-gray-900
             rounded-md border border-gray-300 bg-white hover:bg-gray-50
             transition-colors duration-200 ease-in-out
             focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500
