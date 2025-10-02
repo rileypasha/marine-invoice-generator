@@ -1,7 +1,7 @@
 {
-  "name": "Marine Group Global Services",
-  "short_name": "Marine Group",
-  "description": "Invoice and request management for marine services",
+  "name": "Global Invoicing",
+  "short_name": "Global Invoicing",
+  "description": "Professional invoice and request management system",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

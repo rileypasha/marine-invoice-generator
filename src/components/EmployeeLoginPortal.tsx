@@ -20,7 +20,7 @@ interface EmployeeLoginPortalProps {
 
 const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
   onLogin = () => {},
-  companyName = "Marine Group Global Services",
+  companyName = "Global Invoicing",
   isLoading = false
 }) => {
   const navigate = useNavigate();

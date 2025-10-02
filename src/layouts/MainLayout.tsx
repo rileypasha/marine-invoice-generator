@@ -118,7 +118,7 @@ const SidebarContent = () => {
                 className="h-8 w-8 flex-shrink-0"
                 style={{ marginLeft: '6px' }}
                 src="/bw_logo.svg"
-                alt="Marine Group"
+                alt="Global Invoicing"
               />
             </div>
           </div>
