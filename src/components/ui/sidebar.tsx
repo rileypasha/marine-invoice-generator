@@ -113,38 +113,64 @@ export const MobileSidebar = ({
   const { open, setOpen } = useSidebar();
   return (
     <>
+      {/* Fixed header with hamburger */}
       <div
         className={cn(
-          "app-header md:hidden bg-black border-b border-black"
+          "fixed top-0 left-0 right-0 h-14 md:hidden bg-black border-b border-gray-800 z-50 flex items-center px-4"
         )}
         {...props}
       >
-        <div className="app-header__row">
-          <Menu
-            className="app-menu-btn text-white cursor-pointer h-6 w-6"
-            onClick={() => setOpen(!open)}
-          />
-        </div>
-        <AnimatePresence>
-          {open && (
+        <Menu
+          className="text-white cursor-pointer h-6 w-6"
+          onClick={() => setOpen(!open)}
+        />
+      </div>
+
+      {/* Slide-out menu */}
+      <AnimatePresence>
+        {open && (
+          <>
+            {/* Backdrop */}
             <motion.div
-              initial={{ x: "-100%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "-100%", opacity: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/50 z-[60] md:hidden"
+              onClick={() => setOpen(false)}
+            />
+
+            {/* Slide-out panel */}
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
               transition={{
                 duration: 0.3,
                 ease: "easeInOut",
               }}
               className={cn(
-                "fixed h-full w-full inset-0 bg-white p-10 z-[100] flex flex-col justify-between",
+                "fixed left-0 top-0 bottom-0 w-[280px] bg-white z-[70] md:hidden flex flex-col",
                 className
               )}
             >
-              {children}
+              {/* Close button */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <span className="font-semibold text-gray-900">Menu</span>
+                <X
+                  className="h-6 w-6 text-gray-600 cursor-pointer"
+                  onClick={() => setOpen(false)}
+                />
+              </div>
+
+              {/* Menu content */}
+              <div className="flex-1 overflow-y-auto p-4">
+                {children}
+              </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 };
@@ -174,55 +200,12 @@ export const SidebarLink = ({
     }
   };
 
-  // If there's an onClick handler, render as button instead of Link
-  if (link.onClick) {
-    return (
-      <div className="relative">
-        <button
-          ref={buttonRef as React.RefObject<HTMLButtonElement>}
-          onClick={link.onClick}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={() => setShowTooltip(false)}
-          className={cn(
-            `flex items-center py-2 w-full text-left justify-start ${
-              open ? 'gap-2 pl-3' : 'gap-0 pl-0'
-            }`,
-            className
-          )}
-          {...props}
-        >
-          {link.icon}
-          <span
-            className="text-gray-900 text-sm whitespace-pre inline-block !p-0 !m-0"
-            style={{
-              display: open ? "inline-block" : "none"
-            }}
-          >
-            {link.label}
-          </span>
-        </button>
-        {/* Simple tooltip */}
-        {showTooltip && (
-          <div
-            className="fixed px-2 py-1 bg-black text-white text-xs rounded-lg shadow-lg pointer-events-none whitespace-nowrap z-[9999]"
-            style={{
-              left: `${tooltipPosition.x}px`,
-              top: `${tooltipPosition.y}px`,
-              transform: 'translateY(-50%)'
-            }}
-          >
-            {link.label}
-          </div>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div className="relative">
       <Link
         ref={buttonRef as React.RefObject<HTMLAnchorElement>}
         to={link.href}
+        onClick={link.onClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={() => setShowTooltip(false)}
         className={cn(

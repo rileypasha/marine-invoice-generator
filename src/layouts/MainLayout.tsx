@@ -54,40 +54,53 @@ const SidebarContent = () => {
     setShowExpandTooltip(false);
   };
 
+  // Close sidebar when a link is clicked (mobile only)
+  const handleLinkClick = () => {
+    if (window.innerWidth < 768) {
+      setOpen(false);
+    }
+  };
+
   // Build navigation links for Magic UI sidebar
   const links = [
     {
       label: 'New',
       href: '/requests/new',
       icon: <SquarePen className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+      onClick: handleLinkClick,
     },
     {
       label: 'Requests',
       href: '/requests',
       icon: <FileText className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+      onClick: handleLinkClick,
     },
     {
       label: 'Contacts',
       href: '/contacts',
       icon: <User className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+      onClick: handleLinkClick,
     },
     {
       label: 'Vessels',
       href: '/vessels',
       icon: <Ship className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+      onClick: handleLinkClick,
     },
     {
       label: 'Settings',
       href: '/settings',
       icon: <Settings className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+      onClick: handleLinkClick,
     },
   ];
 
-  // Separate settings link for bottom placement
+  // Separate settings link for bottom placement (desktop only)
   const settingsLink = {
     label: 'Settings',
     href: '/settings',
     icon: <Settings className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+    onClick: handleLinkClick,
   };
 
   const isActive = (href: string) => location.pathname === href;
@@ -238,7 +251,7 @@ const MainContent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div
-      className="ml-0 md:ml-auto"
+      className="pt-14 md:pt-0 md:ml-auto"
       style={{
         marginLeft: typeof window !== 'undefined' && window.innerWidth >= 768 ? (open ? '220px' : '56px') : '0'
       }}
