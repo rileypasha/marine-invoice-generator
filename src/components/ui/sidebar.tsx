@@ -112,12 +112,11 @@ export const MobileSidebar = ({
     <>
       <div
         className={cn(
-          "px-4 flex flex-row md:hidden items-center justify-between bg-black border-b border-black w-full"
+          "app-header px-4 flex flex-row md:hidden items-center justify-between bg-black border-b border-black w-full"
         )}
         style={{
           paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)',
-          paddingBottom: '1.5rem',
-          marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))'
+          paddingBottom: '1.5rem'
         }}
         {...props}
       >

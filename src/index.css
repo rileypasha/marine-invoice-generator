@@ -4,53 +4,54 @@
 
 /* Mobile PWA: Prevent white background during pull-to-refresh */
 @layer base {
-  /* Ensure the entire painting surface is black */
-  :root, html, body, #root {
-    background: #000;
-  }
-
+  /* Paint the viewport itself black */
   html, body {
     height: 100%;
     margin: 0;
+    background: #000;
   }
 
   body {
     overflow: hidden; /* Lock document scroll */
   }
 
-  /* App-level scroller (the only thing that scrolls) */
-  .app-scroll {
-    height: 100dvh;
-    overflow: auto;
-    overscroll-behavior: contain; /* Android/Chrome */
-    -webkit-overflow-scrolling: touch; /* iOS smooth scroll */
-    background: #000;
-  }
-
-  /* Sticky header inside the scroller */
+  /* Fixed header like Instagram */
   .app-header {
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 1000;
     background: #000;
     color: #fff;
-    padding-top: env(safe-area-inset-top); /* content safety */
+    padding-top: env(safe-area-inset-top); /* status bar inset */
   }
 
-  /* Paint the status bar area even during iOS rubber-band */
-  .safe-top {
+  /* Scroll only content */
+  .app-content {
+    height: 100dvh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain; /* helps on Android/Chrome */
+    background: #000;
+    /* header height (56px) + safe area */
+    padding-top: calc(56px + env(safe-area-inset-top));
+  }
+
+  /* Paint the rubber-band zone above the page during bounce */
+  .safe-top-painter {
     position: fixed;
-    inset: 0 auto auto 0;
+    left: 0;
     right: 0;
+    top: 0;
     height: env(safe-area-inset-top);
     background: #000;
     z-index: 2000;
-    pointer-events: none; /* purely visual */
+    pointer-events: none;
   }
 
-  /* Fallback for older iOS (env(...) may be 0) — keep it invisible */
   @supports not (height: env(safe-area-inset-top)) {
-    .safe-top {
+    .safe-top-painter {
       height: 0;
     }
   }
