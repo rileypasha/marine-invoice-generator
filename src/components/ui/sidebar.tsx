@@ -112,17 +112,13 @@ export const MobileSidebar = ({
     <>
       <div
         className={cn(
-          "app-header px-4 flex flex-row md:hidden items-center justify-between bg-black border-b border-black w-full"
+          "app-header md:hidden bg-black border-b border-black"
         )}
-        style={{
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)',
-          paddingBottom: '1.5rem'
-        }}
         {...props}
       >
-        <div className="flex justify-end z-20 w-full">
+        <div className="app-header__row">
           <Menu
-            className="text-white cursor-pointer h-6 w-6"
+            className="app-menu-btn text-white cursor-pointer h-6 w-6"
             onClick={() => setOpen(!open)}
           />
         </div>

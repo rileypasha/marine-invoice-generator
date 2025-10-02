@@ -4,6 +4,10 @@
 
 /* Mobile PWA: Prevent white background during pull-to-refresh */
 @layer base {
+  :root {
+    --header-h: 56px; /* actual header row height */
+  }
+
   /* Paint the viewport itself black */
   html, body {
     height: 100%;
@@ -15,45 +19,64 @@
     overflow: hidden; /* Lock document scroll */
   }
 
-  /* Fixed header like Instagram */
-  .app-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-    background: #000;
-    color: #fff;
-    padding-top: env(safe-area-inset-top); /* status bar inset */
-  }
-
-  /* Scroll only content */
-  .app-content {
-    height: 100dvh;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain; /* helps on Android/Chrome */
-    background: #000;
-    /* header height (56px) + safe area */
-    padding-top: calc(56px + env(safe-area-inset-top));
-  }
-
   /* Paint the rubber-band zone above the page during bounce */
   .safe-top-painter {
     position: fixed;
-    left: 0;
-    right: 0;
-    top: 0;
+    inset: 0 0 auto 0;
     height: env(safe-area-inset-top);
     background: #000;
-    z-index: 2000;
     pointer-events: none;
+    z-index: 0; /* put painter UNDER the header */
   }
 
   @supports not (height: env(safe-area-inset-top)) {
     .safe-top-painter {
       height: 0;
     }
+  }
+
+  /* Fixed header that accounts for safe area */
+  .app-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 3000; /* above everything */
+    background: #000;
+    color: #fff;
+    padding-top: env(safe-area-inset-top);
+    min-height: calc(var(--header-h) + env(safe-area-inset-top));
+    display: flex;
+    align-items: flex-end; /* place inner row below inset */
+  }
+
+  /* Inner row that holds title/menu */
+  .app-header__row {
+    height: var(--header-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 12px;
+  }
+
+  /* Burger menu positioned BELOW the inset */
+  .app-menu-btn {
+    position: absolute;
+    top: calc(env(safe-area-inset-top) + 8px);
+    right: 12px;
+  }
+
+  /* Content scroll area padded under the fixed header */
+  .app-content {
+    height: 100dvh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    background: #000;
+    padding-top: calc(var(--header-h) + env(safe-area-inset-top));
+    position: relative;
+    z-index: 1; /* below header */
   }
 }
 
