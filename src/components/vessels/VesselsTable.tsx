@@ -22,9 +22,10 @@ import {
   SimpleTableRow as TableRow,
 } from "@/components/ui/simple-table";
 import { VesselSort } from "@/hooks/useVesselsQueryState";
-import { MoreHorizontal, ChevronDown, ChevronRight } from "lucide-react";
+import { MoreHorizontal, ChevronDown, ChevronRight, Download, Trash2, X } from "lucide-react";
 import { useRowActionsStore } from "@/features/vessels/state/rowActions.store";
 import { bucketBySize, bucketByActivity, bucketByMonthlyActivity, formatGroupSubtotal, formatCurrency } from "@/features/vessels/grouping";
+import { Button } from "@/components/ui/button";
 
 // Column width definitions for consistent spacing across all tables
 const VESSELS_COLS = [
@@ -92,6 +93,9 @@ export function VesselsTable({
 }: VesselsTableProps) {
   const navigate = useNavigate();
   const openRowActions = useRowActionsStore((s) => s.openAt);
+
+  // Row selection state
+  const [rowSelection, setRowSelection] = useState({});
 
   // Use controlled state or fallback to defaults
   const grouping = controlledGrouping ?? [];
@@ -396,24 +400,75 @@ export function VesselsTable({
     state: {
       grouping,
       expanded,
+      rowSelection,
     },
     getRowId: (row) => row.id, // Stable unique ID for proper expansion state
     onGroupingChange,
     onExpandedChange,
+    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getGroupedRowModel: getGroupedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     getSortedRowModel: getSortedRowModel(),
     enableGrouping: true,
+    enableRowSelection: true,
     // CRITICAL: prevent resets that collapse groups
     autoResetAll: false,
     autoResetExpanded: false,
   });
 
+  // Get selected vessels
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+  const selectedVessels = selectedRows.map(row => row.original);
+
   return (
     <>
       {/* Screen-only interactive table with Airtable-style layout */}
       <div className="screen-only">
+        {/* Bulk selection toolbar */}
+        {selectedRows.length > 0 && (
+          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-3">
+            <div className="flex items-center">
+              <span className="text-sm font-medium">
+                {selectedRows.length} item{selectedRows.length === 1 ? '' : 's'} selected
+              </span>
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.resetRowSelection()}
+                className="h-8 px-2 text-xs transition-none"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear
+              </Button>
+              {onBulkDelete && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onBulkDelete(selectedVessels)}
+                  className="h-8 px-2 text-xs transition-none"
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Delete
+                </Button>
+              )}
+              {onBulkExport && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onBulkExport(selectedVessels)}
+                  className="h-8 px-2 text-xs transition-none"
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Export
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="border-r border-b">
           <Table>
             <TableHeader>

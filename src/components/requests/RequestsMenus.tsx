@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SimpleButton as Button } from '@/components/ui/simple-button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CountBadge from '@/components/ui/count-badge';
 import { RequestGroupBy, RequestSort, RequestFilters } from '@/hooks/useRequestsQueryState';
 
@@ -35,7 +36,7 @@ function ToolbarMenuButtonWithBadge({ label, count, ariaLabel, children }: Toolb
           <CountBadge count={count} />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end">
         {children}
       </DropdownMenuContent>
     </DropdownMenu>
@@ -174,7 +175,7 @@ function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
       ariaLabel={ariaLabel}
     >
       <div
-        className="w-80 max-h-96 overflow-y-auto"
+        className="w-[400px] overflow-x-hidden"
         onKeyDown={(e) => e.stopPropagation()}
       >
         <DropdownMenuLabel>Filter requests</DropdownMenuLabel>
@@ -192,12 +193,13 @@ function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
               value={contactInput}
               onChange={(e) => setContactInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyContactFilter()}
-              className="h-8 text-sm"
+              className="h-8 text-sm flex-1"
             />
             <Button
+              variant="ghost"
               size="sm"
               onClick={applyContactFilter}
-              className="h-8 px-3"
+              className="h-8 px-3 shrink-0"
             >
               Apply
             </Button>
@@ -231,12 +233,13 @@ function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
               value={vesselInput}
               onChange={(e) => setVesselInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyVesselFilter()}
-              className="h-8 text-sm"
+              className="h-8 text-sm flex-1"
             />
             <Button
+              variant="ghost"
               size="sm"
               onClick={applyVesselFilter}
-              className="h-8 px-3"
+              className="h-8 px-3 shrink-0"
             >
               Apply
             </Button>
@@ -270,12 +273,13 @@ function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
               value={createdByInput}
               onChange={(e) => setCreatedByInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyCreatedByFilter()}
-              className="h-8 text-sm"
+              className="h-8 text-sm flex-1"
             />
             <Button
+              variant="ghost"
               size="sm"
               onClick={applyCreatedByFilter}
-              className="h-8 px-3"
+              className="h-8 px-3 shrink-0"
             >
               Apply
             </Button>
@@ -312,9 +316,10 @@ function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
               className="h-8 text-sm"
             />
             <Button
+              variant="ghost"
               size="sm"
               onClick={applyModifiedByFilter}
-              className="h-8 px-3"
+              className="h-8 px-3 shrink-0"
             >
               Apply
             </Button>
@@ -342,32 +347,37 @@ function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
             <Receipt className="h-3 w-3" />
             Status
           </DropdownMenuLabel>
-          <div className="mt-1 space-y-1">
-            {['requested', 'approved', 'change_requested', 'rejected'].map((status) => (
-              <button
-                key={status}
-                onClick={() => applyStatusFilter(status)}
-                className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${
-                  activeFilters.status === status ? 'bg-gray-100 font-medium' : ''
-                }`}
+          <div className="flex gap-1 mt-1">
+            <Select
+              value={selectedStatus}
+              onValueChange={(value) => {
+                setSelectedStatus(value);
+                applyStatusFilter(value);
+              }}
+            >
+              <SelectTrigger className="h-8 text-sm flex-1">
+                <SelectValue placeholder="Select status..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="requested">Requested</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="change_requested">Change requested</SelectItem>
+              </SelectContent>
+            </Select>
+            {activeFilters.status && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  removeFilter('status');
+                  setSelectedStatus('');
+                }}
+                className="h-8 px-3 shrink-0"
               >
-                {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
-              </button>
-            ))}
+                Clear
+              </Button>
+            )}
           </div>
-          {activeFilters.status && (
-            <div className="mt-2 flex items-center gap-1 text-xs text-gray-600">
-              <span className="bg-gray-100 px-2 py-1 rounded">
-                {activeFilters.status.charAt(0).toUpperCase() + activeFilters.status.slice(1).replace('_', ' ')}
-              </span>
-              <button
-                onClick={() => removeFilter('status')}
-                className="text-red-500 hover:text-red-700"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
         </div>
 
         <DropdownMenuSeparator />

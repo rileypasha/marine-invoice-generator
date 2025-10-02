@@ -85,7 +85,8 @@ export function ExpandingSearch({
 
   const handleCollapse = () => {
     setIsExpanded(false);
-    setLocalValue('');
+    // Don't clear the value on collapse - let it persist
+    // Value only clears when user explicitly clicks the X button
     inputRef.current?.blur();
   };
 

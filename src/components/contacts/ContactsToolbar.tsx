@@ -126,22 +126,22 @@ export function ContactsToolbar({
   ];
 
   const handleActivityChange = (newActivity: string) => {
-    // Call external handler if provided (updates table state directly)
+    // Always update URL state first
+    set({ activity: newActivity as typeof activity });
+
+    // Then call external handler if provided
     if (externalActivityHandler) {
       externalActivityHandler(newActivity as typeof activity);
-    } else {
-      // Fallback to URL update only
-      set({ activity: newActivity as typeof activity });
     }
   };
 
   const handleFleetChange = (newFleet: string) => {
-    // Call external handler if provided (updates table state directly)
+    // Always update URL state first
+    set({ fleet: newFleet });
+
+    // Then call external handler if provided
     if (externalFleetHandler) {
       externalFleetHandler(newFleet);
-    } else {
-      // Fallback to URL update only
-      set({ fleet: newFleet });
     }
   };
 
@@ -150,12 +150,12 @@ export function ContactsToolbar({
   };
 
   const handleGroupByChange = (newGroupBy: typeof groupBy) => {
-    // Call external handler if provided (updates table state directly)
+    // Always update URL state first
+    set({ groupBy: newGroupBy });
+
+    // Then call external handler if provided
     if (externalHandler) {
       externalHandler(newGroupBy);
-    } else {
-      // Fallback to URL update only
-      set({ groupBy: newGroupBy });
     }
   };
 

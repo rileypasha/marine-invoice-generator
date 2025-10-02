@@ -43,7 +43,7 @@ const DEFAULT_STATE: RequestsQueryState = {
   view: 'list',
   q: '',
   groupBy: 'none',
-  sort: { field: 'updated_at', direction: 'desc' },
+  sort: null,
   filters: {}
 };
 
@@ -79,7 +79,7 @@ export function useRequestsQueryState(): UseRequestsQueryStateReturn {
     // Parse sort
     const sortField = searchParams.get('sortField');
     const sortDirection = searchParams.get('sortDirection') as SortDirection;
-    const sort = sortField ? { field: sortField, direction: sortDirection || 'desc' } : DEFAULT_STATE.sort;
+    const sort = sortField ? { field: sortField, direction: sortDirection || 'desc' } : null;
 
     // Parse filters
     const filters: RequestFilters = {};
@@ -135,6 +135,14 @@ export function useRequestsQueryState(): UseRequestsQueryStateReturn {
               newParams.set(`filter_${filterKey}`, String(filterValue));
             }
           });
+        } else if (key === 'groupBy') {
+          // Always explicitly handle groupBy to ensure immediate state changes
+          // This prevents needing multiple clicks for grouping changes
+          if (value === 'none' || value === DEFAULT_STATE.groupBy) {
+            newParams.delete('groupBy');
+          } else if (value) {
+            newParams.set('groupBy', String(value));
+          }
         } else if (key === 'q' && value === '') {
           newParams.delete('q');
         } else if (value === DEFAULT_STATE[key as keyof RequestsQueryState]) {

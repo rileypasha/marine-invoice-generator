@@ -197,7 +197,7 @@ const Customers: React.FC = () => {
   // Load customers on mount and when URL state changes
   useEffect(() => {
     fetchCustomers();
-  }, [isAuthenticated, csrfToken, queryState.q, queryState.activity]);
+  }, [isAuthenticated, csrfToken, queryState.q, queryState.activity, queryState.fleet]);
 
   // Initialize grouping, activity, and fleet from URL on mount only
   useEffect(() => {
