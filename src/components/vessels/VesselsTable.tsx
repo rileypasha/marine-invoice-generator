@@ -427,7 +427,7 @@ export function VesselsTable({
           </div>
         )}
 
-        <div className="border-r border-b">
+        <div className="border-r border-b overflow-x-auto">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
