@@ -2997,79 +2997,61 @@ const CreateInvoice: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header Bar */}
-      <div className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-auto min-h-14 w-full max-w-6xl flex-col gap-3 px-4 pt-3 pb-3 sm:h-14 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
-          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground sm:gap-3">
-            <h1 className="text-base font-semibold text-foreground sm:text-lg">
+      <div className="w-full border-b bg-background">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+          {/* Left: Title + Status Badges */}
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold text-foreground">
               {isEditMode ? 'Edit Invoice' : 'New Invoice'}
             </h1>
+
+            {/* Missing Fields Warning */}
+            {!formValidation.isComplete && (
+              <span className="inline-flex items-center rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
+                ⚠ {formValidation.missingFields.length} missing
+              </span>
+            )}
+
+            {/* Unsaved Changes Indicator */}
             {hasUnsavedChanges && (
               <Badge variant="secondary" className="text-xs">
                 Unsaved
               </Badge>
             )}
-            <Badge
-              variant="outline"
-              className={`text-xs ${
-                formValidation.isComplete
-                  ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                  : "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100"
-              }`}
-            >
-              {formValidation.isComplete ? (
-                <span className="flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="hidden sm:inline">Complete</span>
-                  <span className="sm:hidden">✓</span>
-                </span>
-              ) : (
-                <span className="flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                  <span className="hidden sm:inline">
-                    Missing: {formValidation.missingFields.slice(0, 2).join(", ")}
-                    {formValidation.missingFields.length > 2 &&
-                      ` +${formValidation.missingFields.length - 2} more`}
-                  </span>
-                  <span className="sm:hidden">{formValidation.missingFields.length} missing</span>
-                </span>
-              )}
-            </Badge>
           </div>
 
+          {/* Right: Action Buttons */}
           <div className="flex items-center gap-2">
+            {/* Save & New (Desktop Only) */}
             <Button
               variant="outline"
               size="sm"
               onClick={handleSaveAndNew}
               disabled={isLoading || !formValidation.isComplete}
-              className="hidden sm:flex"
+              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 text-sm"
             >
-              <svg className="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
               </svg>
-              <span className="hidden sm:inline">Save & New</span>
+              Save & New
             </Button>
 
+            {/* Primary Save Button */}
             <Button
               onClick={handleSave}
               disabled={isLoading}
-              className={`flex-1 sm:flex-initial bg-black hover:bg-black/90 ${hasUnsavedChanges ? 'shadow-lg' : ''}`}
-              size="sm"
+              className={`inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-black/90 focus:outline-none focus:ring-2 focus:ring-black/50 ${hasUnsavedChanges ? 'shadow-lg' : ''}`}
             >
               {isLoading ? (
-                <svg className="w-4 h-4 sm:mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               ) : (
-                <svg className="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                 </svg>
               )}
-              <span>{isEditMode ? 'Update' : 'Save'}</span>
+              {isEditMode ? 'Update' : 'Save'}
             </Button>
           </div>
         </div>

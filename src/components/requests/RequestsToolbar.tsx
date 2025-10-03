@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, FileText, MoreHorizontal, Printer, Upload, Download } from 'lucide-react';
+import { Plus, FileText, MoreHorizontal, Printer, Upload, Download, ChevronDown } from 'lucide-react';
 import { SimpleButton as Button } from '@/components/ui/simple-button';
 import {
   DropdownMenu,
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
 import { ExpandingSearch } from '../contacts/ExpandingSearch';
 import { useRequestsQueryState } from '@/hooks/useRequestsQueryState';
 import { RequestsMenus } from './RequestsMenus';
@@ -131,15 +132,32 @@ export function RequestsToolbar({
           </div>
         </div>
 
-        {/* Row 2: Month Selector + Controls + Search */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 py-2 px-2 md:px-6">
-          {/* Left side: Month selector (dropdown on mobile, tabs on desktop) */}
-          <div className="flex items-center gap-2">
-            {/* Mobile: Dropdown */}
-            <div className="md:hidden w-full">
+        {/* Row 2: Month Selector (Desktop) OR Controls (Mobile) */}
+        <div className="flex items-center justify-between gap-2 py-2 px-2 md:px-6">
+          {/* Desktop: Tabs */}
+          <div className="hidden md:flex">
+            <Tabs value={month} onValueChange={handleMonthChange}>
+              <TabsList>
+                {monthOptions.map((option) => (
+                  <TabsTrigger key={option.value} value={option.value}>
+                    {option.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Mobile & Desktop: Controls */}
+          <div className="flex items-center gap-2 w-full md:w-auto md:justify-end">
+            {/* Mobile: Compact Month Filter - left aligned */}
+            <div className="md:hidden">
               <Select value={month} onValueChange={handleMonthChange}>
-                <SelectTrigger className="w-full h-9">
-                  <SelectValue />
+                <SelectTrigger className="h-9 w-fit text-xs gap-0.5 pl-1 pr-3 justify-start">
+                  <SelectValue placeholder={
+                    <span className="flex items-center gap-0.5">
+                      Month <ChevronDown className="h-3 w-3" />
+                    </span>
+                  } />
                 </SelectTrigger>
                 <SelectContent>
                   {monthOptions.map((option) => (
@@ -151,22 +169,9 @@ export function RequestsToolbar({
               </Select>
             </div>
 
-            {/* Desktop: Tabs */}
-            <div className="hidden md:flex">
-              <Tabs value={month} onValueChange={handleMonthChange}>
-                <TabsList>
-                  {monthOptions.map((option) => (
-                    <TabsTrigger key={option.value} value={option.value}>
-                      {option.label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            </div>
-          </div>
+            {/* Spacer to push right controls to the right */}
+            <div className="flex-1 md:hidden" />
 
-          {/* Right side: Controls */}
-          <div className="flex items-center gap-2">
             {/* Group/Filter/Sort menus */}
             <RequestsMenus
               activeGroupBy={groupBy}

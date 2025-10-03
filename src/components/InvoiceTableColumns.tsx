@@ -206,7 +206,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
         </div>
       );
     },
-    meta: { width: 'w-32' },
+    meta: {},
   },
   {
     accessorKey: "modifiedByUserName",
@@ -218,12 +218,12 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
       const invoice = row.original;
       const modifiedBy = invoice.modifiedByUserName || '-';
       return (
-        <div className="text-sm text-gray-600 text-left truncate min-w-0 max-w-full">
+        <div className="text-sm text-gray-600 text-left whitespace-nowrap overflow-visible">
           {modifiedBy}
         </div>
       );
     },
-    meta: { width: 'w-32' },
+    meta: {},
   },
   {
     accessorKey: "updated_at",
@@ -241,7 +241,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
         </div>
       );
     },
-    meta: { width: 'w-32' },
+    meta: {},
   },
   {
     accessorKey: "status",
@@ -257,7 +257,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
         </div>
       );
     },
-    meta: { width: 'w-28' },
+    meta: {},
   },
   {
     id: "actions",

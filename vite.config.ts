@@ -113,6 +113,15 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    host: '0.0.0.0', // Listen on all interfaces
+    allowedHosts: [
+      'localhost',
+      '.ngrok-free.dev',
+      '.ngrok.io',
+    ],
+    hmr: {
+      clientPort: 443, // Use HTTPS port for HMR through ngrok
+    },
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:3001',

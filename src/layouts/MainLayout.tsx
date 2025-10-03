@@ -14,8 +14,10 @@ import {
   SidebarBody,
   SidebarLink,
   useSidebar,
+  MobileBottomNav,
 } from '../components/ui/sidebar';
 import { AppHeader } from '../components/layout/AppHeader';
+import { useAuth } from '../context/AuthContext';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -246,7 +248,7 @@ const MainContent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div
-      className="md:ml-auto"
+      className="md:ml-auto pb-20 md:pb-0"
       style={{
         paddingTop: typeof window !== 'undefined' && window.innerWidth < 768 ? '56px' : '0',
         marginLeft: typeof window !== 'undefined' && window.innerWidth >= 768 ? (open ? '280px' : '56px') : '0'
@@ -259,6 +261,41 @@ const MainContent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
+  const { currentUser } = useAuth();
+
+  // Mobile navigation tabs
+  const mobileNavTabs = [
+    {
+      id: 'new',
+      label: 'New',
+      href: '/requests/new',
+      icon: SquarePen,
+    },
+    {
+      id: 'requests',
+      label: 'Requests',
+      href: '/requests',
+      icon: FileText,
+    },
+    {
+      id: 'contacts',
+      label: 'Contacts',
+      href: '/contacts',
+      icon: User,
+    },
+    {
+      id: 'vessels',
+      label: 'Vessels',
+      href: '/vessels',
+      icon: Ship,
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      href: '/settings',
+      icon: Settings,
+    },
+  ];
 
   // Function to get page title based on current route
   const getPageTitle = () => {
@@ -314,7 +351,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </SidebarBody>
 
         {/* Mobile Header - Uber style */}
-        <AppHeader />
+        <AppHeader
+          userName={currentUser?.name}
+          userInitials={currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+          avatarUrl={currentUser?.avatarUrl}
+        />
 
         {/* Fixed Page title header - screen only (hidden for full-width routes and mobile) */}
         {!isFullWidthRoute() && (
@@ -352,6 +393,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             {children}
           </div>
         </MainContent>
+
+        {/* Mobile Bottom Navigation - PWA Style */}
+        <MobileBottomNav
+          tabs={mobileNavTabs}
+          currentPath={location.pathname}
+        />
       </div>
     </Sidebar>
   );

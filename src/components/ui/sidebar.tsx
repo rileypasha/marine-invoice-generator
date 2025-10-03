@@ -110,56 +110,8 @@ export const MobileSidebar = ({
   children,
   ...props
 }: React.ComponentProps<"div">) => {
-  const { open, setOpen } = useSidebar();
-  return (
-    <>
-      {/* Slide-out menu */}
-      <AnimatePresence>
-        {open && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/50 z-[60] md:hidden"
-              onClick={() => setOpen(false)}
-            />
-
-            {/* Slide-out panel */}
-            <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{
-                duration: 0.3,
-                ease: "easeInOut",
-              }}
-              className={cn(
-                "fixed left-0 top-0 bottom-0 w-[280px] bg-white z-[70] md:hidden flex flex-col",
-                className
-              )}
-            >
-              {/* Close button */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <span className="font-semibold text-gray-900">Menu</span>
-                <X
-                  className="h-6 w-6 text-gray-600 cursor-pointer"
-                  onClick={() => setOpen(false)}
-                />
-              </div>
-
-              {/* Menu content */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {children}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </>
-  );
+  // Mobile sidebar disabled - using bottom navigation instead
+  return null;
 };
 
 export const SidebarLink = ({
@@ -227,5 +179,121 @@ export const SidebarLink = ({
         </div>
       )}
     </div>
+  );
+};
+
+// Mobile PWA Bottom Navigation Component
+interface TabItem {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  href: string;
+  badge?: number;
+}
+
+interface MobileBottomNavProps {
+  tabs: TabItem[];
+  currentPath?: string;
+  className?: string;
+}
+
+export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
+  tabs,
+  currentPath = '/',
+  className,
+}) => {
+  return (
+    <nav
+      className={cn(
+        'fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border md:hidden',
+        'pb-safe',
+        className
+      )}
+      style={{
+        paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)',
+      }}
+    >
+      <div className="flex items-center justify-around h-16 max-w-screen-xl mx-auto px-2">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          // Exact match for the tab href
+          const isActive = currentPath === tab.href;
+
+          return (
+            <Link
+              key={tab.id}
+              to={tab.href}
+              className={cn(
+                'flex flex-col items-center justify-center flex-1 h-full',
+                'relative transition-all duration-200 ease-out',
+                'active:scale-95 touch-manipulation',
+                'min-w-0 px-1',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg'
+              )}
+              aria-label={tab.label}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              <div className="relative">
+                <Icon
+                  className={cn(
+                    'w-6 h-6 transition-all duration-200',
+                    isActive
+                      ? 'text-primary scale-110'
+                      : 'text-muted-foreground'
+                  )}
+                  strokeWidth={isActive ? 2.5 : 2}
+                />
+                {tab.badge !== undefined && tab.badge > 0 && (
+                  <span
+                    className={cn(
+                      'absolute -top-1 -right-1',
+                      'flex items-center justify-center',
+                      'min-w-[18px] h-[18px] px-1',
+                      'text-[10px] font-semibold',
+                      'bg-destructive text-destructive-foreground',
+                      'rounded-full',
+                      'animate-in zoom-in-50'
+                    )}
+                  >
+                    {tab.badge > 99 ? '99+' : tab.badge}
+                  </span>
+                )}
+              </div>
+              <span
+                className={cn(
+                  'text-[11px] font-medium mt-1 transition-all duration-200',
+                  'truncate max-w-full',
+                  isActive
+                    ? 'text-primary scale-105'
+                    : 'text-muted-foreground'
+                )}
+              >
+                {tab.label}
+              </span>
+              {isActive && (
+                <div
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-primary rounded-full"
+                  style={{
+                    animation: 'slideDown 0.3s ease-out',
+                  }}
+                />
+              )}
+            </Link>
+          );
+        })}
+      </div>
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-4px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+        }
+      `}</style>
+    </nav>
   );
 };

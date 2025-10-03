@@ -201,7 +201,7 @@ export const ensureCsrfToken = (req: CsrfRequest, _res: Response, next: NextFunc
 };
 
 // Endpoint to get CSRF token
-export const getCsrfToken = (req: CsrfRequest, res: Response): void => {
+export const getCsrfToken = async (req: CsrfRequest, res: Response): Promise<void> => {
   if (!req.session) {
     res.status(400).json({
       code: 'NO_SESSION',
@@ -216,9 +216,34 @@ export const getCsrfToken = (req: CsrfRequest, res: Response): void => {
     req.session.csrfToken = generateCsrfToken();
   }
 
+  // If user is logged in, fetch their data including avatarUrl
+  let userData = null;
+  if (req.session.userId) {
+    try {
+      const { query } = await import('../config/database');
+      const result = await query(
+        'SELECT id, email, name, role, "avatarUrl" FROM "User" WHERE id = $1',
+        [req.session.userId]
+      );
+      if (result.rows.length > 0) {
+        userData = result.rows[0];
+      }
+    } catch (error) {
+      // Silently fail - just won't include user data
+      console.error('Error fetching user data for CSRF response:', error);
+    }
+  }
+
   res.json({
     csrfToken: req.session.csrfToken,
     correlationId: req.correlationId,
+    ...(userData && {
+      userId: userData.id,
+      email: userData.email,
+      name: userData.name,
+      role: userData.role,
+      avatarUrl: userData.avatarUrl
+    })
   });
 };
 

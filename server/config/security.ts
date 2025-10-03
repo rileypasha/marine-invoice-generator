@@ -217,6 +217,8 @@ export function getSecurityConfig(): SecurityConfig {
         'http://localhost:4176',
         // Network IP for mobile testing
         'http://192.168.0.160:3000',
+        // Ngrok tunnel for remote mobile testing
+        'https://irreducibly-nonconspiratorial-bradly.ngrok-free.dev',
       ],
       trustProxy: false,
     },

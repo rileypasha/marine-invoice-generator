@@ -230,7 +230,7 @@ export function DataTable<TData, TValue>({
       )}
       {/* Airtable-style table without card wrapper - wrapped for mobile horizontal scroll */}
       <div className="overflow-x-auto">
-        <div className="min-w-[1200px] md:min-w-0">
+        <div style={{ minWidth: '1200px' }}>
           <Table className="w-full table-fixed border-collapse">
             {colWidths && (
               <colgroup>
@@ -276,7 +276,7 @@ export function DataTable<TData, TValue>({
                   return (
                     <TableCell
                       key={cell.id}
-                      className={`text-sm text-foreground align-middle px-6 py-3 md:px-4 xl:px-6 first:pl-6 last:pr-6 truncate ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
+                      className={`text-sm text-foreground align-middle px-6 py-3 md:px-4 xl:px-6 first:pl-6 last:pr-6 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
                     >
                       {flexRender(
                         cell.column.columnDef.cell,

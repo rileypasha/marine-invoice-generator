@@ -48,10 +48,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.ok) {
         const data = await response.json();
         setCurrentUser({
-          id: data.userId,
-          email: data.email,
-          name: data.name,
-          role: data.role
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role || 'standard',
+          avatarUrl: data.user.avatarUrl
         });
         setCsrfToken(data.csrfToken);
         return true;
@@ -87,15 +88,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        // Extract a display name from email (part before @)
-        const displayName = data.email.split('@')[0];
-        setCurrentUser({
-          id: data.userId,
-          email: data.email,
-          name: displayName,
-          role: 'standard' // Default role
-        });
         setCsrfToken(data.csrfToken);
+
+        // Only set user data if logged in (userId exists)
+        if (data.userId) {
+          // Extract a display name from email (part before @)
+          const displayName = data.name || data.email.split('@')[0];
+          setCurrentUser({
+            id: data.userId,
+            email: data.email,
+            name: displayName,
+            role: data.role || 'standard',
+            avatarUrl: data.avatarUrl
+          });
+        } else {
+          setCurrentUser(null);
+        }
       } else {
         setCurrentUser(null);
         setCsrfToken(null);

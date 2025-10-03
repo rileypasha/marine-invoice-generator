@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import sgMail from '@sendgrid/mail';
 import { prisma } from '../db/client';
+import { query } from '../config/database';
+import { generateCsrfToken } from '../middleware/csrf';
 
 const router = express.Router();
 
@@ -38,6 +40,11 @@ router.post('/login', async (req, res) => {
     (req.session as any).userEmail = user.email;
     (req.session as any).userName = user.name;
 
+    // Generate CSRF token if needed
+    if (!req.session.csrfToken) {
+      req.session.csrfToken = generateCsrfToken();
+    }
+
     await new Promise<void>((resolve, reject) => {
       req.session.save((err) => {
         if (err) reject(err);
@@ -50,7 +57,9 @@ router.post('/login', async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
+        avatarUrl: user.avatarUrl,
       },
+      csrfToken: req.session.csrfToken,
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -191,6 +200,54 @@ router.post('/logout', (req, res) => {
     }
     res.clearCookie('connect.sid');
     res.json({ message: 'Logged out successfully' });
+  });
+});
+
+// Auth check with CSRF token
+router.get('/check', async (req, res) => {
+  if (!req.session) {
+    return res.status(400).json({ error: 'Session not initialized' });
+  }
+
+  // Generate CSRF token if needed
+  if (!req.session.csrfToken) {
+    req.session.csrfToken = generateCsrfToken();
+  }
+
+  // If user is logged in, fetch their data including avatarUrl
+  let userData = null;
+  if (req.session.userId) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: req.session.userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          avatarUrl: true
+        }
+      });
+
+      if (user) {
+        userData = user;
+        (req.session as any).userEmail = user.email;
+        (req.session as any).userName = user.name;
+      }
+    } catch (error) {
+      console.error('Error fetching user data for auth check:', error);
+    }
+  }
+
+  res.json({
+    csrfToken: req.session.csrfToken,
+    ...(userData && {
+      userId: userData.id,
+      email: userData.email,
+      name: userData.name,
+      role: userData.role,
+      avatarUrl: userData.avatarUrl
+    })
   });
 });
 
