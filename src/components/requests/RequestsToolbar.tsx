@@ -154,13 +154,13 @@ export function RequestsToolbar({
               <Select value={month} onValueChange={handleMonthChange}>
                 <SelectTrigger className="h-9 w-auto text-sm gap-2 px-3 border-gray-300 hover:border-gray-400 transition-colors bg-white">
                   <span className="font-semibold text-gray-900">
-                    {monthOptions.find(opt => opt.value === month)?.label || 'Month'}
+                    {month === 'all' ? 'All Months' : monthOptions.find(opt => opt.value === month)?.label || 'Month'}
                   </span>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="min-w-[180px]">
                   {monthOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                      {option.value === 'all' ? 'All Months' : option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
