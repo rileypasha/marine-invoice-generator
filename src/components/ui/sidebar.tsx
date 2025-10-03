@@ -137,7 +137,7 @@ export const MobileSidebar = ({
           onClick={() => setOpen(!open)}
           className="text-white cursor-pointer p-2 hover:bg-white/10 rounded-lg transition-colors"
           aria-label="Open menu"
-          style={{ marginTop: '8px', marginRight: '-18px' }}
+          style={{ marginTop: '8px', marginLeft: 'auto', marginRight: '18px' }}
         >
           <Menu className="h-6 w-6" />
         </button>
