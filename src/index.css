@@ -27,11 +27,11 @@
     --header-h: 56px; /* actual header row height */
   }
 
-  /* Paint the viewport itself black */
+  /* Paint the viewport itself white to match header */
   html, body {
     height: 100%;
     margin: 0;
-    background: #000;
+    background: #fff;
   }
 
   body {
@@ -43,7 +43,7 @@
     position: fixed;
     inset: 0 0 auto 0;
     height: env(safe-area-inset-top);
-    background: #000;
+    background: #fff;
     pointer-events: none;
     z-index: 0; /* put painter UNDER the header */
   }
