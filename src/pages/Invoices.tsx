@@ -433,9 +433,9 @@ const Invoices: React.FC<InvoicesProps> = ({
 
       {/* Infinite Scroll Trigger */}
       {hasMore && (
-        <div ref={loadMoreRef} className="py-8 flex justify-center">
+        <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
           {isLoading && (
-            <div className="text-sm text-gray-500">Loading more...</div>
+            <div className="text-xs text-gray-400">Loading...</div>
           )}
         </div>
       )}

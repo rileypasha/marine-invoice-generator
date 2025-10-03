@@ -227,17 +227,20 @@ const InvoicesPage: React.FC = () => {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
+        if (entries[0].isIntersecting && !isLoading && hasMore) {
           loadMore();
         }
       },
-      { threshold: 0.1 }
+      {
+        threshold: 0.1,
+        rootMargin: '100px' // Trigger 100px before reaching the element
+      }
     );
 
     observer.observe(loadMoreRef.current);
 
     return () => observer.disconnect();
-  }, [loadMore]);
+  }, [loadMore, isLoading, hasMore]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
