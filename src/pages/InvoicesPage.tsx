@@ -79,10 +79,11 @@ const InvoicesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const { isAuthenticated, csrfToken } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Initialize filters from URL on mount
   const [filters, setFilters] = useState<FilterOptions>(() => {
@@ -90,7 +91,7 @@ const InvoicesPage: React.FC = () => {
     return customerIdFromUrl ? { customerId: customerIdFromUrl } : {};
   });
 
-  const fetchInvoices = useCallback(async (page = 1, search = '', filterOptions: FilterOptions = {}) => {
+  const fetchInvoices = useCallback(async (page = 1, search = '', filterOptions: FilterOptions = {}, append = false) => {
     if (!isAuthenticated || !csrfToken) return;
 
     setIsLoading(true);
@@ -139,13 +140,22 @@ const InvoicesPage: React.FC = () => {
       const data = await response.json();
 
       // Store raw API data - transformation happens in useMemo
-      setRawInvoices(data.invoices || []);
-      setCurrentPage(data.pagination?.page || 1);
-      setTotalPages(data.pagination?.totalPages || 1);
+      if (append) {
+        setRawInvoices(prev => [...prev, ...(data.invoices || [])]);
+      } else {
+        setRawInvoices(data.invoices || []);
+      }
+
+      const currentPageNum = data.pagination?.page || 1;
+      const totalPagesNum = data.pagination?.totalPages || 1;
+      setCurrentPage(currentPageNum);
+      setHasMore(currentPageNum < totalPagesNum);
 
     } catch (error) {
       console.error('Error fetching invoices:', error);
-      setRawInvoices([]);
+      if (!append) {
+        setRawInvoices([]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -183,7 +193,7 @@ const InvoicesPage: React.FC = () => {
     return { total, requested, change_requested, approved };
   }, [transformedInvoices]);
 
-  // Fetch invoices when page, search, or filters change
+  // Fetch invoices when search or filters change (reset to page 1)
   useEffect(() => {
     if (!isAuthenticated || !csrfToken) return;
 
@@ -191,7 +201,7 @@ const InvoicesPage: React.FC = () => {
 
     const doFetch = async () => {
       if (!cancelled) {
-        await fetchInvoices(currentPage, searchTerm, filters);
+        await fetchInvoices(1, searchTerm, filters);
       }
     };
 
@@ -201,21 +211,44 @@ const InvoicesPage: React.FC = () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, searchTerm, filters]);
+  }, [searchTerm, filters]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(loadMoreRef.current);
+
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
     setCurrentPage(1);
+    setRawInvoices([]); // Clear existing invoices
   };
 
   const handleFiltersChange = (newFilters: FilterOptions) => {
     setFilters(newFilters);
     setCurrentPage(1);
+    setRawInvoices([]); // Clear existing invoices
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
+  const loadMore = useCallback(() => {
+    if (!isLoading && hasMore) {
+      const nextPage = currentPage + 1;
+      fetchInvoices(nextPage, searchTerm, filters, true);
+    }
+  }, [isLoading, hasMore, currentPage, searchTerm, filters, fetchInvoices]);
 
   const handleEdit = useCallback((invoice: Invoice) => {
     navigate(`/requests/${invoice.id}/edit`);
@@ -319,9 +352,8 @@ const InvoicesPage: React.FC = () => {
       onBulkDelete={handleBulkDelete}
       onBulkExport={handleBulkExport}
       isLoading={isLoading}
-      currentPage={currentPage}
-      totalPages={totalPages}
-      onPageChange={handlePageChange}
+      loadMoreRef={loadMoreRef}
+      hasMore={hasMore}
     />
   );
 };
