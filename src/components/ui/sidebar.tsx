@@ -130,7 +130,7 @@ export const MobileSidebar = ({
           src="/logo_white.svg"
           alt="Global Invoicing"
           className="h-8 w-8"
-          style={{ marginTop: '8px', marginLeft: '14px' }}
+          style={{ marginTop: '12px', marginLeft: '14px' }}
         />
 
         {/* Spacer */}
@@ -140,7 +140,7 @@ export const MobileSidebar = ({
           onClick={() => setOpen(!open)}
           className="text-white cursor-pointer p-2 hover:bg-white/10 rounded-lg transition-colors"
           aria-label="Open menu"
-          style={{ marginTop: '8px', marginRight: '18px' }}
+          style={{ marginTop: '12px', marginRight: '18px' }}
         >
           <Menu className="h-6 w-6" />
         </button>
