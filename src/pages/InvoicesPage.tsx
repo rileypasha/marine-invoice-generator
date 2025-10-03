@@ -84,6 +84,7 @@ const InvoicesPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Initialize filters from URL on mount
   const [filters, setFilters] = useState<FilterOptions>(() => {
@@ -94,7 +95,11 @@ const InvoicesPage: React.FC = () => {
   const fetchInvoices = useCallback(async (page = 1, search = '', filterOptions: FilterOptions = {}, append = false) => {
     if (!isAuthenticated || !csrfToken) return;
 
-    setIsLoading(true);
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+    }
     try {
       const searchParams = new URLSearchParams({
         page: page.toString(),
@@ -157,7 +162,11 @@ const InvoicesPage: React.FC = () => {
         setRawInvoices([]);
       }
     } finally {
-      setIsLoading(false);
+      if (append) {
+        setIsLoadingMore(false);
+      } else {
+        setIsLoading(false);
+      }
     }
   }, [isAuthenticated, csrfToken]);
 
@@ -215,11 +224,11 @@ const InvoicesPage: React.FC = () => {
 
   // Load more function for infinite scroll
   const loadMore = useCallback(() => {
-    if (!isLoading && hasMore) {
+    if (!isLoadingMore && !isLoading && hasMore) {
       const nextPage = currentPage + 1;
       fetchInvoices(nextPage, searchTerm, filters, true);
     }
-  }, [isLoading, hasMore, currentPage, searchTerm, filters, fetchInvoices]);
+  }, [isLoadingMore, isLoading, hasMore, currentPage, searchTerm, filters, fetchInvoices]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -227,20 +236,20 @@ const InvoicesPage: React.FC = () => {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !isLoading && hasMore) {
+        if (entries[0].isIntersecting && !isLoadingMore && !isLoading && hasMore) {
           loadMore();
         }
       },
       {
         threshold: 0.1,
-        rootMargin: '100px' // Trigger 100px before reaching the element
+        rootMargin: '200px' // Trigger 200px before reaching the element
       }
     );
 
     observer.observe(loadMoreRef.current);
 
     return () => observer.disconnect();
-  }, [loadMore, isLoading, hasMore]);
+  }, [loadMore, isLoadingMore, isLoading, hasMore]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -356,6 +365,7 @@ const InvoicesPage: React.FC = () => {
       onBulkDelete={handleBulkDelete}
       onBulkExport={handleBulkExport}
       isLoading={isLoading}
+      isLoadingMore={isLoadingMore}
       loadMoreRef={loadMoreRef}
       hasMore={hasMore}
     />

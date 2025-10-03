@@ -43,6 +43,7 @@ interface InvoicesProps {
   onBulkDelete?: (invoices: Invoice[]) => void;
   onBulkExport?: (invoices: Invoice[]) => void;
   isLoading?: boolean;
+  isLoadingMore?: boolean;
   loadMoreRef?: React.RefObject<HTMLDivElement>;
   hasMore?: boolean;
 }
@@ -57,6 +58,7 @@ const Invoices: React.FC<InvoicesProps> = ({
   onBulkDelete,
   onBulkExport,
   isLoading = false,
+  isLoadingMore = false,
   loadMoreRef,
   hasMore = false
 }) => {
@@ -434,7 +436,7 @@ const Invoices: React.FC<InvoicesProps> = ({
       {/* Infinite Scroll Trigger */}
       {hasMore && (
         <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
-          {isLoading && (
+          {isLoadingMore && (
             <div className="text-xs text-gray-400">Loading...</div>
           )}
         </div>
