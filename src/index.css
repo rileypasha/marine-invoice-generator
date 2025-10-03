@@ -3,10 +3,16 @@
 @tailwind utilities;
 
 /* Safe-area and hit target utilities for mobile PWA */
+@layer base {
+  :root {
+    --sat: env(safe-area-inset-top);
+  }
+}
+
 @layer utilities {
   /* Safe-area top padding using CSS custom property */
   .safe-top {
-    padding-top: max(0px, env(safe-area-inset-top));
+    padding-top: max(0px, var(--sat));
   }
 
   /* Hit target - minimum 44x44px for iOS, accessible touch targets */

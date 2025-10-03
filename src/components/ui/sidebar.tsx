@@ -113,39 +113,6 @@ export const MobileSidebar = ({
   const { open, setOpen } = useSidebar();
   return (
     <>
-      {/* Fixed header with hamburger */}
-      <div
-        className={cn(
-          "fixed top-0 left-0 right-0 md:hidden bg-black z-50 flex items-center px-4"
-        )}
-        style={{
-          height: '56px',
-          paddingTop: 'env(safe-area-inset-top)',
-          paddingBottom: '8px'
-        }}
-        {...props}
-      >
-        {/* Logo */}
-        <img
-          src="/logo_white.svg"
-          alt="Global Invoicing"
-          className="h-8 w-8"
-          style={{ marginTop: '16px', marginLeft: '14px' }}
-        />
-
-        {/* Spacer */}
-        <div style={{ flex: 1 }}></div>
-
-        <button
-          onClick={() => setOpen(!open)}
-          className="text-white cursor-pointer p-2 hover:bg-white/10 rounded-lg transition-colors"
-          aria-label="Open menu"
-          style={{ marginTop: '16px', marginRight: '18px' }}
-        >
-          <Menu className="h-6 w-6" />
-        </button>
-      </div>
-
       {/* Slide-out menu */}
       <AnimatePresence>
         {open && (

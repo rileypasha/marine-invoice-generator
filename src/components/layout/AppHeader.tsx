@@ -1,34 +1,23 @@
 import React from 'react';
-import { Menu, User, MoreVertical } from 'lucide-react';
+import { Menu, MoreVertical } from 'lucide-react';
 import { useSidebar } from '../ui/sidebar';
 
 interface AppHeaderProps {
-  /**
-   * Optional user name for avatar display
-   */
   userName?: string;
-  /**
-   * Optional user initials for avatar fallback
-   */
   userInitials?: string;
-  /**
-   * Callback when profile button is clicked
-   */
   onProfileClick?: () => void;
-  /**
-   * Callback when more menu button is clicked
-   */
   onMoreClick?: () => void;
 }
 
 /**
- * AppHeader - Uber-style transparent mobile header
+ * AppHeader - Uber-style transparent header
  *
- * Mobile-first header that blends with page background.
- * Left: hamburger menu + wordmark
- * Right: profile avatar + more menu
- *
- * Follows iOS PWA guidelines with safe-area support and 44px touch targets.
+ * Single header row with:
+ * - Left: Menu + Wordmark
+ * - Right: Avatar + More menu
+ * - NO page title (renders in PageTitle component below)
+ * - 56px content + safe-area padding
+ * - 44px minimum touch targets
  */
 export const AppHeader: React.FC<AppHeaderProps> = ({
   userName,
@@ -43,36 +32,31 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white md:hidden">
-      <div
-        className="flex h-14 items-center px-4"
-        style={{
-          paddingTop: 'max(0px, env(safe-area-inset-top))',
-        }}
-      >
-        {/* Left: Hamburger + Logo */}
+    <header role="banner" className="sticky top-0 z-40 bg-transparent md:hidden">
+      <div className="safe-top" />
+      <div className="flex h-14 items-center px-4">
+        {/* Left: Menu button */}
         <button
           onClick={handleMenuClick}
-          aria-label="Open menu"
-          className="hit inline-flex items-center justify-center min-w-[44px] min-h-[44px] -mx-1 px-1 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+          aria-label="Menu"
+          className="hit mr-2"
         >
           <Menu className="h-6 w-6 text-gray-900" />
         </button>
 
-        <div className="flex-1 flex items-center ml-2">
-          <img
-            src="/bw_logo.svg"
-            alt="Global Invoicing"
-            className="h-8 select-none"
-          />
-        </div>
+        {/* Wordmark/Brand */}
+        <img
+          src="/bw_logo.svg"
+          alt="Brand"
+          className="h-5 select-none"
+        />
 
-        {/* Right: Profile + More */}
-        <div className="flex items-center gap-1">
+        {/* Right: Actions */}
+        <div className="ml-auto flex items-center gap-2">
           <button
             onClick={onProfileClick}
             aria-label={userName ? `Account - ${userName}` : 'Account'}
-            className="hit inline-flex items-center justify-center min-w-[44px] min-h-[44px] -mx-1 px-1 rounded-full overflow-hidden hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            className="hit rounded-full overflow-hidden"
           >
             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
               <span className="text-sm font-medium text-gray-700">
@@ -83,8 +67,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
           <button
             onClick={onMoreClick}
-            aria-label="More options"
-            className="hit inline-flex items-center justify-center min-w-[44px] min-h-[44px] -mx-1 px-1 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            aria-label="More"
+            className="hit"
           >
             <MoreVertical className="h-6 w-6 text-gray-900" />
           </button>
