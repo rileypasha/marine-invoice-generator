@@ -116,7 +116,7 @@ export const MobileSidebar = ({
       {/* Fixed header with hamburger */}
       <div
         className={cn(
-          "fixed top-0 left-0 right-0 md:hidden bg-black z-50 flex items-center justify-between px-4"
+          "fixed top-0 left-0 right-0 md:hidden bg-black z-50 flex items-center px-4"
         )}
         style={{
           height: '56px',
@@ -133,11 +133,14 @@ export const MobileSidebar = ({
           style={{ marginTop: '8px', marginLeft: '14px' }}
         />
 
+        {/* Spacer */}
+        <div style={{ flex: 1 }}></div>
+
         <button
           onClick={() => setOpen(!open)}
           className="text-white cursor-pointer p-2 hover:bg-white/10 rounded-lg transition-colors"
           aria-label="Open menu"
-          style={{ marginTop: '8px', marginLeft: 'auto', marginRight: '18px' }}
+          style={{ marginTop: '8px', marginRight: '18px' }}
         >
           <Menu className="h-6 w-6" />
         </button>
