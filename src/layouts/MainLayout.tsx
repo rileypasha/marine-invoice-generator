@@ -254,7 +254,7 @@ const MainContent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div
       className="md:ml-auto"
       style={{
-        paddingTop: typeof window !== 'undefined' && window.innerWidth < 768 ? 'calc(56px + env(safe-area-inset-top))' : '0',
+        paddingTop: typeof window !== 'undefined' && window.innerWidth < 768 ? '56px' : '0',
         marginLeft: typeof window !== 'undefined' && window.innerWidth >= 768 ? (open ? '220px' : '56px') : '0'
       }}
     >

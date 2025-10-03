@@ -13,8 +13,8 @@ interface AppHeaderProps {
  * AppHeader - Uber-style transparent header
  *
  * Single header row with:
- * - Left: Menu + Wordmark
- * - Right: Avatar + More menu
+ * - Left: ONLY brand logo/wordmark
+ * - Right: Avatar + Kebab + Menu (in that order)
  * - NO page title (renders in PageTitle component below)
  * - 56px content + safe-area padding
  * - 44px minimum touch targets
@@ -35,23 +35,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     <header role="banner" className="sticky top-0 z-40 bg-transparent md:hidden">
       <div className="safe-top" />
       <div className="flex h-14 items-center px-4">
-        {/* Left: Menu button */}
-        <button
-          onClick={handleMenuClick}
-          aria-label="Menu"
-          className="hit mr-2"
-        >
-          <Menu className="h-6 w-6 text-gray-900" />
-        </button>
-
-        {/* Wordmark/Brand */}
+        {/* Left: Brand only */}
         <img
           src="/bw_logo.svg"
           alt="Brand"
           className="h-5 select-none"
         />
 
-        {/* Right: Actions */}
+        {/* Right: Avatar + Kebab + Menu */}
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={onProfileClick}
@@ -71,6 +62,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             className="hit"
           >
             <MoreVertical className="h-6 w-6 text-gray-900" />
+          </button>
+
+          <button
+            onClick={handleMenuClick}
+            aria-label="Menu"
+            className="hit"
+          >
+            <Menu className="h-6 w-6 text-gray-900" />
           </button>
         </div>
       </div>

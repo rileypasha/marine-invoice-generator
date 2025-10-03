@@ -106,7 +106,9 @@
       "Bash(npm pkg set:*)",
       "SlashCommand(/sc:implement \"Fix white-on-white font color accessibility issues across PWA UI\" --persona-frontend --persona-qa --magic --tdd)",
       "SlashCommand(/sc:implement:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(cp:*)",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "ask": [],

@@ -38,21 +38,21 @@ describe('AppHeader - Uber-style Single Header', () => {
     expect(menuButtons[0]).toHaveAttribute('aria-label', 'Menu');
   });
 
-  it('has correct Uber-style structure: Menu + Brand + Actions', () => {
+  it('has correct Uber-style structure: Brand + Actions (Avatar, Kebab, Menu)', () => {
     renderWithProvider(<AppHeader />);
 
-    // Menu button
-    expect(screen.getByLabelText('Menu')).toBeInTheDocument();
-
-    // Brand/Logo
+    // Brand/Logo (left)
     const brand = screen.getByAlt('Brand');
     expect(brand).toBeInTheDocument();
 
-    // Account button
+    // Account button (right)
     expect(screen.getByLabelText(/Account/)).toBeInTheDocument();
 
-    // More button
+    // More button (right)
     expect(screen.getByLabelText('More')).toBeInTheDocument();
+
+    // Menu button (right)
+    expect(screen.getByLabelText('Menu')).toBeInTheDocument();
   });
 
   it('does NOT render page title in header', () => {
@@ -146,15 +146,15 @@ describe('AppHeader - Uber-style Single Header', () => {
     expect(contentRow).toBeInTheDocument();
   });
 
-  it('maintains proper tab order: Menu → Account → More', () => {
+  it('maintains proper tab order: Account → More → Menu', () => {
     renderWithProvider(<AppHeader />);
 
     const buttons = screen.getAllByRole('button');
 
-    // Expected order: menu → account → more
-    expect(buttons[0]).toHaveAttribute('aria-label', 'Menu');
-    expect(buttons[1]).toHaveAttribute('aria-label', expect.stringContaining('Account'));
-    expect(buttons[2]).toHaveAttribute('aria-label', 'More');
+    // Expected order: account → more → menu
+    expect(buttons[0]).toHaveAttribute('aria-label', expect.stringContaining('Account'));
+    expect(buttons[1]).toHaveAttribute('aria-label', 'More');
+    expect(buttons[2]).toHaveAttribute('aria-label', 'Menu');
   });
 
   it('only renders on mobile (has md:hidden class)', () => {
