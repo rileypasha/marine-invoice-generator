@@ -1,29 +1,27 @@
 import React from 'react';
-import { Menu, MoreVertical } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useSidebar } from '../ui/sidebar';
 
 interface AppHeaderProps {
   userName?: string;
   userInitials?: string;
   onProfileClick?: () => void;
-  onMoreClick?: () => void;
 }
 
 /**
- * AppHeader - Uber-style transparent header
+ * AppHeader - Uber-style header
  *
- * Single header row with:
- * - Left: ONLY brand logo/wordmark
- * - Right: Avatar + Kebab + Menu (in that order)
- * - NO page title (renders in PageTitle component below)
- * - 56px content + safe-area padding
- * - 44px minimum touch targets
+ * Final spec:
+ * - Left: Logo 16px inset from left
+ * - Right: Avatar + Menu (16px from right edge)
+ * - Icons: 20-22px; gap: 8px
+ * - Header: h-14 (56px); tap targets ≥44px
+ * - Hairline divider: border-b border-black/5
  */
 export const AppHeader: React.FC<AppHeaderProps> = ({
   userName,
   userInitials = 'U',
   onProfileClick,
-  onMoreClick,
 }) => {
   const { setOpen } = useSidebar();
 
@@ -32,18 +30,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <header role="banner" className="sticky top-0 z-40 bg-transparent md:hidden">
+    <header role="banner" className="sticky top-0 z-40 bg-white border-b border-black/5 md:hidden">
       <div className="safe-top" />
-      <div className="flex h-14 items-center px-4">
-        {/* Left: Brand only */}
+      <div className="flex h-14 items-center" style={{ paddingLeft: '16px', paddingRight: '16px' }}>
+        {/* Left: Logo 16px inset */}
         <img
           src="/bw_logo.svg"
           alt="Brand"
           className="h-5 select-none"
         />
 
-        {/* Right: Avatar + Kebab + Menu */}
-        <div className="ml-auto flex items-center gap-2">
+        {/* Right: Avatar + Menu (8px gap, 16px from edge) */}
+        <div className="ml-auto flex items-center" style={{ gap: '8px' }}>
           <button
             onClick={onProfileClick}
             aria-label={userName ? `Account - ${userName}` : 'Account'}
@@ -57,19 +55,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </button>
 
           <button
-            onClick={onMoreClick}
-            aria-label="More"
-            className="hit"
-          >
-            <MoreVertical className="h-6 w-6 text-gray-900" />
-          </button>
-
-          <button
             onClick={handleMenuClick}
             aria-label="Menu"
             className="hit"
           >
-            <Menu className="h-6 w-6 text-gray-900" />
+            <Menu className="h-5 w-5 text-gray-900" />
           </button>
         </div>
       </div>

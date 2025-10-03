@@ -38,7 +38,7 @@ describe('AppHeader - Uber-style Single Header', () => {
     expect(menuButtons[0]).toHaveAttribute('aria-label', 'Menu');
   });
 
-  it('has correct Uber-style structure: Brand + Actions (Avatar, Kebab, Menu)', () => {
+  it('has correct Uber-style structure: Brand + Actions (Avatar, Menu)', () => {
     renderWithProvider(<AppHeader />);
 
     // Brand/Logo (left)
@@ -47,9 +47,6 @@ describe('AppHeader - Uber-style Single Header', () => {
 
     // Account button (right)
     expect(screen.getByLabelText(/Account/)).toBeInTheDocument();
-
-    // More button (right)
-    expect(screen.getByLabelText('More')).toBeInTheDocument();
 
     // Menu button (right)
     expect(screen.getByLabelText('Menu')).toBeInTheDocument();
@@ -78,29 +75,20 @@ describe('AppHeader - Uber-style Single Header', () => {
 
     // Account button with user name
     expect(screen.getByLabelText('Account - John Doe')).toBeInTheDocument();
-
-    // More button
-    expect(screen.getByLabelText('More')).toBeInTheDocument();
   });
 
   it('calls callbacks when buttons are clicked', () => {
     const onProfileClick = vi.fn();
-    const onMoreClick = vi.fn();
 
     renderWithProvider(
       <AppHeader
         onProfileClick={onProfileClick}
-        onMoreClick={onMoreClick}
       />
     );
 
     // Click profile button
     fireEvent.click(screen.getByLabelText(/Account/));
     expect(onProfileClick).toHaveBeenCalledTimes(1);
-
-    // Click more button
-    fireEvent.click(screen.getByLabelText('More'));
-    expect(onMoreClick).toHaveBeenCalledTimes(1);
   });
 
   it('has minimum 44px touch targets', () => {
@@ -108,19 +96,19 @@ describe('AppHeader - Uber-style Single Header', () => {
 
     const menuButton = screen.getByLabelText('Menu');
     const accountButton = screen.getByLabelText(/Account/);
-    const moreButton = screen.getByLabelText('More');
 
     // All buttons should have the .hit class which ensures 44px minimum
     expect(menuButton).toHaveClass('hit');
     expect(accountButton).toHaveClass('hit');
-    expect(moreButton).toHaveClass('hit');
   });
 
-  it('has transparent background (bg-transparent)', () => {
+  it('has white background with hairline divider', () => {
     const { container } = renderWithProvider(<AppHeader />);
 
     const header = container.querySelector('header');
-    expect(header).toHaveClass('bg-transparent');
+    expect(header).toHaveClass('bg-white');
+    expect(header).toHaveClass('border-b');
+    expect(header).toHaveClass('border-black/5');
   });
 
   it('has sticky positioning and correct z-index', () => {
@@ -146,15 +134,14 @@ describe('AppHeader - Uber-style Single Header', () => {
     expect(contentRow).toBeInTheDocument();
   });
 
-  it('maintains proper tab order: Account → More → Menu', () => {
+  it('maintains proper tab order: Account → Menu', () => {
     renderWithProvider(<AppHeader />);
 
     const buttons = screen.getAllByRole('button');
 
-    // Expected order: account → more → menu
+    // Expected order: account → menu
     expect(buttons[0]).toHaveAttribute('aria-label', expect.stringContaining('Account'));
-    expect(buttons[1]).toHaveAttribute('aria-label', 'More');
-    expect(buttons[2]).toHaveAttribute('aria-label', 'Menu');
+    expect(buttons[1]).toHaveAttribute('aria-label', 'Menu');
   });
 
   it('only renders on mobile (has md:hidden class)', () => {
@@ -162,5 +149,29 @@ describe('AppHeader - Uber-style Single Header', () => {
 
     const header = container.querySelector('header');
     expect(header).toHaveClass('md:hidden');
+  });
+
+  it('has correct spacing: logo 16px inset, cluster 16px from right', () => {
+    const { container } = renderWithProvider(<AppHeader />);
+
+    const contentRow = container.querySelector('.h-14');
+    expect(contentRow).toHaveStyle({ paddingLeft: '16px', paddingRight: '16px' });
+  });
+
+  it('has 8px gap between avatar and menu button', () => {
+    const { container } = renderWithProvider(<AppHeader />);
+
+    const actionsCluster = container.querySelector('.ml-auto');
+    expect(actionsCluster).toHaveStyle({ gap: '8px' });
+  });
+
+  it('menu icon is 20px (h-5 w-5)', () => {
+    renderWithProvider(<AppHeader />);
+
+    const menuButton = screen.getByLabelText('Menu');
+    const menuIcon = menuButton.querySelector('svg');
+
+    expect(menuIcon).toHaveClass('h-5');
+    expect(menuIcon).toHaveClass('w-5');
   });
 });

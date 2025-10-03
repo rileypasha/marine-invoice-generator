@@ -2998,7 +2998,7 @@ const CreateInvoice: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header Bar */}
       <div className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-auto min-h-14 w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:h-14 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
+        <div className="mx-auto flex h-auto min-h-14 w-full max-w-6xl flex-col gap-3 px-4 pt-3 pb-3 sm:h-14 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground sm:gap-3">
             <h1 className="text-base font-semibold text-foreground sm:text-lg">
               {isEditMode ? 'Edit Invoice' : 'New Invoice'}
