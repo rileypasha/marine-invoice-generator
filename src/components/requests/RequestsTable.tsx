@@ -15,10 +15,10 @@ const REQUESTS_COLS = [
   { id: 'amount', w: '6%' },   // Amount column
   { id: 'created_by', w: '8%' }, // Created by column
   { id: 'created_at', w: '11%' },  // Created at column
-  { id: 'modified_by', w: '19%' }, // Modified by column (needs space for full names)
+  { id: 'modified_by', w: '18%' }, // Modified by column (needs space for full names)
   { id: 'updated_at', w: '11%' }, // Last modified column
-  { id: 'status', w: '14%' },   // Status column (needs space for "Change Requested")
-  { id: 'actions', w: '5%' }   // Actions column
+  { id: 'status', w: '16%' },   // Status column (needs space for "Change Requested")
+  { id: 'actions', w: '4%' }   // Actions column
 ];
 
 // Mobile-specific widths - all columns visible, horizontally scrollable
