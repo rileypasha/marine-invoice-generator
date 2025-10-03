@@ -129,14 +129,15 @@ export const MobileSidebar = ({
         <img
           src="/logo_white.svg"
           alt="Global Invoicing"
-          className="h-8 w-8 -ml-1"
-          style={{ marginTop: '4px' }}
+          className="h-8 w-8"
+          style={{ marginTop: '-2px', marginLeft: '4px' }}
         />
 
         <button
           onClick={() => setOpen(!open)}
-          className="text-white cursor-pointer p-2 -mr-2 hover:bg-white/10 rounded-lg transition-colors"
+          className="text-white cursor-pointer p-2 hover:bg-white/10 rounded-lg transition-colors"
           aria-label="Open menu"
+          style={{ marginTop: '-2px', marginRight: '-4px' }}
         >
           <Menu className="h-6 w-6" />
         </button>
