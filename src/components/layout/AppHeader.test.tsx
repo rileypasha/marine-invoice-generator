@@ -124,7 +124,7 @@ describe('AppHeader - Uber-style Single Header', () => {
     const { container } = renderWithProvider(<AppHeader />);
 
     const header = container.querySelector('header');
-    expect(header).toHaveStyle({ paddingTop: 'env(safe-area-inset-top)' });
+    expect(header).toHaveClass('pt-[env(safe-area-inset-top)]');
   });
 
   it('has 56px content area (h-14 = 3.5rem = 56px)', () => {
