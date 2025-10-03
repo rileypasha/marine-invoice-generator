@@ -15,6 +15,7 @@ import {
   SidebarLink,
   useSidebar,
 } from '../components/ui/sidebar';
+import { AppHeader } from '../components/layout/AppHeader';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -313,14 +314,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
     <Sidebar>
       <div className="min-h-screen bg-white">
+        {/* Desktop Sidebar */}
         <SidebarBody className="justify-start gap-0 screen-only">
           <SidebarContent />
         </SidebarBody>
 
-        {/* Fixed Page title header - screen only (hidden for full-width routes) */}
+        {/* Mobile Header - Uber style */}
+        <AppHeader />
+
+        {/* Fixed Page title header - screen only (hidden for full-width routes and mobile) */}
         {!isFullWidthRoute() && (
           <FixedHeader>
-            <div className="bg-white border-b border-gray-200 screen-only">
+            <div className="bg-white border-b border-gray-200 screen-only hidden md:block">
               <div className="px-6">
                 <div className="py-3">
                   <h1 className="text-xl font-normal text-gray-900">

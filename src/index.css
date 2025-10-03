@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Safe-area and hit target utilities for mobile PWA */
+@layer utilities {
+  /* Safe-area top padding using CSS custom property */
+  .safe-top {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+
+  /* Hit target - minimum 44x44px for iOS, accessible touch targets */
+  .hit {
+    @apply inline-flex items-center justify-center min-w-[44px] min-h-[44px] -mx-1 px-1;
+  }
+}
+
 /* Mobile PWA: Prevent white background during pull-to-refresh */
 @layer base {
   :root {
