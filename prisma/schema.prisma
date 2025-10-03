@@ -25,6 +25,7 @@ model User {
   invoices         Invoice[]
   vessels          Vessel[]
   invoiceRevisions InvoiceRevision[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("User")
 }
@@ -231,4 +232,16 @@ model InvoiceDiff {
   @@index([invoiceId, createdAt(sort: Desc)])
   @@index([toRevisionId])
   @@map("InvoiceDiff")
+}
+
+model PasswordResetToken {
+  id         String   @id @default(uuid())
+  userId     String
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([token])
+  @@index([expiresAt])
 }

@@ -39,14 +39,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           className="h-10 select-none"
         />
 
-        {/* Right: Avatar + Menu (8px gap, 16px from edge) */}
-        <div className="ml-auto flex items-center" style={{ gap: '8px' }}>
+        {/* Right: Avatar + Menu (optimized touch targets) */}
+        <div className="ml-auto flex items-center gap-2">
           <button
             onClick={onProfileClick}
             aria-label={userName ? `Account - ${userName}` : 'Account'}
-            className="hit rounded-full overflow-hidden"
+            className="h-12 w-12 rounded-full p-0 flex items-center justify-center active:opacity-70 transition-opacity"
           >
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-full bg-gray-200 border-2 border-gray-300 flex items-center justify-center">
               <span className="text-sm font-medium text-gray-700">
                 {userInitials}
               </span>
@@ -56,9 +56,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <button
             onClick={handleMenuClick}
             aria-label="Menu"
-            className="hit"
+            className="h-12 w-12 flex items-center justify-center active:opacity-70 transition-opacity"
           >
-            <Menu className="h-5 w-5 text-gray-900" />
+            <Menu className="h-6 w-6 text-gray-900" />
           </button>
         </div>
       </div>

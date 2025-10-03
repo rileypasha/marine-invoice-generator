@@ -78,7 +78,7 @@ function performanceMiddleware() {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
 
 // Optimized middleware stack
 app.use(createOptimizedCompression());
@@ -304,7 +304,7 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Start server
 if (require.main === module) {
-  server = app.listen(PORT, () => {
+  server = app.listen(PORT, '0.0.0.0', () => {
     logger.info(`Server started on port ${PORT}`, {
       environment: process.env.NODE_ENV,
       nodeVersion: process.version,

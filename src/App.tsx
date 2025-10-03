@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './context/AuthContext'
 import { queryClient } from './lib/react-query'
 import EmployeeLoginPortal from './components/EmployeeLoginPortal'
+import ResetPassword from './components/ResetPassword'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import MainLayout from './layouts/MainLayout'
 import { FloatingInstallButton } from './components/pwa/FloatingInstallButton'
@@ -161,6 +162,14 @@ function App() {
                       onLogin={handleLogin}
                       isLoading={false}
                     />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reset-password"
+                element={
+                  <ProtectedRoute requireAuth={false}>
+                    <ResetPassword />
                   </ProtectedRoute>
                 }
               />
