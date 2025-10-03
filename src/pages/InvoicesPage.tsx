@@ -213,6 +213,14 @@ const InvoicesPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, filters]);
 
+  // Load more function for infinite scroll
+  const loadMore = useCallback(() => {
+    if (!isLoading && hasMore) {
+      const nextPage = currentPage + 1;
+      fetchInvoices(nextPage, searchTerm, filters, true);
+    }
+  }, [isLoading, hasMore, currentPage, searchTerm, filters, fetchInvoices]);
+
   // Intersection Observer for infinite scroll
   useEffect(() => {
     if (!loadMoreRef.current) return;
@@ -242,13 +250,6 @@ const InvoicesPage: React.FC = () => {
     setCurrentPage(1);
     setRawInvoices([]); // Clear existing invoices
   };
-
-  const loadMore = useCallback(() => {
-    if (!isLoading && hasMore) {
-      const nextPage = currentPage + 1;
-      fetchInvoices(nextPage, searchTerm, filters, true);
-    }
-  }, [isLoading, hasMore, currentPage, searchTerm, filters, fetchInvoices]);
 
   const handleEdit = useCallback((invoice: Invoice) => {
     navigate(`/requests/${invoice.id}/edit`);
