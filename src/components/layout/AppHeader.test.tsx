@@ -120,11 +120,11 @@ describe('AppHeader - Uber-style Single Header', () => {
     expect(header).toHaveClass('z-40');
   });
 
-  it('includes safe-area div for iOS notch support', () => {
+  it('has safe-area padding on header for iOS notch support', () => {
     const { container } = renderWithProvider(<AppHeader />);
 
-    const safeAreaDiv = container.querySelector('.safe-top');
-    expect(safeAreaDiv).toBeInTheDocument();
+    const header = container.querySelector('header');
+    expect(header).toHaveStyle({ paddingTop: 'env(safe-area-inset-top)' });
   });
 
   it('has 56px content area (h-14 = 3.5rem = 56px)', () => {

@@ -30,8 +30,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <header role="banner" className="sticky top-0 z-40 bg-white border-b border-black/5 md:hidden">
-      <div className="safe-top" />
+    <header role="banner" className="sticky top-0 z-40 bg-white border-b border-black/5 md:hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="flex h-14 items-center" style={{ paddingLeft: '16px', paddingRight: '16px' }}>
         {/* Left: Logo 16px inset */}
         <img
