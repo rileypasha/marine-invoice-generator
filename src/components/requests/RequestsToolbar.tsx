@@ -157,7 +157,7 @@ export function RequestsToolbar({
                     {month === 'all' ? 'All Months' : monthOptions.find(opt => opt.value === month)?.label || 'Month'}
                   </span>
                 </SelectTrigger>
-                <SelectContent className="min-w-[180px]">
+                <SelectContent className="min-w-[160px]">
                   {monthOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.value === 'all' ? 'All Months' : option.label}

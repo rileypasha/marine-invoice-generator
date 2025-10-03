@@ -51,18 +51,18 @@ const DEFAULT_STATE: RequestsQueryState = {
 export function getRollingMonths(count: number): Array<{ value: string; label: string }> {
   return [
     { value: 'all', label: 'All' },
-    { value: '2025-09', label: 'Sep25' },
-    { value: '2025-10', label: 'Oct25' },
-    { value: '2025-11', label: 'Nov25' },
-    { value: '2025-12', label: 'Dec25' },
-    { value: '2026-01', label: 'Jan26' },
-    { value: '2026-02', label: 'Feb26' },
-    { value: '2026-03', label: 'Mar26' },
-    { value: '2026-04', label: 'Apr26' },
-    { value: '2026-05', label: 'May26' },
-    { value: '2026-06', label: 'Jun26' },
-    { value: '2026-07', label: 'Jul26' },
-    { value: '2026-08', label: 'Aug26' }
+    { value: '2025-09', label: 'September 2025' },
+    { value: '2025-10', label: 'October 2025' },
+    { value: '2025-11', label: 'November 2025' },
+    { value: '2025-12', label: 'December 2025' },
+    { value: '2026-01', label: 'January 2026' },
+    { value: '2026-02', label: 'February 2026' },
+    { value: '2026-03', label: 'March 2026' },
+    { value: '2026-04', label: 'April 2026' },
+    { value: '2026-05', label: 'May 2026' },
+    { value: '2026-06', label: 'June 2026' },
+    { value: '2026-07', label: 'July 2026' },
+    { value: '2026-08', label: 'August 2026' }
   ];
 }
 
