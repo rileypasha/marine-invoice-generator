@@ -89,16 +89,16 @@ export const DesktopSidebar = ({
   return (
     <div
       className={cn(
-        "fixed left-0 top-0 h-screen px-1 py-2 hidden md:flex md:flex-col bg-white border-r border-gray-200 w-[220px] flex-shrink-0 z-40",
+        "fixed left-0 top-0 h-screen px-1 py-2 hidden md:flex md:flex-col bg-white border-r border-gray-200 w-[280px] flex-shrink-0 z-40",
         className
       )}
       style={{
-        width: open ? "220px" : "56px",
+        width: open ? "280px" : "56px",
         overflow: "hidden"
       }}
       {...props}
     >
-      <div style={{ minWidth: "220px", width: "220px" }}>
+      <div style={{ minWidth: "280px", width: "280px" }}>
         {children}
       </div>
     </div>
@@ -180,8 +180,8 @@ export const SidebarLink = ({
     if (!open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setTooltipPosition({
-        x: rect.right + 8,
-        y: rect.top + rect.height / 2
+        x: 64, // Fixed position: 56px sidebar + 8px margin
+        y: rect.top + (rect.height / 2)
       });
       setShowTooltip(true);
     }

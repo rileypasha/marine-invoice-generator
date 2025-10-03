@@ -30,13 +30,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <header role="banner" className="sticky top-0 z-40 bg-white border-b border-black/5 md:hidden pt-[env(safe-area-inset-top)]">
+    <header role="banner" className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-black/5 md:hidden">
       <div className="flex h-14 items-center" style={{ paddingLeft: '16px', paddingRight: '16px' }}>
-        {/* Left: Logo 16px inset */}
+          {/* Left: Logo 16px inset */}
         <img
-          src="/bw_logo.svg"
+          src="/mgbw_logo.svg"
           alt="Brand"
-          className="h-5 select-none"
+          className="h-10 select-none"
         />
 
         {/* Right: Avatar + Menu (8px gap, 16px from edge) */}

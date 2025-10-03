@@ -41,14 +41,8 @@ const SidebarContent = () => {
   };
 
   const handleExpandButtonMouseEnter = () => {
-    if (expandButtonRef.current && !open) {
-      const rect = expandButtonRef.current.getBoundingClientRect();
-      setTooltipPosition({
-        x: rect.right + 8,
-        y: rect.top + rect.height / 2
-      });
-      setShowExpandTooltip(true);
-    }
+    // Tooltip disabled - was causing blurry rendering
+    return;
   };
 
   const handleExpandButtonMouseLeave = () => {
@@ -124,15 +118,13 @@ const SidebarContent = () => {
           <div
             className={`relative rounded-lg transition-colors duration-300`}
           >
-            {/* Collapsed hover overlay - only show when not hovered */}
-            {!open && !isLogoHovered && <div className="absolute inset-0 pl-1 pr-2 py-2 ml-0 rounded-lg pointer-events-none"></div>}
-
+            {/* Full logo when expanded */}
             <div className={`flex items-center relative z-10 ${!open && (isLogoHovered || isSidebarHovered) ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <img
-                className="h-8 w-8 flex-shrink-0"
+                className={`flex-shrink-0 ${open ? 'h-8 w-auto' : 'h-10 w-10'}`}
                 style={{ marginLeft: '6px' }}
-                src="/bw_logo.svg"
-                alt="Global Invoicing"
+                src={open ? '/mgbw_logo.svg' : '/collapsed_logo.svg'}
+                alt="Marine Group Boat Works"
               />
             </div>
           </div>
@@ -144,7 +136,7 @@ const SidebarContent = () => {
               onClick={toggleSidebar}
               onMouseEnter={handleExpandButtonMouseEnter}
               onMouseLeave={handleExpandButtonMouseLeave}
-              className="absolute pl-3 pr-4 py-2 ml-0 rounded-lg hover:bg-gray-50 z-10"
+              className="absolute pl-3 pr-4 py-2 ml-0 rounded-lg hover:bg-gray-50 z-10 bg-white"
               style={{
                 left: '1px'
               }}
@@ -156,11 +148,13 @@ const SidebarContent = () => {
           {/* Expand Button Tooltip */}
           {showExpandTooltip && (
             <div
-              className="fixed px-2 py-1 bg-black text-white text-xs rounded-lg shadow-lg pointer-events-none whitespace-nowrap z-[9999]"
+              className="fixed px-2 py-1 bg-black text-white text-xs rounded-md shadow-lg pointer-events-none whitespace-nowrap z-[9999]"
               style={{
                 left: `${tooltipPosition.x}px`,
                 top: `${tooltipPosition.y}px`,
-                transform: 'translateY(-50%)'
+                transform: 'translateY(-50%)',
+                WebkitFontSmoothing: 'antialiased',
+                MozOsxFontSmoothing: 'grayscale'
               }}
             >
               Open sidebar
@@ -169,12 +163,12 @@ const SidebarContent = () => {
           {open && (
             <button
               onClick={toggleSidebar}
-              className="absolute pl-3 pr-4 py-2 ml-0 rounded-lg hover:bg-gray-50 z-30"
+              className="absolute p-1.5 rounded-lg hover:bg-gray-50 z-50"
               style={{
                 right: '8px'
               }}
             >
-              <PanelLeftClose className="h-5 w-5 text-gray-400" />
+              <PanelLeftClose className="h-4 w-4 text-gray-400" />
             </button>
           )}
         </div>
@@ -238,7 +232,7 @@ const FixedHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div
       className="fixed top-0 z-30"
       style={{
-        left: open ? '220px' : '56px',
+        left: open ? '280px' : '56px',
         right: '0'
       }}
     >
@@ -255,7 +249,7 @@ const MainContent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       className="md:ml-auto"
       style={{
         paddingTop: typeof window !== 'undefined' && window.innerWidth < 768 ? '56px' : '0',
-        marginLeft: typeof window !== 'undefined' && window.innerWidth >= 768 ? (open ? '220px' : '56px') : '0'
+        marginLeft: typeof window !== 'undefined' && window.innerWidth >= 768 ? (open ? '280px' : '56px') : '0'
       }}
     >
       {children}

@@ -215,6 +215,8 @@ export function getSecurityConfig(): SecurityConfig {
         'http://localhost:4174',
         'http://localhost:4175',
         'http://localhost:4176',
+        // Network IP for mobile testing
+        'http://192.168.0.160:3000',
       ],
       trustProxy: false,
     },

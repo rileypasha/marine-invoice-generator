@@ -71,18 +71,15 @@ const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md mx-auto mt-24 p-8 rounded-2xl shadow-sm border bg-white">
-        <CardHeader className="text-center pb-6">
-          <div className="flex justify-center mb-4">
+      <Card className="w-full max-w-md mx-auto p-12 rounded-2xl shadow-sm border bg-white">
+        <CardHeader className="text-center pt-4 p-0 mb-12">
+          <div className="flex justify-center">
             <img
-              src="/color_logo.svg"
+              src="/mgbw_logo.svg"
               alt="Marine Group Logo"
-              className="w-16 h-16 object-contain"
+              className="w-80 h-auto object-contain"
             />
           </div>
-          <h1 className="text-2xl font-semibold text-foreground mb-1">
-            {companyName}
-          </h1>
         </CardHeader>
 
           <CardContent>
