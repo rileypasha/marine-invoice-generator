@@ -125,24 +125,21 @@ export const MobileSidebar = ({
         }}
         {...props}
       >
-        <button
-          onClick={() => setOpen(!open)}
-          className="text-white cursor-pointer p-2 -ml-2 hover:bg-white/10 rounded-lg transition-colors"
-          aria-label="Open menu"
-        >
-          <Menu className="h-6 w-6" />
-        </button>
-
         {/* Logo */}
         <img
           src="/logo_white.svg"
           alt="Global Invoicing"
-          className="h-8 w-8"
+          className="h-8 w-8 -ml-1"
           style={{ marginTop: '4px' }}
         />
 
-        {/* Spacer to keep logo centered */}
-        <div className="w-10"></div>
+        <button
+          onClick={() => setOpen(!open)}
+          className="text-white cursor-pointer p-2 -mr-2 hover:bg-white/10 rounded-lg transition-colors"
+          aria-label="Open menu"
+        >
+          <Menu className="h-6 w-6" />
+        </button>
       </div>
 
       {/* Slide-out menu */}
