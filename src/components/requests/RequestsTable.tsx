@@ -24,16 +24,16 @@ const REQUESTS_COLS = [
 // Mobile-specific widths - all columns visible, horizontally scrollable
 const REQUESTS_COLS_MOBILE = [
   { id: 'select', w: '5%' },     // Checkbox column
-  { id: 'invoice_number', w: '15%' },    // Request # column
-  { id: 'customer', w: '15%' },    // Contact column
-  { id: 'vessel', w: '12%' },     // Vessel column
-  { id: 'amount', w: '10%' },     // Amount column
-  { id: 'created_by', w: '12%' },  // Created by column
-  { id: 'created_at', w: '12%' },    // Created at column
-  { id: 'modified_by', w: '12%' }, // Modified by column
-  { id: 'updated_at', w: '12%' },  // Last modified column
-  { id: 'status', w: '12%' },    // Status column
-  { id: 'actions', w: '8%' }    // Actions column (three dots menu)
+  { id: 'invoice_number', w: '14%' },    // Request # column
+  { id: 'customer', w: '14%' },    // Contact column
+  { id: 'vessel', w: '10%' },     // Vessel column
+  { id: 'amount', w: '9%' },     // Amount column
+  { id: 'created_by', w: '10%' },  // Created by column
+  { id: 'created_at', w: '10%' },    // Created at column
+  { id: 'modified_by', w: '10%' }, // Modified by column
+  { id: 'updated_at', w: '10%' },  // Last modified column
+  { id: 'status', w: '18%' },    // Status column (for "Change Requested")
+  { id: 'actions', w: '5%' }    // Actions column
 ];
 
 interface Invoice {

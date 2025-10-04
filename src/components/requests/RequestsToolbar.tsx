@@ -152,10 +152,11 @@ export function RequestsToolbar({
             {/* Mobile: Compact Month Filter - left aligned */}
             <div className="md:hidden">
               <Select value={month} onValueChange={handleMonthChange}>
-                <SelectTrigger className="h-9 w-auto text-sm gap-2 px-3 border-gray-300 hover:border-gray-400 transition-colors bg-white">
-                  <span className="font-semibold text-gray-900">
+                <SelectTrigger className="inline-flex items-center gap-1.5 h-8 px-3 text-sm text-gray-900 rounded-md border border-gray-300 bg-white hover:bg-gray-50 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 w-auto [&>svg:last-child]:hidden">
+                  <span>
                     {month === 'all' ? 'All Months' : monthOptions.find(opt => opt.value === month)?.label || 'Month'}
                   </span>
+                  <ChevronDown className="h-3 w-3 text-gray-500 flex-shrink-0" />
                 </SelectTrigger>
                 <SelectContent className="min-w-[160px]">
                   {monthOptions.map((option) => (

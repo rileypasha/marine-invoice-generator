@@ -266,28 +266,30 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
       const invoice = row.original;
 
       return (
-        <button
-          aria-label="Row actions"
-          data-row-actions-trigger
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            actions.openRowActions?.({
-              rowId: invoice.id,
-              pos: { top: r.bottom + window.scrollY, left: r.left + window.scrollX },
-              handlers: {
-                view: (id) => actions.onView?.(invoice),
-                edit: (id) => actions.onEdit?.(invoice),
-                print: (id) => actions.onPrint?.(invoice),
-                del: (id) => actions.onDelete?.(invoice),
-              }
-            });
-          }}
-          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-5 w-5 p-0"
-        >
-          <MoreHorizontal className="h-3 w-3" />
-        </button>
+        <div className="flex items-center justify-start">
+          <button
+            aria-label="Row actions"
+            data-row-actions-trigger
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              actions.openRowActions?.({
+                rowId: invoice.id,
+                pos: { top: r.bottom + window.scrollY, left: r.left + window.scrollX },
+                handlers: {
+                  view: (id) => actions.onView?.(invoice),
+                  edit: (id) => actions.onEdit?.(invoice),
+                  print: (id) => actions.onPrint?.(invoice),
+                  del: (id) => actions.onDelete?.(invoice),
+                }
+              });
+            }}
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0 md:h-5 md:w-5"
+          >
+            <MoreHorizontal className="h-4 w-4 md:h-3 md:w-3" />
+          </button>
+        </div>
       );
     },
     enableSorting: false,
