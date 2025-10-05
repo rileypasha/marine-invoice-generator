@@ -3664,7 +3664,7 @@ const CreateInvoice: React.FC = () => {
                                 <Label htmlFor={`service-tax-status-${index}`} className="!text-black font-medium">Tax Status</Label>
                                 {service.jobType === 'Clearance Fee' ? (
                                   <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-                                    Non-Taxable (Fixed)
+                                    Non-Taxable
                                   </div>
                                 ) : (
                                   <Select
@@ -3697,7 +3697,7 @@ const CreateInvoice: React.FC = () => {
                                 <Label htmlFor={`service-markup-${index}`} className="!text-black font-medium">Markup</Label>
                                 {service.jobType === 'Clearance Fee' ? (
                                   <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-                                    No Markup (Fixed)
+                                    No Markup
                                   </div>
                                 ) : (
                                   <Select
