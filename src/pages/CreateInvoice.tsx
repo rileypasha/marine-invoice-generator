@@ -2131,6 +2131,13 @@ const CreateInvoice: React.FC = () => {
       missingFields.push("At least one service");
     }
 
+    // Check Clearance Fee services require Cost field
+    invoiceData.services.forEach((service, index) => {
+      if (service.jobType === 'Clearance Fee' && (!service.manualCost || service.manualCost <= 0)) {
+        missingFields.push(`Clearance Fee Cost (Service ${index + 1})`);
+      }
+    });
+
     return {
       isComplete: missingFields.length === 0,
       missingFields,
@@ -3595,7 +3602,16 @@ const CreateInvoice: React.FC = () => {
 
                         {shouldShowManualCostInputs && (
                           <div className="space-y-2">
-                            <Label htmlFor={`service-manual-cost-${index}`} className="!text-black font-medium">Cost</Label>
+                            <Label
+                              htmlFor={`service-manual-cost-${index}`}
+                              className={
+                                service.jobType === 'Clearance Fee' && isFieldMissing(`Clearance Fee Cost (Service ${index + 1})`)
+                                  ? "text-red-600 font-medium"
+                                  : "!text-black font-medium"
+                              }
+                            >
+                              Cost {service.jobType === 'Clearance Fee' && <span className="text-red-600">*</span>}
+                            </Label>
                             <Input
                               id={`service-manual-cost-${index}`}
                               type="text"
@@ -3617,7 +3633,8 @@ const CreateInvoice: React.FC = () => {
                               className={cn(
                                 isDeleted
                                   ? getDeletedFieldClasses(isDeleted)
-                                  : getChangedFieldClasses(`/services/${index}/manualCost`, ['services', index, 'manualCost'])
+                                  : getChangedFieldClasses(`/services/${index}/manualCost`, ['services', index, 'manualCost']),
+                                service.jobType === 'Clearance Fee' && isFieldMissing(`Clearance Fee Cost (Service ${index + 1})`) && "border-red-500 focus:ring-red-500"
                               )}
                               style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/manualCost`, ['services', index, 'manualCost'])}
                             />
