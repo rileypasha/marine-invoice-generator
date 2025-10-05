@@ -99,6 +99,8 @@ interface Service {
   markupRate?: number;
   isMarkupExempt?: boolean;
   isTaxExempt?: boolean;
+  receipt?: File | null;
+  receiptName?: string;
 }
 
 interface PendingSelection {
@@ -3826,6 +3828,51 @@ const CreateInvoice: React.FC = () => {
                             <p className="text-xs text-red-600">Service description is required</p>
                           )}
                         </div>
+
+                        {/* Receipt upload - show for all service types except Agent Services and Manual Entry > Labor */}
+                        {!(service.jobType === 'Agent Services' || (service.jobType === 'Manual Entry' && service.itemType === 'Labor')) && (
+                          <div className="space-y-2">
+                            <Label htmlFor={`service-receipt-${index}`} className="!text-black font-medium">Receipt</Label>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                id={`service-receipt-${index}`}
+                                type="file"
+                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0] || null;
+                                  updateService(service.id, 'receipt', file);
+                                  if (file) {
+                                    updateService(service.id, 'receiptName', file.name);
+                                  }
+                                }}
+                                className={cn(
+                                  "cursor-pointer",
+                                  isDeleted && getDeletedFieldClasses(isDeleted)
+                                )}
+                                disabled={isDeleted}
+                              />
+                              {service.receiptName && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    updateService(service.id, 'receipt', null);
+                                    updateService(service.id, 'receiptName', '');
+                                    // Reset the file input
+                                    const fileInput = document.getElementById(`service-receipt-${index}`) as HTMLInputElement;
+                                    if (fileInput) fileInput.value = '';
+                                  }}
+                                  className="text-red-600 hover:text-red-800 text-sm underline"
+                                  disabled={isDeleted}
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                            {service.receiptName && (
+                              <p className="text-xs text-muted-foreground">Selected: {service.receiptName}</p>
+                            )}
+                          </div>
+                        )}
 
                         {!shouldHideTaxAndMarkup && (
                           <>
