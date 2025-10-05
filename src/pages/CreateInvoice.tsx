@@ -3653,13 +3653,17 @@ const CreateInvoice: React.FC = () => {
                                   type="text"
                                   inputMode="decimal"
                                   value={getLaborHoursInputValue(service, focusedLaborHoursId === service.id)}
-                                  onChange={(e) =>
-                                    updateService(
-                                      service.id,
-                                      'laborHours',
-                                      e.target.value
-                                    )
-                                  }
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    // Only allow numbers and a single decimal point
+                                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                      updateService(
+                                        service.id,
+                                        'laborHours',
+                                        value
+                                      );
+                                    }
+                                  }}
                                   onFocus={() => setFocusedLaborHoursId(service.id)}
                                   onBlur={() => setFocusedLaborHoursId(null)}
                                   placeholder="e.g. 8.0"
@@ -3692,13 +3696,17 @@ const CreateInvoice: React.FC = () => {
                                   type="text"
                                   inputMode="decimal"
                                   value={getOtHoursInputValue(service, focusedOtHoursId === service.id)}
-                                  onChange={(e) =>
-                                    updateService(
-                                      service.id,
-                                      'otHours',
-                                      e.target.value
-                                    )
-                                  }
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    // Only allow numbers and a single decimal point
+                                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                      updateService(
+                                        service.id,
+                                        'otHours',
+                                        value
+                                      );
+                                    }
+                                  }}
                                   onFocus={() => setFocusedOtHoursId(service.id)}
                                   onBlur={() => setFocusedOtHoursId(null)}
                                   placeholder="e.g. 8.0"
