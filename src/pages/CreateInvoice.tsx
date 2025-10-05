@@ -3665,15 +3665,13 @@ const CreateInvoice: React.FC = () => {
                                     >
                                       <SelectValue placeholder="Non-Taxable">
                                         {service.taxStatus === 'taxable' && 'Taxable (8.75%)'}
-                                        {service.taxStatus === 'non-taxable' && 'Non-Taxable'}
-                                        {service.taxStatus === 'exempt' && 'Tax Exempt'}
+                                        {(service.taxStatus === 'non-taxable' || service.taxStatus === 'exempt') && 'Non-Taxable'}
                                         {!service.taxStatus && 'Non-Taxable'}
                                       </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="taxable">Taxable (8.75%)</SelectItem>
                                       <SelectItem value="non-taxable">Non-Taxable</SelectItem>
-                                      <SelectItem value="exempt">Tax Exempt</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 )}
