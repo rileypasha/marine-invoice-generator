@@ -3655,8 +3655,8 @@ const CreateInvoice: React.FC = () => {
                                   value={getLaborHoursInputValue(service, focusedLaborHoursId === service.id)}
                                   onChange={(e) => {
                                     const value = e.target.value;
-                                    // Only allow numbers and a single decimal point
-                                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                    // Only allow numbers and a single decimal point with max 2 decimal places
+                                    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
                                       updateService(
                                         service.id,
                                         'laborHours',
@@ -3698,8 +3698,8 @@ const CreateInvoice: React.FC = () => {
                                   value={getOtHoursInputValue(service, focusedOtHoursId === service.id)}
                                   onChange={(e) => {
                                     const value = e.target.value;
-                                    // Only allow numbers and a single decimal point
-                                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                    // Only allow numbers and a single decimal point with max 2 decimal places
+                                    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
                                       updateService(
                                         service.id,
                                         'otHours',
