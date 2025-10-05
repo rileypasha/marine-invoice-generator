@@ -3645,7 +3645,7 @@ const CreateInvoice: React.FC = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
                                 <Label htmlFor={`service-tax-status-${index}`}>Tax Status</Label>
-                                {service.jobType === 'Clearance Fee' ? (
+                                {(service.jobType === 'Clearance Fee' || service.jobType === 'Pilotage') ? (
                                   <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
                                     Non-Taxable (Fixed)
                                   </div>
@@ -3680,7 +3680,7 @@ const CreateInvoice: React.FC = () => {
                               </div>
                               <div className="space-y-2">
                                 <Label htmlFor={`service-markup-${index}`}>Markup</Label>
-                                {service.jobType === 'Clearance Fee' ? (
+                                {(service.jobType === 'Clearance Fee' || service.jobType === 'Pilotage') ? (
                                   <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
                                     No Markup (Fixed)
                                   </div>
