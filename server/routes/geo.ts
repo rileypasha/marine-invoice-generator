@@ -193,7 +193,7 @@ router.get('/address-autocomplete', rateLimit, validateInput, async (req: Reques
     cleanupCache();
 
     // Check cache first
-    const cacheKey = `${cleanQuery}-${limit}-${lang}-us`;
+    const cacheKey = `${cleanQuery}-${limit}-${lang}`;
     const cached = addressCache.get(cacheKey);
 
     if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
@@ -210,7 +210,7 @@ router.get('/address-autocomplete', rateLimit, validateInput, async (req: Reques
     apiUrl.searchParams.set('text', cleanQuery as string);
     apiUrl.searchParams.set('limit', limit as string);
     apiUrl.searchParams.set('lang', lang as string);
-    apiUrl.searchParams.set('filter', 'countrycode:us');
+    // Removed country filter to allow international addresses
     apiUrl.searchParams.set('apiKey', GEOAPIFY_API_KEY);
 
     logger.info('Fetching address suggestions from Geoapify', {
