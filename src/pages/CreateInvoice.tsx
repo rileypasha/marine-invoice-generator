@@ -2152,6 +2152,15 @@ const CreateInvoice: React.FC = () => {
       }
     });
 
+    // Check Manual Entry > Subcontractor services require Cost field
+    invoiceData.services.forEach((service, index) => {
+      if (service.jobType === 'Manual Entry' && service.itemType === 'Subcontractor') {
+        if (!service.manualCost || service.manualCost <= 0) {
+          missingFields.push(`Subcontractor Cost (Service ${index + 1})`);
+        }
+      }
+    });
+
     return {
       isComplete: missingFields.length === 0,
       missingFields,
@@ -3640,12 +3649,13 @@ const CreateInvoice: React.FC = () => {
                               htmlFor={`service-manual-cost-${index}`}
                               className={
                                 (service.jobType === 'Clearance Fee' && isFieldMissing(`Clearance Fee Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Manual Entry' && service.itemType === 'Material' && isFieldMissing(`Material Cost (Service ${index + 1})`))
+                                (service.jobType === 'Manual Entry' && service.itemType === 'Material' && isFieldMissing(`Material Cost (Service ${index + 1})`)) ||
+                                (service.jobType === 'Manual Entry' && service.itemType === 'Subcontractor' && isFieldMissing(`Subcontractor Cost (Service ${index + 1})`))
                                   ? "text-red-600 font-medium"
                                   : "!text-black font-medium"
                               }
                             >
-                              Cost {(service.jobType === 'Clearance Fee' || (service.jobType === 'Manual Entry' && service.itemType === 'Material')) && <span className="text-red-600">*</span>}
+                              Cost {(service.jobType === 'Clearance Fee' || (service.jobType === 'Manual Entry' && (service.itemType === 'Material' || service.itemType === 'Subcontractor'))) && <span className="text-red-600">*</span>}
                             </Label>
                             <Input
                               id={`service-manual-cost-${index}`}
@@ -3670,7 +3680,8 @@ const CreateInvoice: React.FC = () => {
                                   ? getDeletedFieldClasses(isDeleted)
                                   : getChangedFieldClasses(`/services/${index}/manualCost`, ['services', index, 'manualCost']),
                                 ((service.jobType === 'Clearance Fee' && isFieldMissing(`Clearance Fee Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Manual Entry' && service.itemType === 'Material' && isFieldMissing(`Material Cost (Service ${index + 1})`))) && "border-red-500 focus:ring-red-500"
+                                (service.jobType === 'Manual Entry' && service.itemType === 'Material' && isFieldMissing(`Material Cost (Service ${index + 1})`)) ||
+                                (service.jobType === 'Manual Entry' && service.itemType === 'Subcontractor' && isFieldMissing(`Subcontractor Cost (Service ${index + 1})`))) && "border-red-500 focus:ring-red-500"
                               )}
                               style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/manualCost`, ['services', index, 'manualCost'])}
                             />
