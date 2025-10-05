@@ -2138,6 +2138,18 @@ const CreateInvoice: React.FC = () => {
       }
     });
 
+    // Check Manual Entry > Labor services require hours fields
+    invoiceData.services.forEach((service, index) => {
+      if (service.jobType === 'Manual Entry' && service.itemType === 'Labor') {
+        if (!service.laborHours || service.laborHours <= 0) {
+          missingFields.push(`Regular Hours (Service ${index + 1})`);
+        }
+        if (!service.otHours || service.otHours <= 0) {
+          missingFields.push(`Overtime Hours (Service ${index + 1})`);
+        }
+      }
+    });
+
     return {
       isComplete: missingFields.length === 0,
       missingFields,
@@ -3199,7 +3211,7 @@ const CreateInvoice: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="vessel-name" className={isFieldMissing("Vessel Name") ? "text-red-600 font-medium" : "!text-black font-medium"}>
-                        Vessel {isFieldMissing("Vessel Name") && <span className="text-red-600">*</span>}
+                        Vessel <span className="text-red-600">*</span>
                       </Label>
                       <Input
                         id="vessel-name"
@@ -3218,7 +3230,7 @@ const CreateInvoice: React.FC = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="vessel-weight" className={isFieldMissing("Vessel Weight") ? "text-red-600 font-medium" : "!text-black font-medium"}>
-                        Weight {isFieldMissing("Vessel Weight") && <span className="text-red-600">*</span>}
+                        Weight <span className="text-red-600">*</span>
                       </Label>
                       <div className="relative">
                         <Input
@@ -3339,7 +3351,7 @@ const CreateInvoice: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="contact-name" className={isFieldMissing("Contact Name") ? "text-red-600 font-medium" : "!text-black font-medium"}>
-                        Contact Name {isFieldMissing("Contact Name") && <span className="text-red-600">*</span>}
+                        Contact Name <span className="text-red-600">*</span>
                       </Label>
                       <Input
                         id="contact-name"
@@ -3430,7 +3442,7 @@ const CreateInvoice: React.FC = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className={isFieldMissing("At least one service") ? "text-base text-red-600" : "text-base"}>
-                    Services & Line Items {isFieldMissing("At least one service") && <span className="text-red-600">*</span>}
+                    Services & Line Items <span className="text-red-600">*</span>
                   </CardTitle>
                   <CardDescription>
                     Add services, labor, and materials for this invoice
@@ -3487,7 +3499,7 @@ const CreateInvoice: React.FC = () => {
 
                         <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", isDeleted && "pointer-events-none opacity-60")}>
                           <div className="space-y-2">
-                            <Label htmlFor={`service-job-type-${index}`} className={isDeleted ? "line-through text-red-600" : "!text-black font-medium"}>Service Type *</Label>
+                            <Label htmlFor={`service-job-type-${index}`} className={isDeleted ? "line-through text-red-600" : "!text-black font-medium"}>Service Type <span className="text-red-600">*</span></Label>
                             <Select
                               value={service.jobType || ''}
                               onValueChange={(value) => updateService(service.id, 'jobType', value)}
@@ -3519,7 +3531,7 @@ const CreateInvoice: React.FC = () => {
 
                           {service.jobType === 'Manual Entry' && (
                             <div className="space-y-2">
-                              <Label htmlFor={`service-item-type-${index}`} className="!text-black font-medium">Item Type *</Label>
+                              <Label htmlFor={`service-item-type-${index}`} className="!text-black font-medium">Item Type <span className="text-red-600">*</span></Label>
                               <Select
                                 value={service.itemType || ''}
                                 onValueChange={(value) => updateService(service.id, 'itemType', value)}
@@ -3540,7 +3552,16 @@ const CreateInvoice: React.FC = () => {
                         {(isLaborHoursEntry || isAgentServices) && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label htmlFor={`service-labor-hours-${index}`} className="!text-black font-medium">Regular Hours</Label>
+                              <Label
+                                htmlFor={`service-labor-hours-${index}`}
+                                className={
+                                  service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Regular Hours (Service ${index + 1})`)
+                                    ? "text-red-600 font-medium"
+                                    : "!text-black font-medium"
+                                }
+                              >
+                                Regular Hours {service.jobType === 'Manual Entry' && service.itemType === 'Labor' && <span className="text-red-600">*</span>}
+                              </Label>
                               <div className="relative">
                                 <Input
                                   id={`service-labor-hours-${index}`}
@@ -3561,7 +3582,10 @@ const CreateInvoice: React.FC = () => {
                                     )
                                   }
                                   placeholder="0"
-                                  className="pr-12"
+                                  className={cn(
+                                    "pr-12",
+                                    service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Regular Hours (Service ${index + 1})`) && "border-red-500 focus:ring-red-500"
+                                  )}
                                 />
                                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
                                   hours
@@ -3569,7 +3593,16 @@ const CreateInvoice: React.FC = () => {
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor={`service-ot-hours-${index}`} className="!text-black font-medium">Overtime Hours</Label>
+                              <Label
+                                htmlFor={`service-ot-hours-${index}`}
+                                className={
+                                  service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Overtime Hours (Service ${index + 1})`)
+                                    ? "text-red-600 font-medium"
+                                    : "!text-black font-medium"
+                                }
+                              >
+                                Overtime Hours {service.jobType === 'Manual Entry' && service.itemType === 'Labor' && <span className="text-red-600">*</span>}
+                              </Label>
                               <div className="relative">
                                 <Input
                                   id={`service-ot-hours-${index}`}
@@ -3590,7 +3623,10 @@ const CreateInvoice: React.FC = () => {
                                     )
                                   }
                                   placeholder="0"
-                                  className="pr-12"
+                                  className={cn(
+                                    "pr-12",
+                                    service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Overtime Hours (Service ${index + 1})`) && "border-red-500 focus:ring-red-500"
+                                  )}
                                 />
                                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
                                   hours
@@ -3642,7 +3678,7 @@ const CreateInvoice: React.FC = () => {
                         )}
 
                         <div className="space-y-2">
-                          <Label htmlFor={`service-description-${index}`} className="!text-black font-medium">Description *</Label>
+                          <Label htmlFor={`service-description-${index}`} className="!text-black font-medium">Description <span className="text-red-600">*</span></Label>
                           <Input
                             id={`service-description-${index}`}
                             value={service.description}
