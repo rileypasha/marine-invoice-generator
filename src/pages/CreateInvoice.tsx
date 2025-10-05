@@ -3581,7 +3581,7 @@ const CreateInvoice: React.FC = () => {
                                       parseFloat(e.target.value) || 0
                                     )
                                   }
-                                  placeholder="0"
+                                  placeholder="e.g. 8.0"
                                   className={cn(
                                     "pr-12",
                                     service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Regular Hours (Service ${index + 1})`) && "border-red-500 focus:ring-red-500"
@@ -3622,7 +3622,7 @@ const CreateInvoice: React.FC = () => {
                                       parseFloat(e.target.value) || 0
                                     )
                                   }
-                                  placeholder="0"
+                                  placeholder="e.g. 8.0"
                                   className={cn(
                                     "pr-12",
                                     service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Overtime Hours (Service ${index + 1})`) && "border-red-500 focus:ring-red-500"
