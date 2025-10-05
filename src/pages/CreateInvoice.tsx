@@ -3901,7 +3901,7 @@ const CreateInvoice: React.FC = () => {
                             )}
                             {service.isTaxExempt && (
                               <Badge variant="secondary" className="text-xs">
-                                Tax Exempt
+                                Non-Taxable
                               </Badge>
                             )}
                             {service.jobType === 'Clearance Fee' && (() => {
@@ -3912,7 +3912,7 @@ const CreateInvoice: React.FC = () => {
 
                               return (
                                 <Badge variant={isManuallyOverridden ? "secondary" : "outline"} className="text-xs">
-                                  {isManuallyOverridden ? 'Manually Overridden' : 'Auto-calculated'}
+                                  {isManuallyOverridden ? 'Manually Overridden' : 'Auto-Calculated'}
                                 </Badge>
                               );
                             })()}
