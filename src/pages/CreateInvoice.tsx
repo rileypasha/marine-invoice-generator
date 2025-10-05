@@ -3735,7 +3735,7 @@ const CreateInvoice: React.FC = () => {
                                           parseFloat(value) || 0
                                         );
                                       }}
-                                      placeholder="0%"
+                                      placeholder="e.g. 15%"
                                     />
                                   </div>
                                 </div>
