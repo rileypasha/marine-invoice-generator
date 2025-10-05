@@ -3309,7 +3309,7 @@ const CreateInvoice: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-name" className={isFieldMissing("Vessel Name") ? "text-red-600 font-medium" : "!text-black font-medium"}>
+                      <Label htmlFor="vessel-name" className={isFieldMissing("Vessel Name") ? "!text-red-600 font-medium" : "!text-black font-medium"}>
                         Vessel <span className="text-red-600">*</span>
                       </Label>
                       <Input
@@ -3445,7 +3445,7 @@ const CreateInvoice: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="contact-name" className={isFieldMissing("Contact Name") ? "text-red-600 font-medium" : "!text-black font-medium"}>
+                      <Label htmlFor="contact-name" className={isFieldMissing("Contact Name") ? "!text-red-600 font-medium" : "!text-black font-medium"}>
                         Contact Name <span className="text-red-600">*</span>
                       </Label>
                       <Input
@@ -3652,7 +3652,7 @@ const CreateInvoice: React.FC = () => {
                                 className={
                                   ((service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Regular Hours (Service ${index + 1})`)) ||
                                   (service.jobType === 'Agent Services' && isFieldMissing(`Agent Services Regular Hours (Service ${index + 1})`)))
-                                    ? "text-red-600 font-medium"
+                                    ? "!text-red-600 font-medium"
                                     : "!text-black font-medium"
                                 }
                               >
@@ -3699,7 +3699,7 @@ const CreateInvoice: React.FC = () => {
                                 className={
                                   ((service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Overtime Hours (Service ${index + 1})`)) ||
                                   (service.jobType === 'Agent Services' && isFieldMissing(`Agent Services Overtime Hours (Service ${index + 1})`)))
-                                    ? "text-red-600 font-medium"
+                                    ? "!text-red-600 font-medium"
                                     : "!text-black font-medium"
                                 }
                               >
@@ -3756,7 +3756,7 @@ const CreateInvoice: React.FC = () => {
                                 (service.jobType === 'Trash Removal' && isFieldMissing(`Trash Removal Cost (Service ${index + 1})`)) ||
                                 (service.jobType === 'Good Stew' && isFieldMissing(`Good Stew Cost (Service ${index + 1})`)) ||
                                 (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`))
-                                  ? "text-red-600 font-medium"
+                                  ? "!text-red-600 font-medium"
                                   : "!text-black font-medium"
                               }
                             >
