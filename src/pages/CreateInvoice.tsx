@@ -2143,7 +2143,7 @@ const CreateInvoice: React.FC = () => {
     }
 
     // Check customer fields
-    if (!invoiceData.customer.customerName?.trim()) {
+    if (!invoiceData.customer.contactName?.trim()) {
       missingFields.push("Contact Name");
     }
 
