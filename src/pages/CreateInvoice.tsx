@@ -3595,7 +3595,7 @@ const CreateInvoice: React.FC = () => {
 
                         {shouldShowManualCostInputs && (
                           <div className="space-y-2">
-                            <Label htmlFor={`service-manual-cost-${index}`}>Cost</Label>
+                            <Label htmlFor={`service-manual-cost-${index}`} className="!text-black font-medium">Cost</Label>
                             <Input
                               id={`service-manual-cost-${index}`}
                               type="text"
