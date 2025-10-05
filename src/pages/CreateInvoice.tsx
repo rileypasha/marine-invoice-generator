@@ -3833,8 +3833,8 @@ const CreateInvoice: React.FC = () => {
                         {!(service.jobType === 'Agent Services' || (service.jobType === 'Manual Entry' && service.itemType === 'Labor')) && (
                           <div className="space-y-2">
                             <Label htmlFor={`service-receipt-${index}`} className="!text-black font-medium">Receipt</Label>
-                            <div className="flex items-center gap-2">
-                              <Input
+                            <div className="flex items-center gap-3">
+                              <input
                                 id={`service-receipt-${index}`}
                                 type="file"
                                 accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
@@ -3845,32 +3845,49 @@ const CreateInvoice: React.FC = () => {
                                     updateService(service.id, 'receiptName', file.name);
                                   }
                                 }}
-                                className={cn(
-                                  "cursor-pointer",
-                                  isDeleted && getDeletedFieldClasses(isDeleted)
-                                )}
+                                className="hidden"
                                 disabled={isDeleted}
                               />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const fileInput = document.getElementById(`service-receipt-${index}`) as HTMLInputElement;
+                                  if (fileInput) fileInput.click();
+                                }}
+                                disabled={isDeleted}
+                                className={cn(
+                                  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors",
+                                  "h-9 px-4 py-2",
+                                  "bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950",
+                                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+                                )}
+                              >
+                                Choose File
+                              </button>
                               {service.receiptName && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    updateService(service.id, 'receipt', null);
-                                    updateService(service.id, 'receiptName', '');
-                                    // Reset the file input
-                                    const fileInput = document.getElementById(`service-receipt-${index}`) as HTMLInputElement;
-                                    if (fileInput) fileInput.value = '';
-                                  }}
-                                  className="text-red-600 hover:text-red-800 text-sm underline"
-                                  disabled={isDeleted}
-                                >
-                                  Remove
-                                </button>
+                                <>
+                                  <span className="text-sm text-slate-600">{service.receiptName}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      updateService(service.id, 'receipt', null);
+                                      updateService(service.id, 'receiptName', '');
+                                      // Reset the file input
+                                      const fileInput = document.getElementById(`service-receipt-${index}`) as HTMLInputElement;
+                                      if (fileInput) fileInput.value = '';
+                                    }}
+                                    className="text-red-600 hover:text-red-800 hover:underline text-sm font-medium transition-colors"
+                                    disabled={isDeleted}
+                                  >
+                                    Remove
+                                  </button>
+                                </>
+                              )}
+                              {!service.receiptName && (
+                                <span className="text-sm text-slate-400">No file chosen</span>
                               )}
                             </div>
-                            {service.receiptName && (
-                              <p className="text-xs text-muted-foreground">Selected: {service.receiptName}</p>
-                            )}
                           </div>
                         )}
 
