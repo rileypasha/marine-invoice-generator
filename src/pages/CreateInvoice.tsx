@@ -2196,6 +2196,18 @@ const CreateInvoice: React.FC = () => {
       }
     });
 
+    // Check Agent Services require hours fields
+    invoiceData.services.forEach((service, index) => {
+      if (service.jobType === 'Agent Services') {
+        if (!service.laborHours || service.laborHours <= 0) {
+          missingFields.push(`Agent Services Regular Hours (Service ${index + 1})`);
+        }
+        if (!service.otHours || service.otHours <= 0) {
+          missingFields.push(`Agent Services Overtime Hours (Service ${index + 1})`);
+        }
+      }
+    });
+
     return {
       isComplete: missingFields.length === 0,
       missingFields,
@@ -3597,12 +3609,13 @@ const CreateInvoice: React.FC = () => {
                               <Label
                                 htmlFor={`service-labor-hours-${index}`}
                                 className={
-                                  service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Regular Hours (Service ${index + 1})`)
+                                  ((service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Regular Hours (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Agent Services' && isFieldMissing(`Agent Services Regular Hours (Service ${index + 1})`)))
                                     ? "text-red-600 font-medium"
                                     : "!text-black font-medium"
                                 }
                               >
-                                Regular Hours {service.jobType === 'Manual Entry' && service.itemType === 'Labor' && <span className="text-red-600">*</span>}
+                                Regular Hours {((service.jobType === 'Manual Entry' && service.itemType === 'Labor') || service.jobType === 'Agent Services') && <span className="text-red-600">*</span>}
                               </Label>
                               <div className="relative">
                                 <Input
@@ -3626,7 +3639,8 @@ const CreateInvoice: React.FC = () => {
                                   placeholder="e.g. 8.0"
                                   className={cn(
                                     "pr-12",
-                                    service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Regular Hours (Service ${index + 1})`) && "border-red-500 focus:ring-red-500"
+                                    ((service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Regular Hours (Service ${index + 1})`)) ||
+                                    (service.jobType === 'Agent Services' && isFieldMissing(`Agent Services Regular Hours (Service ${index + 1})`))) && "border-red-500 focus:ring-red-500"
                                   )}
                                 />
                                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
@@ -3638,12 +3652,13 @@ const CreateInvoice: React.FC = () => {
                               <Label
                                 htmlFor={`service-ot-hours-${index}`}
                                 className={
-                                  service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Overtime Hours (Service ${index + 1})`)
+                                  ((service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Overtime Hours (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Agent Services' && isFieldMissing(`Agent Services Overtime Hours (Service ${index + 1})`)))
                                     ? "text-red-600 font-medium"
                                     : "!text-black font-medium"
                                 }
                               >
-                                Overtime Hours {service.jobType === 'Manual Entry' && service.itemType === 'Labor' && <span className="text-red-600">*</span>}
+                                Overtime Hours {((service.jobType === 'Manual Entry' && service.itemType === 'Labor') || service.jobType === 'Agent Services') && <span className="text-red-600">*</span>}
                               </Label>
                               <div className="relative">
                                 <Input
@@ -3667,7 +3682,8 @@ const CreateInvoice: React.FC = () => {
                                   placeholder="e.g. 8.0"
                                   className={cn(
                                     "pr-12",
-                                    service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Overtime Hours (Service ${index + 1})`) && "border-red-500 focus:ring-red-500"
+                                    ((service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Overtime Hours (Service ${index + 1})`)) ||
+                                    (service.jobType === 'Agent Services' && isFieldMissing(`Agent Services Overtime Hours (Service ${index + 1})`))) && "border-red-500 focus:ring-red-500"
                                   )}
                                 />
                                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
