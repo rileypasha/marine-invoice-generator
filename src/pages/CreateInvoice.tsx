@@ -3829,8 +3829,8 @@ const CreateInvoice: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Receipt upload - show for all service types except Agent Services and Manual Entry > Labor */}
-                        {!(service.jobType === 'Agent Services' || (service.jobType === 'Manual Entry' && service.itemType === 'Labor')) && (
+                        {/* Receipt upload - show for all service types except Agent Services, Manual Entry > Labor, and Clearance Fee */}
+                        {!(service.jobType === 'Agent Services' || (service.jobType === 'Manual Entry' && service.itemType === 'Labor') || service.jobType === 'Clearance Fee') && (
                           <div className="space-y-2">
                             <Label htmlFor={`service-receipt-${index}`} className="!text-black font-medium">Receipt</Label>
                             <div className="flex items-center gap-3">
