@@ -1737,46 +1737,22 @@ const CreateInvoice: React.FC = () => {
   };
 
   const calculateTax = (service: Service, totalWithMarkup: number): number => {
-    console.log('[calculateTax] START', {
-      description: service.description,
-      taxStatus: service.taxStatus,
-      taxStatusType: typeof service.taxStatus,
-      isTaxExempt: service.isTaxExempt,
-      totalWithMarkup
-    });
-
     // Clearance Fee is always non-taxable
     if (service.jobType === 'Clearance Fee') {
-      console.log('[calculateTax] Clearance Fee - returning 0');
       return 0;
     }
 
-    // Check tax status
-    if (!service.taxStatus ||
-        service.taxStatus === 'non-taxable' ||
-        service.taxStatus === 'exempt' ||
-        service.isTaxExempt === true) {
-      console.log('[calculateTax] Tax exempt - returning 0:', {
-        notTaxStatus: !service.taxStatus,
-        isNonTaxable: service.taxStatus === 'non-taxable',
-        isExempt: service.taxStatus === 'exempt',
-        isTaxExemptTrue: service.isTaxExempt === true
-      });
-      return 0;
+    // Check tax status - if explicitly set to taxable, calculate tax
+    if (service.taxStatus === 'taxable') {
+      const defaultTaxRate =
+        (invoiceData.metadata.taxRate != null && invoiceData.metadata.taxRate !== 0) ? invoiceData.metadata.taxRate / 100 : 0.0875;
+      const taxRate = typeof service.taxRate === 'number' ? service.taxRate : defaultTaxRate;
+      const taxAmount = totalWithMarkup * taxRate;
+      return taxAmount;
     }
 
-    const defaultTaxRate =
-      (invoiceData.metadata.taxRate != null && invoiceData.metadata.taxRate !== 0) ? invoiceData.metadata.taxRate / 100 : 0.0875;
-    const taxRate = typeof service.taxRate === 'number' ? service.taxRate : defaultTaxRate;
-    const taxAmount = totalWithMarkup * taxRate;
-    console.log('[calculateTax] CALCULATING TAX:', {
-      metadataTaxRate: invoiceData.metadata.taxRate,
-      defaultTaxRate,
-      serviceTaxRate: service.taxRate,
-      finalTaxRate: taxRate,
-      taxAmount
-    });
-   return taxAmount;
+    // For non-taxable, exempt, or undefined taxStatus
+    return 0;
  };
 
   const previewSummary = useMemo(() => {
