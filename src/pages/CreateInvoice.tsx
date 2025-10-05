@@ -3868,7 +3868,7 @@ const CreateInvoice: React.FC = () => {
                               </button>
                               {service.receiptName && (
                                 <>
-                                  <span className="text-sm text-slate-600">{service.receiptName}</span>
+                                  <span className="text-sm text-slate-600 truncate max-w-[200px]" title={service.receiptName}>{service.receiptName}</span>
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -3878,7 +3878,7 @@ const CreateInvoice: React.FC = () => {
                                       const fileInput = document.getElementById(`service-receipt-${index}`) as HTMLInputElement;
                                       if (fileInput) fileInput.value = '';
                                     }}
-                                    className="text-red-600 hover:text-red-800 hover:underline text-sm font-medium transition-colors"
+                                    className="text-red-600 hover:text-red-800 hover:underline text-sm font-medium transition-colors whitespace-nowrap"
                                     disabled={isDeleted}
                                   >
                                     Remove
