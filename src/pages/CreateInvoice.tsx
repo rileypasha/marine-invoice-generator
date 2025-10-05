@@ -3480,7 +3480,7 @@ const CreateInvoice: React.FC = () => {
 
                         <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", isDeleted && "pointer-events-none opacity-60")}>
                           <div className="space-y-2">
-                            <Label htmlFor={`service-job-type-${index}`} className={isDeleted ? "line-through text-red-600" : "text-foreground"}>Service Type *</Label>
+                            <Label htmlFor={`service-job-type-${index}`} className={isDeleted ? "line-through text-red-600" : "text-black"}>Service Type *</Label>
                             <Select
                               value={service.jobType || ''}
                               onValueChange={(value) => updateService(service.id, 'jobType', value)}
@@ -3625,7 +3625,7 @@ const CreateInvoice: React.FC = () => {
                         )}
 
                         <div className="space-y-2">
-                          <Label htmlFor={`service-description-${index}`} className="text-foreground">Description *</Label>
+                          <Label htmlFor={`service-description-${index}`} className="text-black">Description *</Label>
                           <Input
                             id={`service-description-${index}`}
                             value={service.description}
@@ -3644,7 +3644,7 @@ const CreateInvoice: React.FC = () => {
                           <>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <Label htmlFor={`service-tax-status-${index}`} className="text-foreground">Tax Status</Label>
+                                <Label htmlFor={`service-tax-status-${index}`} className="text-black">Tax Status</Label>
                                 {service.jobType === 'Clearance Fee' ? (
                                   <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
                                     Non-Taxable (Fixed)
@@ -3677,7 +3677,7 @@ const CreateInvoice: React.FC = () => {
                                 )}
                               </div>
                               <div className="space-y-2">
-                                <Label htmlFor={`service-markup-${index}`} className="text-foreground">Markup</Label>
+                                <Label htmlFor={`service-markup-${index}`} className="text-black">Markup</Label>
                                 {service.jobType === 'Clearance Fee' ? (
                                   <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
                                     No Markup (Fixed)
@@ -3720,7 +3720,7 @@ const CreateInvoice: React.FC = () => {
                               !service.isMarkupExempt &&
                               service.jobType !== 'Clearance Fee' && (
                                 <div className="space-y-2">
-                                  <Label htmlFor={`service-markup-rate-${index}`} className="text-foreground">Custom Markup</Label>
+                                  <Label htmlFor={`service-markup-rate-${index}`} className="text-black">Custom Markup</Label>
                                   <div className="relative">
                                     <Input
                                       id={`service-markup-rate-${index}`}
