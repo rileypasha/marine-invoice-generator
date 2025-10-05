@@ -2288,6 +2288,12 @@ const CreateInvoice: React.FC = () => {
   const handleSave = async () => {
     setHasAttemptedSave(true);
 
+    // Check if form is valid before saving
+    if (!formValidation.isComplete) {
+      setError(`Please complete required fields: ${formValidation.missingFields.join(", ")}`);
+      return;
+    }
+
     if (!isAuthenticated || !csrfToken) {
       setError('Please log in to save invoices');
       return;
