@@ -3810,24 +3810,27 @@ const CreateInvoice: React.FC = () => {
                           </div>
                         )}
 
-                        <div className="space-y-2">
-                          <Label htmlFor={`service-description-${index}`} className="!text-black font-medium">Description <span className="text-red-600">*</span></Label>
-                          <Input
-                            id={`service-description-${index}`}
-                            value={service.description}
-                            onChange={(e) => updateService(service.id, 'description', e.target.value)}
-                            placeholder="e.g. Engine Repair, oil change, hull cleaning"
-                            className={cn(
-                              isDeleted
-                                ? getDeletedFieldClasses(isDeleted)
-                                : getChangedFieldClasses(`/services/${index}/description`, ['services', index, 'description'])
+                        {/* Description field - hide for Clearance Fee */}
+                        {service.jobType !== 'Clearance Fee' && (
+                          <div className="space-y-2">
+                            <Label htmlFor={`service-description-${index}`} className="!text-black font-medium">Description <span className="text-red-600">*</span></Label>
+                            <Input
+                              id={`service-description-${index}`}
+                              value={service.description}
+                              onChange={(e) => updateService(service.id, 'description', e.target.value)}
+                              placeholder="e.g. Engine Repair, oil change, hull cleaning"
+                              className={cn(
+                                isDeleted
+                                  ? getDeletedFieldClasses(isDeleted)
+                                  : getChangedFieldClasses(`/services/${index}/description`, ['services', index, 'description'])
+                              )}
+                              style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/description`, ['services', index, 'description'])}
+                            />
+                            {!service.description?.trim() && hasAttemptedSave && (
+                              <p className="text-xs text-red-600">Service description is required</p>
                             )}
-                            style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/description`, ['services', index, 'description'])}
-                          />
-                          {!service.description?.trim() && hasAttemptedSave && (
-                            <p className="text-xs text-red-600">Service description is required</p>
-                          )}
-                        </div>
+                          </div>
+                        )}
 
                         {/* Receipt upload - show for all service types except Agent Services, Manual Entry > Labor, and Clearance Fee */}
                         {!(service.jobType === 'Agent Services' || (service.jobType === 'Manual Entry' && service.itemType === 'Labor') || service.jobType === 'Clearance Fee') && (
