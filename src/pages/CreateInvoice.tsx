@@ -1748,6 +1748,13 @@ const CreateInvoice: React.FC = () => {
         (invoiceData.metadata.taxRate != null && invoiceData.metadata.taxRate !== 0) ? invoiceData.metadata.taxRate / 100 : 0.0875;
       const taxRate = typeof service.taxRate === 'number' ? service.taxRate : defaultTaxRate;
       const taxAmount = totalWithMarkup * taxRate;
+      console.log('[calculateTax] TAXABLE - calculating:', {
+        desc: service.description,
+        taxStatus: service.taxStatus,
+        totalWithMarkup,
+        taxRate,
+        taxAmount
+      });
       return taxAmount;
     }
 
@@ -3077,12 +3084,10 @@ const CreateInvoice: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  // Calculate totals
-  const subtotal = invoiceData.services
-    .filter(service => !service._deleted)
-    .reduce((sum, service) => sum + service.total, 0);
-  const taxAmount = invoiceData.metadata.taxRate ? (subtotal * invoiceData.metadata.taxRate / 100) : 0;
-  const total = subtotal + taxAmount;
+  // Calculate totals using previewSummary
+  const subtotal = previewSummary.subtotalWithMarkup;
+  const taxAmount = previewSummary.totalTax;
+  const total = previewSummary.finalTotal;
 
   const TabButton = ({ id, label, isActive, onClick }: {
     id: string;
