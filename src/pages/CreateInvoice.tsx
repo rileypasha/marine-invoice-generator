@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { SquarePen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { gatherInvoiceData } from '../utils/invoiceData';
 import {
@@ -261,6 +262,7 @@ const CreateInvoice: React.FC = () => {
   const [isFetchingData, setIsFetchingData] = useState(isEditMode);
   const [activeTab, setActiveTab] = useState('vessel');
   const [error, setError] = useState<string | null>(null);
+  const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [emailRecipient, setEmailRecipient] = useState('');
   const [emailMessage, setEmailMessage] = useState('');
@@ -1381,6 +1383,7 @@ const CreateInvoice: React.FC = () => {
   // Automatically add/update Clearance Fee based on vessel weight
   useEffect(() => {
     const weight = parseFloat(invoiceData.vessel.weight) || 0;
+    console.log('DEBUG Clearance Fee - rawWeight:', invoiceData.vessel.weight, 'parsedWeight:', weight, 'comparison >= 500:', weight >= 500, 'expectedAmount:', weight >= 500 ? 1250 : 950);
 
     if (weight > 0) {
       const clearanceFeeIndex = invoiceData.services.findIndex(s => s.jobType === 'Clearance Fee');
@@ -1394,6 +1397,7 @@ const CreateInvoice: React.FC = () => {
           description: 'Clearance Fee',
           quantity: 1,
           rate: clearanceFeeAmount,
+          manualCost: clearanceFeeAmount,
           total: clearanceFeeAmount,
           taxStatus: 'non-taxable',
           taxRate: 0,
@@ -1409,13 +1413,19 @@ const CreateInvoice: React.FC = () => {
         }));
         setHasUnsavedChanges(true);
       } else {
-        // Update existing Clearance Fee amount if weight changed
+        // Only update if user hasn't manually overridden the cost
         const existingService = invoiceData.services[clearanceFeeIndex];
-        if (existingService.rate !== clearanceFeeAmount) {
+        const currentManualCost = existingService.manualCost || 0;
+
+        // Check if manualCost is either 950 or 1250 (the only valid auto-calculated amounts)
+        const isAutoCalculatedAmount = currentManualCost === 950 || currentManualCost === 1250;
+
+        if (isAutoCalculatedAmount && existingService.rate !== clearanceFeeAmount) {
           const updatedServices = [...invoiceData.services];
           updatedServices[clearanceFeeIndex] = {
             ...existingService,
             rate: clearanceFeeAmount,
+            manualCost: clearanceFeeAmount,
             total: clearanceFeeAmount
           };
 
@@ -1656,8 +1666,11 @@ const CreateInvoice: React.FC = () => {
       return (laborHours * 80) + (otHours * 120);
     }
 
-    // Clearance Fee calculation based on vessel weight
+    // Clearance Fee - use manual cost if set, otherwise auto-calculate
     if (service.jobType === 'Clearance Fee') {
+      if (service.manualCost !== undefined && service.manualCost !== null) {
+        return parseFloat(String(service.manualCost)) || 0;
+      }
       const vesselWeight = parseFloat(invoiceData.vessel.weight) || 0;
       return vesselWeight >= 500 ? 1250 : 950;
     }
@@ -2062,15 +2075,24 @@ const CreateInvoice: React.FC = () => {
   };
 
   const removeService = (id: string) => {
-    setInvoiceData(prev => ({
-      ...prev,
-      services: prev.services.map(service =>
-        service.id === id
-          ? { ...service, _deleted: true }
-          : service
-      )
-    }));
-    setDeletedItemsCount(prev => prev + 1);
+    if (isEditMode) {
+      // In edit mode, mark as deleted (with strikethrough)
+      setInvoiceData(prev => ({
+        ...prev,
+        services: prev.services.map(service =>
+          service.id === id
+            ? { ...service, _deleted: true }
+            : service
+        )
+      }));
+      setDeletedItemsCount(prev => prev + 1);
+    } else {
+      // In create mode, actually remove the item
+      setInvoiceData(prev => ({
+        ...prev,
+        services: prev.services.filter(service => service.id !== id)
+      }));
+    }
     setHasUnsavedChanges(true);
   };
 
@@ -2112,6 +2134,11 @@ const CreateInvoice: React.FC = () => {
     };
   };
 
+  // Helper function to check if a specific field is missing
+  const isFieldMissing = (fieldName: string) => {
+    return hasAttemptedSave && formValidation.missingFields.includes(fieldName);
+  };
+
   const selectionCardPosition = pendingSelection
     ? (() => {
         if (!pendingSelection) return null;
@@ -2141,6 +2168,8 @@ const CreateInvoice: React.FC = () => {
   const formValidation = getFormValidation();
 
   const handleSave = async () => {
+    setHasAttemptedSave(true);
+
     if (!isAuthenticated || !csrfToken) {
       setError('Please log in to save invoices');
       return;
@@ -2952,9 +2981,9 @@ const CreateInvoice: React.FC = () => {
   }) => (
     <button
       onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${ 
+      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
         isActive
-          ? 'bg-primary text-primary-foreground'
+          ? 'bg-[#1E3A5F] text-white'
           : 'bg-muted text-muted-foreground hover:bg-muted/80'
       }`}
     >
@@ -2998,19 +3027,13 @@ const CreateInvoice: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header Bar */}
       <div className="w-full border-b bg-background">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-2 md:px-6 pt-0 pb-2 -mt-1">
           {/* Left: Title + Status Badges */}
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-foreground">
-              {isEditMode ? 'Edit Invoice' : 'New Invoice'}
+            <h1 className="flex items-center gap-2 text-xl md:text-2xl font-semibold text-foreground">
+              <SquarePen className="h-5 w-5" />
+              {isEditMode ? 'Edit Invoice' : 'New Invoice Request'}
             </h1>
-
-            {/* Missing Fields Warning */}
-            {!formValidation.isComplete && (
-              <span className="inline-flex items-center rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
-                ⚠ {formValidation.missingFields.length} missing
-              </span>
-            )}
 
             {/* Unsaved Changes Indicator */}
             {hasUnsavedChanges && (
@@ -3040,14 +3063,14 @@ const CreateInvoice: React.FC = () => {
             <Button
               onClick={handleSave}
               disabled={isLoading}
-              className={`inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-black/90 focus:outline-none focus:ring-2 focus:ring-black/50 ${hasUnsavedChanges ? 'shadow-lg' : ''}`}
+              className={`inline-flex items-center gap-1 rounded-md bg-[#1E3A5F] h-8 px-3 text-xs font-medium text-white shadow-sm hover:bg-[#152b47] focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]/50 ${hasUnsavedChanges ? 'shadow-lg' : ''}`}
             >
               {isLoading ? (
-                <svg className="h-4 w-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="h-3 w-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               ) : (
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                 </svg>
               )}
@@ -3059,12 +3082,12 @@ const CreateInvoice: React.FC = () => {
 
       {/* Main Content */}
       <div className="w-full px-4 py-4 sm:px-6 sm:py-6">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-[minmax(0,6fr)_minmax(320px,1fr)]">
+        <div className={`mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:gap-8 ${activeTab === 'notes' ? '' : 'lg:grid-cols-[minmax(0,6fr)_minmax(320px,1fr)]'}`}>
 
           {/* Main Form Area */}
           <div className="space-y-6">
             {/* Tabs */}
-            <div className="flex gap-1 p-1 bg-muted rounded-lg overflow-x-auto scrollbar-hide">
+            <div className="grid grid-cols-4 gap-1 p-1 bg-muted rounded-lg">
               <TabButton
                 id="vessel"
                 label="Vessel"
@@ -3095,7 +3118,7 @@ const CreateInvoice: React.FC = () => {
             {activeTab === 'vessel' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Vessel Information</CardTitle>
+                  <CardTitle className="text-base">Vessel Information</CardTitle>
                   <CardDescription>
                     Enter details about the vessel for this invoice
                   </CardDescription>
@@ -3103,7 +3126,7 @@ const CreateInvoice: React.FC = () => {
                 <CardContent className="space-y-4">
                   {/* Link to Existing Vessel */}
                   <div className="space-y-2">
-                    <Label htmlFor="vessel-link">Link to Existing Vessel</Label>
+                    <Label htmlFor="vessel-link" className="!text-black font-medium">Link to Existing Vessel</Label>
                     <Select
                       value={selectedVesselId}
                       onValueChange={(value) => {
@@ -3163,21 +3186,37 @@ const CreateInvoice: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-name">Vessel</Label>
+                      <Label htmlFor="vessel-name" className={isFieldMissing("Vessel Name") ? "text-red-600 font-medium" : "!text-black font-medium"}>
+                        Vessel {isFieldMissing("Vessel Name") && <span className="text-red-600">*</span>}
+                      </Label>
                       <Input
                         id="vessel-name"
                         value={invoiceData.vessel.name}
                         onChange={(e) => handleVesselChange('name', e.target.value)}
-                        className={cn(getChangedFieldClasses('/vesselName', ['vessel', 'name']))}
+                        placeholder="e.g. The Sea Serpent"
+                        className={cn(
+                          getChangedFieldClasses('/vesselName', ['vessel', 'name']),
+                          isFieldMissing("Vessel Name") && "border-red-500 focus:ring-red-500"
+                        )}
                         style={getChangedFieldStyles('/vesselName', ['vessel', 'name'])}
                       />
+                      {isFieldMissing("Vessel Name") && (
+                        <p className="text-xs text-red-600">Vessel name is required</p>
+                      )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-weight">Weight</Label>
+                      <Label htmlFor="vessel-weight" className={isFieldMissing("Vessel Weight") ? "text-red-600 font-medium" : "!text-black font-medium"}>
+                        Weight {isFieldMissing("Vessel Weight") && <span className="text-red-600">*</span>}
+                      </Label>
                       <div className="relative">
                         <Input
                           id="vessel-weight"
-                          className={cn('pr-12', getChangedFieldClasses('/vesselWeight', ['vessel', 'weight']))}
+                          placeholder="e.g. 50"
+                          className={cn(
+                            'pr-12',
+                            getChangedFieldClasses('/vesselWeight', ['vessel', 'weight']),
+                            isFieldMissing("Vessel Weight") && "border-red-500 focus:ring-red-500"
+                          )}
                           style={getChangedFieldStyles('/vesselWeight', ['vessel', 'weight'])}
                           value={formatNumberWithSeparators(invoiceData.vessel.weight)}
                           onChange={(e) => handleVesselChange('weight', e.target.value)}
@@ -3186,12 +3225,16 @@ const CreateInvoice: React.FC = () => {
                           tons
                         </span>
                       </div>
+                      {isFieldMissing("Vessel Weight") && (
+                        <p className="text-xs text-red-600">Vessel weight is required</p>
+                      )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-beam">Length</Label>
+                      <Label htmlFor="vessel-beam" className="!text-black font-medium">Length</Label>
                       <div className="relative">
                         <Input
                           id="vessel-beam"
+                          placeholder="e.g. 65"
                           className={cn('pr-12', getChangedFieldClasses('/vesselBeam', ['vessel', 'beam']))}
                           style={getChangedFieldStyles('/vesselBeam', ['vessel', 'beam'])}
                           value={formatNumberWithSeparators(invoiceData.vessel.beam)}
@@ -3211,7 +3254,7 @@ const CreateInvoice: React.FC = () => {
             {activeTab === 'customer' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Contact Information</CardTitle>
+                  <CardTitle className="text-base">Contact Information</CardTitle>
                   <CardDescription>
                     Enter contact details for this invoice
                   </CardDescription>
@@ -3219,7 +3262,7 @@ const CreateInvoice: React.FC = () => {
                 <CardContent className="space-y-4">
                   {/* Link to Existing Customer */}
                   <div className="space-y-2">
-                    <Label htmlFor="customer-link">Link to an existing contact</Label>
+                    <Label htmlFor="customer-link" className="!text-black font-medium">Link to Existing Vessel</Label>
                     <Select
                       value={selectedCustomerId}
                       onValueChange={(value) => {
@@ -3283,22 +3326,32 @@ const CreateInvoice: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="contact-name">Contact Name</Label>
+                      <Label htmlFor="contact-name" className={isFieldMissing("Contact Name") ? "text-red-600 font-medium" : "!text-black font-medium"}>
+                        Contact Name {isFieldMissing("Contact Name") && <span className="text-red-600">*</span>}
+                      </Label>
                       <Input
                         id="contact-name"
                         value={invoiceData.customer.contactName}
                         onChange={(e) => handleCustomerChange('contactName', e.target.value)}
-                        className={cn(getChangedFieldClasses('/contactName', ['customer', 'contactName']))}
+                        placeholder="e.g. John Smith"
+                        className={cn(
+                          getChangedFieldClasses('/contactName', ['customer', 'contactName']),
+                          isFieldMissing("Contact Name") && "border-red-500 focus:ring-red-500"
+                        )}
                         style={getChangedFieldStyles('/contactName', ['customer', 'contactName'])}
                       />
+                      {isFieldMissing("Contact Name") && (
+                        <p className="text-xs text-red-600">Contact name is required</p>
+                      )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="customer-email">Email Address</Label>
+                      <Label htmlFor="customer-email" className="!text-black font-medium">Email Address</Label>
                       <Input
                         id="customer-email"
                         type="email"
                         value={invoiceData.customer.customerEmail}
                         onChange={(e) => handleCustomerChange('customerEmail', e.target.value)}
+                        placeholder="e.g. john.smith@example.com"
                         className={cn(getChangedFieldClasses('/customerEmail', ['customer', 'customerEmail']))}
                         style={getChangedFieldStyles('/customerEmail', ['customer', 'customerEmail'])}
                       />
@@ -3316,7 +3369,7 @@ const CreateInvoice: React.FC = () => {
                       />
                     </div>
                     <div className="space-y-2 md:-mt-1">
-                      <Label htmlFor="customer-address">Address</Label>
+                      <Label htmlFor="customer-address" className="!text-black font-medium">Address</Label>
                       <div className="relative">
                         <Input
                           id="customer-address"
@@ -3332,6 +3385,7 @@ const CreateInvoice: React.FC = () => {
                           }}
                           onFocus={() => setShowAddressSuggestions(true)}
                           onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 150)}
+                          placeholder="e.g. 123 Main Street, Anytown, USA"
                           className={cn(getChangedFieldClasses('/customerAddress', ['customer', 'customerAddress']))}
                           style={getChangedFieldStyles('/customerAddress', ['customer', 'customerAddress'])}
                         />
@@ -3363,10 +3417,15 @@ const CreateInvoice: React.FC = () => {
             {activeTab === 'services' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Services & Line Items</CardTitle>
+                  <CardTitle className={isFieldMissing("At least one service") ? "text-base text-red-600" : "text-base"}>
+                    Services & Line Items {isFieldMissing("At least one service") && <span className="text-red-600">*</span>}
+                  </CardTitle>
                   <CardDescription>
                     Add services, labor, and materials for this invoice
                   </CardDescription>
+                  {isFieldMissing("At least one service") && (
+                    <p className="text-xs text-red-600 mt-2">At least one service is required</p>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {invoiceData.services
@@ -3389,8 +3448,7 @@ const CreateInvoice: React.FC = () => {
                         service.itemType !== 'Labor') ||
                       (service.jobType &&
                         service.jobType !== 'Manual Entry' &&
-                        service.jobType !== 'Agent Services' &&
-                        service.jobType !== 'Clearance Fee');
+                        service.jobType !== 'Agent Services');
 
                     return (
                       <div
@@ -3490,7 +3548,7 @@ const CreateInvoice: React.FC = () => {
                                       parseFloat(e.target.value) || 0
                                     )
                                   }
-                                  placeholder="0.0"
+                                  placeholder="0"
                                   className="pr-12"
                                 />
                                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
@@ -3519,7 +3577,7 @@ const CreateInvoice: React.FC = () => {
                                       parseFloat(e.target.value) || 0
                                     )
                                   }
-                                  placeholder="0.0"
+                                  placeholder="0"
                                   className="pr-12"
                                 />
                                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
@@ -3531,64 +3589,33 @@ const CreateInvoice: React.FC = () => {
                         )}
 
                         {shouldShowManualCostInputs && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor={`service-manual-cost-${index}`}>Cost</Label>
-                              <Input
-                                id={`service-manual-cost-${index}`}
-                                type="text"
-                                inputMode="decimal"
-                                value={getManualCostInputValue(service, focusedCostId === service.id)}
-                                onChange={(e) =>
-                                  updateService(service.id, 'manualCost', e.target.value)
-                                }
-                                onFocus={() => setFocusedCostId(service.id)}
-                                onBlur={() => {
-                                  setFocusedCostId(null);
-                                  updateService(
-                                    service.id,
-                                    'manualCost',
-                                    service.manualCostInput ?? ''
-                                  );
-                                }}
-                                placeholder="0.00"
-                                className={cn(
-                                  isDeleted
-                                    ? getDeletedFieldClasses(isDeleted)
-                                    : getChangedFieldClasses(`/services/${index}/manualCost`, ['services', index, 'manualCost'])
-                                )}
-                                style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/manualCost`, ['services', index, 'manualCost'])}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor={`service-quantity-${index}`}>Quantity</Label>
-                              <Input
-                                id={`service-quantity-${index}`}
-                                type="text"
-                                inputMode="decimal"
-                                value={
-                                  service.quantityDisplay ??
-                                  (service.quantity
-                                    ? normalizeDecimalInput(String(service.quantity))
-                                    : '')
-                                }
-                                onChange={(e) =>
-                                  updateService(service.id, 'quantity', e.target.value)
-                                }
-                                onBlur={() => {
-                                  if (!service.quantityDisplay) {
-                                    updateService(service.id, 'quantity', '1');
-                                  }
-                                }}
-                                placeholder="1"
-                                className={cn(
-                                  isDeleted
-                                    ? getDeletedFieldClasses(isDeleted)
-                                    : getChangedFieldClasses(`/services/${index}/quantity`, ['services', index, 'quantity'])
-                                )}
-                                style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/quantity`, ['services', index, 'quantity'])}
-                              />
-                            </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`service-manual-cost-${index}`}>Cost</Label>
+                            <Input
+                              id={`service-manual-cost-${index}`}
+                              type="text"
+                              inputMode="decimal"
+                              value={getManualCostInputValue(service, focusedCostId === service.id)}
+                              onChange={(e) =>
+                                updateService(service.id, 'manualCost', e.target.value)
+                              }
+                              onFocus={() => setFocusedCostId(service.id)}
+                              onBlur={() => {
+                                setFocusedCostId(null);
+                                updateService(
+                                  service.id,
+                                  'manualCost',
+                                  service.manualCostInput ?? ''
+                                );
+                              }}
+                              placeholder="$0.00"
+                              className={cn(
+                                isDeleted
+                                  ? getDeletedFieldClasses(isDeleted)
+                                  : getChangedFieldClasses(`/services/${index}/manualCost`, ['services', index, 'manualCost'])
+                              )}
+                              style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/manualCost`, ['services', index, 'manualCost'])}
+                            />
                           </div>
                         )}
 
@@ -3631,11 +3658,11 @@ const CreateInvoice: React.FC = () => {
                                       )}
                                       style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                                     >
-                                      <SelectValue placeholder="Select">
+                                      <SelectValue placeholder="Non-Taxable">
                                         {service.taxStatus === 'taxable' && 'Taxable (8.75%)'}
                                         {service.taxStatus === 'non-taxable' && 'Non-Taxable'}
                                         {service.taxStatus === 'exempt' && 'Tax Exempt'}
-                                        {!service.taxStatus && 'Select'}
+                                        {!service.taxStatus && 'Non-Taxable'}
                                       </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
@@ -3667,18 +3694,18 @@ const CreateInvoice: React.FC = () => {
                                       )}
                                       style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                                     >
-                                      <SelectValue placeholder="Select">
+                                      <SelectValue placeholder="No Markup">
                                         {service.markupType === 'preset-2.5' && '2.5%'}
                                         {service.markupType === 'preset-12.5' && '12.5%'}
-                                        {service.markupType === 'custom' && 'Custom %'}
+                                        {service.markupType === 'custom' && 'Custom Markup'}
                                         {service.markupType === 'exempt' && 'No Markup'}
-                                        {!service.markupType && 'Select'}
+                                        {!service.markupType && 'No Markup'}
                                       </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="preset-2.5">2.5%</SelectItem>
                                       <SelectItem value="preset-12.5">12.5%</SelectItem>
-                                      <SelectItem value="custom">Custom %</SelectItem>
+                                      <SelectItem value="custom">Custom Markup</SelectItem>
                                       <SelectItem value="exempt">No Markup</SelectItem>
                                     </SelectContent>
                                   </Select>
@@ -3726,11 +3753,18 @@ const CreateInvoice: React.FC = () => {
                                 Tax Exempt
                               </Badge>
                             )}
-                            {service.jobType === 'Clearance Fee' && (
-                              <Badge variant="outline" className="text-xs">
-                                Auto-calculated
-                              </Badge>
-                            )}
+                            {service.jobType === 'Clearance Fee' && (() => {
+                              const weight = parseFloat(invoiceData.vessel.weight) || 0;
+                              const autoCalculatedAmount = weight >= 500 ? 1250 : 950;
+                              const currentCost = parseFloat(String(service.manualCost)) || 0;
+                              const isManuallyOverridden = currentCost !== autoCalculatedAmount;
+
+                              return (
+                                <Badge variant={isManuallyOverridden ? "secondary" : "outline"} className="text-xs">
+                                  {isManuallyOverridden ? 'Manually Overridden' : 'Auto-calculated'}
+                                </Badge>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -3756,7 +3790,7 @@ const CreateInvoice: React.FC = () => {
             {activeTab === 'notes' && (
               <Card className="border-none shadow-none">
                 <CardHeader className="px-0">
-                  <CardTitle>Comments & Preview</CardTitle>
+                  <CardTitle className="text-base">Comments & Preview</CardTitle>
                   <CardDescription>
                     Highlight the invoice preview to leave contextual comments for collaborators.
                   </CardDescription>
@@ -4010,10 +4044,11 @@ const CreateInvoice: React.FC = () => {
           </div>
 
           {/* Summary Sidebar */}
+          {activeTab !== 'notes' && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Summary</CardTitle>
+                <CardTitle className="text-base">Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between text-sm">
@@ -4034,7 +4069,7 @@ const CreateInvoice: React.FC = () => {
             {isEditMode && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Attach Invoice</CardTitle>
+                  <CardTitle className="text-base">Attach Invoice</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Show read-only original attachment when re-approving */}
@@ -4214,16 +4249,17 @@ const CreateInvoice: React.FC = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Actions</CardTitle>
+                <CardTitle className="text-base">Actions</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-2">
-                <Button onClick={handlePrint} variant="outline">Print</Button>
-                <Button onClick={handleExportPDF} variant="outline">Export PDF</Button>
-                <Button onClick={handleEmail} variant="outline">Email</Button>
-                <Button onClick={handleExportCSV} variant="outline">Export CSV</Button>
+                <Button onClick={handlePrint} variant="outline" className="text-xs h-8">Print</Button>
+                <Button onClick={handleExportPDF} variant="outline" className="text-xs h-8">Export PDF</Button>
+                <Button onClick={handleEmail} variant="outline" className="text-xs h-8">Email</Button>
+                <Button onClick={handleExportCSV} variant="outline" className="text-xs h-8">Export CSV</Button>
               </CardContent>
             </Card>
           </div>
+          )}
         </div>
       </div>
 
