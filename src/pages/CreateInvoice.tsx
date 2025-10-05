@@ -3533,7 +3533,7 @@ const CreateInvoice: React.FC = () => {
                         {(isLaborHoursEntry || isAgentServices) && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label htmlFor={`service-labor-hours-${index}`}>Regular Hours</Label>
+                              <Label htmlFor={`service-labor-hours-${index}`} className="!text-black font-medium">Regular Hours</Label>
                               <div className="relative">
                                 <Input
                                   id={`service-labor-hours-${index}`}
@@ -3562,7 +3562,7 @@ const CreateInvoice: React.FC = () => {
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor={`service-ot-hours-${index}`}>Overtime Hours</Label>
+                              <Label htmlFor={`service-ot-hours-${index}`} className="!text-black font-medium">Overtime Hours</Label>
                               <div className="relative">
                                 <Input
                                   id={`service-ot-hours-${index}`}
