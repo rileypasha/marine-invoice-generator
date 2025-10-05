@@ -3512,7 +3512,7 @@ const CreateInvoice: React.FC = () => {
 
                           {service.jobType === 'Manual Entry' && (
                             <div className="space-y-2">
-                              <Label htmlFor={`service-item-type-${index}`}>Item Type *</Label>
+                              <Label htmlFor={`service-item-type-${index}`} className="!text-black font-medium">Item Type *</Label>
                               <Select
                                 value={service.itemType || ''}
                                 onValueChange={(value) => updateService(service.id, 'itemType', value)}
