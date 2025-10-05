@@ -3722,21 +3722,24 @@ const CreateInvoice: React.FC = () => {
                               !service.isMarkupExempt &&
                               service.jobType !== 'Clearance Fee' && (
                                 <div className="space-y-2">
-                                  <Label htmlFor={`service-markup-rate-${index}`}>Custom Markup (%)</Label>
-                                  <Input
-                                    id={`service-markup-rate-${index}`}
-                                    type="number"
-                                    step="0.01"
-                                    value={service.markupRate || 0}
-                                    onChange={(e) =>
-                                      updateService(
-                                        service.id,
-                                        'markupRate',
-                                        parseFloat(e.target.value) || 0
-                                      )
-                                    }
-                                    placeholder="0.00"
-                                  />
+                                  <Label htmlFor={`service-markup-rate-${index}`}>Custom Markup</Label>
+                                  <div className="relative">
+                                    <Input
+                                      id={`service-markup-rate-${index}`}
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={service.markupRate ? `${service.markupRate}%` : ''}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace('%', '');
+                                        updateService(
+                                          service.id,
+                                          'markupRate',
+                                          parseFloat(value) || 0
+                                        );
+                                      }}
+                                      placeholder="0%"
+                                    />
+                                  </div>
                                 </div>
                               )}
                           </>
