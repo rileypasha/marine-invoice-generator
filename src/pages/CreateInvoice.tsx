@@ -3367,7 +3367,7 @@ const CreateInvoice: React.FC = () => {
                         label="Phone Number"
                         value={invoiceData.customer.customerPhone || undefined}
                         onChange={handleCustomerPhoneChange}
-                        placeholder="Enter phone number"
+                        placeholder="e.g. (123) 456-7890"
                         defaultCountry="US"
                         error={customerPhoneError}
                         className={cn(getChangedFieldClasses('/customerPhone', ['customer', 'customerPhone']))}
