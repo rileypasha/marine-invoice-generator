@@ -3709,11 +3709,7 @@ const CreateInvoice: React.FC = () => {
                                       )}
                                       style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                                     >
-                                      <SelectValue placeholder="Non-Taxable">
-                                        {service.taxStatus === 'taxable' && 'Taxable (8.75%)'}
-                                        {(service.taxStatus === 'non-taxable' || service.taxStatus === 'exempt') && 'Non-Taxable'}
-                                        {!service.taxStatus && 'Non-Taxable'}
-                                      </SelectValue>
+                                      <SelectValue placeholder="Non-Taxable" />
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="taxable">Taxable (8.75%)</SelectItem>
@@ -3743,13 +3739,7 @@ const CreateInvoice: React.FC = () => {
                                       )}
                                       style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                                     >
-                                      <SelectValue placeholder="No Markup">
-                                        {service.markupType === 'preset-2.5' && '2.5%'}
-                                        {service.markupType === 'preset-12.5' && '12.5%'}
-                                        {service.markupType === 'custom' && 'Custom Markup'}
-                                        {service.markupType === 'exempt' && 'No Markup'}
-                                        {!service.markupType && 'No Markup'}
-                                      </SelectValue>
+                                      <SelectValue placeholder="No Markup" />
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="preset-2.5">2.5%</SelectItem>
