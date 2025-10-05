@@ -4120,39 +4120,7 @@ const CreateInvoice: React.FC = () => {
                               No services added yet.
                             </div>
                           ) : (
-                            <>
-                              {/* Mobile: Card Layout */}
-                              <div className="space-y-3 md:hidden">
-                                {previewSummary.services.map((service, index) => (
-                                  <div key={service.id} className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
-                                    <div>
-                                      <p className={cn("font-medium text-sm", isFieldInBackendDiff(`/services/${index}/description`) ? 'text-green-600 font-semibold' : 'text-slate-800')}>{service.description}</p>
-                                      <p className={cn("text-xs text-muted-foreground", isFieldInBackendDiff(`/services/${index}/jobType`) && 'text-green-600 font-semibold')}>{service.jobType}</p>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2 text-xs">
-                                      <div>
-                                        <span className="text-slate-500">Cost:</span>
-                                        <span className={cn("ml-1 text-slate-700", isFieldInBackendDiff(`/services/${index}/manualCost`) && 'text-green-600 font-semibold')}>{formatCurrency(service.baseCost)}</span>
-                                      </div>
-                                      <div>
-                                        <span className="text-slate-500">Markup:</span>
-                                        <span className={cn("ml-1 text-slate-700", isFieldInBackendDiff(`/services/${index}/markupType`) && 'text-green-600 font-semibold')}>{formatCurrency(service.markupAmount)}</span>
-                                      </div>
-                                      <div>
-                                        <span className="text-slate-500">Tax:</span>
-                                        <span className={cn("ml-1 text-slate-700", isFieldInBackendDiff(`/services/${index}/taxStatus`) && 'text-green-600 font-semibold')}>{formatCurrency(service.taxAmount)}</span>
-                                      </div>
-                                      <div className="font-medium">
-                                        <span className="text-slate-500">Total:</span>
-                                        <span className="ml-1 text-slate-900">{formatCurrency(service.total)}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-
-                              {/* Desktop: Table Layout */}
-                              <div className="hidden md:block overflow-hidden rounded-lg border border-slate-200">
+                            <div className="overflow-hidden rounded-lg border border-slate-200">
                                 <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
                                   <span>Item</span>
                                   <span className="text-right">Cost</span>
@@ -4172,8 +4140,7 @@ const CreateInvoice: React.FC = () => {
                                     <div className="text-right font-medium text-slate-900">{formatCurrency(service.total)}</div>
                                   </div>
                                 ))}
-                              </div>
-                            </>
+                            </div>
                           )}
                         </div>
 
