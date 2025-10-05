@@ -3856,9 +3856,10 @@ const CreateInvoice: React.FC = () => {
                                 }}
                                 disabled={isDeleted}
                                 className={cn(
-                                  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors",
-                                  "h-9 px-4 py-2",
-                                  "bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950",
+                                  "inline-flex items-center justify-center rounded-md text-xs font-medium transition-colors",
+                                  "h-8 px-3 py-1.5",
+                                  "bg-slate-100 text-slate-700 hover:bg-slate-200 active:bg-slate-300",
+                                  "border border-slate-300",
                                   "disabled:opacity-50 disabled:cursor-not-allowed",
                                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
                                 )}
