@@ -2030,13 +2030,9 @@ const CreateInvoice: React.FC = () => {
             } else if (value === 'Clearance Fee') {
               updated.isMarkupExempt = true;
               updated.isTaxExempt = true;
-              updated.markupType = 'exempt';
-              updated.taxStatus = 'non-taxable';
             } else if (value === 'Pilotage') {
               updated.isMarkupExempt = false;
               updated.isTaxExempt = false;
-              updated.markupType = 'exempt';
-              updated.taxStatus = 'non-taxable';
             } else if (value === 'Manual Entry') {
               updated.isMarkupExempt = false;
               updated.isTaxExempt = false;
