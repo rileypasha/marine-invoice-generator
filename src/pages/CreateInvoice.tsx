@@ -3279,7 +3279,7 @@ const CreateInvoice: React.FC = () => {
                 <CardContent className="space-y-4">
                   {/* Link to Existing Customer */}
                   <div className="space-y-2">
-                    <Label htmlFor="customer-link" className="!text-black font-medium">Link to Existing Vessel</Label>
+                    <Label htmlFor="customer-link" className="!text-black font-medium">Link to Existing Contact</Label>
                     <Select
                       value={selectedCustomerId}
                       onValueChange={(value) => {
