@@ -2109,9 +2109,6 @@ const CreateInvoice: React.FC = () => {
     if (!invoiceData.vessel.name?.trim()) {
       missingFields.push("Vessel Name");
     }
-    if (!invoiceData.vessel.weight?.trim() || parseFloat(invoiceData.vessel.weight) <= 0) {
-      missingFields.push("Vessel Weight");
-    }
 
     // Check customer fields
     if (!invoiceData.customer.customerName?.trim()) {
@@ -3229,8 +3226,8 @@ const CreateInvoice: React.FC = () => {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-weight" className={isFieldMissing("Vessel Weight") ? "text-red-600 font-medium" : "!text-black font-medium"}>
-                        Weight <span className="text-red-600">*</span>
+                      <Label htmlFor="vessel-weight" className="!text-black font-medium">
+                        Weight
                       </Label>
                       <div className="relative">
                         <Input
@@ -3238,8 +3235,7 @@ const CreateInvoice: React.FC = () => {
                           placeholder="e.g. 50"
                           className={cn(
                             'pr-12',
-                            getChangedFieldClasses('/vesselWeight', ['vessel', 'weight']),
-                            isFieldMissing("Vessel Weight") && "border-red-500 focus:ring-red-500"
+                            getChangedFieldClasses('/vesselWeight', ['vessel', 'weight'])
                           )}
                           style={getChangedFieldStyles('/vesselWeight', ['vessel', 'weight'])}
                           value={formatNumberWithSeparators(invoiceData.vessel.weight)}
@@ -3249,9 +3245,6 @@ const CreateInvoice: React.FC = () => {
                           tons
                         </span>
                       </div>
-                      {isFieldMissing("Vessel Weight") && (
-                        <p className="text-xs text-red-600">Vessel weight is required</p>
-                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="vessel-beam" className="!text-black font-medium">Length</Label>
