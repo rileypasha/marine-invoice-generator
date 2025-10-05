@@ -2290,7 +2290,8 @@ const CreateInvoice: React.FC = () => {
 
     // Check if form is valid before saving
     if (!formValidation.isComplete) {
-      setError(`Please complete required fields: ${formValidation.missingFields.join(", ")}`);
+      // Don't show error popup, just highlight fields with inline errors
+      // The red borders and messages will appear via isFieldMissing() checks
       return;
     }
 
@@ -3687,6 +3688,10 @@ const CreateInvoice: React.FC = () => {
                                   hours
                                 </span>
                               </div>
+                              {((service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Regular Hours (Service ${index + 1})`)) ||
+                                (service.jobType === 'Agent Services' && isFieldMissing(`Agent Services Regular Hours (Service ${index + 1})`))) && (
+                                <p className="text-xs text-red-600">Regular hours are required</p>
+                              )}
                             </div>
                             <div className="space-y-2">
                               <Label
@@ -3730,6 +3735,10 @@ const CreateInvoice: React.FC = () => {
                                   hours
                                 </span>
                               </div>
+                              {((service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Overtime Hours (Service ${index + 1})`)) ||
+                                (service.jobType === 'Agent Services' && isFieldMissing(`Agent Services Overtime Hours (Service ${index + 1})`))) && (
+                                <p className="text-xs text-red-600">Overtime hours are required</p>
+                              )}
                             </div>
                           </div>
                         )}
@@ -3786,6 +3795,16 @@ const CreateInvoice: React.FC = () => {
                               )}
                               style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/manualCost`, ['services', index, 'manualCost'])}
                             />
+                            {((service.jobType === 'Clearance Fee' && isFieldMissing(`Clearance Fee Cost (Service ${index + 1})`)) ||
+                              (service.jobType === 'Manual Entry' && service.itemType === 'Material' && isFieldMissing(`Material Cost (Service ${index + 1})`)) ||
+                              (service.jobType === 'Manual Entry' && service.itemType === 'Subcontractor' && isFieldMissing(`Subcontractor Cost (Service ${index + 1})`)) ||
+                              (service.jobType === 'Pilotage' && isFieldMissing(`Pilotage Cost (Service ${index + 1})`)) ||
+                              (service.jobType === 'Car Rental' && isFieldMissing(`Car Rental Cost (Service ${index + 1})`)) ||
+                              (service.jobType === 'Trash Removal' && isFieldMissing(`Trash Removal Cost (Service ${index + 1})`)) ||
+                              (service.jobType === 'Good Stew' && isFieldMissing(`Good Stew Cost (Service ${index + 1})`)) ||
+                              (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`))) && (
+                              <p className="text-xs text-red-600">Cost is required for this service type</p>
+                            )}
                           </div>
                         )}
 
@@ -3803,6 +3822,9 @@ const CreateInvoice: React.FC = () => {
                             )}
                             style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/description`, ['services', index, 'description'])}
                           />
+                          {!service.description?.trim() && hasAttemptedSave && (
+                            <p className="text-xs text-red-600">Service description is required</p>
+                          )}
                         </div>
 
                         {!shouldHideTaxAndMarkup && (
