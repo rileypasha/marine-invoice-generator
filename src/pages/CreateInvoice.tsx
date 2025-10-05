@@ -88,7 +88,9 @@ interface Service {
   jobType?: string;
   itemType?: string;
   laborHours?: number;
+  laborHoursInput?: string;
   otHours?: number;
+  otHoursInput?: string;
   manualCost?: number;
   manualCostInput?: string;
   taxStatus?: 'taxable' | 'non-taxable' | 'exempt';
@@ -269,6 +271,8 @@ const CreateInvoice: React.FC = () => {
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [customerPhoneError, setCustomerPhoneError] = useState('');
   const [focusedCostId, setFocusedCostId] = useState<string | null>(null);
+  const [focusedLaborHoursId, setFocusedLaborHoursId] = useState<string | null>(null);
+  const [focusedOtHoursId, setFocusedOtHoursId] = useState<string | null>(null);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [secondAttachedFile, setSecondAttachedFile] = useState<File | null>(null);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
@@ -366,6 +370,20 @@ const CreateInvoice: React.FC = () => {
     return service.manualCost && service.manualCost !== 0
       ? formatCurrency(service.manualCost)
       : rawValue;
+  };
+
+  const getLaborHoursInputValue = (service: Service, isFocused: boolean): string => {
+    if (isFocused) {
+      return service.laborHoursInput ?? (service.laborHours !== undefined && service.laborHours !== null && service.laborHours !== 0 ? service.laborHours.toString() : '');
+    }
+    return service.laborHours !== undefined && service.laborHours !== null && service.laborHours !== 0 ? service.laborHours.toString() : '';
+  };
+
+  const getOtHoursInputValue = (service: Service, isFocused: boolean): string => {
+    if (isFocused) {
+      return service.otHoursInput ?? (service.otHours !== undefined && service.otHours !== null && service.otHours !== 0 ? service.otHours.toString() : '');
+    }
+    return service.otHours !== undefined && service.otHours !== null && service.otHours !== 0 ? service.otHours.toString() : '';
   };
 
   const clearTextSelection = () => {
@@ -1970,7 +1988,9 @@ const CreateInvoice: React.FC = () => {
       jobType: '',
       itemType: '',
       laborHours: 0,
+      laborHoursInput: '',
       otHours: 0,
+      otHoursInput: '',
       manualCost: 0,
       manualCostInput: '',
       taxStatus: undefined,
@@ -2000,6 +2020,16 @@ const CreateInvoice: React.FC = () => {
             const parsed = parseCurrencyInput(normalizedInput);
             updated.manualCostInput = normalizedInput;
             updated.manualCost = parsed ?? 0;
+          } else if (field === 'laborHours') {
+            const stringValue = typeof value === 'string' ? value : String(value ?? '');
+            updated.laborHoursInput = stringValue;
+            const parsed = parseFloat(stringValue);
+            updated.laborHours = Number.isFinite(parsed) ? parsed : 0;
+          } else if (field === 'otHours') {
+            const stringValue = typeof value === 'string' ? value : String(value ?? '');
+            updated.otHoursInput = stringValue;
+            const parsed = parseFloat(stringValue);
+            updated.otHours = Number.isFinite(parsed) ? parsed : 0;
           } else if (field === 'quantity') {
             const stringValue = typeof value === 'string' ? value : String(value ?? '');
             const normalizedInput = normalizeDecimalInput(stringValue);
@@ -3622,20 +3652,16 @@ const CreateInvoice: React.FC = () => {
                                   id={`service-labor-hours-${index}`}
                                   type="text"
                                   inputMode="decimal"
-                                  value={
-                                    service.laborHours !== undefined &&
-                                    service.laborHours !== null &&
-                                    service.laborHours !== 0
-                                      ? service.laborHours.toString()
-                                      : ''
-                                  }
+                                  value={getLaborHoursInputValue(service, focusedLaborHoursId === service.id)}
                                   onChange={(e) =>
                                     updateService(
                                       service.id,
                                       'laborHours',
-                                      parseFloat(e.target.value) || 0
+                                      e.target.value
                                     )
                                   }
+                                  onFocus={() => setFocusedLaborHoursId(service.id)}
+                                  onBlur={() => setFocusedLaborHoursId(null)}
                                   placeholder="e.g. 8.0"
                                   className={cn(
                                     "pr-12",
@@ -3665,20 +3691,16 @@ const CreateInvoice: React.FC = () => {
                                   id={`service-ot-hours-${index}`}
                                   type="text"
                                   inputMode="decimal"
-                                  value={
-                                    service.otHours !== undefined &&
-                                    service.otHours !== null &&
-                                    service.otHours !== 0
-                                      ? service.otHours.toString()
-                                      : ''
-                                  }
+                                  value={getOtHoursInputValue(service, focusedOtHoursId === service.id)}
                                   onChange={(e) =>
                                     updateService(
                                       service.id,
                                       'otHours',
-                                      parseFloat(e.target.value) || 0
+                                      e.target.value
                                     )
                                   }
+                                  onFocus={() => setFocusedOtHoursId(service.id)}
+                                  onBlur={() => setFocusedOtHoursId(null)}
                                   placeholder="e.g. 8.0"
                                   className={cn(
                                     "pr-12",
