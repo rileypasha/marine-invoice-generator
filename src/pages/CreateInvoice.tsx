@@ -3630,7 +3630,7 @@ const CreateInvoice: React.FC = () => {
                             id={`service-description-${index}`}
                             value={service.description}
                             onChange={(e) => updateService(service.id, 'description', e.target.value)}
-                            placeholder="Enter service description..."
+                            placeholder="e.g. Engine Repair, oil change, hull cleaning"
                             className={cn(
                               isDeleted
                                 ? getDeletedFieldClasses(isDeleted)
