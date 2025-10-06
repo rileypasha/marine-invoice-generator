@@ -240,9 +240,6 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
       const avatarUrl = invoice.modifiedByUserAvatar;
       const initials = getInitials(invoice.modifiedByUserName);
 
-      // Debug: log the actual data
-      console.log('Modified By Cell:', { modifiedBy, avatarUrl, invoice });
-
       return (
         <div className="flex items-center gap-2 text-sm text-gray-600 text-left whitespace-nowrap overflow-visible">
           {modifiedBy !== '-' && (
