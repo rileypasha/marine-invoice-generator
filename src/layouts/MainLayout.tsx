@@ -378,7 +378,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <main className="flex-1 bg-white screen-only" style={{ paddingTop: isFullWidthRoute() ? '0' : (typeof window !== 'undefined' && window.innerWidth < 768 ? '-0.25rem' : '4rem') }}>
             {isFullWidthRoute() ? (
               // Full-width layout for Airtable-style pages (like contacts)
-              <div className="w-full h-full">
+              <div className="w-full h-screen">
                 {children}
               </div>
             ) : (

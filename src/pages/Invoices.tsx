@@ -376,8 +376,8 @@ const Invoices: React.FC<InvoicesProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Sticky Toolbar */}
+    <div className="h-full flex flex-col">
+      {/* Fixed Toolbar */}
       <div className="flex-shrink-0">
         <RequestsToolbar
           requests={filteredData}
@@ -388,8 +388,8 @@ const Invoices: React.FC<InvoicesProps> = ({
         />
       </div>
 
-      {/* Table Content */}
-      <div className="flex-1 overflow-auto">
+      {/* Scrollable Table Content */}
+      <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-muted-foreground">Loading requests...</div>
