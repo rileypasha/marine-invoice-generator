@@ -512,87 +512,26 @@ const InvoiceView: React.FC = () => {
   const invoiceNumber = invoice.invoiceNumber || (invoice.id ? invoice.id.substring(0, 8) : '—');
 
   return (
-    <div className="min-h-full bg-slate-50 px-4 py-6 md:px-8">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-              <span>{isPreviewMode ? 'Preview' : 'Invoice request'}</span>
-              <span className="text-slate-300">•</span>
-              <span>{invoiceDate}</span>
-            </div>
-            <h1 className="text-2xl font-semibold text-slate-900">{invoiceTitle}</h1>
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              {createdAtLabel && <span>Created {createdAtLabel}</span>}
-              {updatedAtLabel && <span>• Last saved {updatedAtLabel}</span>}
-              <span>• Invoice #{invoiceNumber}</span>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge
-              variant="outline"
-              className={cn(
-                'capitalize',
-                invoice.status === 'change_requested' && 'border-amber-500 text-amber-700 bg-amber-50'
-              )}
-            >
-              {invoice.status === 'change_requested' ? 'Changes Requested' : invoice.status}
-              {invoice.status === 'change_requested' && invoice.diff && invoice.diff.length > 0 && (
-                <span className="ml-1 text-xs">({invoice.diff.length})</span>
-              )}
-            </Badge>
-            <Button variant="outline" onClick={handlePrint}>
-              Print
-            </Button>
-            <Button onClick={handleBack}>
-              {isPreviewMode ? 'Back to create' : 'Back to requests'}
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]">
-          <Card className="border-none shadow-lg">
-            <CardContent className="relative p-0">
-              <div
-                ref={previewRef}
-                className="relative max-h-[75vh] overflow-auto rounded-xl bg-white p-6"
-              >
-                <div className="space-y-6 text-sm text-slate-700">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-500">
-                        Marine Group • Invoice summary
-                      </p>
-                      <h2 className="text-xl font-semibold text-slate-900">
-                        <ChangedValue
-                          path="/title"
-                          value={invoiceTitle}
-                          diff={diffIndex}
-                          status={invoice.status}
-                        />
-                      </h2>
-                      <p className="text-xs text-muted-foreground">Saved {invoiceDate}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2 text-sm text-slate-600">
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          'capitalize',
-                          invoice.status === 'change_requested' && 'border-amber-500 text-amber-700 bg-amber-50'
-                        )}
-                      >
-                        {invoice.status === 'change_requested' ? 'Changes Requested' : invoice.status}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">Invoice #{invoiceNumber}</span>
-                      {invoice.userName && (
-                        <span className="text-xs text-muted-foreground">Estimator: {invoice.userName}</span>
-                      )}
-                    </div>
+    <div className="min-h-full bg-slate-50">
+      <div className="mx-auto flex max-w-6xl flex-col">
+        <div
+          ref={previewRef}
+          className="bg-white rounded-lg shadow-md p-6 select-none [-webkit-touch-callout:none]"
+        >
+            <div className="space-y-6 text-sm text-slate-700">
+                  {/* Header */}
+                  <div className="bg-slate-50 -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
+                    <h2 className="text-base font-semibold text-slate-900">
+                      {invoice.title || `Invoice for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`}
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {invoice.status === 'draft' ? 'Draft preview' : invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)} • {new Date(invoice.createdAt).toLocaleDateString()}
+                    </p>
                   </div>
 
-                  <div className="grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
+                  <div className="grid gap-6 bg-slate-50 p-4 md:grid-cols-2">
                     <div className="space-y-1">
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Vessel</h3>
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">VESSEL</h3>
                       <p className="font-medium text-slate-900">
                         <ChangedValue
                           path="/vesselName"
@@ -625,7 +564,7 @@ const InvoiceView: React.FC = () => {
                       )}
                     </div>
                     <div className="space-y-1">
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contact</h3>
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">CONTACT</h3>
                       <p className="font-medium text-slate-900">
                         <ChangedValue
                           path="/customerName"
@@ -650,25 +589,60 @@ const InvoiceView: React.FC = () => {
                           status={invoice.status}
                         />
                       </p>
+                      {customer.address && (
+                        <p className="text-xs text-muted-foreground">{customer.address}</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-slate-800">Services</h3>
-                    <div className="overflow-x-auto rounded-lg border border-slate-200">
-                      <div className="min-w-[600px]">
-                        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          <span>Item</span>
-                          <span className="text-right">Cost</span>
-                          <span className="text-right">Markup</span>
-                          <span className="text-right">Tax</span>
-                          <span className="text-right">Total</span>
+                    {servicesSummary.services.length === 0 && baselineLineItems.length === 0 ? (
+                      <div className="rounded-lg border border-slate-200 px-4 py-6 text-center text-sm text-muted-foreground">
+                        No services added yet.
+                      </div>
+                    ) : (
+                      <>
+                        {/* Mobile: Card Layout */}
+                        <div className="space-y-3 md:hidden">
+                          {servicesSummary.services.map((service, index) => (
+                            <div key={service.id} className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
+                              <div>
+                                <p className="font-medium text-sm text-slate-800">{service.description}</p>
+                                <p className="text-xs text-muted-foreground">{service.type}</p>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                  <span className="text-slate-500">Cost:</span>
+                                  <span className="ml-1 text-slate-700">{formatCurrency(service.cost)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Markup:</span>
+                                  <span className="ml-1 text-slate-700">{formatCurrency(service.markupAmount)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Tax:</span>
+                                  <span className="ml-1 text-slate-700">{formatCurrency(service.taxAmount)}</span>
+                                </div>
+                                <div className="font-medium">
+                                  <span className="text-slate-500">Total:</span>
+                                  <span className="ml-1 text-slate-900">{formatCurrency(service.total)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      {servicesSummary.services.length === 0 && baselineLineItems.length === 0 ? (
-                        <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                          No services recorded for this invoice.
-                        </div>
-                      ) : (
+
+                        {/* Desktop: Table Layout */}
+                        <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
+                          <div className="min-w-[600px]">
+                            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                              <span>Item</span>
+                              <span className="text-right">Cost</span>
+                              <span className="text-right">Markup</span>
+                              <span className="text-right">Tax</span>
+                              <span className="text-right">Total</span>
+                            </div>
                         <>
                           {/* Show deleted items first (items in baseline but not in current) */}
                           {baselineLineItems
@@ -796,18 +770,15 @@ const InvoiceView: React.FC = () => {
                           );
                         })}
                         </>
-                      )}
-                      </div>
-                    </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
 
-                  <div className="grid gap-2 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                  <div className="space-y-2 bg-slate-50 p-4 text-xs text-slate-600">
                     <div className="flex justify-between">
-                      <span>Base cost</span>
-                      <span className="font-medium text-slate-900">{formatCurrency(servicesSummary.baseCostTotal)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Subtotal (with markup)</span>
+                      <span>Subtotal</span>
                       <span className="font-medium text-slate-900">
                         <ChangedValue
                           path="/subtotal"
@@ -828,7 +799,7 @@ const InvoiceView: React.FC = () => {
                         />
                       </span>
                     </div>
-                    <div className="flex justify-between border-t pt-2 text-base font-semibold text-slate-900">
+                    <div className="flex justify-between pt-2 text-sm font-semibold text-slate-900">
                       <span>Total</span>
                       <span>
                         <ChangedValue
@@ -839,34 +810,12 @@ const InvoiceView: React.FC = () => {
                         />
                       </span>
                     </div>
-                    <div className="flex justify-between pt-2 text-sm">
-                      <span>Gross profit</span>
-                      <span className="font-medium text-slate-900">
-                        <ChangedValue
-                          path="/grossProfit"
-                          value={formatCurrency(servicesSummary.grossProfit)}
-                          diff={diffIndex}
-                          status={invoice.status}
-                        />
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Gross profit %</span>
-                      <span className="font-medium text-slate-900">
-                        <ChangedValue
-                          path="/profitPercent"
-                          value={`${servicesSummary.grossProfitPercent.toFixed(2)}%`}
-                          diff={diffIndex}
-                          status={invoice.status}
-                        />
-                      </span>
-                    </div>
                   </div>
 
                   {invoice.notes && (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <h3 className="text-sm font-semibold text-slate-800">Notes</h3>
-                      <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-slate-800">Comments</h3>
+                      <p className="whitespace-pre-wrap text-sm text-slate-700">
                         <ChangedValue
                           path="/notes"
                           value={invoice.notes}
@@ -910,18 +859,83 @@ const InvoiceView: React.FC = () => {
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+        </div>
+      </div>
+  );
+};
 
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Financial summary</CardTitle>
-                <CardDescription>Snapshot of totals for this invoice request.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-slate-700">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
+const calculateLineItemCost = (item: LineItem | null | undefined): number => {
+  if (!item || typeof item !== 'object') {
+    return 0;
+  }
+  if (item.manualCost != null && item.manualCost !== 0) {
+    return item.manualCost;
+  }
+
+  let cost = item.cost !== undefined ? parseFloat(String(item.cost)) : 0;
+  if (Number.isNaN(cost)) {
+    cost = 0;
+  }
+
+  const scope = item.scope;
+  if (!scope || typeof scope !== 'object') {
+    return cost;
+  }
+
+  let markupRate = item.markupRate !== undefined ? item.markupRate : (scope?.markupRate ?? 2.5);
+  markupRate = parseFloat(String(markupRate));
+  if (Number.isNaN(markupRate)) {
+    markupRate = 0;
+  }
+
+  if (markupRate > 1) {
+    markupRate = markupRate / 100;
+  }
+
+  return cost * (1 + markupRate);
+};
+
+const calculateLineItemTax = (item: LineItem | null | undefined): number => {
+  if (!item || typeof item !== 'object') {
+    return 0;
+  }
+
+  let cost = item.cost !== undefined ? parseFloat(String(item.cost)) : 0;
+  if (Number.isNaN(cost)) {
+    cost = 0;
+  }
+
+  const scope = item.scope;
+  if (!scope || typeof scope !== 'object') {
+    return 0;
+  }
+
+  let markupRate = item.markupRate !== undefined ? item.markupRate : (scope?.markupRate ?? 2.5);
+  markupRate = parseFloat(String(markupRate));
+  if (Number.isNaN(markupRate)) {
+    markupRate = 0;
+  }
+
+  if (markupRate > 1) {
+    markupRate = markupRate / 100;
+  }
+
+  const totalWithMarkup = cost * (1 + markupRate);
+
+  if (item.taxStatus === 'no_tax') {
+    return 0;
+  }
+
+  if (!item.taxStatus && item.description && item.description.includes('Clearance Fee')) {
+    return 0;
+  }
+
+  const taxRate = parseFloat(String(item.taxRate)) || 0.0875;
+  return totalWithMarkup * taxRate;
+};
+
+export default InvoiceView;
                   <span>
                     <ChangedValue
                       path="/subtotal"
@@ -973,222 +987,3 @@ const InvoiceView: React.FC = () => {
                 <CardDescription>
                   {comments.length === 0
                     ? 'No comments have been added yet.'
-                    : `${comments.length} contextual ${comments.length === 1 ? 'comment' : 'comments'}`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {comments.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-blue-200 bg-white/60 p-6 text-center text-sm text-blue-700">
-                    Highlights and threaded feedback from the Notes tab will appear here.
-                  </div>
-                ) : (
-                  comments.map((comment, index) => (
-                    <div key={comment.id} className="rounded-lg border border-blue-200 bg-white p-4 shadow-sm">
-                      <div className="flex items-start gap-3">
-                        <Avatar className="h-9 w-9">
-                          <AvatarFallback>{comment.initials || getInitials(comment.author)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-semibold text-slate-900">{comment.author}</p>
-                            <span className="text-xs font-medium text-blue-600">#{index + 1}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            “{truncate(comment.selectionText, 70)}”
-                          </p>
-                          <p className="text-xs text-muted-foreground">{formatDateTime(comment.createdAt)}</p>
-                        </div>
-                      </div>
-                      <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">{comment.text}</p>
-
-                      {comment.replies.length > 0 && (
-                        <div className="mt-3 space-y-3 border-t border-blue-100 pt-3">
-                          {comment.replies.map((reply) => (
-                            <div key={reply.id} className="flex gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback>{reply.initials || getInitials(reply.author)}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="text-sm font-semibold text-slate-900">{reply.author}</p>
-                                <p className="text-xs text-muted-foreground">{formatDateTime(reply.createdAt)}</p>
-                                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{reply.text}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Attachments Section */}
-            {(invoice?.attachmentUrl || invoice?.secondAttachmentUrl) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Attached Invoices</CardTitle>
-                  <CardDescription>View attached invoice files</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {invoice.attachmentUrl && invoice.attachmentName && invoice.attachmentType && (
-                    <div className="flex items-center justify-between p-3 bg-muted rounded-md">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <svg className="w-5 h-5 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <button
-                          onClick={() => handleViewAttachment(invoice.attachmentUrl!, invoice.attachmentType!, invoice.attachmentName!)}
-                          className="text-sm truncate text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
-                        >
-                          {invoice.attachmentName}
-                        </button>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewAttachment(invoice.attachmentUrl!, invoice.attachmentType!, invoice.attachmentName!)}
-                        className="flex-shrink-0"
-                        title="View attachment"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </Button>
-                    </div>
-                  )}
-
-                  {invoice.secondAttachmentUrl && invoice.secondAttachmentName && invoice.secondAttachmentType && (
-                    <div className="flex items-center justify-between p-3 bg-muted rounded-md">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <svg className="w-5 h-5 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <button
-                          onClick={() => handleViewAttachment(invoice.secondAttachmentUrl!, invoice.secondAttachmentType!, invoice.secondAttachmentName!)}
-                          className="text-sm truncate text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
-                        >
-                          {invoice.secondAttachmentName}
-                        </button>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewAttachment(invoice.secondAttachmentUrl!, invoice.secondAttachmentType!, invoice.secondAttachmentName!)}
-                        className="flex-shrink-0"
-                        title="View updated attachment"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Show message for legacy approved invoices without attachments */}
-            {invoice?.status === 'approved' && !invoice.attachmentUrl && !invoice.secondAttachmentUrl && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Attached Invoices</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Legacy approval - no attachment on file
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const calculateLineItemCost = (item: LineItem | null | undefined): number => {
-  if (!item || typeof item !== 'object') {
-    return 0;
-  }
-  if (item.manualCost != null && item.manualCost !== 0) {
-    return parseFloat(String(item.manualCost)) || 0;
-  }
-  if (item.cost != null && item.cost !== 0) {
-    return parseFloat(String(item.cost)) || 0;
-  }
-
-  const laborHours = parseFloat(String(item.laborHours)) || 0;
-  const otHours = parseFloat(String(item.otHours)) || 0;
-
-  if (item.jobType === 'Agent Services') {
-    return (laborHours * 80) + (otHours * 120);
-  }
-  if (item.itemType === 'Labor') {
-    return (laborHours * 80) + (otHours * 120);
-  }
-
-  return (laborHours * 85) + (otHours * 127.5);
-};
-
-const applyMarkup = (cost: number, item: LineItem | null | undefined, scope: any): number => {
-  if (!item || typeof item !== 'object') {
-    return cost;
-  }
-  if (
-    item.isMarkupExempt ||
-    item.markupType === 'exempt' ||
-    item.jobType === 'Clearance Fee' ||
-    (item.description && item.description.includes('Clearance Fee')) ||
-    item.jobType === 'Agent Services' ||
-    (item.jobType === 'Manual Entry' && item.itemType === 'Labor')
-  ) {
-    return cost;
-  }
-
-  if (item.markupRate === 0 || item.markupRate === '0') {
-    return cost;
-  }
-
-  let markupRate = item.markupRate !== undefined ? item.markupRate : (scope?.markupRate ?? 2.5);
-  markupRate = parseFloat(String(markupRate));
-  if (Number.isNaN(markupRate)) {
-    markupRate = 0;
-  }
-
-  if (markupRate > 1) {
-    markupRate = markupRate / 100;
-  }
-
-  return cost * (1 + markupRate);
-};
-
-const calculateTax = (item: LineItem | null | undefined, totalWithMarkup: number): number => {
-  if (!item || typeof item !== 'object') {
-    return 0;
-  }
-  if (item.jobType === 'Clearance Fee') {
-    return 0;
-  }
-
-  if (
-    item.taxStatus === 'non-taxable' ||
-    item.taxStatus === 'exempt' ||
-    item.isTaxExempt === true ||
-    item.isTaxable === false
-  ) {
-    return 0;
-  }
-
-  if (!item.taxStatus && item.description && item.description.includes('Clearance Fee')) {
-    return 0;
-  }
-
-  const taxRate = parseFloat(String(item.taxRate)) || 0.0875;
-  return totalWithMarkup * taxRate;
-};
-
-export default InvoiceView;
