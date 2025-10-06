@@ -645,3 +645,25 @@ body {
   }
 }
 
+/* Global iOS text selection callout prevention on mobile */
+@media (max-width: 767px) {
+  /* Disable iOS callout (Copy, Look Up, Translate popup) globally */
+  * {
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+  }
+
+  /* Allow text selection only in input fields and textareas */
+  input,
+  textarea,
+  [contenteditable="true"] {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+  }
+
+  /* Prevent context menu on long press */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
