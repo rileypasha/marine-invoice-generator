@@ -4081,7 +4081,13 @@ const CreateInvoice: React.FC = () => {
                         ref={previewRef}
                         onMouseUp={handlePreviewMouseUp}
                         onTouchEnd={handlePreviewTouchEnd}
+                        onContextMenu={(e) => e.preventDefault()}
                         className="relative rounded-lg border bg-white p-6 shadow-sm"
+                        style={{
+                          WebkitUserSelect: 'text',
+                          WebkitTouchCallout: 'none',
+                          userSelect: 'text'
+                        }}
                       >
                         <div className="space-y-6 text-sm text-slate-700">
                           <div className="flex flex-wrap items-start justify-between gap-4">
