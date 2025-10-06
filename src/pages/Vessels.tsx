@@ -577,23 +577,25 @@ const Vessels: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Sticky Toolbar */}
-      <VesselsToolbar
-        vessels={vessels}
-        currentGroupBy={currentGroupBy}
-        currentSegment={currentSegment}
-        currentFleet={currentFleet}
-        onAddClick={() => navigate('/vessels/create')}
-        onPrint={handlePrint}
-        onImport={() => setShowImportModal(true)}
-        onExport={handleExportCSV}
-        onGroupByChange={handleGroupByChangeWithState}
-        onSegmentChange={handleSegmentChangeWithState}
-        onFleetChange={handleFleetChangeWithState}
-      />
+      {/* Fixed Toolbar */}
+      <div className="flex-shrink-0">
+        <VesselsToolbar
+          vessels={vessels}
+          currentGroupBy={currentGroupBy}
+          currentSegment={currentSegment}
+          currentFleet={currentFleet}
+          onAddClick={() => navigate('/vessels/create')}
+          onPrint={handlePrint}
+          onImport={() => setShowImportModal(true)}
+          onExport={handleExportCSV}
+          onGroupByChange={handleGroupByChangeWithState}
+          onSegmentChange={handleSegmentChangeWithState}
+          onFleetChange={handleFleetChangeWithState}
+        />
+      </div>
 
-      {/* Table Content */}
-      <div className="flex-1 overflow-hidden">
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="text-muted-foreground">Loading vessels...</div>

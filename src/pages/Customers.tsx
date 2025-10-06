@@ -582,8 +582,9 @@ const Customers: React.FC = () => {
     <>
       {/* Container for Airtable-style layout without fixed height */}
       <div className="h-full flex flex-col">
-        {/* Sticky Toolbar */}
-        <ContactsToolbar
+        {/* Fixed Toolbar */}
+        <div className="flex-shrink-0">
+          <ContactsToolbar
             customers={customers}
             currentGroupBy={currentGroupBy}
             currentActivity={currentActivity}
@@ -809,9 +810,10 @@ const Customers: React.FC = () => {
               URL.revokeObjectURL(url);
             }}
           />
+        </div>
 
-          {/* Content area */}
-          <div className="flex-1 overflow-hidden">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="text-muted-foreground">Loading contacts...</div>
