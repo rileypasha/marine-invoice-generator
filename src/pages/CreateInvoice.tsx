@@ -408,8 +408,7 @@ const CreateInvoice: React.FC = () => {
     }
   };
 
-  const handlePreviewMouseUp = (event: React.MouseEvent<HTMLDivElement>) => {
-    const target = event.target as Node;
+  const handleTextSelection = (target: Node) => {
     if (selectionCardRef.current?.contains(target)) {
       return;
     }
@@ -473,6 +472,19 @@ const CreateInvoice: React.FC = () => {
       rect: highlight
     });
     setPendingCommentText('');
+  };
+
+  const handlePreviewMouseUp = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as Node;
+    handleTextSelection(target);
+  };
+
+  const handlePreviewTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const target = event.target as Node;
+    // Small delay to allow selection to be established on mobile
+    setTimeout(() => {
+      handleTextSelection(target);
+    }, 100);
   };
 
   const handleCancelSelection = () => {
@@ -4068,6 +4080,7 @@ const CreateInvoice: React.FC = () => {
                       <div
                         ref={previewRef}
                         onMouseUp={handlePreviewMouseUp}
+                        onTouchEnd={handlePreviewTouchEnd}
                         className="relative rounded-lg border bg-white p-6 shadow-sm"
                       >
                         <div className="space-y-6 text-sm text-slate-700">
