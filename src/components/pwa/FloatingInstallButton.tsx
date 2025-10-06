@@ -85,14 +85,14 @@ export function FloatingInstallButton() {
       {/* Floating Install Button */}
       <button
         onClick={handleClick}
-        className="fixed bottom-20 right-6 z-40 w-14 h-14 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none md:bottom-6"
+        className="fixed bottom-20 right-6 z-40 w-14 h-14 rounded-full bg-[#1E3A5F] transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none md:bottom-6 shadow-lg"
         aria-label="Install app"
         style={{
           bottom: 'calc(56px + env(safe-area-inset-bottom) + 1.5rem)'
         }}
       >
         <img
-          src="/pwa_install_icon_black_flat.svg"
+          src="/src/assets/new_install_icon.svg"
           alt="Install"
           className="w-full h-full"
         />

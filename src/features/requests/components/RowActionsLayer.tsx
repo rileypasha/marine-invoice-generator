@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Eye, Edit, Printer, Trash2 } from 'lucide-react';
 import { useRequestsRowActionsStore } from '../state/rowActions.store';
 
 export default function RequestsRowActionsLayer() {
@@ -23,45 +24,96 @@ export default function RequestsRowActionsLayer() {
     return ()=>{ document.removeEventListener('pointerdown', onPD, true); document.removeEventListener('keydown', onKey, true); };
   }, [open, armed, close]);
 
-  if (!open || !pos || !handlers || rowId == null) return null;
+  if (!open || !handlers || rowId == null) return null;
 
-  // Adjust position to prevent overflow
-  const menuWidth = 150; // Approximate width of the menu
-  const menuHeight = 160; // Approximate height of the menu (4 items)
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
+  // Backdrop blur style
+  const backdropStyle: React.CSSProperties = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backdropFilter: 'blur(2px)',
+    zIndex: 999,
+  };
 
-  let adjustedLeft = pos.left;
-  let adjustedTop = pos.top;
-
-  // Check if menu overflows right edge
-  if (pos.left + menuWidth > viewportWidth) {
-    adjustedLeft = viewportWidth - menuWidth - 10; // 10px padding from edge
-  }
-
-  // Check if menu overflows bottom edge
-  if (pos.top + menuHeight > viewportHeight) {
-    adjustedTop = viewportHeight - menuHeight - 10; // 10px padding from edge
-  }
-
-  const style: React.CSSProperties = {
-    position:'absolute', top: adjustedTop, left: adjustedLeft, zIndex: 1000,
-    display: 'flex', flexDirection: 'column', background:'white', border:'1px solid rgba(0,0,0,0.08)',
-    borderRadius: 8, boxShadow:'0 8px 24px rgba(0,0,0,0.12)', padding: 6
+  // Bottom sheet style
+  const sheetStyle: React.CSSProperties = {
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    background: 'white',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    boxShadow: '0 -4px 24px rgba(0,0,0,0.15)',
+    padding: '8px 0 24px 0',
+    animation: 'slideUp 0.2s ease-out',
   };
 
   return createPortal(
-    <div ref={boxRef} role="menu" aria-label={`Row ${rowId} actions`} data-row-actions style={style}
-         onPointerDown={(e)=>e.stopPropagation()} onClick={(e)=>e.stopPropagation()}>
-      <button role="menuitem" className="block text-left px-2 py-1.5 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-              onClick={()=>{ handlers.view(rowId); close(); }}>View</button>
-      <button role="menuitem" className="block text-left px-2 py-1.5 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-              onClick={()=>{ handlers.edit(rowId); close(); }}>Edit</button>
-      <button role="menuitem" className="block text-left px-2 py-1.5 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-              onClick={()=>{ handlers.print(rowId); close(); }}>Print</button>
-      <button role="menuitem" className="block text-left px-2 py-1.5 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap text-red-600"
-              onClick={()=>{ handlers.del(rowId); close(); }}>Delete</button>
-    </div>,
+    <>
+      <div
+        style={backdropStyle}
+        onClick={close}
+        onPointerDown={(e) => e.stopPropagation()}
+      />
+      <div
+        ref={boxRef}
+        role="menu"
+        aria-label={`Row ${rowId} actions`}
+        data-row-actions
+        style={sheetStyle}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
+        <button
+          role="menuitem"
+          className="flex items-center gap-3 w-full text-left px-6 py-3 text-base hover:bg-gray-50 transition-colors"
+          onClick={() => { handlers.view(rowId); close(); }}
+        >
+          <Eye className="h-5 w-5 text-gray-600" />
+          <span>View</span>
+        </button>
+        <button
+          role="menuitem"
+          className="flex items-center gap-3 w-full text-left px-6 py-3 text-base hover:bg-gray-50 transition-colors"
+          onClick={() => { handlers.edit(rowId); close(); }}
+        >
+          <Edit className="h-5 w-5 text-gray-600" />
+          <span>Edit</span>
+        </button>
+        <button
+          role="menuitem"
+          className="flex items-center gap-3 w-full text-left px-6 py-3 text-base hover:bg-gray-50 transition-colors"
+          onClick={() => { handlers.print(rowId); close(); }}
+        >
+          <Printer className="h-5 w-5 text-gray-600" />
+          <span>Print</span>
+        </button>
+        <button
+          role="menuitem"
+          className="flex items-center gap-3 w-full text-left px-6 py-3 text-base text-red-600 hover:bg-gray-50 transition-colors"
+          onClick={() => { handlers.del(rowId); close(); }}
+        >
+          <Trash2 className="h-5 w-5" />
+          <span>Delete</span>
+        </button>
+      </div>
+      <style>{`
+        @keyframes slideUp {
+          from {
+            transform: translateY(100%);
+          }
+          to {
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+    </>,
     document.body
   );
 }
