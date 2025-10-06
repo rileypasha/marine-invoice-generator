@@ -103,7 +103,7 @@ export function FloatingInstallButton() {
           aria-label="Install app"
         >
           <img
-            src="/pwa_install.svg"
+            src="/new_install_icon.svg"
             alt="Install"
             className="w-full h-full"
           />
