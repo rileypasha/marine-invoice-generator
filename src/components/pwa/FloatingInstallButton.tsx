@@ -91,17 +91,10 @@ export function FloatingInstallButton() {
           bottom: 'calc(56px + env(safe-area-inset-bottom) + 1.5rem)'
         }}
       >
-        {/* Mobile: Navy blue background icon */}
-        <img
-          src="/pwa_install.svg"
-          alt="Install"
-          className="w-full h-full md:hidden"
-        />
-        {/* Desktop: Transparent/flat icon */}
         <img
           src="/pwa_install_icon_black_flat.svg"
           alt="Install"
-          className="w-full h-full hidden md:block"
+          className="w-full h-full"
         />
       </button>
     </>
