@@ -1,6 +1,6 @@
 {
-  "name": "Marine Invoice Manager",
-  "short_name": "Marine Invoice",
+  "name": "Marine Group",
+  "short_name": "Marine Group",
   "description": "Mobile-first PWA for managing marine invoices offline",
   "start_url": "/",
   "display": "standalone",

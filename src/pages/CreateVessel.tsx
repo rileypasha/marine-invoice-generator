@@ -270,7 +270,7 @@ const CreateVessel: React.FC = () => {
               <Save className="h-4 w-4 mr-2" />
               {isLoading ? 'Saving...' : 'Save Vessel'}
             </Button>
-            <Button onClick={handleSaveAndNew} disabled={!isFormValid || isLoading} className="bg-black text-white hover:bg-gray-800">
+            <Button onClick={handleSaveAndNew} disabled={!isFormValid || isLoading} className="bg-[#1E3A5F] text-white hover:bg-[#152b47]">
               <Save className="h-4 w-4 mr-2" />
               {isLoading ? 'Saving...' : 'Save & New'}
             </Button>

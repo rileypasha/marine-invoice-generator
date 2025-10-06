@@ -20,7 +20,7 @@ function ViewToggleButton({ view, icon, label, active, onClick }: ViewToggleButt
         first:rounded-l-md last:rounded-r-md
         border border-gray-300 hover:bg-gray-50
         ${active
-          ? 'bg-black text-white border-black z-10'
+          ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] z-10'
           : 'bg-white text-gray-700 hover:text-gray-900'
         }
         ${!active && 'border-r-0 last:border-r'}

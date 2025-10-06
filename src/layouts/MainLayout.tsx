@@ -375,7 +375,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         {/* Main content */}
         <MainContent>
           {/* Screen-only page content */}
-          <main className="flex-1 bg-white screen-only" style={{ paddingTop: isFullWidthRoute() ? '0' : '4rem' }}>
+          <main className="flex-1 bg-white screen-only" style={{ paddingTop: isFullWidthRoute() ? '0' : (typeof window !== 'undefined' && window.innerWidth < 768 ? '-0.25rem' : '4rem') }}>
             {isFullWidthRoute() ? (
               // Full-width layout for Airtable-style pages (like contacts)
               <div className="w-full h-full">
@@ -383,7 +383,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </div>
             ) : (
               // Centered layout for other pages
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-0 md:py-8">
                 {children}
               </div>
             )}

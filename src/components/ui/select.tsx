@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { cn } from "../../lib/utils";
 
 interface SelectProps {
@@ -34,9 +34,25 @@ interface SelectItemProps extends React.HTMLAttributes<HTMLDivElement> {
 
 function Select({ children, onValueChange, value }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isOpen]);
 
   return (
-    <div className="relative">
+    <div ref={selectRef} className="relative">
       {React.Children.map(children, child => {
         if (React.isValidElement(child)) {
           if (child.type === SelectTrigger) {

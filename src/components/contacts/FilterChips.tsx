@@ -18,7 +18,7 @@ function FilterChip({ label, icon, active, count, onClick }: FilterChipProps) {
         inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium
         transition-all duration-200 ease-in-out
         ${active
-          ? 'bg-black text-white shadow-sm'
+          ? 'bg-[#1E3A5F] text-white shadow-sm'
           : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'
         }
       `}

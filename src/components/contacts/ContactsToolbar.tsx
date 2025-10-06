@@ -76,6 +76,11 @@ export function ContactsToolbar({
   const activeActivity = currentActivity ?? activity;
   const activeFleet = currentFleet ?? fleet;
 
+  // Determine selected value based on activity and fleet state
+  const selectedActivityValue = activeFleet !== 'all'
+    ? `${activeFleet}-monthly`
+    : activeActivity;
+
   // Calculate counts if not provided
   const calculatedCounts = counts || {
     all: customers.length,
@@ -88,7 +93,7 @@ export function ContactsToolbar({
   const monthlyActive = customers.filter(c => (c.monthly_invoice_count || 0) > 0).length;
   const monthlyInactive = customers.filter(c => (c.monthly_invoice_count || 0) === 0).length;
 
-  // Activity options for ToolbarSelect
+  // Combined activity options for ToolbarSelect
   const activityOptions: ToolbarSelectOption[] = [
     {
       value: 'all',
@@ -105,43 +110,36 @@ export function ContactsToolbar({
       label: 'Inactive',
       icon: <Circle className="h-3.5 w-3.5" />,
       count: calculatedCounts.inactive
-    }
-  ];
-
-  // Fleet options for ToolbarSelect (secondary segment)
-  const fleetOptions: ToolbarSelectOption[] = [
-    { value: 'all', label: 'Monthly Activity' },
+    },
+    { value: 'all-monthly', label: 'Monthly Activity' },
     {
-      value: 'active',
-      label: 'Active',
+      value: 'active-monthly',
+      label: 'Active (Monthly)',
       icon: <CheckCircle className="h-3.5 w-3.5" />,
       count: monthlyActive
     },
     {
-      value: 'inactive',
-      label: 'Inactive',
+      value: 'inactive-monthly',
+      label: 'Inactive (Monthly)',
       icon: <Circle className="h-3.5 w-3.5" />,
       count: monthlyInactive
     }
   ];
 
   const handleActivityChange = (newActivity: string) => {
-    // Always update URL state first
-    set({ activity: newActivity as typeof activity });
-
-    // Then call external handler if provided
-    if (externalActivityHandler) {
-      externalActivityHandler(newActivity as typeof activity);
-    }
-  };
-
-  const handleFleetChange = (newFleet: string) => {
-    // Always update URL state first
-    set({ fleet: newFleet });
-
-    // Then call external handler if provided
-    if (externalFleetHandler) {
-      externalFleetHandler(newFleet);
+    // Handle monthly options separately
+    if (newActivity.endsWith('-monthly')) {
+      const baseValue = newActivity.replace('-monthly', '');
+      set({ fleet: baseValue });
+      if (externalFleetHandler) {
+        externalFleetHandler(baseValue);
+      }
+    } else {
+      // Handle regular activity
+      set({ activity: newActivity as typeof activity });
+      if (externalActivityHandler) {
+        externalActivityHandler(newActivity as typeof activity);
+      }
     }
   };
 
@@ -171,11 +169,11 @@ export function ContactsToolbar({
     <div className={`sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 ${className}`}>
       <div>
         {/* Row 1: Title + Overflow Menu + Add Contact */}
-        <div className="flex items-center justify-between py-2 pt-3 px-2 md:px-0">
+        <div className="flex items-center justify-between py-1 pt-0 px-2 md:px-6 -mt-1">
           <div className="flex items-center gap-2">
             <h2 className="flex items-center gap-2 text-xl md:text-2xl font-semibold text-gray-900">
               <Users className="h-4 w-4 md:h-5 md:w-5" />
-              Contacts
+              <span>Contacts</span>
             </h2>
           </div>
 
@@ -214,7 +212,7 @@ export function ContactsToolbar({
             {/* Add Contact Button */}
             <Button
               onClick={onAddClick}
-              className="h-8 px-3 text-xs transition-none !bg-black !text-white hover:!bg-gray-800"
+              className="h-8 px-3 text-xs transition-none !bg-[#1E3A5F] !text-white hover:!bg-[#152b47]"
             >
               <Plus className="h-3 w-3 mr-1" />
               <span className="hidden sm:inline">Add Contact</span>
@@ -223,28 +221,35 @@ export function ContactsToolbar({
           </div>
         </div>
 
-        {/* Row 2: Toolbar Selects + Controls + Search */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 py-2 px-2 md:px-0">
-          {/* Left side: Dropdown selects */}
-          <div className="flex items-center gap-2">
+        {/* Row 2: Activity Filter + Controls */}
+        <div className="flex items-center justify-between gap-2 py-2 px-2 md:px-6">
+          {/* Desktop: Activity Filter */}
+          <div className="hidden md:flex">
             <ToolbarSelect
               label="Activity"
-              value={activeActivity}
+              value={selectedActivityValue}
               options={activityOptions}
               onChange={handleActivityChange}
               showCounts={true}
             />
-            <ToolbarSelect
-              label="Fleet"
-              value={activeFleet}
-              options={fleetOptions}
-              onChange={handleFleetChange}
-              showCounts={true}
-            />
           </div>
 
-          {/* Right side: Controls */}
-          <div className="flex items-center gap-2">
+          {/* Mobile & Desktop: Controls */}
+          <div className="flex items-center gap-2 w-full md:w-auto md:justify-end">
+            {/* Mobile: Activity Filter - left aligned */}
+            <div className="md:hidden">
+              <ToolbarSelect
+                label="Activity"
+                value={selectedActivityValue}
+                options={activityOptions}
+                onChange={handleActivityChange}
+                showCounts={true}
+              />
+            </div>
+
+            {/* Spacer to push right controls to the right */}
+            <div className="flex-1 md:hidden" />
+
             {/* Group/Filter/Sort menus */}
             <ContactsToolbarMenus
               activeGroupBy={activeGroupBy}

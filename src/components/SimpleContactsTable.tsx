@@ -137,7 +137,7 @@ export function ContactsTable({
               </button>
               <button
                 onClick={onAddClick}
-                className="flex items-center gap-1 px-3 py-2 text-sm bg-black text-white rounded-md hover:bg-gray-800"
+                className="flex items-center gap-1 px-3 py-2 text-sm bg-[#1E3A5F] text-white rounded-md hover:bg-[#152b47]"
               >
                 <Plus className="h-4 w-4" />
                 Add Contact

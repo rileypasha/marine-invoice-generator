@@ -403,7 +403,7 @@ const Invoices: React.FC<InvoicesProps> = ({
               </div>
               <button
                 onClick={handleAddClick}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-black hover:bg-gray-800"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#1E3A5F] hover:bg-[#152b47]"
               >
                 Create Your First Request
               </button>

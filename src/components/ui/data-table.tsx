@@ -143,7 +143,7 @@ export function DataTable<TData, TValue>({
             </DropdownMenu>
           )}
               {showAddButton && (
-                <Button onClick={onAddClick} className="h-8 px-3 text-xs transition-none !bg-black !text-white hover:!bg-gray-800">
+                <Button onClick={onAddClick} className="h-8 px-3 text-xs transition-none !bg-[#1E3A5F] !text-white hover:!bg-[#152b47]">
                   <Plus className="h-3 w-3 mr-1" />
                   {addButtonText}
                 </Button>
@@ -191,7 +191,7 @@ export function DataTable<TData, TValue>({
                 </Button>
               )}
               {showAddButton && (
-                <Button onClick={onAddClick} className="h-8 px-3 text-xs transition-none !bg-black !text-white hover:!bg-gray-800">
+                <Button onClick={onAddClick} className="h-8 px-3 text-xs transition-none !bg-[#1E3A5F] !text-white hover:!bg-[#152b47]">
                   <Plus className="h-3 w-3 mr-1" />
                   {addButtonText}
                 </Button>

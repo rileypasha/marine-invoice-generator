@@ -169,7 +169,7 @@ export function VesselsToolbar({
     <div className={`sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 ${className}`}>
       <div>
         {/* Row 1: Title + Overflow Menu + Add Vessel */}
-        <div className="flex items-center justify-between py-2 pt-3 px-2 md:px-6">
+        <div className="flex items-center justify-between py-1 pt-0 px-2 md:px-6 -mt-1">
           <div className="flex items-center gap-2">
             <h2 className="flex items-center gap-2 text-xl md:text-2xl font-semibold text-gray-900">
               <Ship className="h-4 w-4 md:h-5 md:w-5" />
@@ -212,7 +212,7 @@ export function VesselsToolbar({
             {/* Add Vessel Button */}
             <Button
               onClick={onAddClick}
-              className="h-8 px-3 text-xs transition-none !bg-black !text-white hover:!bg-gray-800"
+              className="h-8 px-3 text-xs transition-none !bg-[#1E3A5F] !text-white hover:!bg-[#152b47]"
             >
               <Plus className="h-3 w-3 mr-1" />
               <span className="hidden sm:inline">Add Vessel</span>

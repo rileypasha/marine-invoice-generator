@@ -444,7 +444,7 @@ const Settings: React.FC = () => {
                 <Button
                   onClick={updateProfile}
                   disabled={loading}
-                  className="bg-black hover:bg-gray-800 text-white"
+                  className="bg-[#1E3A5F] hover:bg-[#152b47] text-white"
                 >
                   {loading ? 'Saving...' : 'Save Changes'}
                 </Button>
@@ -537,7 +537,7 @@ const Settings: React.FC = () => {
                 <Button
                   onClick={updatePassword}
                   disabled={loading}
-                  className="bg-black hover:bg-gray-800 text-white"
+                  className="bg-[#1E3A5F] hover:bg-[#152b47] text-white"
                 >
                   {loading ? 'Updating...' : 'Update Password'}
                 </Button>

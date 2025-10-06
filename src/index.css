@@ -645,15 +645,3 @@ body {
   }
 }
 
-/* Disable iOS text selection callout (Copy, Look Up, Translate popup) on mobile */
-@media (max-width: 767px) {
-  * {
-    -webkit-touch-callout: none !important;
-  }
-
-  /* Allow text selection but prevent the callout menu */
-  * {
-    -webkit-user-select: text;
-    user-select: text;
-  }
-}

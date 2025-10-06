@@ -808,7 +808,6 @@ const Customers: React.FC = () => {
               document.body.removeChild(a);
               URL.revokeObjectURL(url);
             }}
-            className="px-6"
           />
 
           {/* Content area */}

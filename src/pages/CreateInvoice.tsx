@@ -408,6 +408,10 @@ const CreateInvoice: React.FC = () => {
     }
   };
 
+  // Custom touch selection state for iOS
+  const [touchStartPos, setTouchStartPos] = React.useState<{ x: number; y: number } | null>(null);
+  const [touchEndPos, setTouchEndPos] = React.useState<{ x: number; y: number } | null>(null);
+
   const handleTextSelection = (target: Node) => {
     if (selectionCardRef.current?.contains(target)) {
       return;
@@ -479,12 +483,110 @@ const CreateInvoice: React.FC = () => {
     handleTextSelection(target);
   };
 
+  const handlePreviewTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    setTouchStartPos({ x: touch.clientX, y: touch.clientY });
+    setTouchEndPos(null);
+  };
+
+  const handlePreviewTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    setTouchEndPos({ x: touch.clientX, y: touch.clientY });
+  };
+
   const handlePreviewTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
-    const target = event.target as Node;
-    // Small delay to allow selection to be established on mobile
-    setTimeout(() => {
-      handleTextSelection(target);
-    }, 100);
+    if (!touchStartPos || !touchEndPos || !previewRef.current) {
+      setTouchStartPos(null);
+      setTouchEndPos(null);
+      return;
+    }
+
+    // Check if this was a drag gesture (not just a tap)
+    const distance = Math.sqrt(
+      Math.pow(touchEndPos.x - touchStartPos.x, 2) +
+      Math.pow(touchEndPos.y - touchStartPos.y, 2)
+    );
+
+    if (distance < 10) {
+      // Just a tap, not a selection
+      setTouchStartPos(null);
+      setTouchEndPos(null);
+      return;
+    }
+
+    // Prevent default to stop iOS callout
+    event.preventDefault();
+
+    // Create a custom range from touch coordinates
+    const range = document.createRange();
+    const containerRect = previewRef.current.getBoundingClientRect();
+
+    // Get text nodes at start and end positions
+    const startNode = document.caretPositionFromPoint?.(touchStartPos.x, touchStartPos.y) ||
+                      document.caretRangeFromPoint?.(touchStartPos.x, touchStartPos.y);
+    const endNode = document.caretPositionFromPoint?.(touchEndPos.x, touchEndPos.y) ||
+                    document.caretRangeFromPoint?.(touchEndPos.x, touchEndPos.y);
+
+    if (!startNode || !endNode) {
+      setTouchStartPos(null);
+      setTouchEndPos(null);
+      return;
+    }
+
+    try {
+      // Set range boundaries
+      if ('offsetNode' in startNode) {
+        range.setStart(startNode.offsetNode, startNode.offset);
+      } else {
+        range.setStart(startNode.startContainer, startNode.startOffset);
+      }
+
+      if ('offsetNode' in endNode) {
+        range.setEnd(endNode.offsetNode, endNode.offset);
+      } else {
+        range.setEnd(endNode.endContainer, endNode.endOffset);
+      }
+
+      const selectedText = range.toString().trim();
+      if (selectedText.length === 0) {
+        setTouchStartPos(null);
+        setTouchEndPos(null);
+        return;
+      }
+
+      // Calculate highlight rect
+      const rect = range.getBoundingClientRect();
+      const padding = 8;
+      const top = rect.top - containerRect.top + previewRef.current.scrollTop;
+      const left = rect.left - containerRect.left + previewRef.current.scrollLeft;
+      const width = Math.max(rect.width + padding * 2, 36);
+      const height = Math.max(rect.height + padding * 2, 30);
+      const scrollHeight = previewRef.current.scrollHeight;
+      const scrollWidth = previewRef.current.scrollWidth;
+      const maxTop = Math.max(0, scrollHeight - height - 4);
+      const maxLeft = Math.max(0, scrollWidth - width - 4);
+
+      const highlight: CommentHighlightRect = {
+        top: Math.max(0, Math.min(top - padding, maxTop)),
+        left: Math.max(0, Math.min(left - padding, maxLeft)),
+        width,
+        height,
+      };
+
+      setPendingSelection({
+        text: selectedText,
+        rect: highlight
+      });
+      setPendingCommentText('');
+
+      // Clear selection to prevent any native UI
+      window.getSelection()?.removeAllRanges();
+    } catch (error) {
+      console.error('Touch selection error:', error);
+    }
+
+    setTouchStartPos(null);
+    setTouchEndPos(null);
   };
 
   const handleCancelSelection = () => {
@@ -4080,13 +4182,15 @@ const CreateInvoice: React.FC = () => {
                       <div
                         ref={previewRef}
                         onMouseUp={handlePreviewMouseUp}
+                        onTouchStart={handlePreviewTouchStart}
+                        onTouchMove={handlePreviewTouchMove}
                         onTouchEnd={handlePreviewTouchEnd}
                         onContextMenu={(e) => e.preventDefault()}
-                        className="relative rounded-lg border bg-white p-6 shadow-sm"
+                        className="relative rounded-lg border bg-white p-6 shadow-sm md:select-text select-none"
                         style={{
-                          WebkitUserSelect: 'text',
                           WebkitTouchCallout: 'none',
-                          userSelect: 'text'
+                          WebkitUserSelect: 'none',
+                          userSelect: 'none'
                         }}
                       >
                         <div className="space-y-6 text-sm text-slate-700">
