@@ -11,6 +11,7 @@ import {
   normalizeInvoiceComments
 } from '../utils/invoiceComments';
 import { PhoneField } from '../components/phone/PhoneField';
+import { LongPressComment } from '../components/comments/LongPressComment';
 import { buildDiffIndex, ChangedValue, DiffIndex, getDelta } from '../components/invoices/ChangedValue';
 import { PatchOperation } from '../types/diff.types';
 import { cn } from '../lib/utils';
@@ -246,20 +247,40 @@ const CreateInvoice: React.FC = () => {
     isAuthenticated
   });
 
-  const [invoiceData, setInvoiceData] = useState<InvoiceData>({
-    vessel: { name: '', weight: '', beam: '' },
-    customer: {
-      customerName: '',
-      customerEmail: '',
-      customerPhone: '',
-      customerAddress: '',
-      estimatorName: '',
-      contactName: ''
-    },
-    services: [],
-    notes: '',
-    metadata: { taxRate: 0, comments: [] }
-  });
+  // Load draft from localStorage for new invoices
+  const loadDraft = () => {
+    if (!isEditMode) {
+      try {
+        const savedDraft = localStorage.getItem('invoice-draft');
+        if (savedDraft) {
+          const parsed = JSON.parse(savedDraft);
+          // Handle both old format (just invoiceData) and new format (with IDs)
+          if (parsed.invoiceData) {
+            return parsed.invoiceData;
+          }
+          return parsed;
+        }
+      } catch (err) {
+        console.error('Failed to load draft:', err);
+      }
+    }
+    return {
+      vessel: { name: '', weight: '', beam: '' },
+      customer: {
+        customerName: '',
+        customerEmail: '',
+        customerPhone: '',
+        customerAddress: '',
+        estimatorName: '',
+        contactName: ''
+      },
+      services: [],
+      notes: '',
+      metadata: { taxRate: 0, comments: [] }
+    };
+  };
+
+  const [invoiceData, setInvoiceData] = useState<InvoiceData>(loadDraft());
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -649,15 +670,44 @@ const CreateInvoice: React.FC = () => {
     setReplyDrafts(prev => ({ ...prev, [commentId]: '' }));
   };
 
+  // Map to track which service elements have comments
+  const [serviceCommentMap, setServiceCommentMap] = useState<Map<string, string>>(new Map());
+
+  // Handle general comments from long-press (no text selection/highlight)
+  const handleLongPressComment = (text: string, targetElement: HTMLElement) => {
+    const authorName = currentUser?.name || currentUser?.email || 'Unknown User';
+
+    const commentId = `comment_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+    const newComment: InvoiceComment = {
+      id: commentId,
+      author: authorName,
+      initials: getInitials(authorName),
+      text: text,
+      selectionText: '', // No selection text for long-press comments
+      createdAt: new Date().toISOString(),
+      highlight: null, // No highlight rectangle for general comments
+      replies: []
+    };
+
+    setComments(prev => [...prev, newComment]);
+
+    // Store the association between the service element and comment
+    const serviceId = targetElement.getAttribute('data-service-id');
+    if (serviceId) {
+      setServiceCommentMap(prev => new Map(prev).set(serviceId, commentId));
+    }
+  };
+
   const renderCommentsPanel = (className = '') => (
     <div className={className}>
       <div className="flex items-center justify-between">
         <h3 className="text-base font-semibold text-slate-800">Comments</h3>
-        <span className="text-xs text-muted-foreground">{comments.length} open</span>
       </div>
       {comments.length === 0 ? (
         <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-          Highlight any portion of the preview on the left to leave a comment.
+          <span className="hidden lg:inline">Highlight any portion of the preview on the left to leave a comment.</span>
+          <span className="lg:hidden">Tap and hold a line item to add a comment.</span>
         </div>
       ) : (
         <div className="space-y-4">
@@ -670,10 +720,12 @@ const CreateInvoice: React.FC = () => {
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold text-slate-900">{comment.author}</p>
-                    <span className="text-xs text-muted-foreground">#{index + 1}</span>
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1e3a5f] text-xs font-bold text-white shadow-md">
+                      {index + 1}
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    “{comment.selectionText.slice(0, 70)}{comment.selectionText.length > 70 ? '…' : ''}”
+                    "{comment.selectionText.slice(0, 70)}{comment.selectionText.length > 70 ? '…' : ''}"
                   </p>
                 </div>
               </div>
@@ -739,12 +791,14 @@ const CreateInvoice: React.FC = () => {
   const [availableVessels, setAvailableVessels] = useState<DatabaseVessel[]>([]);
   const [isLoadingVessels, setIsLoadingVessels] = useState(false);
   const [selectedVesselId, setSelectedVesselId] = useState<string>('');
+  const [selectedVesselObject, setSelectedVesselObject] = useState<DatabaseVessel | null>(null);
   const [vesselSearchQuery, setVesselSearchQuery] = useState('');
 
   // Customer linking state
   const [availableCustomers, setAvailableCustomers] = useState<DatabaseCustomer[]>([]);
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [selectedCustomerObject, setSelectedCustomerObject] = useState<DatabaseCustomer | null>(null);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
 
   // Address autocomplete state
@@ -1061,6 +1115,80 @@ const CreateInvoice: React.FC = () => {
       console.error('Failed to restore invoice form state:', error);
     }
   }, [isEditMode, location.pathname, location.search, location.state, navigate]);
+
+  // Auto-save draft to localStorage for new invoices
+  useEffect(() => {
+    if (isEditMode) return; // Don't save drafts when editing existing invoices
+
+    try {
+      const draftData = {
+        invoiceData,
+        selectedVesselId,
+        selectedCustomerId,
+        // Save the actual vessel and customer objects
+        selectedVessel: selectedVesselObject,
+        selectedCustomer: selectedCustomerObject
+      };
+      console.log('💾 SAVING DRAFT:', {
+        hasVesselId: !!selectedVesselId,
+        hasVessel: !!selectedVesselObject,
+        vesselName: selectedVesselObject?.name,
+        hasCustomerId: !!selectedCustomerId,
+        hasCustomer: !!selectedCustomerObject,
+        customerName: selectedCustomerObject?.display_name
+      });
+      localStorage.setItem('invoice-draft', JSON.stringify(draftData));
+    } catch (err) {
+      console.error('Failed to save draft:', err);
+    }
+  }, [invoiceData, selectedVesselId, selectedCustomerId, selectedVesselObject, selectedCustomerObject, isEditMode]);
+
+  // Restore linked vessel and customer from saved draft
+  // This needs to re-run when the page becomes active to handle navigation back
+  useEffect(() => {
+    if (isEditMode) return;
+
+    // Check if we already have the objects loaded
+    if (selectedVesselObject && selectedCustomerObject) {
+      console.log('📂 Already have vessel and customer objects, skipping restore');
+      return;
+    }
+
+    try {
+      const savedDraft = localStorage.getItem('invoice-draft');
+      console.log('📂 RESTORING DRAFT:', savedDraft ? 'Found draft' : 'No draft');
+
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        console.log('📂 PARSED DRAFT:', {
+          hasVesselId: !!parsed.selectedVesselId,
+          hasVessel: !!parsed.selectedVessel,
+          vesselName: parsed.selectedVessel?.name,
+          hasCustomerId: !!parsed.selectedCustomerId,
+          hasCustomer: !!parsed.selectedCustomer,
+          customerName: parsed.selectedCustomer?.display_name
+        });
+
+        // Restore vessel
+        if (parsed.selectedVesselId && parsed.selectedVessel && !selectedVesselObject) {
+          console.log('✅ Restoring vessel:', parsed.selectedVessel.name);
+          setSelectedVesselId(parsed.selectedVesselId);
+          setSelectedVesselObject(parsed.selectedVessel);
+          setAvailableVessels([parsed.selectedVessel]);
+        }
+
+        // Restore customer
+        if (parsed.selectedCustomerId && parsed.selectedCustomer && !selectedCustomerObject) {
+          console.log('✅ Restoring customer:', parsed.selectedCustomer.display_name);
+          setSelectedCustomerId(parsed.selectedCustomerId);
+          setSelectedCustomerObject(parsed.selectedCustomer);
+          setAvailableCustomers([parsed.selectedCustomer]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to restore linked entities:', err);
+    }
+  }, [isEditMode, selectedVesselObject, selectedCustomerObject]); // Re-run when these change
 
   useEffect(() => {
     if (!pendingSelection) return;
@@ -2510,6 +2638,11 @@ const CreateInvoice: React.FC = () => {
       const result = await response.json();
       setHasUnsavedChanges(false);
 
+      // Clear draft from localStorage after successful save
+      if (!isEditMode) {
+        localStorage.removeItem('invoice-draft');
+      }
+
       // Navigate to invoice requests table on success
       navigate('/requests');
 
@@ -2599,6 +2732,11 @@ const CreateInvoice: React.FC = () => {
       }
 
       const result = await response.json();
+
+      // Clear draft from localStorage after successful save
+      if (!isEditMode) {
+        localStorage.removeItem('invoice-draft');
+      }
 
       // Instead of navigating, clear the form for new invoice
       handleNewInvoice();
@@ -3382,10 +3520,14 @@ const CreateInvoice: React.FC = () => {
                     <Select
                       value={selectedVesselId}
                       onValueChange={(value) => {
+                        console.log('🚢 VESSEL SELECTED:', { value, availableVesselsCount: availableVessels.length });
                         setSelectedVesselId(value);
                         if (value && value !== '') {
                           const selectedVessel = availableVessels.find(v => v.id === value);
+                          console.log('🚢 FOUND VESSEL:', { found: !!selectedVessel, vessel: selectedVessel });
                           if (selectedVessel) {
+                            setSelectedVesselObject(selectedVessel); // Save the vessel object
+                            console.log('✅ SAVED VESSEL OBJECT:', selectedVessel.name);
                             setInvoiceData(prev => ({
                               ...prev,
                               vessel: {
@@ -3401,9 +3543,9 @@ const CreateInvoice: React.FC = () => {
                       }}
                     >
                       <SelectTrigger>
-                        {selectedVesselId ? (
+                        {selectedVesselId && selectedVesselObject ? (
                           <div className="flex items-center">
-                            <span>{availableVessels.find(v => v.id === selectedVesselId)?.name}</span>
+                            <span>{selectedVesselObject.name}</span>
                             <svg className="w-4 h-4 ml-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                             </svg>
@@ -3514,11 +3656,14 @@ const CreateInvoice: React.FC = () => {
                     <Select
                       value={selectedCustomerId}
                       onValueChange={(value) => {
+                        console.log('👤 CUSTOMER SELECTED:', { value, availableCustomersCount: availableCustomers.length });
                         setSelectedCustomerId(value);
                         if (value) {
                           const selectedCustomer = availableCustomers.find(c => c.id === value);
+                          console.log('👤 FOUND CUSTOMER:', { found: !!selectedCustomer, customer: selectedCustomer });
                           if (selectedCustomer) {
-                            console.log('Selected Customer:', selectedCustomer);
+                            setSelectedCustomerObject(selectedCustomer); // Save the customer object
+                            console.log('✅ SAVED CUSTOMER OBJECT:', selectedCustomer.display_name);
                             setInvoiceData(prev => ({
                               ...prev,
                               customer: {
@@ -3537,9 +3682,9 @@ const CreateInvoice: React.FC = () => {
                       }}
                     >
                       <SelectTrigger>
-                        {selectedCustomerId ? (
+                        {selectedCustomerId && selectedCustomerObject ? (
                           <div className="flex items-center">
-                            <span>{availableCustomers.find(c => c.id === selectedCustomerId)?.display_name}</span>
+                            <span>{selectedCustomerObject.display_name}</span>
                             <svg className="w-4 h-4 ml-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                             </svg>
@@ -3981,8 +4126,17 @@ const CreateInvoice: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const fileInput = document.getElementById(`service-receipt-${index}`) as HTMLInputElement;
-                                  if (fileInput) fileInput.click();
+                                  // Blur any active input to dismiss keyboard before file picker
+                                  const activeElement = document.activeElement as HTMLElement;
+                                  if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT')) {
+                                    activeElement.blur();
+                                  }
+
+                                  // Small delay to let keyboard dismiss
+                                  setTimeout(() => {
+                                    const fileInput = document.getElementById(`service-receipt-${index}`) as HTMLInputElement;
+                                    if (fileInput) fileInput.click();
+                                  }, 100);
                                 }}
                                 disabled={isDeleted}
                                 className={cn(
@@ -4170,7 +4324,8 @@ const CreateInvoice: React.FC = () => {
                 <CardHeader className="px-0">
                   <CardTitle className="text-base">Comments & Preview</CardTitle>
                   <CardDescription>
-                    Highlight the invoice preview to leave contextual comments for collaborators.
+                    <span className="hidden lg:inline">Highlight the invoice preview to leave contextual comments for collaborators.</span>
+                    <span className="lg:hidden">Tap and hold a line item to add a comment.</span>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 px-0">
@@ -4244,10 +4399,27 @@ const CreateInvoice: React.FC = () => {
                             </div>
                           ) : (
                             <>
-                              {/* Mobile: Card Layout */}
+                              {/* Mobile: Card Layout with Long-Press Comments */}
                               <div className="space-y-3 md:hidden">
-                                {previewSummary.services.map((service, index) => (
-                                  <div key={service.id} className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
+                                {previewSummary.services.map((service, index) => {
+                                  const hasComment = serviceCommentMap.has(service.id);
+                                  const commentId = serviceCommentMap.get(service.id);
+                                  const commentIndex = commentId ? comments.findIndex(c => c.id === commentId) : -1;
+
+                                  return (
+                                    <LongPressComment
+                                      key={service.id}
+                                      onCommentAdd={handleLongPressComment}
+                                      isHighlighted={hasComment}
+                                      commentNumber={hasComment && commentIndex >= 0 ? commentIndex + 1 : undefined}
+                                      totalComments={comments.length}
+                                      userName={currentUser?.name}
+                                      userEmail={currentUser?.email}
+                                      userAvatar={currentUser?.avatarUrl}
+                                      className="block"
+                                      data-service-id={service.id}
+                                    >
+                                      <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
                                     <div>
                                       <p className={cn("font-medium text-sm", isFieldInBackendDiff(`/services/${index}/description`) ? 'text-green-600 font-semibold' : 'text-slate-800')}>{service.description}</p>
                                       <p className={cn("text-xs text-muted-foreground", isFieldInBackendDiff(`/services/${index}/jobType`) && 'text-green-600 font-semibold')}>{service.jobType}</p>
@@ -4271,7 +4443,9 @@ const CreateInvoice: React.FC = () => {
                                       </div>
                                     </div>
                                   </div>
-                                ))}
+                                  </LongPressComment>
+                                  );
+                                })}
                               </div>
 
                               {/* Desktop: Table Layout */}
@@ -4664,3 +4838,4 @@ const CreateInvoice: React.FC = () => {
 };
 
 export default CreateInvoice;
+ 

@@ -96,3 +96,18 @@ export const AvatarFallback: React.FC<AvatarFallbackProps> = ({ children, classN
     {children}
   </div>
 );
+
+interface AvatarImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  src: string;
+  alt: string;
+  className?: string;
+}
+
+export const AvatarImage: React.FC<AvatarImageProps> = ({ src, alt, className = '', ...props }) => (
+  <img
+    src={src}
+    alt={alt}
+    className={`aspect-square h-full w-full ${className}`}
+    {...props}
+  />
+);
