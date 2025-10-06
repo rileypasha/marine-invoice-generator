@@ -21,19 +21,19 @@ const REQUESTS_COLS = [
   { id: 'actions', w: '1%' }   // Actions column
 ];
 
-// Mobile-specific widths - all columns visible, horizontally scrollable
+// Mobile-specific widths - totals ~104% to prevent overflow past last column
 const REQUESTS_COLS_MOBILE = [
-  { id: 'select', w: '5%' },     // Checkbox column
-  { id: 'invoice_number', w: '14%' },    // Request # column
+  { id: 'select', w: '4%' },     // Checkbox column
+  { id: 'invoice_number', w: '12%' },    // Request # column
   { id: 'customer', w: '14%' },    // Contact column
   { id: 'vessel', w: '10%' },     // Vessel column
   { id: 'amount', w: '9%' },     // Amount column
-  { id: 'created_by', w: '10%' },  // Created by column
-  { id: 'created_at', w: '10%' },    // Created at column
-  { id: 'modified_by', w: '10%' }, // Modified by column
-  { id: 'updated_at', w: '10%' },  // Last modified column
+  { id: 'created_by', w: '10%' },  // Created by column (hidden but needs space)
+  { id: 'created_at', w: '10%' },    // Created at column (hidden but needs space)
+  { id: 'modified_by', w: '12%' }, // Modified by column
+  { id: 'updated_at', w: '11%' },  // Last modified column
   { id: 'status', w: '18%' },    // Status column (for "Change Requested")
-  { id: 'actions', w: '5%' }    // Actions column
+  { id: 'actions', w: '4%' }    // Actions column
 ];
 
 interface Invoice {
@@ -161,9 +161,6 @@ export function RequestsTable({
     openRowActions
   }), [onView, onEdit, handleEditWrapper, onPrint, onDelete, openRowActions]);
 
-  // Select column widths based on device
-  const columnWidths = isMobile ? REQUESTS_COLS_MOBILE : REQUESTS_COLS;
-
   return (
     <DataTable
       columns={columns}
@@ -171,7 +168,6 @@ export function RequestsTable({
       onBulkDelete={onBulkDelete}
       onBulkExport={onBulkExport}
       title={title}
-      colWidths={columnWidths}
     />
   )
 }
