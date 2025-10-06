@@ -4,8 +4,8 @@
  * Provides offline support with caching strategies and background sync.
  */
 
-const CACHE_NAME = 'marine-invoice-v1'
-const RUNTIME_CACHE = 'marine-invoice-runtime-v1'
+const CACHE_NAME = 'marine-invoice-v2'
+const RUNTIME_CACHE = 'marine-invoice-runtime-v2'
 
 // Static assets to cache on install
 const STATIC_ASSETS = [

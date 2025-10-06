@@ -111,7 +111,8 @@
       "Bash(npm test:*)",
       "Bash(~/ngrok.exe http 3000 --log stdout)",
       "Bash(~/ngrok.exe config add-authtoken 33Z9Mu0hu34uBf52QcnHb9egqPT_3gX3fgzjfXuEZdyWFvozY)",
-      "Bash(ipconfig)"
+      "Bash(ipconfig)",
+      "Bash(md5sum:*)"
     ],
     "deny": [],
     "ask": [],
