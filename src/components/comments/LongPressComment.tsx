@@ -221,8 +221,17 @@ export function LongPressComment({
       {/* Comment Modal - Positioned below line item */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[9999] pointer-events-none">
-          {/* Subtle backdrop blur */}
-          <div className="absolute inset-0 backdrop-blur-[2px] bg-black/[0.02] pointer-events-auto" onClick={handleCancel} />
+          {/* Subtle backdrop blur - extends into safe areas for full screen coverage */}
+          <div
+            className="absolute backdrop-blur-[2px] bg-black/[0.02] pointer-events-auto"
+            style={{
+              top: '-100px',
+              left: '-100px',
+              right: '-100px',
+              bottom: '-100px'
+            }}
+            onClick={handleCancel}
+          />
 
           <div
             className="absolute w-full max-w-sm pointer-events-auto"
@@ -280,6 +289,7 @@ export function LongPressComment({
                 placeholder="Type your comment here..."
                 className="min-h-[80px] resize-none w-full touch-auto text-sm"
                 autoFocus
+                inputMode="text"
                 onTouchStart={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
               />

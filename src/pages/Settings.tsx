@@ -26,6 +26,7 @@ interface ProfileData {
   name: string;
   email: string;
   avatarFile?: File | null;
+  avatarUrl?: string;
 }
 
 const Settings: React.FC = () => {
@@ -40,7 +41,8 @@ const Settings: React.FC = () => {
   const [profileData, setProfileData] = useState<ProfileData>({
     name: '',
     email: '',
-    avatarFile: null
+    avatarFile: null,
+    avatarUrl: ''
   });
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -282,7 +284,15 @@ const Settings: React.FC = () => {
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                onClick={() => setShowModal('profile')}
+                onClick={() => {
+                  setProfileData({
+                    name: currentUser?.name || '',
+                    email: currentUser?.email || '',
+                    avatarFile: null,
+                    avatarUrl: currentUser?.avatarUrl || ''
+                  });
+                  setShowModal('profile');
+                }}
               >
                 Profile Information
               </Button>
@@ -407,9 +417,32 @@ const Settings: React.FC = () => {
                     Profile Picture
                   </label>
                   <div className="flex items-center gap-3">
+                    {/* Show current avatar if exists */}
+                    {(profileData.avatarUrl || profileData.avatarFile) && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                        <img
+                          src={profileData.avatarFile ? URL.createObjectURL(profileData.avatarFile) : profileData.avatarUrl}
+                          alt="Current avatar"
+                          className="h-10 w-10 rounded-full object-cover"
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-xs font-medium text-green-700">
+                            {profileData.avatarFile ? 'New image selected' : 'Current avatar'}
+                          </span>
+                          {profileData.avatarFile && (
+                            <span className="text-xs text-gray-600">
+                              {profileData.avatarFile.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <label className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                       <Upload className="h-4 w-4 mr-2" />
-                      <span className="text-sm">Choose Image</span>
+                      <span className="text-sm">
+                        {profileData.avatarUrl || profileData.avatarFile ? 'Change Image' : 'Choose Image'}
+                      </span>
                       <input
                         type="file"
                         accept="image/*"
@@ -422,14 +455,11 @@ const Settings: React.FC = () => {
                         className="hidden"
                       />
                     </label>
-                    {profileData.avatarFile && (
-                      <span className="text-sm text-gray-600">
-                        {profileData.avatarFile.name}
-                      </span>
-                    )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Upload an image for your profile picture (optional)
+                    {profileData.avatarUrl || profileData.avatarFile
+                      ? 'You can upload a new image to replace your current avatar'
+                      : 'Upload an image for your profile picture (optional)'}
                   </p>
                 </div>
               </div>
