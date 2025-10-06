@@ -92,7 +92,7 @@
     /* Content scroll area padded under the fixed header */
     .app-content {
       height: 100dvh;
-      overflow: auto;
+      overflow: visible;
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
       background: #fff;

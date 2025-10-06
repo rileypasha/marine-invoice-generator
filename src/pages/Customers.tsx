@@ -16,9 +16,9 @@ import {
 } from '../components/magic/index';
 import { ContactsTable } from '../components/ContactsTable';
 import { ContactsToolbar } from '../components/contacts/ContactsToolbar';
-import { Pagination } from '../components/ui/pagination';
 import { useContactsQueryState, ContactGroupBy, ContactActivity } from '../hooks/useContactsQueryState';
 import { useFileInput } from '../components/hooks/use-file-input';
+import ContactsRowActionsLayer from '../features/contacts/components/ContactsRowActionsLayer';
 
 interface Customer {
   id: string;
@@ -65,6 +65,9 @@ const Customers: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Table state management (controlled)
   const [grouping, setGrouping] = useState<GroupingState>([]);
@@ -109,16 +112,20 @@ const Customers: React.FC = () => {
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
 
   // Fetch all customers from API with URL-driven filtering
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async (page = 1, append = false) => {
     if (!isAuthenticated || !csrfToken) return;
 
     try {
-      setIsLoading(true);
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
+      }
 
-      // Build query parameters - fetch all customers at once
+      // Build query parameters
       const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '25', // Server-side pagination
+        page: page.toString(),
+        limit: '25',
       });
 
       if (queryState.q.trim()) {
@@ -140,15 +147,23 @@ const Customers: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setCustomers(data.customers || []);
 
-        // Update total count for header display
+        if (append) {
+          setCustomers(prev => [...prev, ...(data.customers || [])]);
+        } else {
+          setCustomers(data.customers || []);
+        }
+
+        // Update pagination state
         if (data.pagination) {
           setTotalCustomers(data.pagination.total);
           setTotalPages(data.pagination.totalPages || 1);
+          setCurrentPage(page);
+          setHasMore(page < (data.pagination.totalPages || 1));
         } else {
           setTotalCustomers(data.customers?.length || 0);
           setTotalPages(1);
+          setHasMore(false);
         }
       } else {
         console.error('Failed to fetch customers');
@@ -157,8 +172,9 @@ const Customers: React.FC = () => {
       console.error('Error fetching customers:', error);
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
-  };
+  }, [isAuthenticated, csrfToken, queryState.q, queryState.segment]);
 
   // Filter customers based on search query and filters
   const filteredCustomers = customers.filter(customer => {
@@ -201,8 +217,39 @@ const Customers: React.FC = () => {
 
   // Load customers on mount and when URL state changes
   useEffect(() => {
-    fetchCustomers();
-  }, [isAuthenticated, csrfToken, queryState.q, queryState.activity, queryState.fleet, currentPage]);
+    setCurrentPage(1);
+    fetchCustomers(1, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryState.q, queryState.activity, queryState.fleet, queryState.segment]);
+
+  // Load more function for infinite scroll
+  const loadMore = useCallback(() => {
+    if (!isLoadingMore && !isLoading && hasMore) {
+      const nextPage = currentPage + 1;
+      fetchCustomers(nextPage, true);
+    }
+  }, [isLoadingMore, isLoading, hasMore, currentPage, fetchCustomers]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoadingMore && !isLoading && hasMore) {
+          loadMore();
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '200px' // Trigger 200px before reaching the element
+      }
+    );
+
+    observer.observe(loadMoreRef.current);
+
+    return () => observer.disconnect();
+  }, [loadMore, isLoadingMore, isLoading, hasMore]);
 
   // Initialize grouping, activity, and fleet from URL on mount only
   useEffect(() => {
@@ -225,7 +272,7 @@ const Customers: React.FC = () => {
 
     setIsLoadingInvoices(true);
     try {
-      const response = await fetch(`/api/v1/invoices?customer_id=${customerId}`, {
+      const response = await fetch(`/api/v1/invoice?customerId=${customerId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -580,10 +627,9 @@ const Customers: React.FC = () => {
 
   return (
     <>
-      {/* Container for Airtable-style layout without fixed height */}
       <div className="h-full flex flex-col">
-        {/* Fixed Toolbar */}
-        <div className="flex-shrink-0">
+        {/* Sticky Toolbar - always visible at top */}
+        <div className="flex-shrink-0 sticky top-0 z-30 bg-white border-b">
           <ContactsToolbar
             customers={customers}
             currentGroupBy={currentGroupBy}
@@ -812,9 +858,9 @@ const Customers: React.FC = () => {
           />
         </div>
 
-        {/* Scrollable Content */}
+        {/* Content - flex-1 and overflow-y-auto makes this the scrollable area */}
         <div className="flex-1 overflow-y-auto">
-            {isLoading ? (
+          {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="text-muted-foreground">Loading contacts...</div>
               </div>
@@ -852,15 +898,29 @@ const Customers: React.FC = () => {
             onBulkDelete={handleBulkDelete}
             onBulkExport={handleBulkExport}
           />
-          <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-              </>
+
+          {/* Infinite scroll loading indicator */}
+          {hasMore && (
+            <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
+              {isLoadingMore && (
+                <div className="text-xs text-gray-400">Loading more...</div>
+              )}
+            </div>
+          )}
+
+          {/* End of results message */}
+          {!hasMore && filteredCustomers.length > 0 && (
+            <div className="py-8 text-center text-sm text-gray-500">
+              End of results
+            </div>
+          )}
+          </>
             )}
-          </div>
         </div>
+      </div>
+
+      {/* Contacts Row Actions Layer */}
+      <ContactsRowActionsLayer />
 
       {/* Import Modal */}
       {showImportModal && createPortal(
@@ -1059,23 +1119,15 @@ const Customers: React.FC = () => {
                     <div key={invoice.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-4">
-                            <h4 className="font-medium text-gray-900">#{invoice.invoice_number}</h4>
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              invoice.status === 'paid'
-                                ? 'bg-green-100 text-green-800'
-                                : invoice.status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {invoice.status}
-                            </span>
-                          </div>
-                          <div className="mt-1 text-sm text-gray-600">
-                            <div>Created: {new Date(invoice.created_at).toLocaleDateString()}</div>
-                            {invoice.due_date && (
-                              <div>Due: {new Date(invoice.due_date).toLocaleDateString()}</div>
+                          <div className="flex flex-col gap-1">
+                            <div className="font-medium text-gray-900">{invoice.invoiceNumber || invoice.invoice_number || 'N/A'}</div>
+                            {invoice.vessel?.name && (
+                              <div className="text-sm text-gray-600">{invoice.vessel.name}</div>
                             )}
+                            <div className="text-sm text-gray-600">
+                              {invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() :
+                               invoice.created_at ? new Date(invoice.created_at).toLocaleDateString() : 'N/A'}
+                            </div>
                           </div>
                         </div>
                         <div className="text-right">
