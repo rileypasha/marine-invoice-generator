@@ -3,7 +3,10 @@
 import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Avatar, AvatarFallback, AvatarImage } from "./magic/index"
 import { MoreHorizontal } from "lucide-react"
+
+// Fixed Avatar import path
 
 interface Invoice {
   id: string;
@@ -22,6 +25,7 @@ interface Invoice {
   };
   userName?: string;
   modifiedByUserName?: string;
+  modifiedByUserAvatar?: string;
   total_amount?: number;
   invoice_date?: string;
   updated_at?: string;
@@ -54,18 +58,31 @@ const formatCurrency = (amount?: number) => {
   return currencyFormatter.format(amount);
 };
 
+// Helper to get user initials
+const getInitials = (name?: string) => {
+  if (!name) return '?';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
+
 // Hoist status config outside to prevent recreation
 const STATUS_CONFIG = {
   requested: {
-    className: 'bg-blue-400 text-white dark:bg-blue-500 dark:text-white',
-    label: 'Requested'
+    bgColor: '#d2e5fe',
+    textColor: '#5d6885',
+    label: 'Pending Approval'
   },
   change_requested: {
-    className: 'bg-purple-400 text-white dark:bg-purple-500 dark:text-white',
-    label: 'Change Requested'
+    bgColor: '#ffe9ae',
+    textColor: '#988a6d',
+    label: 'Changes Needed'
   },
   approved: {
-    className: 'bg-green-400 text-white dark:bg-green-500 dark:text-white',
+    bgColor: '#d1f5d1',
+    textColor: '#2c270f',
     label: 'Approved'
   }
 } as const;
@@ -74,7 +91,10 @@ const getStatusBadge = (status?: string) => {
   const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.requested;
 
   return (
-    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.className}`}>
+    <span
+      className="inline-flex px-2 py-1 text-xs rounded-full"
+      style={{ backgroundColor: config.bgColor, color: config.textColor }}
+    >
       {config.label}
     </span>
   );
@@ -217,9 +237,18 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     cell: ({ row }) => {
       const invoice = row.original;
       const modifiedBy = invoice.modifiedByUserName || '-';
+      const avatarUrl = invoice.modifiedByUserAvatar;
+      const initials = getInitials(invoice.modifiedByUserName);
+
       return (
-        <div className="text-sm text-gray-600 text-left whitespace-nowrap overflow-visible">
-          {modifiedBy}
+        <div className="flex items-center gap-2 text-sm text-gray-600 text-left whitespace-nowrap overflow-visible">
+          {modifiedBy !== '-' && (
+            <Avatar className="h-6 w-6">
+              {avatarUrl && <AvatarImage src={avatarUrl} alt={modifiedBy} />}
+              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            </Avatar>
+          )}
+          <span>{modifiedBy}</span>
         </div>
       );
     },
