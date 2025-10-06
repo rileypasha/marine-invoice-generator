@@ -23,6 +23,7 @@ import { getLineItemOp } from '../components/invoices/LineItemsDiff';
 import { cn } from '../lib/utils';
 import { convertFieldDeltaToPatch, isFieldDeltaFormat } from '../utils/diffConverter';
 import { PatchOperation } from '../types/diff.types';
+import { FileText, X, Paperclip } from 'lucide-react';
 
 interface LineItem {
   id?: string;
@@ -42,6 +43,9 @@ interface LineItem {
   isTaxable?: boolean;
   isMarkupExempt?: boolean;
   markupType?: string;
+  receiptUrl?: string;
+  receiptName?: string;
+  receiptType?: string;
 }
 
 interface Invoice {
@@ -103,6 +107,9 @@ interface ServiceSummaryItem {
   taxAmount: number;
   totalBeforeTax: number;
   total: number;
+  receiptUrl?: string;
+  receiptName?: string;
+  receiptType?: string;
 }
 
 const parseMetadata = (metadata: unknown): Record<string, unknown> => {
@@ -220,6 +227,8 @@ const InvoiceView: React.FC = () => {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+  const [currentReceipt, setCurrentReceipt] = useState<{ url: string; name: string; type: string } | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
   const isPreviewMode = id === 'preview' || Boolean(location.state?.previewData);
@@ -318,27 +327,8 @@ const InvoiceView: React.FC = () => {
   };
 
   const handleViewAttachment = (attachmentUrl: string, attachmentType: string, attachmentName: string) => {
-    try {
-      // Convert base64 to blob
-      const base64Data = attachmentUrl.split(',')[1]; // Remove data:mime;base64, prefix
-      const byteCharacters = atob(base64Data);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: attachmentType });
-
-      // Create object URL and open in new tab
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, '_blank', 'noopener,noreferrer');
-
-      // Clean up object URL after a delay
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-    } catch (error) {
-      console.error('Error viewing attachment:', error);
-      alert('Failed to view attachment');
-    }
+    setCurrentReceipt({ url: attachmentUrl, name: attachmentName, type: attachmentType });
+    setReceiptModalOpen(true);
   };
 
   const metadata = useMemo(() => parseMetadata(invoice?.metadata), [invoice?.metadata]);
@@ -452,7 +442,10 @@ const InvoiceView: React.FC = () => {
           markupAmount,
           taxAmount,
           totalBeforeTax: costWithMarkup,
-          total
+          total,
+          receiptUrl: item.receiptUrl,
+          receiptName: item.receiptName,
+          receiptType: item.receiptType
         };
       });
 
@@ -544,15 +537,43 @@ const InvoiceView: React.FC = () => {
   const invoiceNumber = invoice.invoiceNumber || (invoice.id ? invoice.id.substring(0, 8) : '—');
 
   return (
-    <div className="min-h-full bg-slate-50">
+    <div className="min-h-full bg-white">
       <div className="mx-auto flex max-w-6xl flex-col">
+        {/* Page Header */}
+        <div className="bg-white border-b border-slate-200 pl-0 pr-0 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-slate-700" />
+              <h1 className="text-lg font-semibold text-slate-900">Invoice Request Preview</h1>
+            </div>
+            <Button
+              onClick={handleBack}
+              className="bg-[#1e3a5f] text-white hover:bg-[#152d4a] rounded-md px-3 py-1.5 text-sm font-medium h-auto"
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Exit
+            </Button>
+          </div>
+        </div>
+
+        {/* Comments & Preview Section */}
+        <div className="pl-0 pr-4 py-4 mb-6">
+          <h2 className="text-base font-semibold text-slate-800 mb-1">Comments & Preview</h2>
+          <p className="text-sm text-slate-600 md:hidden">
+            Tap and hold a line item to add a comment
+          </p>
+          <p className="text-sm text-slate-600 hidden md:block">
+            Click on a line item to add a comment
+          </p>
+        </div>
+
         <div
           ref={previewRef}
-          className="bg-white rounded-lg shadow-md p-6 space-y-6 text-sm text-slate-700 select-none [-webkit-touch-callout:none]"
+          className="bg-white rounded-lg border border-slate-200 p-6 space-y-6 text-sm text-slate-700 select-none [-webkit-touch-callout:none]"
         >
           {/* Header */}
-          <div className="bg-slate-50 -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
-            <h2 className="text-base font-semibold text-slate-900">
+          <div className="pb-4">
+            <h2 className="text-xl font-semibold text-slate-900">
               {invoice.title || `Invoice for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`}
             </h2>
             <p className="text-xs text-slate-500 mt-1">
@@ -560,7 +581,7 @@ const InvoiceView: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid gap-6 bg-slate-50 p-4 md:grid-cols-2">
+          <div className="grid gap-6 border border-slate-200 rounded-lg bg-slate-50 p-4 md:grid-cols-2">
             <div className="space-y-1">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">VESSEL</h3>
               <p className="font-medium text-slate-900">
@@ -636,10 +657,23 @@ const InvoiceView: React.FC = () => {
               <>
                 {/* Mobile: Card Layout */}
                 <div className="space-y-3 md:hidden">
-                  {servicesSummary.services.map((service, index) => (
-                    <div key={service.id} className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
+                  {servicesSummary.services.map((service, index) => {
+                    return (
+                      <div key={service.id} className="rounded-lg border border-slate-200 bg-white p-3 space-y-2 relative">
+                      {service.receiptUrl && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewAttachment(service.receiptUrl!, service.receiptType || 'application/pdf', service.receiptName || 'receipt');
+                          }}
+                          className="absolute top-3 right-3 text-blue-600 hover:text-blue-800"
+                        >
+                          <Paperclip className="h-5 w-5" />
+                        </button>
+                      )}
+
                       <div>
-                        <p className="font-medium text-sm text-slate-800">{service.description}</p>
+                        <p className="font-medium text-sm text-slate-800 pr-8">{service.description}</p>
                         <p className="text-xs text-muted-foreground">{service.type}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
@@ -661,7 +695,8 @@ const InvoiceView: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Desktop: Table Layout */}
@@ -749,15 +784,28 @@ const InvoiceView: React.FC = () => {
                     )}
                   >
                     <div className="pr-4">
-                      <p className="font-medium text-slate-900">
-                        <ChangedValue
-                          path={`/lineItems/${index}/description`}
-                          value={service.description}
-                          diff={diffIndex}
-                          status={invoice.status}
-                          isNewItem={isNewItem}
-                        />
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-slate-900">
+                          <ChangedValue
+                            path={`/lineItems/${index}/description`}
+                            value={service.description}
+                            diff={diffIndex}
+                            status={invoice.status}
+                            isNewItem={isNewItem}
+                          />
+                        </p>
+                        {service.receiptUrl && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewAttachment(service.receiptUrl!, service.receiptType || 'application/pdf', service.receiptName || 'receipt');
+                            }}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <Paperclip className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">{service.type}</p>
                     </div>
                     <span className="text-right">
@@ -805,7 +853,7 @@ const InvoiceView: React.FC = () => {
             )}
           </div>
 
-          <div className="space-y-2 bg-slate-50 p-4 text-xs text-slate-600">
+          <div className="border border-slate-200 rounded-lg space-y-2 bg-slate-50 p-4 text-xs text-slate-600">
             <div className="flex justify-between">
               <span>Subtotal</span>
               <span className="font-medium text-slate-900">
@@ -828,7 +876,7 @@ const InvoiceView: React.FC = () => {
                 />
               </span>
             </div>
-            <div className="flex justify-between pt-2 text-sm font-semibold text-slate-900">
+            <div className="flex justify-between pt-2 border-t border-slate-300 text-sm font-semibold text-slate-900">
               <span>Total</span>
               <span>
                 <ChangedValue
@@ -840,18 +888,25 @@ const InvoiceView: React.FC = () => {
               </span>
             </div>
           </div>
+        </div>
 
-          {invoice.notes && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-800">Comments</h3>
-              <p className="whitespace-pre-wrap text-sm text-slate-700">
-                <ChangedValue
-                  path="/notes"
-                  value={invoice.notes}
-                  diff={diffIndex}
-                  status={invoice.status}
-                  renderMode="block"
-                />
+        {/* Comments Section - Outside the invoice card */}
+        <div className="space-y-3 pt-6 px-6 pb-12">
+          <h3 className="text-base font-semibold text-slate-800">Comments</h3>
+          {invoice.notes ? (
+            <p className="whitespace-pre-wrap text-sm text-slate-700">
+              <ChangedValue
+                path="/notes"
+                value={invoice.notes}
+                diff={diffIndex}
+                status={invoice.status}
+                renderMode="block"
+              />
+            </p>
+          ) : (
+            <div className="border border-slate-200 rounded-lg p-4">
+              <p className="text-sm text-slate-500">
+                Tap and hold a line item to add a comment.
               </p>
             </div>
           )}
@@ -888,6 +943,52 @@ const InvoiceView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Receipt Modal */}
+      {receiptModalOpen && currentReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setReceiptModalOpen(false)}>
+          <div className="relative bg-white rounded-lg shadow-xl max-w-4xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold text-slate-900">{currentReceipt.name}</h3>
+              <button
+                onClick={() => setReceiptModalOpen(false)}
+                className="text-slate-500 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 overflow-auto max-h-[calc(90vh-80px)]">
+              {currentReceipt.type.startsWith('image/') ? (
+                <img
+                  src={currentReceipt.url}
+                  alt={currentReceipt.name}
+                  className="max-w-full h-auto mx-auto"
+                />
+              ) : currentReceipt.type === 'application/pdf' ? (
+                <iframe
+                  src={currentReceipt.url}
+                  className="w-full h-[70vh] border-0"
+                  title={currentReceipt.name}
+                />
+              ) : (
+                <div className="text-center py-8 text-slate-500">
+                  <p className="mb-4">Preview not available for this file type</p>
+                  <a
+                    href={currentReceipt.url}
+                    download={currentReceipt.name}
+                    className="text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Download {currentReceipt.name}
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

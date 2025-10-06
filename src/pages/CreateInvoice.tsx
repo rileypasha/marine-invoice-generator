@@ -98,6 +98,8 @@ interface Service {
   taxRate?: number;
   markupType?: 'preset-2.5' | 'preset-12.5' | 'custom' | 'exempt';
   markupRate?: number;
+  receiptUrl?: string;  // base64 data URL
+  receiptType?: string; // MIME type
   isMarkupExempt?: boolean;
   isTaxExempt?: boolean;
   receipt?: File | null;
@@ -2175,6 +2177,9 @@ const CreateInvoice: React.FC = () => {
           markupRate: snapshot.markupRate,
           isMarkupExempt: snapshot.isMarkupExempt,
           isTaxExempt: snapshot.isTaxExempt,
+          receiptUrl: invoiceData.services[index].receiptUrl || null,
+          receiptName: invoiceData.services[index].receiptName || null,
+          receiptType: invoiceData.services[index].receiptType || null,
           _deleted: invoiceData.services[index]._deleted || false
         }))
       },
@@ -4115,9 +4120,26 @@ const CreateInvoice: React.FC = () => {
                                 accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
                                 onChange={(e) => {
                                   const file = e.target.files?.[0] || null;
-                                  updateService(service.id, 'receipt', file);
                                   if (file) {
+                                    // Validate file size (max 10MB)
+                                    const maxSize = 10 * 1024 * 1024;
+                                    if (file.size > maxSize) {
+                                      alert('Receipt file size must be less than 10MB');
+                                      e.target.value = '';
+                                      return;
+                                    }
+
+                                    updateService(service.id, 'receipt', file);
                                     updateService(service.id, 'receiptName', file.name);
+
+                                    // Convert to base64 for storage
+                                    const reader = new FileReader();
+                                    reader.onload = () => {
+                                      const base64Data = reader.result as string;
+                                      updateService(service.id, 'receiptUrl', base64Data);
+                                      updateService(service.id, 'receiptType', file.type);
+                                    };
+                                    reader.readAsDataURL(file);
                                   }
                                 }}
                                 className="hidden"
