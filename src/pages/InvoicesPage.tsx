@@ -35,6 +35,7 @@ interface ApiInvoice {
   userEmail?: string;
   modifiedByUserName?: string;
   modifiedByUserEmail?: string;
+  modifiedByUserAvatar?: string;
   customer?: {
     id: string;
     display_name: string;
@@ -186,6 +187,7 @@ const InvoicesPage: React.FC = () => {
       user: apiInvoice.user,
       userName: apiInvoice.userName,
       modifiedByUserName: apiInvoice.modifiedByUserName,
+      modifiedByUserAvatar: apiInvoice.modifiedByUserAvatar,
       total_amount: apiInvoice.total,
       invoice_date: apiInvoice.createdAt,
       updated_at: apiInvoice.updatedAt,

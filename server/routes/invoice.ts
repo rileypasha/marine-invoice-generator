@@ -18,6 +18,37 @@ const versioningService = createVersioningService(prisma);
 const auditService = createAuditService(prisma);
 const changeRequestService = createChangeRequestService(prisma);
 
+// Helper function to generate sequential invoice number
+async function generateNextInvoiceNumber(): Promise<string> {
+  // Find the highest existing invoice number
+  const latestInvoice = await prisma.invoice.findFirst({
+    where: {
+      invoiceNumber: {
+        startsWith: 'REQ-'
+      }
+    },
+    orderBy: {
+      invoiceNumber: 'desc'
+    },
+    select: {
+      invoiceNumber: true
+    }
+  });
+
+  if (!latestInvoice || !latestInvoice.invoiceNumber) {
+    return 'REQ-1';
+  }
+
+  // Extract the number from the latest invoice number (e.g., "REQ-123" -> 123)
+  const match = latestInvoice.invoiceNumber.match(/^REQ-(\d+)$/);
+  if (!match) {
+    return 'REQ-1';
+  }
+
+  const nextNumber = parseInt(match[1], 10) + 1;
+  return `REQ-${nextNumber}`;
+}
+
 interface InvoiceRequest extends Request {
   userId?: string;
   correlationId?: string;
@@ -51,7 +82,7 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
     }
 
     // Generate invoice number if not provided
-    const invoiceNumber = invoiceData.invoiceNumber || `INV-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+    const invoiceNumber = invoiceData.invoiceNumber || await generateNextInvoiceNumber();
 
     const providedIdRaw =
       typeof invoiceData.id === 'string' ? invoiceData.id.trim() : invoiceData.id;
@@ -110,7 +141,7 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
         include: {
           customer: { select: { display_name: true, legal_name: true } },
           vessel: { select: { name: true } },
-          user: { select: { name: true, email: true } },
+          user: { select: { name: true, email: true, avatarUrl: true } },
         },
       });
 
@@ -362,7 +393,7 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
         include: {
           customer: { select: { display_name: true, legal_name: true } },
           vessel: { select: { name: true } },
-          user: { select: { name: true, email: true } },
+          user: { select: { name: true, email: true, avatarUrl: true } },
         },
       }),
       prisma.invoice.count({ where }),
@@ -374,6 +405,20 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
       }),
     ]);
 
+    // Get unique user IDs from modifiedByUserId fields
+    const modifiedByUserIds = Array.from(new Set(rawInvoices.map(inv => inv.modifiedByUserId).filter(Boolean))) as string[];
+
+    // Fetch all modifier users in one query
+    const modifiedByUsers = modifiedByUserIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: modifiedByUserIds } },
+          select: { id: true, avatarUrl: true },
+        })
+      : [];
+
+    // Create a map for quick lookup
+    const modifiedByUserMap = new Map(modifiedByUsers.map(u => [u.id, u.avatarUrl]));
+
     // Transform invoices to ensure userName and modifiedByUserName are populated from user relation if missing
     const invoices = rawInvoices.map(invoice => ({
       ...invoice,
@@ -382,6 +427,10 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
       // For existing invoices without modifiedByUserName, use the creator's name as fallback
       modifiedByUserName: invoice.modifiedByUserName || invoice.user?.name || invoice.userName || null,
       modifiedByUserEmail: invoice.modifiedByUserEmail || invoice.user?.email || invoice.userEmail || null,
+      // Include avatar URL from modifiedByUser lookup
+      modifiedByUserAvatar: invoice.modifiedByUserId
+        ? (modifiedByUserMap.get(invoice.modifiedByUserId) || null)
+        : (invoice.user?.avatarUrl || null),
     }));
 
     // Build stats map from groupBy results (no additional query needed)
@@ -485,7 +534,7 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     // Note: Removed ownership check - all authenticated users can update all invoices
 
     // Generate invoice number if not provided (keep existing if available)
-    const invoiceNumber = invoiceData.invoiceNumber || existingInvoice.invoiceNumber || `INV-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+    const invoiceNumber = invoiceData.invoiceNumber || existingInvoice.invoiceNumber || await generateNextInvoiceNumber();
 
     // Determine new status
     const newStatus = invoiceData.status || 'change_requested';

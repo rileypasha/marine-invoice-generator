@@ -240,13 +240,25 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
       const avatarUrl = invoice.modifiedByUserAvatar;
       const initials = getInitials(invoice.modifiedByUserName);
 
+      // Debug: log the actual data
+      console.log('Modified By Cell:', { modifiedBy, avatarUrl, invoice });
+
       return (
         <div className="flex items-center gap-2 text-sm text-gray-600 text-left whitespace-nowrap overflow-visible">
           {modifiedBy !== '-' && (
-            <Avatar className="h-6 w-6">
-              {avatarUrl && <AvatarImage src={avatarUrl} alt={modifiedBy} />}
-              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-            </Avatar>
+            <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={modifiedBy}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-xs font-medium text-gray-700">
+                  {initials}
+                </span>
+              )}
+            </div>
           )}
           <span>{modifiedBy}</span>
         </div>
