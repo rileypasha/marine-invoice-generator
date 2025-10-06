@@ -394,6 +394,38 @@ const InvoiceView: React.FC = () => {
     return baseline.services || [];
   }, [invoice, lineItems]);
 
+  const applyMarkup = (cost: number, item: LineItem, scope: any): number => {
+    // Check if item is markup exempt
+    if (item.isMarkupExempt || item.markupType === 'exempt' || item.jobType === 'Clearance Fee') {
+      return cost;
+    }
+
+    // Get markup rate
+    let markupRate = item.markupRate !== undefined ? item.markupRate : (scope?.markupRate ?? 2.5);
+    markupRate = parseFloat(String(markupRate));
+    if (Number.isNaN(markupRate)) {
+      markupRate = 0;
+    }
+
+    // If rate is > 1, assume it's a percentage, convert to decimal
+    if (markupRate > 1) {
+      markupRate = markupRate / 100;
+    }
+
+    return cost * (1 + markupRate);
+  };
+
+  const calculateTax = (item: LineItem, totalWithMarkup: number): number => {
+    // Clearance Fee is always non-taxable
+    if (item.jobType === 'Clearance Fee' || item.isTaxExempt || item.taxStatus === 'no_tax') {
+      return 0;
+    }
+
+    // Get tax rate
+    const taxRate = item.taxRate !== undefined ? parseFloat(String(item.taxRate)) : 0.0875;
+    return totalWithMarkup * taxRate;
+  };
+
   const servicesSummary = useMemo(() => {
     try {
       const sanitizedItems = lineItems.filter((item): item is LineItem => Boolean(item) && typeof item === 'object');
@@ -516,352 +548,347 @@ const InvoiceView: React.FC = () => {
       <div className="mx-auto flex max-w-6xl flex-col">
         <div
           ref={previewRef}
-          className="bg-white rounded-lg shadow-md p-6 select-none [-webkit-touch-callout:none]"
+          className="bg-white rounded-lg shadow-md p-6 space-y-6 text-sm text-slate-700 select-none [-webkit-touch-callout:none]"
         >
-            <div className="space-y-6 text-sm text-slate-700">
-                  {/* Header */}
-                  <div className="bg-slate-50 -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
-                    <h2 className="text-base font-semibold text-slate-900">
-                      {invoice.title || `Invoice for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`}
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {invoice.status === 'draft' ? 'Draft preview' : invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)} • {new Date(invoice.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
+          {/* Header */}
+          <div className="bg-slate-50 -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
+            <h2 className="text-base font-semibold text-slate-900">
+              {invoice.title || `Invoice for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`}
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              {invoice.status === 'draft' ? 'Draft preview' : invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)} • {new Date(invoice.createdAt).toLocaleDateString()}
+            </p>
+          </div>
 
-                  <div className="grid gap-6 bg-slate-50 p-4 md:grid-cols-2">
-                    <div className="space-y-1">
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">VESSEL</h3>
-                      <p className="font-medium text-slate-900">
-                        <ChangedValue
-                          path="/vesselName"
-                          value={vessel.name || invoice.vesselName || 'Not specified'}
-                          diff={diffIndex}
-                          status={invoice.status}
-                        />
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Weight: <ChangedValue
-                          path="/vesselWeight"
-                          value={`${vessel.weight_tons || vessel.weight || invoice.vesselWeight || '—'} tons`}
-                          diff={diffIndex}
-                          status={invoice.status}
-                        />
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Beam: <ChangedValue
-                          path="/vesselBeam"
-                          value={`${vessel.beam_ft || vessel.beam || invoice.vesselBeam || '—'} ft`}
-                          diff={diffIndex}
-                          status={invoice.status}
-                        />
-                      </p>
-                      {vessel.length_ft && (
-                        <p className="text-xs text-muted-foreground">Length: {vessel.length_ft} ft</p>
-                      )}
-                      {vessel.home_port && (
-                        <p className="text-xs text-muted-foreground">Home port: {vessel.home_port}</p>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">CONTACT</h3>
-                      <p className="font-medium text-slate-900">
-                        <ChangedValue
-                          path="/customerName"
-                          value={customer.display_name || customer.contact_name || invoice.customerName || 'Not assigned'}
-                          diff={diffIndex}
-                          status={invoice.status}
-                        />
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        <ChangedValue
-                          path="/customerEmail"
-                          value={customer.email || invoice.customerEmail || '—'}
-                          diff={diffIndex}
-                          status={invoice.status}
-                        />
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        <ChangedValue
-                          path="/customerPhone"
-                          value={customer.phone || invoice.customerPhone || '—'}
-                          diff={diffIndex}
-                          status={invoice.status}
-                        />
-                      </p>
-                      {customer.address && (
-                        <p className="text-xs text-muted-foreground">{customer.address}</p>
-                      )}
-                    </div>
-                  </div>
+          <div className="grid gap-6 bg-slate-50 p-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">VESSEL</h3>
+              <p className="font-medium text-slate-900">
+                <ChangedValue
+                  path="/vesselName"
+                  value={vessel.name || invoice.vesselName || 'Not specified'}
+                  diff={diffIndex}
+                  status={invoice.status}
+                />
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Weight: <ChangedValue
+                  path="/vesselWeight"
+                  value={`${vessel.weight_tons || vessel.weight || invoice.vesselWeight || '—'} tons`}
+                  diff={diffIndex}
+                  status={invoice.status}
+                />
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Beam: <ChangedValue
+                  path="/vesselBeam"
+                  value={`${vessel.beam_ft || vessel.beam || invoice.vesselBeam || '—'} ft`}
+                  diff={diffIndex}
+                  status={invoice.status}
+                />
+              </p>
+              {vessel.length_ft && (
+                <p className="text-xs text-muted-foreground">Length: {vessel.length_ft} ft</p>
+              )}
+              {vessel.home_port && (
+                <p className="text-xs text-muted-foreground">Home port: {vessel.home_port}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">CONTACT</h3>
+              <p className="font-medium text-slate-900">
+                <ChangedValue
+                  path="/customerName"
+                  value={customer.display_name || customer.contact_name || invoice.customerName || 'Not assigned'}
+                  diff={diffIndex}
+                  status={invoice.status}
+                />
+              </p>
+              <p className="text-xs text-muted-foreground">
+                <ChangedValue
+                  path="/customerEmail"
+                  value={customer.email || invoice.customerEmail || '—'}
+                  diff={diffIndex}
+                  status={invoice.status}
+                />
+              </p>
+              <p className="text-xs text-muted-foreground">
+                <ChangedValue
+                  path="/customerPhone"
+                  value={customer.phone || invoice.customerPhone || '—'}
+                  diff={diffIndex}
+                  status={invoice.status}
+                />
+              </p>
+              {customer.address && (
+                <p className="text-xs text-muted-foreground">{customer.address}</p>
+              )}
+            </div>
+          </div>
 
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-slate-800">Services</h3>
-                    {servicesSummary.services.length === 0 && baselineLineItems.length === 0 ? (
-                      <div className="rounded-lg border border-slate-200 px-4 py-6 text-center text-sm text-muted-foreground">
-                        No services added yet.
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-slate-800">Services</h3>
+            {servicesSummary.services.length === 0 && baselineLineItems.length === 0 ? (
+              <div className="rounded-lg border border-slate-200 px-4 py-6 text-center text-sm text-muted-foreground">
+                No services added yet.
+              </div>
+            ) : (
+              <>
+                {/* Mobile: Card Layout */}
+                <div className="space-y-3 md:hidden">
+                  {servicesSummary.services.map((service, index) => (
+                    <div key={service.id} className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
+                      <div>
+                        <p className="font-medium text-sm text-slate-800">{service.description}</p>
+                        <p className="text-xs text-muted-foreground">{service.type}</p>
                       </div>
-                    ) : (
-                      <>
-                        {/* Mobile: Card Layout */}
-                        <div className="space-y-3 md:hidden">
-                          {servicesSummary.services.map((service, index) => (
-                            <div key={service.id} className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
-                              <div>
-                                <p className="font-medium text-sm text-slate-800">{service.description}</p>
-                                <p className="text-xs text-muted-foreground">{service.type}</p>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div>
-                                  <span className="text-slate-500">Cost:</span>
-                                  <span className="ml-1 text-slate-700">{formatCurrency(service.cost)}</span>
-                                </div>
-                                <div>
-                                  <span className="text-slate-500">Markup:</span>
-                                  <span className="ml-1 text-slate-700">{formatCurrency(service.markupAmount)}</span>
-                                </div>
-                                <div>
-                                  <span className="text-slate-500">Tax:</span>
-                                  <span className="ml-1 text-slate-700">{formatCurrency(service.taxAmount)}</span>
-                                </div>
-                                <div className="font-medium">
-                                  <span className="text-slate-500">Total:</span>
-                                  <span className="ml-1 text-slate-900">{formatCurrency(service.total)}</span>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-slate-500">Cost:</span>
+                          <span className="ml-1 text-slate-700">{formatCurrency(service.cost)}</span>
                         </div>
-
-                        {/* Desktop: Table Layout */}
-                        <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
-                          <div className="min-w-[600px]">
-                            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                              <span>Item</span>
-                              <span className="text-right">Cost</span>
-                              <span className="text-right">Markup</span>
-                              <span className="text-right">Tax</span>
-                              <span className="text-right">Total</span>
-                            </div>
-                        <>
-                          {/* Show deleted items first (items in baseline but not in current) */}
-                          {baselineLineItems
-                            .filter((baselineItem: any) => !servicesSummary.services.some(s => s.id === baselineItem.id))
-                            .map((deletedItem: any, index: number) => {
-                              const shouldShowRowDiff = invoice.status === 'change_requested' &&
-                                invoice.diff &&
-                                Array.isArray(invoice.diff) &&
-                                invoice.diff.length > 0;
-
-                              return (
-                                <div
-                                  key={deletedItem.id}
-                                  className={cn(
-                                    'grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm',
-                                    shouldShowRowDiff && 'border-l-4 bg-red-50 border-red-500 opacity-75'
-                                  )}
-                                >
-                                  <div className="pr-4">
-                                    <p className="font-medium text-red-600 line-through">
-                                      {deletedItem.description || 'Untitled Service'}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground line-through">{deletedItem.type}</p>
-                                  </div>
-                                  <span className="text-right text-red-600 line-through">
-                                    $0.00
-                                  </span>
-                                  <span className="text-right text-red-600 line-through">
-                                    $0.00
-                                  </span>
-                                  <span className="text-right text-red-600 line-through">
-                                    $0.00
-                                  </span>
-                                  <span className="text-right font-medium text-red-600 line-through">
-                                    $0.00
-                                  </span>
-                                </div>
-                              );
-                            })}
-
-                          {/* Show current items */}
-                          {servicesSummary.services.map((service, index) => {
-                          // Only show diff indicators when status is 'change_requested' AND we have a valid diff
-                          const shouldShowRowDiff = invoice.status === 'change_requested' &&
-                            invoice.diff &&
-                            Array.isArray(invoice.diff) &&
-                            invoice.diff.length > 0 &&
-                            diffIndex &&
-                            diffIndex.size > 0;
-
-                          if (index === 0) {
-                            console.log(`[InvoiceView] shouldShowRowDiff: status="${invoice.status}", hasDiff=${!!invoice.diff}, diffLength=${invoice.diff?.length}, diffIndexSize=${diffIndex.size}, shouldShowRowDiff=${shouldShowRowDiff}`);
-                          }
-
-                          // Check if this item is new by comparing against baseline
-                          // Only mark as new if we should show diffs and the item doesn't exist in baseline
-                          const isNewItem = shouldShowRowDiff &&
-                            service.id &&
-                            !baselineLineItems.some((item: any) => item.id === service.id);
-
-                          // For row-level highlighting, only show if item is actually new
-                          // Don't use getLineItemOp because /services/- wildcard applies to all items
-                          const itemDiffOp = isNewItem ? { op: 'add' as const } : undefined;
-
-                          return (
-                            <div
-                              key={service.id}
-                              className={cn(
-                                'grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm',
-                                itemDiffOp && 'border-l-4',
-                                itemDiffOp?.op === 'add' && 'bg-green-50 border-green-500',
-                                itemDiffOp?.op === 'remove' && 'bg-red-50 border-red-500 opacity-75',
-                                itemDiffOp?.op === 'replace' && 'bg-yellow-50 border-yellow-500'
-                              )}
-                            >
-                              <div className="pr-4">
-                                <p className="font-medium text-slate-900">
-                                  <ChangedValue
-                                    path={`/lineItems/${index}/description`}
-                                    value={service.description}
-                                    diff={diffIndex}
-                                    status={invoice.status}
-                                    isNewItem={isNewItem}
-                                  />
-                                </p>
-                                <p className="text-xs text-muted-foreground">{service.type}</p>
-                              </div>
-                              <span className="text-right">
-                                <ChangedValue
-                                  path={`/lineItems/${index}/cost`}
-                                  value={formatCurrency(service.cost)}
-                                  diff={diffIndex}
-                                  status={invoice.status}
-                                  isNewItem={isNewItem}
-                                />
-                              </span>
-                              <span className="text-right">
-                                <ChangedValue
-                                  path={`/lineItems/${index}/markupAmount`}
-                                  value={formatCurrency(service.markupAmount)}
-                                  diff={diffIndex}
-                                  status={invoice.status}
-                                  isNewItem={isNewItem}
-                                />
-                              </span>
-                              <span className="text-right">
-                                <ChangedValue
-                                  path={`/lineItems/${index}/taxAmount`}
-                                  value={formatCurrency(service.taxAmount)}
-                                  diff={diffIndex}
-                                  status={invoice.status}
-                                  isNewItem={isNewItem}
-                                />
-                              </span>
-                              <span className="text-right font-medium text-slate-900">
-                                <ChangedValue
-                                  path={`/lineItems/${index}/total`}
-                                  value={formatCurrency(service.total)}
-                                  diff={diffIndex}
-                                  status={invoice.status}
-                                  isNewItem={isNewItem}
-                                />
-                              </span>
-                            </div>
-                          );
-                        })}
-                        </>
-                          </div>
+                        <div>
+                          <span className="text-slate-500">Markup:</span>
+                          <span className="ml-1 text-slate-700">{formatCurrency(service.markupAmount)}</span>
                         </div>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="space-y-2 bg-slate-50 p-4 text-xs text-slate-600">
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span className="font-medium text-slate-900">
-                        <ChangedValue
-                          path="/subtotal"
-                          value={formatCurrency(servicesSummary.subtotalWithMarkup)}
-                          diff={diffIndex}
-                          status={invoice.status}
-                        />
-                      </span>
+                        <div>
+                          <span className="text-slate-500">Tax:</span>
+                          <span className="ml-1 text-slate-700">{formatCurrency(service.taxAmount)}</span>
+                        </div>
+                        <div className="font-medium">
+                          <span className="text-slate-500">Total:</span>
+                          <span className="ml-1 text-slate-900">{formatCurrency(service.total)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Tax</span>
-                      <span className="font-medium text-slate-900">
-                        <ChangedValue
-                          path="/taxAmount"
-                          value={formatCurrency(servicesSummary.totalTax)}
-                          diff={diffIndex}
-                          status={invoice.status}
-                        />
-                      </span>
-                    </div>
-                    <div className="flex justify-between pt-2 text-sm font-semibold text-slate-900">
-                      <span>Total</span>
-                      <span>
-                        <ChangedValue
-                          path="/total"
-                          value={formatCurrency(servicesSummary.finalTotal || invoice.total)}
-                          diff={diffIndex}
-                          status={invoice.status}
-                        />
-                      </span>
-                    </div>
-                  </div>
-
-                  {invoice.notes && (
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-semibold text-slate-800">Comments</h3>
-                      <p className="whitespace-pre-wrap text-sm text-slate-700">
-                        <ChangedValue
-                          path="/notes"
-                          value={invoice.notes}
-                          diff={diffIndex}
-                          status={invoice.status}
-                          renderMode="block"
-                        />
-                      </p>
-                    </div>
-                  )}
+                  ))}
                 </div>
 
-                {comments.length > 0 && (
-                  <div className="pointer-events-none absolute inset-0 z-10">
-                    {comments.map((comment, index) => {
-                      const width = Math.max(comment.highlight.width, 36);
-                      const height = Math.max(comment.highlight.height, 30);
-                      return (
-                        <React.Fragment key={comment.id}>
-                          <div
-                            className="absolute rounded-md border border-blue-500 bg-blue-500/15"
-                            style={{
-                              top: comment.highlight.top,
-                              left: comment.highlight.left,
-                              width,
-                              height
-                            }}
-                          />
-                          <div
-                            className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-blue-500 text-[11px] font-semibold text-white shadow"
-                            style={{
-                              top: comment.highlight.top,
-                              left: comment.highlight.left
-                            }}
-                          >
-                            {index + 1}
-                          </div>
-                        </React.Fragment>
-                      );
-                    })}
+                {/* Desktop: Table Layout */}
+                <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
+                  <div className="min-w-[600px]">
+                    <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                      <span>Item</span>
+                      <span className="text-right">Cost</span>
+                      <span className="text-right">Markup</span>
+                      <span className="text-right">Tax</span>
+                      <span className="text-right">Total</span>
+                    </div>
+                {/* Show deleted items first (items in baseline but not in current) */}
+                {baselineLineItems
+                  .filter((baselineItem: any) => !servicesSummary.services.some(s => s.id === baselineItem.id))
+                  .map((deletedItem: any, index: number) => {
+                    const shouldShowRowDiff = invoice.status === 'change_requested' &&
+                      invoice.diff &&
+                      Array.isArray(invoice.diff) &&
+                      invoice.diff.length > 0;
+
+                    return (
+                      <div
+                        key={deletedItem.id}
+                        className={cn(
+                          'grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm',
+                          shouldShowRowDiff && 'border-l-4 bg-red-50 border-red-500 opacity-75'
+                        )}
+                      >
+                        <div className="pr-4">
+                          <p className="font-medium text-red-600 line-through">
+                            {deletedItem.description || 'Untitled Service'}
+                          </p>
+                          <p className="text-xs text-muted-foreground line-through">{deletedItem.type}</p>
+                        </div>
+                        <span className="text-right text-red-600 line-through">
+                          $0.00
+                        </span>
+                        <span className="text-right text-red-600 line-through">
+                          $0.00
+                        </span>
+                        <span className="text-right text-red-600 line-through">
+                          $0.00
+                        </span>
+                        <span className="text-right font-medium text-red-600 line-through">
+                          $0.00
+                        </span>
+                      </div>
+                    );
+                  })}
+
+                {/* Show current items */}
+                {servicesSummary.services.map((service, index) => {
+                // Only show diff indicators when status is 'change_requested' AND we have a valid diff
+                const shouldShowRowDiff = invoice.status === 'change_requested' &&
+                  invoice.diff &&
+                  Array.isArray(invoice.diff) &&
+                  invoice.diff.length > 0 &&
+                  diffIndex &&
+                  diffIndex.size > 0;
+
+                if (index === 0) {
+                  console.log(`[InvoiceView] shouldShowRowDiff: status="${invoice.status}", hasDiff=${!!invoice.diff}, diffLength=${invoice.diff?.length}, diffIndexSize=${diffIndex.size}, shouldShowRowDiff=${shouldShowRowDiff}`);
+                }
+
+                // Check if this item is new by comparing against baseline
+                // Only mark as new if we should show diffs and the item doesn't exist in baseline
+                const isNewItem = shouldShowRowDiff &&
+                  service.id &&
+                  !baselineLineItems.some((item: any) => item.id === service.id);
+
+                // For row-level highlighting, only show if item is actually new
+                // Don't use getLineItemOp because /services/- wildcard applies to all items
+                const itemDiffOp = isNewItem ? { op: 'add' as const } : undefined;
+
+                return (
+                  <div
+                    key={service.id}
+                    className={cn(
+                      'grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm',
+                      itemDiffOp && 'border-l-4',
+                      itemDiffOp?.op === 'add' && 'bg-green-50 border-green-500',
+                      itemDiffOp?.op === 'remove' && 'bg-red-50 border-red-500 opacity-75',
+                      itemDiffOp?.op === 'replace' && 'bg-yellow-50 border-yellow-500'
+                    )}
+                  >
+                    <div className="pr-4">
+                      <p className="font-medium text-slate-900">
+                        <ChangedValue
+                          path={`/lineItems/${index}/description`}
+                          value={service.description}
+                          diff={diffIndex}
+                          status={invoice.status}
+                          isNewItem={isNewItem}
+                        />
+                      </p>
+                      <p className="text-xs text-muted-foreground">{service.type}</p>
+                    </div>
+                    <span className="text-right">
+                      <ChangedValue
+                        path={`/lineItems/${index}/cost`}
+                        value={formatCurrency(service.cost)}
+                        diff={diffIndex}
+                        status={invoice.status}
+                        isNewItem={isNewItem}
+                      />
+                    </span>
+                    <span className="text-right">
+                      <ChangedValue
+                        path={`/lineItems/${index}/markupAmount`}
+                        value={formatCurrency(service.markupAmount)}
+                        diff={diffIndex}
+                        status={invoice.status}
+                        isNewItem={isNewItem}
+                      />
+                    </span>
+                    <span className="text-right">
+                      <ChangedValue
+                        path={`/lineItems/${index}/taxAmount`}
+                        value={formatCurrency(service.taxAmount)}
+                        diff={diffIndex}
+                        status={invoice.status}
+                        isNewItem={isNewItem}
+                      />
+                    </span>
+                    <span className="text-right font-medium text-slate-900">
+                      <ChangedValue
+                        path={`/lineItems/${index}/total`}
+                        value={formatCurrency(service.total)}
+                        diff={diffIndex}
+                        status={invoice.status}
+                        isNewItem={isNewItem}
+                      />
+                    </span>
                   </div>
-                )}
-              </div>
+                );
+              })}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="space-y-2 bg-slate-50 p-4 text-xs text-slate-600">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span className="font-medium text-slate-900">
+                <ChangedValue
+                  path="/subtotal"
+                  value={formatCurrency(servicesSummary.subtotalWithMarkup)}
+                  diff={diffIndex}
+                  status={invoice.status}
+                />
+              </span>
             </div>
+            <div className="flex justify-between">
+              <span>Tax</span>
+              <span className="font-medium text-slate-900">
+                <ChangedValue
+                  path="/taxAmount"
+                  value={formatCurrency(servicesSummary.totalTax)}
+                  diff={diffIndex}
+                  status={invoice.status}
+                />
+              </span>
+            </div>
+            <div className="flex justify-between pt-2 text-sm font-semibold text-slate-900">
+              <span>Total</span>
+              <span>
+                <ChangedValue
+                  path="/total"
+                  value={formatCurrency(servicesSummary.finalTotal || invoice.total)}
+                  diff={diffIndex}
+                  status={invoice.status}
+                />
+              </span>
+            </div>
+          </div>
+
+          {invoice.notes && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-slate-800">Comments</h3>
+              <p className="whitespace-pre-wrap text-sm text-slate-700">
+                <ChangedValue
+                  path="/notes"
+                  value={invoice.notes}
+                  diff={diffIndex}
+                  status={invoice.status}
+                  renderMode="block"
+                />
+              </p>
+            </div>
+          )}
         </div>
+
+        {comments.length > 0 && (
+          <div className="pointer-events-none absolute inset-0 z-10">
+            {comments.map((comment, index) => {
+              const width = Math.max(comment.highlight.width, 36);
+              const height = Math.max(comment.highlight.height, 30);
+              return (
+                <React.Fragment key={comment.id}>
+                  <div
+                    className="absolute rounded-md border border-blue-500 bg-blue-500/15"
+                    style={{
+                      top: comment.highlight.top,
+                      left: comment.highlight.left,
+                      width,
+                      height
+                    }}
+                  />
+                  <div
+                    className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-blue-500 text-[11px] font-semibold text-white shadow"
+                    style={{
+                      top: comment.highlight.top,
+                      left: comment.highlight.left
+                    }}
+                  >
+                    {index + 1}
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )}
       </div>
+    </div>
   );
 };
 
@@ -936,54 +963,3 @@ const calculateLineItemTax = (item: LineItem | null | undefined): number => {
 };
 
 export default InvoiceView;
-                  <span>
-                    <ChangedValue
-                      path="/subtotal"
-                      value={formatCurrency(servicesSummary.subtotalWithMarkup)}
-                      diff={diffIndex}
-                      status={invoice.status}
-                    />
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Tax</span>
-                  <span>
-                    <ChangedValue
-                      path="/taxAmount"
-                      value={formatCurrency(servicesSummary.totalTax)}
-                      diff={diffIndex}
-                      status={invoice.status}
-                    />
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Gross profit</span>
-                  <span>
-                    <ChangedValue
-                      path="/grossProfit"
-                      value={formatCurrency(servicesSummary.grossProfit)}
-                      diff={diffIndex}
-                      status={invoice.status}
-                    />
-                  </span>
-                </div>
-                <div className="flex justify-between text-base font-semibold text-slate-900">
-                  <span>Total due</span>
-                  <span>
-                    <ChangedValue
-                      path="/total"
-                      value={formatCurrency(servicesSummary.finalTotal || invoice.total)}
-                      diff={diffIndex}
-                      status={invoice.status}
-                    />
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-blue-100 bg-blue-50/60">
-              <CardHeader>
-                <CardTitle>Comments</CardTitle>
-                <CardDescription>
-                  {comments.length === 0
-                    ? 'No comments have been added yet.'
