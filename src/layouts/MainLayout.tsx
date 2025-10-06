@@ -361,12 +361,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         {!isFullWidthRoute() && (
           <FixedHeader>
             <div className="bg-white border-b border-gray-200 screen-only hidden md:block">
-              <div className="px-6">
-                <div className="py-3">
-                  <h1 className="text-xl font-normal text-gray-900">
-                    {getPageTitle()}
-                  </h1>
-                </div>
+              <div className="px-8 pt-6 pb-4">
+                <h1 className="text-xl font-normal text-gray-900">
+                  {getPageTitle()}
+                </h1>
               </div>
             </div>
           </FixedHeader>

@@ -169,7 +169,7 @@ export function ContactsToolbar({
     <div className={`sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 ${className}`}>
       <div>
         {/* Row 1: Title + Overflow Menu + Add Contact */}
-        <div className="flex items-center justify-between py-1 pt-0 px-2 md:px-6 -mt-1">
+        <div className="flex items-center justify-between py-1 pt-0 md:pt-6 px-2 md:px-6 -mt-1 md:mt-0">
           <div className="flex items-center gap-2">
             <h2 className="flex items-center gap-2 text-xl md:text-2xl font-semibold text-gray-900">
               <Users className="h-4 w-4 md:h-5 md:w-5" />

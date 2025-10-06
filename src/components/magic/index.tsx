@@ -92,7 +92,7 @@ interface AvatarFallbackProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const AvatarFallback: React.FC<AvatarFallbackProps> = ({ children, className = '', ...props }) => (
-  <div className={`flex h-full w-full items-center justify-center rounded-full bg-muted ${className}`} {...props}>
+  <div className={`flex h-full w-full items-center justify-center rounded-full bg-[#1e3a5f] text-white font-semibold ${className}`} {...props}>
     {children}
   </div>
 );

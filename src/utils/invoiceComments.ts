@@ -20,6 +20,7 @@ export interface InvoiceComment {
   text: string;
   selectionText: string;
   createdAt: string;
+  serviceId?: string;
   highlight: CommentHighlightRect;
   replies: CommentReply[];
 }

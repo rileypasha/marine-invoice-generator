@@ -681,6 +681,9 @@ const CreateInvoice: React.FC = () => {
 
     const commentId = `comment_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
+    // Get service ID from target element
+    const serviceId = targetElement.getAttribute('data-service-id');
+
     const newComment: InvoiceComment = {
       id: commentId,
       author: authorName,
@@ -688,6 +691,7 @@ const CreateInvoice: React.FC = () => {
       text: text,
       selectionText: '', // No selection text for long-press comments
       createdAt: new Date().toISOString(),
+      serviceId: serviceId || undefined, // Store serviceId in comment
       highlight: null, // No highlight rectangle for general comments
       replies: []
     };
@@ -695,7 +699,6 @@ const CreateInvoice: React.FC = () => {
     setComments(prev => [...prev, newComment]);
 
     // Store the association between the service element and comment
-    const serviceId = targetElement.getAttribute('data-service-id');
     if (serviceId) {
       setServiceCommentMap(prev => new Map(prev).set(serviceId, commentId));
     }
@@ -726,9 +729,6 @@ const CreateInvoice: React.FC = () => {
                       {index + 1}
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    "{comment.selectionText.slice(0, 70)}{comment.selectionText.length > 70 ? '…' : ''}"
-                  </p>
                 </div>
               </div>
               <p className="mt-3 text-sm text-slate-700 whitespace-pre-wrap">{comment.text}</p>
@@ -748,33 +748,6 @@ const CreateInvoice: React.FC = () => {
                   ))}
                 </div>
               )}
-
-              <div className="mt-3 space-y-2">
-                <Textarea
-                  rows={2}
-                  value={replyDrafts[comment.id] ?? ''}
-                  onChange={(e) => setReplyDrafts(prev => ({ ...prev, [comment.id]: e.target.value }))}
-                  placeholder="Reply or mention others with @"
-                />
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setReplyDrafts(prev => ({ ...prev, [comment.id]: '' }))}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => handleAddReply(comment.id)}
-                    disabled={!replyDrafts[comment.id]?.trim()}
-                  >
-                    Reply
-                  </Button>
-                </div>
-              </div>
             </div>
           ))}
         </div>
@@ -2601,6 +2574,8 @@ const CreateInvoice: React.FC = () => {
         grossProfit: totals.grossProfit,
         profitPercent: totals.profitPercent,
         parsedData,
+        // Preserve diff when editing (so highlights persist on View page)
+        ...(isEditMode && invoiceDiff && invoiceDiff.length > 0 && { diff: invoiceDiff }),
         // Only set status to 'approved' if a NEW attachment is being added
         ...((isFirstAttachmentNew || isSecondAttachmentNew) && { status: 'approved' }),
         ...(attachmentData && {
@@ -3167,7 +3142,8 @@ const CreateInvoice: React.FC = () => {
                 status: 'approved',
                 attachmentUrl: base64Data,
                 attachmentName: file.name,
-                attachmentType: file.type
+                attachmentType: file.type,
+                metadata: comments.length > 0 ? JSON.stringify({ comments }) : undefined
               })
             });
 
@@ -3237,7 +3213,8 @@ const CreateInvoice: React.FC = () => {
                 status: 'approved',
                 secondAttachmentUrl: base64Data,
                 secondAttachmentName: file.name,
-                secondAttachmentType: file.type
+                secondAttachmentType: file.type,
+                metadata: comments.length > 0 ? JSON.stringify({ comments }) : undefined
               })
             });
 
@@ -3422,7 +3399,7 @@ const CreateInvoice: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header Bar */}
       <div className="w-full border-b bg-background">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-2 md:px-6 pt-0 pb-2 -mt-1">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-2 md:px-6 pt-0 md:pt-6 pb-2 -mt-1 md:mt-0">
           {/* Left: Title + Status Badges */}
           <div className="flex items-center gap-2">
             <h1 className="flex items-center gap-2 text-xl md:text-2xl font-semibold text-foreground">
@@ -3476,7 +3453,7 @@ const CreateInvoice: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="w-full px-4 py-4 sm:px-6 sm:py-6">
+      <div className="w-full px-4 py-4 sm:px-6 sm:py-6 pb-32">
         <div className={`mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:gap-8 ${activeTab === 'notes' ? '' : 'lg:grid-cols-[minmax(0,6fr)_minmax(320px,1fr)]'}`}>
 
           {/* Main Form Area */}
@@ -3525,14 +3502,11 @@ const CreateInvoice: React.FC = () => {
                     <Select
                       value={selectedVesselId}
                       onValueChange={(value) => {
-                        console.log('🚢 VESSEL SELECTED:', { value, availableVesselsCount: availableVessels.length });
                         setSelectedVesselId(value);
                         if (value && value !== '') {
                           const selectedVessel = availableVessels.find(v => v.id === value);
-                          console.log('🚢 FOUND VESSEL:', { found: !!selectedVessel, vessel: selectedVessel });
                           if (selectedVessel) {
                             setSelectedVesselObject(selectedVessel); // Save the vessel object
-                            console.log('✅ SAVED VESSEL OBJECT:', selectedVessel.name);
                             setInvoiceData(prev => ({
                               ...prev,
                               vessel: {
@@ -3661,14 +3635,11 @@ const CreateInvoice: React.FC = () => {
                     <Select
                       value={selectedCustomerId}
                       onValueChange={(value) => {
-                        console.log('👤 CUSTOMER SELECTED:', { value, availableCustomersCount: availableCustomers.length });
                         setSelectedCustomerId(value);
                         if (value) {
                           const selectedCustomer = availableCustomers.find(c => c.id === value);
-                          console.log('👤 FOUND CUSTOMER:', { found: !!selectedCustomer, customer: selectedCustomer });
                           if (selectedCustomer) {
                             setSelectedCustomerObject(selectedCustomer); // Save the customer object
-                            console.log('✅ SAVED CUSTOMER OBJECT:', selectedCustomer.display_name);
                             setInvoiceData(prev => ({
                               ...prev,
                               customer: {
@@ -4806,17 +4777,6 @@ const CreateInvoice: React.FC = () => {
               </Card>
             )}
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-2">
-                <Button onClick={handlePrint} variant="outline" className="text-xs h-8">Print</Button>
-                <Button onClick={handleExportPDF} variant="outline" className="text-xs h-8">Export PDF</Button>
-                <Button onClick={handleEmail} variant="outline" className="text-xs h-8">Email</Button>
-                <Button onClick={handleExportCSV} variant="outline" className="text-xs h-8">Export CSV</Button>
-              </CardContent>
-            </Card>
           </div>
           )}
         </div>
