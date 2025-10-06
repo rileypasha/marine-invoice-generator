@@ -376,18 +376,20 @@ const Invoices: React.FC<InvoicesProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Sticky Toolbar */}
-      <RequestsToolbar
-        requests={filteredData}
-        onAddClick={handleAddClick}
-        onPrint={handlePrint}
-        onImport={() => setShowImportModal(true)}
-        onExport={handleExportCSV}
-      />
+      <div className="flex-shrink-0">
+        <RequestsToolbar
+          requests={filteredData}
+          onAddClick={handleAddClick}
+          onPrint={handlePrint}
+          onImport={() => setShowImportModal(true)}
+          onExport={handleExportCSV}
+        />
+      </div>
 
       {/* Table Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-muted-foreground">Loading requests...</div>
