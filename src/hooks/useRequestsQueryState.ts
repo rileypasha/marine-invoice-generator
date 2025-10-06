@@ -135,6 +135,14 @@ export function useRequestsQueryState(): UseRequestsQueryStateReturn {
               newParams.set(`filter_${filterKey}`, String(filterValue));
             }
           });
+        } else if (key === 'month') {
+          // Always explicitly handle month to ensure immediate state changes
+          // This prevents needing multiple clicks for month filter changes
+          if (value === 'all' || value === DEFAULT_STATE.month) {
+            newParams.delete('month');
+          } else if (value) {
+            newParams.set('month', String(value));
+          }
         } else if (key === 'groupBy') {
           // Always explicitly handle groupBy to ensure immediate state changes
           // This prevents needing multiple clicks for grouping changes

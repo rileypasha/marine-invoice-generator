@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { isPWA, isIOS, canInstall } from '@/utils/pwa';
 import { IOSInstallModal } from './IOSInstallModal';
+import { X } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -74,6 +75,12 @@ export function FloatingInstallButton() {
     }
   };
 
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    localStorage.setItem(DISMISS_STORAGE_KEY, Date.now().toString());
+    setShowButton(false);
+  };
+
   if (!showButton) {
     return null;
   }
@@ -82,21 +89,35 @@ export function FloatingInstallButton() {
     <>
       {showIOSModal && <IOSInstallModal onClose={() => setShowIOSModal(false)} />}
 
-      {/* Floating Install Button */}
-      <button
-        onClick={handleClick}
-        className="fixed bottom-20 right-6 z-40 w-14 h-14 rounded-full bg-[#1E3A5F] transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none md:bottom-6 shadow-lg"
-        aria-label="Install app"
+      {/* Floating Install Button Container */}
+      <div
+        className="fixed bottom-20 right-6 z-40 md:bottom-6"
         style={{
           bottom: 'calc(56px + env(safe-area-inset-bottom) + 1.5rem)'
         }}
       >
-        <img
-          src="/src/assets/new_install_icon.svg"
-          alt="Install"
-          className="w-full h-full"
-        />
-      </button>
+        {/* Install Button */}
+        <button
+          onClick={handleClick}
+          className="relative w-14 h-14 rounded-full bg-[#1E3A5F] transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none shadow-lg"
+          aria-label="Install app"
+        >
+          <img
+            src="/src/assets/new_install_icon.svg"
+            alt="Install"
+            className="w-full h-full"
+          />
+        </button>
+
+        {/* Dismiss X Button */}
+        <button
+          onClick={handleDismiss}
+          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition-colors shadow-md"
+          aria-label="Dismiss install prompt"
+        >
+          <X className="w-3 h-3 text-white" />
+        </button>
+      </div>
     </>
   );
 }

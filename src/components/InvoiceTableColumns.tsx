@@ -4,7 +4,7 @@ import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Avatar, AvatarFallback, AvatarImage } from "./magic/index"
-import { MoreHorizontal } from "lucide-react"
+import { MoreVertical } from "lucide-react"
 
 // Fixed Avatar import path
 
@@ -199,34 +199,34 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     accessorKey: "user.name",
     id: "created_by",
     header: () => (
-      <div className="text-left">Created by</div>
+      <div className="text-left hidden md:table-cell">Created by</div>
     ),
     cell: ({ row }) => {
       const invoice = row.original;
       const userName = invoice.user?.name || invoice.userName || '-';
       return (
-        <div className="text-sm text-gray-600 text-left truncate min-w-0 max-w-full">
+        <div className="text-sm text-gray-600 text-left truncate min-w-0 max-w-full hidden md:table-cell">
           {userName}
         </div>
       );
     },
-    meta: { width: 'w-32' },
+    meta: { width: 'w-32', className: 'hidden md:table-cell' },
   },
   {
     accessorKey: "invoice_date",
     id: "created_at",
     header: () => (
-      <div className="text-right">Created at</div>
+      <div className="text-right hidden md:table-cell">Created at</div>
     ),
     cell: ({ row }) => {
       const invoice = row.original;
       return (
-        <div className="text-sm text-gray-600 text-right tabular-nums">
+        <div className="text-sm text-gray-600 text-right tabular-nums hidden md:table-cell">
           {formatDate(invoice.invoice_date)}
         </div>
       );
     },
-    meta: {},
+    meta: { className: 'hidden md:table-cell' },
   },
   {
     accessorKey: "modifiedByUserName",
@@ -326,9 +326,9 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
                 }
               });
             }}
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0 md:h-5 md:w-5"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-gray-100 hover:bg-gray-200 h-8 w-8 p-0"
           >
-            <MoreHorizontal className="h-4 w-4 md:h-3 md:w-3" />
+            <MoreVertical className="h-4 w-4 text-gray-600" />
           </button>
         </div>
       );
