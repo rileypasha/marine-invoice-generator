@@ -44,12 +44,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 src={avatarUrl}
                 alt={userName || 'User'}
                 className="h-full w-full object-cover"
+                onError={(e) => {
+                  // If image fails to load, hide it so initials show
+                  e.currentTarget.style.display = 'none';
+                }}
               />
-            ) : (
-              <span className="text-sm font-medium text-gray-700">
-                {userInitials}
-              </span>
-            )}
+            ) : null}
+            {/* Always render initials as fallback */}
+            <span className="text-sm font-medium text-gray-700" style={{ display: avatarUrl ? 'none' : 'block' }}>
+              {userInitials}
+            </span>
           </div>
         </button>
       </div>
