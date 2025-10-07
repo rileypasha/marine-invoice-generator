@@ -159,9 +159,10 @@ export function LongPressComment({
       const positionAbove = spaceBelow < modalHeight && spaceAbove > modalHeight;
 
       setModalPosition({
+        // Use viewport coordinates (getBoundingClientRect) without scrollY since modal is fixed
         top: positionAbove
-          ? `${rect.top + window.scrollY - modalHeight - 8}px`
-          : `${rect.bottom + window.scrollY + 8}px`,
+          ? `${rect.top - modalHeight - 8}px`
+          : `${rect.bottom + 8}px`,
         left: '50%'
       });
     }

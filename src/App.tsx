@@ -8,6 +8,7 @@ import ResetPassword from './components/ResetPassword'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import MainLayout from './layouts/MainLayout'
 import { FloatingInstallButton } from './components/pwa/FloatingInstallButton'
+import { OrientationLock } from './components/pwa/OrientationLock'
 // import { ChunkErrorBoundary, RouteErrorBoundary } from './components/ErrorBoundary'
 // import { initPerformanceMonitoring } from './utils/performance-monitoring'
 import { useRequestsRowActionsStore } from './features/requests/state/rowActions.store'
@@ -57,7 +58,7 @@ if (typeof window !== 'undefined') {
 // Conditionally lazy load row action layers - only when first opened
 const RowActionsLayer = lazy(() => import('./features/vessels/components/RowActionsLayer'))
 const RequestsRowActionsLayer = lazy(() => import('./features/requests/components/RowActionsLayer'))
-const ContactsRowActionsLayer = lazy(() => import('./features/contacts/components/RowActionsLayer'))
+const ContactsRowActionsLayer = lazy(() => import('./features/contacts/components/ContactsRowActionsLayer'))
 
 // Wrappers to defer loading until actually opened
 const ConditionalRequestsRowActions = () => {
@@ -152,6 +153,7 @@ function App() {
               <div className="app-content">
                 {/* <RouteErrorBoundary> */}
                   <Suspense fallback={<PageLoader />}>
+                    <OrientationLock />
                     <FloatingInstallButton />
                     <Routes>
               <Route
