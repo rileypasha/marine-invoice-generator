@@ -7,14 +7,22 @@ export default function RequestsRowActionsLayer() {
   const { open, pos, rowId, handlers, close } = useRequestsRowActionsStore();
   const [armed, setArmed] = useState(false);
   const boxRef = useRef<HTMLDivElement|null>(null);
+  const isProcessingActionRef = useRef(false);
 
-  useEffect(()=>{ if (open) { setArmed(false); requestAnimationFrame(()=>setArmed(true)); }}, [open]);
+  useEffect(()=>{
+    if (open) {
+      setArmed(false);
+      isProcessingActionRef.current = false;
+      requestAnimationFrame(()=>setArmed(true));
+    }
+  }, [open]);
 
   useEffect(()=>{
     if (!open) return;
     const onPD = (ev: PointerEvent) => {
       const t = ev.target as HTMLElement;
       if (!armed) return; // ignore the opening click
+      if (isProcessingActionRef.current) return; // Don't close while processing an action
       if (t.closest('[data-row-actions]') || t.closest('[data-row-actions-trigger]')) return;
       close();
     };
@@ -73,7 +81,11 @@ export default function RequestsRowActionsLayer() {
         <button
           role="menuitem"
           className="flex items-center gap-3 w-full text-left px-6 py-3 text-base hover:bg-gray-50 transition-colors"
-          onClick={() => { handlers.view(rowId); close(); }}
+          onClick={() => {
+            isProcessingActionRef.current = true;
+            handlers.view(rowId);
+            setTimeout(() => close(), 50);
+          }}
         >
           <Eye className="h-5 w-5 text-gray-600" />
           <span>View</span>
@@ -81,7 +93,11 @@ export default function RequestsRowActionsLayer() {
         <button
           role="menuitem"
           className="flex items-center gap-3 w-full text-left px-6 py-3 text-base hover:bg-gray-50 transition-colors"
-          onClick={() => { handlers.edit(rowId); close(); }}
+          onClick={() => {
+            isProcessingActionRef.current = true;
+            handlers.edit(rowId);
+            setTimeout(() => close(), 50);
+          }}
         >
           <Edit className="h-5 w-5 text-gray-600" />
           <span>Edit</span>
@@ -89,7 +105,11 @@ export default function RequestsRowActionsLayer() {
         <button
           role="menuitem"
           className="flex items-center gap-3 w-full text-left px-6 py-3 text-base hover:bg-gray-50 transition-colors"
-          onClick={() => { handlers.print(rowId); close(); }}
+          onClick={() => {
+            isProcessingActionRef.current = true;
+            handlers.print(rowId);
+            setTimeout(() => close(), 50);
+          }}
         >
           <Printer className="h-5 w-5 text-gray-600" />
           <span>Print</span>
@@ -97,7 +117,11 @@ export default function RequestsRowActionsLayer() {
         <button
           role="menuitem"
           className="flex items-center gap-3 w-full text-left px-6 py-3 text-base text-red-600 hover:bg-gray-50 transition-colors"
-          onClick={() => { handlers.del(rowId); close(); }}
+          onClick={() => {
+            isProcessingActionRef.current = true;
+            handlers.del(rowId);
+            setTimeout(() => close(), 50);
+          }}
         >
           <Trash2 className="h-5 w-5" />
           <span>Delete</span>
