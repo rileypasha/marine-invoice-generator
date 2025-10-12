@@ -14,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { ExpandingSearch } from '../contacts/ExpandingSearch';
 import { useRequestsQueryState } from '@/hooks/useRequestsQueryState';
@@ -132,42 +131,29 @@ export function RequestsToolbar({
           </div>
         </div>
 
-        {/* Row 2: Month Selector (Desktop) OR Controls (Mobile) */}
+        {/* Row 2: Month Selector & Controls */}
         <div className="flex items-center justify-between gap-2 py-2 px-2 md:px-6">
-          {/* Desktop: Tabs */}
-          <div className="hidden md:flex">
-            <Tabs key={month} value={month} onValueChange={handleMonthChange}>
-              <TabsList>
+          {/* Month Dropdown - All Screens */}
+          <div className="flex-shrink-0">
+            <Select key={month} value={month} onValueChange={handleMonthChange}>
+              <SelectTrigger className="inline-flex items-center gap-1.5 h-8 px-3 text-sm text-gray-900 rounded-md border border-gray-300 bg-white hover:bg-gray-50 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 w-auto [&>svg:last-child]:hidden">
+                <span>
+                  {month === 'all' ? 'All Months' : monthOptions.find(opt => opt.value === month)?.label || 'Month'}
+                </span>
+                <ChevronDown className="h-3 w-3 text-gray-500 flex-shrink-0" />
+              </SelectTrigger>
+              <SelectContent className="min-w-[160px]">
                 {monthOptions.map((option) => (
-                  <TabsTrigger key={option.value} value={option.value}>
-                    {option.label}
-                  </TabsTrigger>
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.value === 'all' ? 'All Months' : option.label}
+                  </SelectItem>
                 ))}
-              </TabsList>
-            </Tabs>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Mobile & Desktop: Controls */}
-          <div className="flex items-center gap-2 w-full md:w-auto md:justify-end">
-            {/* Mobile: Compact Month Filter - left aligned */}
-            <div className="md:hidden">
-              <Select key={month} value={month} onValueChange={handleMonthChange}>
-                <SelectTrigger className="inline-flex items-center gap-1.5 h-8 px-3 text-sm text-gray-900 rounded-md border border-gray-300 bg-white hover:bg-gray-50 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 w-auto [&>svg:last-child]:hidden">
-                  <span>
-                    {month === 'all' ? 'All Months' : monthOptions.find(opt => opt.value === month)?.label || 'Month'}
-                  </span>
-                  <ChevronDown className="h-3 w-3 text-gray-500 flex-shrink-0" />
-                </SelectTrigger>
-                <SelectContent className="min-w-[160px]">
-                  {monthOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.value === 'all' ? 'All Months' : option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
+          {/* Controls */}
+          <div className="flex items-center gap-2">
             {/* Spacer to push right controls to the right */}
             <div className="flex-1 md:hidden" />
 
