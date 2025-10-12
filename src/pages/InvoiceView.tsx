@@ -46,6 +46,7 @@ interface LineItem {
   receiptUrl?: string;
   receiptName?: string;
   receiptType?: string;
+  scope?: any;
 }
 
 interface Invoice {
