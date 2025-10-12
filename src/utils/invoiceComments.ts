@@ -2,6 +2,7 @@ export interface CommentReply {
   id: string;
   author: string;
   initials: string;
+  avatarUrl?: string;
   text: string;
   createdAt: string;
 }
@@ -17,6 +18,7 @@ export interface InvoiceComment {
   id: string;
   author: string;
   initials: string;
+  avatarUrl?: string;
   text: string;
   selectionText: string;
   createdAt: string;

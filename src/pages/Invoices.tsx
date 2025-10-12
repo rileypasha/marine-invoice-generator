@@ -444,13 +444,6 @@ const Invoices: React.FC<InvoicesProps> = ({
         </div>
       )}
 
-      {/* End of results message */}
-      {!hasMore && filteredData.length > 0 && (
-        <div className="py-8 text-center text-sm text-gray-500">
-          End of results
-        </div>
-      )}
-
       {/* Import Modal */}
       {showImportModal && createPortal(
         <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50">

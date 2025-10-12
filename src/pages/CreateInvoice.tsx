@@ -33,6 +33,7 @@ import {
   SelectContent,
   SelectItem,
   Avatar,
+  AvatarImage,
   AvatarFallback,
   Textarea
 } from '../components/magic/index';
@@ -635,6 +636,7 @@ const CreateInvoice: React.FC = () => {
       id: `comment_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       author: authorName,
       initials: getInitials(authorName),
+      avatarUrl: currentUser?.avatarUrl,
       text: trimmed,
       selectionText: pendingSelection.text,
       createdAt: new Date().toISOString(),
@@ -657,6 +659,7 @@ const CreateInvoice: React.FC = () => {
       id: `reply_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       author: authorName,
       initials: getInitials(authorName),
+      avatarUrl: currentUser?.avatarUrl,
       text: draft,
       createdAt: new Date().toISOString()
     };
@@ -688,6 +691,7 @@ const CreateInvoice: React.FC = () => {
       id: commentId,
       author: authorName,
       initials: getInitials(authorName),
+      avatarUrl: currentUser?.avatarUrl,
       text: text,
       selectionText: '', // No selection text for long-press comments
       createdAt: new Date().toISOString(),
@@ -720,6 +724,7 @@ const CreateInvoice: React.FC = () => {
             <div key={comment.id} className="rounded-lg border bg-white p-4 shadow-sm">
               <div className="flex items-start gap-3">
                 <Avatar className="h-9 w-9">
+                  {comment.avatarUrl && <AvatarImage src={comment.avatarUrl} alt={comment.author} />}
                   <AvatarFallback>{comment.initials}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 space-y-1">
@@ -738,6 +743,7 @@ const CreateInvoice: React.FC = () => {
                   {comment.replies.map(reply => (
                     <div key={reply.id} className="flex gap-3">
                       <Avatar className="h-8 w-8">
+                        {reply.avatarUrl && <AvatarImage src={reply.avatarUrl} alt={reply.author} />}
                         <AvatarFallback>{reply.initials}</AvatarFallback>
                       </Avatar>
                       <div>
@@ -3398,7 +3404,7 @@ const CreateInvoice: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header Bar */}
-      <div className="w-full border-b bg-background">
+      <div className="sticky top-0 z-50 w-full border-b bg-background shadow-sm">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-2 md:px-6 pt-0 md:pt-6 pb-2 -mt-1 md:mt-0">
           {/* Left: Title + Status Badges */}
           <div className="flex items-center gap-2">
@@ -3417,20 +3423,6 @@ const CreateInvoice: React.FC = () => {
 
           {/* Right: Action Buttons */}
           <div className="flex items-center gap-2">
-            {/* Save & New (Desktop Only) */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSaveAndNew}
-              disabled={isLoading || !formValidation.isComplete}
-              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 text-sm"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-              </svg>
-              Save & New
-            </Button>
-
             {/* Primary Save Button */}
             <Button
               onClick={handleSave}
@@ -4323,9 +4315,6 @@ const CreateInvoice: React.FC = () => {
                 </CardHeader>
                 <CardContent className="space-y-6 px-0">
                   <div className="relative">
-                    {renderCommentsPanel(
-                      'hidden lg:flex lg:flex-col lg:gap-4 lg:absolute lg:left-0 lg:top-0 lg:-translate-x-[calc(100%+1.5rem)] lg:w-72 lg:max-h-[70vh] lg:overflow-y-auto lg:rounded-lg lg:border lg:bg-white lg:p-4 lg:shadow-sm'
-                    )}
                     <div className="flex flex-col gap-6">
                       <div
                         ref={previewRef}
@@ -4334,12 +4323,7 @@ const CreateInvoice: React.FC = () => {
                         onTouchMove={handlePreviewTouchMove}
                         onTouchEnd={handlePreviewTouchEnd}
                         onContextMenu={(e) => e.preventDefault()}
-                        className="relative rounded-lg border bg-white p-6 shadow-sm md:select-text select-none"
-                        style={{
-                          WebkitTouchCallout: 'none',
-                          WebkitUserSelect: 'none',
-                          userSelect: 'none'
-                        }}
+                        className="relative rounded-lg border bg-white p-6 shadow-sm select-text"
                       >
                         <div className="space-y-6 text-sm text-slate-700">
                           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -4530,6 +4514,7 @@ const CreateInvoice: React.FC = () => {
                             <CardContent className="space-y-3 pt-4">
                               <div className="flex items-center gap-2">
                                 <Avatar className="h-8 w-8">
+                                  {currentUser?.avatarUrl && <AvatarImage src={currentUser.avatarUrl} alt={currentUser.name || currentUser.email || 'You'} />}
                                   <AvatarFallback>{getInitials(currentUser?.name || currentUser?.email)}</AvatarFallback>
                                 </Avatar>
                                 <div>
@@ -4556,6 +4541,7 @@ const CreateInvoice: React.FC = () => {
                                   size="sm"
                                   onClick={handleCreateComment}
                                   disabled={pendingCommentText.trim().length === 0}
+                                  className="bg-[#1E3A5F] hover:bg-[#152b47] text-white"
                                 >
                                   Comment
                                 </Button>
@@ -4565,7 +4551,7 @@ const CreateInvoice: React.FC = () => {
                         </div>
                       )}
                       </div>
-                      {renderCommentsPanel('flex flex-col gap-4 lg:hidden')}
+                      {renderCommentsPanel('flex flex-col gap-4')}
                     </div>
                   </div>
                 </CardContent>
