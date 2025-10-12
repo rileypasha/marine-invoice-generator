@@ -327,6 +327,15 @@ const InvoiceView: React.FC = () => {
   };
 
   const handleViewAttachment = (attachmentUrl: string, attachmentType: string, attachmentName: string) => {
+    console.log('[InvoiceView] Opening receipt:', { url: attachmentUrl, name: attachmentName, type: attachmentType });
+
+    // Check if URL is valid (base64 data URL or http URL)
+    if (!attachmentUrl || (!attachmentUrl.startsWith('data:') && !attachmentUrl.startsWith('http'))) {
+      console.error('[InvoiceView] Invalid receipt URL:', attachmentUrl);
+      alert(`Cannot display receipt: Invalid image data. The receipt may not have been properly saved.`);
+      return;
+    }
+
     setCurrentReceipt({ url: attachmentUrl, name: attachmentName, type: attachmentType });
     setReceiptModalOpen(true);
   };
@@ -567,6 +576,7 @@ const InvoiceView: React.FC = () => {
           </p>
         </div>
 
+        <div className="relative">
         <div
           ref={previewRef}
           className="bg-white rounded-lg border border-slate-200 p-6 space-y-6 text-sm text-slate-700 select-none [-webkit-touch-callout:none]"
@@ -892,7 +902,7 @@ const InvoiceView: React.FC = () => {
 
         {/* Comments Section - Outside the invoice card */}
         <div className="space-y-3 pt-6 px-6 pb-12">
-          <h3 className="text-base font-semibold text-slate-800">Comments</h3>
+          <h3 className="text-base font-semibold text-slate-800">Notes</h3>
           {invoice.notes ? (
             <p className="whitespace-pre-wrap text-sm text-slate-700">
               <ChangedValue
@@ -906,11 +916,66 @@ const InvoiceView: React.FC = () => {
           ) : (
             <div className="border border-slate-200 rounded-lg p-4">
               <p className="text-sm text-slate-500">
-                Tap and hold a line item to add a comment.
+                No notes added.
               </p>
             </div>
           )}
         </div>
+
+        {/* Line Item Comments Section */}
+        {comments.length > 0 && (
+          <div className="space-y-4 px-6 pb-12">
+            <h3 className="text-base font-semibold text-slate-800">Line Item Comments</h3>
+            {comments.map((comment, index) => (
+              <div key={comment.id} className="rounded-lg border bg-white p-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-9 w-9">
+                    {comment.avatarUrl && <img src={comment.avatarUrl} alt={comment.author} className="h-full w-full object-cover rounded-full" />}
+                    <AvatarFallback>{comment.initials}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-slate-900">{comment.author}</p>
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1e3a5f] text-xs font-bold text-white shadow-md">
+                        {index + 1}
+                      </div>
+                    </div>
+                    {comment.selectionText && (
+                      <p className="text-xs text-slate-600 italic">
+                        Re: "{comment.selectionText.length > 60 ? comment.selectionText.slice(0, 60) + '...' : comment.selectionText}"
+                      </p>
+                    )}
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{comment.text}</p>
+                    <p className="text-xs text-slate-500">
+                      {new Date(comment.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Replies */}
+                {comment.replies && comment.replies.length > 0 && (
+                  <div className="mt-3 space-y-3 border-t pt-3">
+                    {comment.replies.map(reply => (
+                      <div key={reply.id} className="flex gap-3">
+                        <Avatar className="h-8 w-8">
+                          {reply.avatarUrl && <img src={reply.avatarUrl} alt={reply.author} className="h-full w-full object-cover rounded-full" />}
+                          <AvatarFallback>{reply.initials}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{reply.author}</p>
+                          <p className="text-sm text-slate-700 whitespace-pre-wrap">{reply.text}</p>
+                          <p className="text-xs text-slate-500">
+                            {new Date(reply.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {comments.length > 0 && (
           <div className="pointer-events-none absolute inset-0 z-10">
