@@ -341,7 +341,6 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
                 handlers: {
                   view: (id) => actions.onView?.(invoice),
                   edit: (id) => actions.onEdit?.(invoice),
-                  print: (id) => actions.onPrint?.(invoice),
                   del: (id) => actions.onDelete?.(invoice),
                 }
               });

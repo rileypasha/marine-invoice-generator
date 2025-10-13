@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Eye, Edit, Printer, Trash2 } from 'lucide-react';
+import { Eye, Edit, Trash2 } from 'lucide-react';
 import { useRequestsRowActionsStore } from '../state/rowActions.store';
 
 export default function RequestsRowActionsLayer() {
@@ -101,18 +101,6 @@ export default function RequestsRowActionsLayer() {
         >
           <Edit className="h-5 w-5 text-gray-600" />
           <span>Edit</span>
-        </button>
-        <button
-          role="menuitem"
-          className="flex items-center gap-3 w-full text-left px-6 py-3 text-base hover:bg-gray-50 transition-colors"
-          onClick={() => {
-            isProcessingActionRef.current = true;
-            handlers.print(rowId);
-            setTimeout(() => close(), 50);
-          }}
-        >
-          <Printer className="h-5 w-5 text-gray-600" />
-          <span>Print</span>
         </button>
         <button
           role="menuitem"
