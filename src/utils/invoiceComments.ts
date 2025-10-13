@@ -73,6 +73,7 @@ export const normalizeInvoiceComments = (raw: unknown): InvoiceComment[] => {
         id: ensureString(replyAny?.id) || `reply_${Date.now()}_${index}_${replyIndex}`,
         author: replyAuthor,
         initials: ensureString(replyAny?.initials) || getInitials(replyAuthor),
+        avatarUrl: ensureString(replyAny?.avatarUrl) || undefined,
         text: ensureString(replyAny?.text),
         createdAt: ensureString(replyAny?.createdAt) || new Date().toISOString(),
       };
@@ -84,6 +85,7 @@ export const normalizeInvoiceComments = (raw: unknown): InvoiceComment[] => {
       id: ensureString(commentAny?.id) || `comment_${Date.now()}_${index}`,
       author: authorName,
       initials: ensureString(commentAny?.initials) || getInitials(authorName),
+      avatarUrl: ensureString(commentAny?.avatarUrl) || undefined,
       text: ensureString(commentAny?.text),
       selectionText: ensureString(commentAny?.selectionText),
       createdAt: ensureString(commentAny?.createdAt) || new Date().toISOString(),
