@@ -4,19 +4,22 @@ import { useAuth } from '../context/AuthContext';
 import { gatherInvoiceData } from '../utils/invoiceData';
 import {
   InvoiceComment,
+  CommentHighlightRect,
   normalizeInvoiceComments,
   getInitials
 } from '../utils/invoiceComments';
 import {
   Avatar,
   AvatarFallback,
+  AvatarImage,
   Badge,
   Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
+  Textarea
 } from '../components/magic/index';
 import { buildDiffIndex, ChangedValue, DiffIndex } from '../components/invoices/ChangedValue';
 import { getLineItemOp } from '../components/invoices/LineItemsDiff';
@@ -97,6 +100,11 @@ interface Invoice {
     length_ft?: number;
     home_port?: string;
   };
+}
+
+interface PendingSelection {
+  text: string;
+  rect: CommentHighlightRect;
 }
 
 interface ServiceSummaryItem {
@@ -224,7 +232,7 @@ const InvoiceView: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAuthenticated, csrfToken, user } = useAuth();
+  const { isAuthenticated, csrfToken, currentUser: user } = useAuth();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -233,7 +241,11 @@ const InvoiceView: React.FC = () => {
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
+  const [pendingCommentText, setPendingCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
+  const selectionCardRef = useRef<HTMLDivElement>(null);
 
   const isPreviewMode = id === 'preview' || Boolean(location.state?.previewData);
   const previewData = location.state?.previewData;
@@ -384,6 +396,138 @@ const InvoiceView: React.FC = () => {
       alert('Failed to submit reply. Please try again.');
     } finally {
       setIsSubmittingReply(false);
+    }
+  };
+
+  const clearTextSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.removeAllRanges) {
+      selection.removeAllRanges();
+    }
+  };
+
+  const handleTextSelection = (target: Node) => {
+    if (selectionCardRef.current?.contains(target)) {
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      setPendingSelection(null);
+      setPendingCommentText('');
+      return;
+    }
+
+    if (!previewRef.current) return;
+
+    const anchorNode = selection.anchorNode;
+    const focusNode = selection.focusNode;
+    if (!anchorNode || !focusNode) {
+      setPendingSelection(null);
+      setPendingCommentText('');
+      return;
+    }
+
+    if (!previewRef.current.contains(anchorNode) || !previewRef.current.contains(focusNode)) {
+      setPendingSelection(null);
+      setPendingCommentText('');
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!range || range.toString().trim().length === 0) {
+      setPendingSelection(null);
+      setPendingCommentText('');
+      return;
+    }
+
+    const rect = range.getBoundingClientRect();
+    if (!rect || (rect.width === 0 && rect.height === 0)) {
+      setPendingSelection(null);
+      setPendingCommentText('');
+      return;
+    }
+
+    const containerRect = previewRef.current.getBoundingClientRect();
+    const padding = 8;
+    const top = rect.top - containerRect.top + previewRef.current.scrollTop;
+    const left = rect.left - containerRect.left + previewRef.current.scrollLeft;
+    const width = Math.max(rect.width + padding * 2, 36);
+    const height = Math.max(rect.height + padding * 2, 30);
+    const scrollHeight = previewRef.current.scrollHeight;
+    const scrollWidth = previewRef.current.scrollWidth;
+    const maxTop = Math.max(0, scrollHeight - height - 4);
+    const maxLeft = Math.max(0, scrollWidth - width - 4);
+    const highlight: CommentHighlightRect = {
+      top: Math.max(0, Math.min(top - padding, maxTop)),
+      left: Math.max(0, Math.min(left - padding, maxLeft)),
+      width,
+      height,
+    };
+
+    setPendingSelection({
+      text: range.toString().trim(),
+      rect: highlight
+    });
+    setPendingCommentText('');
+  };
+
+  const handlePreviewMouseUp = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as Node;
+    handleTextSelection(target);
+  };
+
+  const handleCancelSelection = () => {
+    setPendingSelection(null);
+    setPendingCommentText('');
+    clearTextSelection();
+  };
+
+  const handleCreateComment = async () => {
+    if (!pendingSelection || !user || !invoice || isPreviewMode) return;
+    const trimmed = pendingCommentText.trim();
+    if (!trimmed) return;
+
+    setIsSubmittingComment(true);
+    try {
+      const response = await fetch(`/api/v1/invoice/${invoice.id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || ''
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          text: trimmed,
+          selectionText: pendingSelection.text,
+          highlight: pendingSelection.rect
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create comment');
+      }
+
+      const data = await response.json();
+
+      // Update local invoice state with new metadata
+      setInvoice(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          metadata: data.metadata
+        };
+      });
+
+      // Reset comment form
+      setPendingSelection(null);
+      setPendingCommentText('');
+      clearTextSelection();
+    } catch (err) {
+      console.error('Error creating comment:', err);
+      alert('Failed to create comment. Please try again.');
+    } finally {
+      setIsSubmittingComment(false);
     }
   };
 
@@ -626,7 +770,8 @@ const InvoiceView: React.FC = () => {
         <div className="relative">
         <div
           ref={previewRef}
-          className="bg-white rounded-lg border border-slate-200 p-6 space-y-6 text-sm text-slate-700 select-none [-webkit-touch-callout:none]"
+          onMouseUp={!isPreviewMode ? handlePreviewMouseUp : undefined}
+          className="bg-white rounded-lg border border-slate-200 p-6 space-y-6 text-sm text-slate-700 select-none md:select-auto [-webkit-touch-callout:none]"
         >
           {/* Header */}
           <div className="pb-4">
@@ -1013,7 +1158,7 @@ const InvoiceView: React.FC = () => {
                               value={replyText}
                               onChange={(e) => setReplyText(e.target.value)}
                               placeholder="Write a reply..."
-                              className="w-full min-h-[80px] p-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full min-h-[80px] p-2 text-sm text-slate-900 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                               disabled={isSubmittingReply}
                             />
                           </div>
@@ -1027,6 +1172,7 @@ const InvoiceView: React.FC = () => {
                               setReplyText('');
                             }}
                             disabled={isSubmittingReply}
+                            className="text-slate-700 hover:text-slate-900"
                           >
                             Cancel
                           </Button>
@@ -1085,6 +1231,58 @@ const InvoiceView: React.FC = () => {
                 </React.Fragment>
               );
             })}
+          </div>
+        )}
+
+        {/* Comment Creation Modal */}
+        {pendingSelection && !isPreviewMode && (
+          <div
+            ref={selectionCardRef}
+            className="absolute z-30 w-72 max-w-[320px] md:w-80"
+            style={{
+              top: Math.min(pendingSelection.rect.top + pendingSelection.rect.height + 8, previewRef.current ? previewRef.current.scrollHeight - 300 : 0),
+              left: Math.max(8, Math.min(pendingSelection.rect.left, previewRef.current ? previewRef.current.scrollWidth - 328 : 0))
+            }}
+          >
+            <Card className="shadow-xl">
+              <CardContent className="space-y-3 pt-4">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name || user.email || 'You'} />}
+                    <AvatarFallback>{getInitials(user?.name || user?.email)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {user?.name || user?.email || 'You'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Commenting on "{pendingSelection.text.slice(0, 40)}{pendingSelection.text.length > 40 ? '…' : ''}"
+                    </p>
+                  </div>
+                </div>
+                <Textarea
+                  rows={3}
+                  value={pendingCommentText}
+                  onChange={(e) => setPendingCommentText(e.target.value)}
+                  placeholder="Add a comment or mention others with @"
+                  disabled={isSubmittingComment}
+                />
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="ghost" size="sm" onClick={handleCancelSelection} disabled={isSubmittingComment}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleCreateComment}
+                    disabled={pendingCommentText.trim().length === 0 || isSubmittingComment}
+                    className="bg-[#1E3A5F] hover:bg-[#152b47] text-white"
+                  >
+                    {isSubmittingComment ? 'Submitting...' : 'Comment'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>

@@ -1425,6 +1425,160 @@ router.get('/:id/diff/:fromVersion/:toVersion', async (req: InvoiceRequest, res:
   }
 });
 
+// POST /api/v1/invoice/:id/comments - Create new comment
+router.post('/:id/comments', async (req: InvoiceRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+  const userId = req.userId!;
+  const invoiceId = req.params.id;
+
+  try {
+    const { text, selectionText, highlight } = req.body;
+
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      logger.warn('Invalid comment text', {
+        correlationId,
+        userId,
+        invoiceId,
+      });
+
+      return res.status(400).json({
+        code: 'INVALID_COMMENT',
+        message: 'Comment text is required',
+        correlationId,
+      });
+    }
+
+    if (!selectionText || typeof selectionText !== 'string') {
+      logger.warn('Invalid selection text', {
+        correlationId,
+        userId,
+        invoiceId,
+      });
+
+      return res.status(400).json({
+        code: 'INVALID_SELECTION',
+        message: 'Selection text is required',
+        correlationId,
+      });
+    }
+
+    if (!highlight || typeof highlight !== 'object') {
+      logger.warn('Invalid highlight data', {
+        correlationId,
+        userId,
+        invoiceId,
+      });
+
+      return res.status(400).json({
+        code: 'INVALID_HIGHLIGHT',
+        message: 'Highlight data is required',
+        correlationId,
+      });
+    }
+
+    // Check if invoice exists
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      select: { id: true, metadata: true },
+    });
+
+    if (!invoice) {
+      logger.warn('Invoice not found for comment creation', {
+        correlationId,
+        userId,
+        invoiceId,
+      });
+
+      return res.status(404).json({
+        code: 'INVOICE_NOT_FOUND',
+        message: 'Invoice not found',
+        correlationId,
+      });
+    }
+
+    // Get user data for comment author
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true, avatarUrl: true },
+    });
+
+    // Parse existing metadata
+    let metadata: any = {};
+    if (invoice.metadata) {
+      if (typeof invoice.metadata === 'string') {
+        try {
+          metadata = JSON.parse(invoice.metadata);
+        } catch (e) {
+          metadata = {};
+        }
+      } else {
+        metadata = invoice.metadata;
+      }
+    }
+
+    // Initialize comments array if it doesn't exist
+    if (!metadata.comments || !Array.isArray(metadata.comments)) {
+      metadata.comments = [];
+    }
+
+    // Create new comment
+    const newComment = {
+      id: randomUUID(),
+      author: user?.name || user?.email || 'Unknown User',
+      initials: user?.name ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U',
+      avatarUrl: user?.avatarUrl || undefined,
+      text: text.trim(),
+      selectionText: selectionText.trim(),
+      createdAt: new Date().toISOString(),
+      highlight: {
+        top: Number(highlight.top) || 0,
+        left: Number(highlight.left) || 0,
+        width: Number(highlight.width) || 28,
+        height: Number(highlight.height) || 24,
+      },
+      replies: [],
+    };
+
+    metadata.comments.push(newComment);
+
+    // Update invoice metadata
+    const updatedInvoice = await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        metadata: JSON.stringify(metadata),
+      },
+    });
+
+    logger.info('Comment created successfully', {
+      correlationId,
+      userId,
+      invoiceId,
+      commentId: newComment.id,
+    });
+
+    res.json({
+      comment: newComment,
+      metadata: updatedInvoice.metadata,
+      message: 'Comment created successfully',
+      correlationId,
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to create comment', {
+      error: error.message,
+      correlationId,
+      userId,
+      invoiceId,
+    });
+
+    res.status(500).json({
+      code: 'COMMENT_FAILED',
+      message: 'Failed to create comment',
+      correlationId,
+    });
+  }
+});
+
 // POST /api/v1/invoice/:id/comments/:commentId/reply - Add reply to comment
 router.post('/:id/comments/:commentId/reply', async (req: InvoiceRequest, res: Response) => {
   const correlationId = req.correlationId!;
