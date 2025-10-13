@@ -3492,7 +3492,7 @@ const CreateInvoice: React.FC = () => {
                   <div className="space-y-2">
                     <Label htmlFor="vessel-link" className="!text-black font-medium">Link to Existing Vessel</Label>
                     <Select
-                      value=""
+                      value={selectedVesselObject?.name || ""}
                       onValueChange={(value) => {
                         setSelectedVesselId(value);
                         if (value && value !== '') {
@@ -3616,7 +3616,7 @@ const CreateInvoice: React.FC = () => {
                   <div className="space-y-2">
                     <Label htmlFor="customer-link" className="!text-black font-medium">Link to Existing Contact</Label>
                     <Select
-                      value=""
+                      value={selectedCustomerObject?.display_name || ""}
                       onValueChange={(value) => {
                         setSelectedCustomerId(value);
                         if (value) {
