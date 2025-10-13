@@ -1009,6 +1009,7 @@ const InvoiceView: React.FC = () => {
           </div>
         )}
       </div>
+      </div>
 
       {/* Receipt Modal */}
       {receiptModalOpen && currentReceipt && (
