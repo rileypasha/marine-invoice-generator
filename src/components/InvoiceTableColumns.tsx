@@ -339,9 +339,18 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
                 rowId: invoice.id,
                 pos: { top: r.bottom + window.scrollY, left: r.left + window.scrollX },
                 handlers: {
-                  view: () => actions.onView?.(invoice),
-                  edit: () => actions.onEdit?.(invoice),
-                  del: () => actions.onDelete?.(invoice),
+                  view: () => {
+                    console.log('[InvoiceTableColumns] View handler called', { invoice, onView: actions.onView });
+                    actions.onView?.(invoice);
+                  },
+                  edit: () => {
+                    console.log('[InvoiceTableColumns] Edit handler called', { invoice, onEdit: actions.onEdit });
+                    actions.onEdit?.(invoice);
+                  },
+                  del: () => {
+                    console.log('[InvoiceTableColumns] Delete handler called', { invoice, onDelete: actions.onDelete });
+                    actions.onDelete?.(invoice);
+                  },
                 }
               });
             }}
