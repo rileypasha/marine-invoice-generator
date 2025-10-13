@@ -591,18 +591,33 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     // Update the invoice
     const { parsedData, vessel, customer, customerId, vesselId, ...restOfInvoiceData } = invoiceData;
 
-    // Build update data, excluding null customerId and vesselId
+    // Build update data - explicitly preserve attachments and data field if not provided
     const updateData: any = {
       ...restOfInvoiceData,
       invoiceNumber,
       status: newStatus,
       userId: existingInvoice.userId, // Preserve original creator's ID
-      attachmentUrl: invoiceData.attachmentUrl !== undefined ? invoiceData.attachmentUrl : existingInvoice.attachmentUrl,
-      attachmentName: invoiceData.attachmentName !== undefined ? invoiceData.attachmentName : existingInvoice.attachmentName,
-      attachmentType: invoiceData.attachmentType !== undefined ? invoiceData.attachmentType : existingInvoice.attachmentType,
-      secondAttachmentUrl: invoiceData.secondAttachmentUrl !== undefined ? invoiceData.secondAttachmentUrl : existingInvoice.secondAttachmentUrl,
-      secondAttachmentName: invoiceData.secondAttachmentName !== undefined ? invoiceData.secondAttachmentName : existingInvoice.secondAttachmentName,
-      secondAttachmentType: invoiceData.secondAttachmentType !== undefined ? invoiceData.secondAttachmentType : existingInvoice.secondAttachmentType,
+      // Preserve attachment fields if not provided (check for both undefined and null)
+      attachmentUrl: (invoiceData.attachmentUrl !== undefined && invoiceData.attachmentUrl !== null)
+        ? invoiceData.attachmentUrl
+        : existingInvoice.attachmentUrl,
+      attachmentName: (invoiceData.attachmentName !== undefined && invoiceData.attachmentName !== null)
+        ? invoiceData.attachmentName
+        : existingInvoice.attachmentName,
+      attachmentType: (invoiceData.attachmentType !== undefined && invoiceData.attachmentType !== null)
+        ? invoiceData.attachmentType
+        : existingInvoice.attachmentType,
+      secondAttachmentUrl: (invoiceData.secondAttachmentUrl !== undefined && invoiceData.secondAttachmentUrl !== null)
+        ? invoiceData.secondAttachmentUrl
+        : existingInvoice.secondAttachmentUrl,
+      secondAttachmentName: (invoiceData.secondAttachmentName !== undefined && invoiceData.secondAttachmentName !== null)
+        ? invoiceData.secondAttachmentName
+        : existingInvoice.secondAttachmentName,
+      secondAttachmentType: (invoiceData.secondAttachmentType !== undefined && invoiceData.secondAttachmentType !== null)
+        ? invoiceData.secondAttachmentType
+        : existingInvoice.secondAttachmentType,
+      // Preserve data field (contains receipts and services) if not provided
+      data: invoiceData.data !== undefined ? invoiceData.data : existingInvoice.data,
     };
 
     // Only include customerId and vesselId if they're not null

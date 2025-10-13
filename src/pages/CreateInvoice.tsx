@@ -2195,6 +2195,10 @@ const CreateInvoice: React.FC = () => {
           taxStatus: snapshot.taxStatus,
           markupType: snapshot.markupType,
           markupRate: snapshot.markupRate,
+          // Include receipt fields for display
+          receiptUrl: invoiceData.services[index].receiptUrl || null,
+          receiptName: invoiceData.services[index].receiptName || null,
+          receiptType: invoiceData.services[index].receiptType || null,
           _deleted: invoiceData.services[index]._deleted || false
         })),
         subtotal: subtotalBeforeTax,
@@ -3137,6 +3141,9 @@ const CreateInvoice: React.FC = () => {
           try {
             setIsUploadingFile(true);
 
+            // Build the complete payload to preserve all data
+            const { structuredData, metadataPayload } = buildInvoiceSubmissionPayload();
+
             const response = await fetch(`/api/v1/invoice/${id}`, {
               method: 'PUT',
               headers: {
@@ -3146,14 +3153,21 @@ const CreateInvoice: React.FC = () => {
               credentials: 'include',
               body: JSON.stringify({
                 status: 'approved',
+                // Preserve existing second attachment
+                secondAttachmentUrl: invoiceData.secondAttachmentUrl,
+                secondAttachmentName: invoiceData.secondAttachmentName,
+                secondAttachmentType: invoiceData.secondAttachmentType,
+                // New first attachment
                 attachmentUrl: base64Data,
                 attachmentName: file.name,
                 attachmentType: file.type,
+                // Preserve data field (contains receipts and all service data)
+                data: JSON.stringify(structuredData),
                 total: previewSummary.finalTotal,
                 subtotal: previewSummary.subtotalWithMarkup,
                 // Preserve existing metadata (taxRate, title, etc.) and update comments
                 metadata: JSON.stringify({
-                  ...invoiceData.metadata,
+                  ...metadataPayload,
                   comments
                 })
               })
@@ -3214,6 +3228,9 @@ const CreateInvoice: React.FC = () => {
           try {
             setIsUploadingFile(true);
 
+            // Build the complete payload to preserve all data
+            const { structuredData, metadataPayload } = buildInvoiceSubmissionPayload();
+
             const response = await fetch(`/api/v1/invoice/${id}`, {
               method: 'PUT',
               headers: {
@@ -3223,14 +3240,21 @@ const CreateInvoice: React.FC = () => {
               credentials: 'include',
               body: JSON.stringify({
                 status: 'approved',
+                // Preserve existing first attachment
+                attachmentUrl: invoiceData.attachmentUrl,
+                attachmentName: invoiceData.attachmentName,
+                attachmentType: invoiceData.attachmentType,
+                // New second attachment
                 secondAttachmentUrl: base64Data,
                 secondAttachmentName: file.name,
                 secondAttachmentType: file.type,
+                // Preserve data field (contains receipts and all service data)
+                data: JSON.stringify(structuredData),
                 total: previewSummary.finalTotal,
                 subtotal: previewSummary.subtotalWithMarkup,
                 // Preserve existing metadata (taxRate, title, etc.) and update comments
                 metadata: JSON.stringify({
-                  ...invoiceData.metadata,
+                  ...metadataPayload,
                   comments
                 })
               })

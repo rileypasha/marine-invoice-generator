@@ -83,7 +83,7 @@ export const DATABASE = {
 // Network Configuration
 export const NETWORK = {
   // Request Limits
-  REQUEST_SIZE_LIMIT: '10mb',
+  REQUEST_SIZE_LIMIT: '50mb',  // Increased to handle invoices with multiple base64-encoded attachments and receipts
 
   // Compression
   COMPRESSION_THRESHOLD: 1024,           // 1KB minimum for compression

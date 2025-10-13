@@ -1090,6 +1090,55 @@ const InvoiceView: React.FC = () => {
               </span>
             </div>
           </div>
+
+          {/* Invoice Attachments Section */}
+          {(invoice.attachmentUrl || invoice.secondAttachmentUrl) && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-slate-800">Attachments</h3>
+              <div className="space-y-2">
+                {invoice.attachmentUrl && (
+                  <button
+                    onClick={() => handleViewAttachment(
+                      invoice.attachmentUrl!,
+                      invoice.attachmentType || 'application/pdf',
+                      invoice.attachmentName || 'Invoice Attachment'
+                    )}
+                    className="flex items-center gap-2 w-full px-4 py-3 text-left bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    <Paperclip className="h-4 w-4 text-slate-600" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">
+                        {invoice.attachmentName || 'Invoice Attachment'}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {invoice.attachmentType || 'Unknown type'}
+                      </p>
+                    </div>
+                  </button>
+                )}
+                {invoice.secondAttachmentUrl && (
+                  <button
+                    onClick={() => handleViewAttachment(
+                      invoice.secondAttachmentUrl!,
+                      invoice.secondAttachmentType || 'application/pdf',
+                      invoice.secondAttachmentName || 'Second Attachment'
+                    )}
+                    className="flex items-center gap-2 w-full px-4 py-3 text-left bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    <Paperclip className="h-4 w-4 text-slate-600" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">
+                        {invoice.secondAttachmentName || 'Second Attachment'}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {invoice.secondAttachmentType || 'Unknown type'}
+                      </p>
+                    </div>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Line Item Comments Section */}
