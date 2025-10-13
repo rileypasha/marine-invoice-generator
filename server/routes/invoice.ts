@@ -1425,6 +1425,151 @@ router.get('/:id/diff/:fromVersion/:toVersion', async (req: InvoiceRequest, res:
   }
 });
 
+// POST /api/v1/invoice/:id/comments/:commentId/reply - Add reply to comment
+router.post('/:id/comments/:commentId/reply', async (req: InvoiceRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+  const userId = req.userId!;
+  const invoiceId = req.params.id;
+  const commentId = req.params.commentId;
+
+  try {
+    const { text } = req.body;
+
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      logger.warn('Invalid reply text', {
+        correlationId,
+        userId,
+        invoiceId,
+        commentId,
+      });
+
+      return res.status(400).json({
+        code: 'INVALID_REPLY',
+        message: 'Reply text is required',
+        correlationId,
+      });
+    }
+
+    // Check if invoice exists
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      select: { id: true, metadata: true },
+    });
+
+    if (!invoice) {
+      logger.warn('Invoice not found for comment reply', {
+        correlationId,
+        userId,
+        invoiceId,
+        commentId,
+      });
+
+      return res.status(404).json({
+        code: 'INVOICE_NOT_FOUND',
+        message: 'Invoice not found',
+        correlationId,
+      });
+    }
+
+    // Get user data for reply author
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true, avatarUrl: true },
+    });
+
+    // Parse existing metadata
+    let metadata: any = {};
+    if (invoice.metadata) {
+      if (typeof invoice.metadata === 'string') {
+        try {
+          metadata = JSON.parse(invoice.metadata);
+        } catch (e) {
+          metadata = {};
+        }
+      } else {
+        metadata = invoice.metadata;
+      }
+    }
+
+    // Initialize comments array if it doesn't exist
+    if (!metadata.comments || !Array.isArray(metadata.comments)) {
+      metadata.comments = [];
+    }
+
+    // Find the comment and add reply
+    const comment = metadata.comments.find((c: any) => c.id === commentId);
+    if (!comment) {
+      logger.warn('Comment not found for reply', {
+        correlationId,
+        userId,
+        invoiceId,
+        commentId,
+      });
+
+      return res.status(404).json({
+        code: 'COMMENT_NOT_FOUND',
+        message: 'Comment not found',
+        correlationId,
+      });
+    }
+
+    // Initialize replies array if it doesn't exist
+    if (!comment.replies || !Array.isArray(comment.replies)) {
+      comment.replies = [];
+    }
+
+    // Create new reply
+    const newReply = {
+      id: randomUUID(),
+      author: user?.name || user?.email || 'Unknown User',
+      initials: user?.name ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U',
+      avatarUrl: user?.avatarUrl || undefined,
+      text: text.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    comment.replies.push(newReply);
+
+    // Update invoice metadata
+    const updatedInvoice = await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        metadata: JSON.stringify(metadata),
+      },
+    });
+
+    logger.info('Comment reply added successfully', {
+      correlationId,
+      userId,
+      invoiceId,
+      commentId,
+      replyId: newReply.id,
+    });
+
+    res.json({
+      reply: newReply,
+      metadata: updatedInvoice.metadata,
+      message: 'Reply added successfully',
+      correlationId,
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to add comment reply', {
+      error: error.message,
+      correlationId,
+      userId,
+      invoiceId,
+      commentId,
+    });
+
+    res.status(500).json({
+      code: 'REPLY_FAILED',
+      message: 'Failed to add reply',
+      correlationId,
+    });
+  }
+});
+
 export default router;
 
 

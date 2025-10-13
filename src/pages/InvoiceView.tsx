@@ -224,12 +224,15 @@ const InvoiceView: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAuthenticated, csrfToken } = useAuth();
+  const { isAuthenticated, csrfToken, user } = useAuth();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [currentReceipt, setCurrentReceipt] = useState<{ url: string; name: string; type: string } | null>(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   const isPreviewMode = id === 'preview' || Boolean(location.state?.previewData);
@@ -339,6 +342,49 @@ const InvoiceView: React.FC = () => {
 
     setCurrentReceipt({ url: attachmentUrl, name: attachmentName, type: attachmentType });
     setReceiptModalOpen(true);
+  };
+
+  const handleSubmitReply = async (commentId: string) => {
+    if (!replyText.trim() || !user || !invoice || isPreviewMode) return;
+
+    setIsSubmittingReply(true);
+    try {
+      const response = await fetch(`/api/v1/invoice/${invoice.id}/comments/${commentId}/reply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || ''
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          text: replyText.trim()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit reply');
+      }
+
+      const data = await response.json();
+
+      // Update local invoice state with new metadata
+      setInvoice(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          metadata: data.metadata
+        };
+      });
+
+      // Reset reply form
+      setReplyText('');
+      setReplyingTo(null);
+    } catch (err) {
+      console.error('Error submitting reply:', err);
+      alert('Failed to submit reply. Please try again.');
+    } finally {
+      setIsSubmittingReply(false);
+    }
   };
 
   const metadata = useMemo(() => parseMetadata(invoice?.metadata), [invoice?.metadata]);
@@ -949,6 +995,61 @@ const InvoiceView: React.FC = () => {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Reply Form */}
+                {!isPreviewMode && (
+                  <div className="mt-3 border-t pt-3">
+                    {replyingTo === comment.id ? (
+                      <div className="space-y-2">
+                        <div className="flex gap-3">
+                          <Avatar className="h-8 w-8">
+                            {user?.avatarUrl && <img src={user.avatarUrl} alt={user.name || ''} className="h-full w-full object-cover rounded-full" />}
+                            <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <textarea
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                              placeholder="Write a reply..."
+                              className="w-full min-h-[80px] p-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              disabled={isSubmittingReply}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setReplyingTo(null);
+                              setReplyText('');
+                            }}
+                            disabled={isSubmittingReply}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleSubmitReply(comment.id)}
+                            disabled={!replyText.trim() || isSubmittingReply}
+                            className="bg-[#1e3a5f] text-white hover:bg-[#152d4a]"
+                          >
+                            {isSubmittingReply ? 'Submitting...' : 'Reply'}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setReplyingTo(comment.id)}
+                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                      >
+                        Reply
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
