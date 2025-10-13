@@ -589,21 +589,33 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     }
 
     // Update the invoice
-    const { parsedData, vessel, customer, ...restOfInvoiceData } = invoiceData;
+    const { parsedData, vessel, customer, customerId, vesselId, ...restOfInvoiceData } = invoiceData;
+
+    // Build update data, excluding null customerId and vesselId
+    const updateData: any = {
+      ...restOfInvoiceData,
+      invoiceNumber,
+      status: newStatus,
+      userId: existingInvoice.userId, // Preserve original creator's ID
+      attachmentUrl: invoiceData.attachmentUrl !== undefined ? invoiceData.attachmentUrl : existingInvoice.attachmentUrl,
+      attachmentName: invoiceData.attachmentName !== undefined ? invoiceData.attachmentName : existingInvoice.attachmentName,
+      attachmentType: invoiceData.attachmentType !== undefined ? invoiceData.attachmentType : existingInvoice.attachmentType,
+      secondAttachmentUrl: invoiceData.secondAttachmentUrl !== undefined ? invoiceData.secondAttachmentUrl : existingInvoice.secondAttachmentUrl,
+      secondAttachmentName: invoiceData.secondAttachmentName !== undefined ? invoiceData.secondAttachmentName : existingInvoice.secondAttachmentName,
+      secondAttachmentType: invoiceData.secondAttachmentType !== undefined ? invoiceData.secondAttachmentType : existingInvoice.secondAttachmentType,
+    };
+
+    // Only include customerId and vesselId if they're not null
+    if (customerId !== null && customerId !== undefined) {
+      updateData.customerId = customerId;
+    }
+    if (vesselId !== null && vesselId !== undefined) {
+      updateData.vesselId = vesselId;
+    }
+
     const updatedInvoice = await prisma.invoice.update({
       where: { id: invoiceId },
-      data: {
-        ...restOfInvoiceData,
-        invoiceNumber,
-        status: newStatus,
-        userId: existingInvoice.userId, // Preserve original creator's ID
-        attachmentUrl: invoiceData.attachmentUrl !== undefined ? invoiceData.attachmentUrl : existingInvoice.attachmentUrl,
-        attachmentName: invoiceData.attachmentName !== undefined ? invoiceData.attachmentName : existingInvoice.attachmentName,
-        attachmentType: invoiceData.attachmentType !== undefined ? invoiceData.attachmentType : existingInvoice.attachmentType,
-        secondAttachmentUrl: invoiceData.secondAttachmentUrl !== undefined ? invoiceData.secondAttachmentUrl : existingInvoice.secondAttachmentUrl,
-        secondAttachmentName: invoiceData.secondAttachmentName !== undefined ? invoiceData.secondAttachmentName : existingInvoice.secondAttachmentName,
-        secondAttachmentType: invoiceData.secondAttachmentType !== undefined ? invoiceData.secondAttachmentType : existingInvoice.secondAttachmentType,
-      },
+      data: updateData,
       include: {
         customer: { select: { display_name: true, legal_name: true } },
         vessel: { select: { name: true } },
