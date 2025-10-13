@@ -3514,16 +3514,7 @@ const CreateInvoice: React.FC = () => {
                       }}
                     >
                       <SelectTrigger>
-                        {selectedVesselId && selectedVesselObject ? (
-                          <div className="flex items-center">
-                            <span>{selectedVesselObject.name}</span>
-                            <svg className="w-4 h-4 ml-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        ) : (
-                          <SelectValue placeholder="Search for a vessel..." />
-                        )}
+                        <SelectValue placeholder="Search for a vessel..." />
                       </SelectTrigger>
                       <SelectContent>
                         <div className="p-2">
@@ -3650,16 +3641,7 @@ const CreateInvoice: React.FC = () => {
                       }}
                     >
                       <SelectTrigger>
-                        {selectedCustomerId && selectedCustomerObject ? (
-                          <div className="flex items-center">
-                            <span>{selectedCustomerObject.display_name}</span>
-                            <svg className="w-4 h-4 ml-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        ) : (
-                          <SelectValue placeholder="Search for a contact..." />
-                        )}
+                        <SelectValue placeholder="Search for a contact..." />
                       </SelectTrigger>
                       <SelectContent>
                         <div className="p-2">
