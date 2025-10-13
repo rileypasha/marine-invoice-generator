@@ -210,23 +210,26 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
       const initials = getInitials(userName);
 
       return (
-        <div className="flex items-center gap-2 text-sm text-gray-600 text-left whitespace-nowrap hidden md:table-cell">
+        <div className="text-sm text-gray-600 text-left hidden md:table-cell">
           {userName !== '-' && (
-            <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={userName}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="text-xs font-medium text-gray-700">
-                  {initials}
-                </span>
-              )}
-            </div>
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-flex h-6 w-6 rounded-full bg-gray-200 items-center justify-center overflow-hidden flex-shrink-0">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={userName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-xs font-medium text-gray-700">
+                    {initials}
+                  </span>
+                )}
+              </span>
+              <span className="truncate">{userName}</span>
+            </span>
           )}
-          <span className="truncate">{userName}</span>
+          {userName === '-' && <span>{userName}</span>}
         </div>
       );
     },
