@@ -22,8 +22,10 @@ interface Invoice {
   user?: {
     name?: string;
     email?: string;
+    avatarUrl?: string;
   };
   userName?: string;
+  userAvatar?: string;
   modifiedByUserName?: string;
   modifiedByUserAvatar?: string;
   total_amount?: number;
@@ -122,7 +124,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     ),
     enableSorting: false,
     enableHiding: false,
-    meta: { width: 'w-10' },
+    meta: { width: 'w-12' },
   },
   {
     accessorKey: "invoice_number",
@@ -133,12 +135,12 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     cell: ({ row }) => {
       const invoice = row.original;
       return (
-        <div className="font-medium !pl-3 truncate min-w-0 max-w-full text-foreground">
+        <div className="font-medium !pl-3 truncate min-w-0 text-foreground">
           {invoice.invoice_number || `#${invoice.id}`}
         </div>
       );
     },
-    meta: { width: 'w-40', className: '!pl-3' },
+    meta: { width: 'min-w-[120px]', className: '!pl-3' },
   },
   {
     accessorKey: "customer.display_name",
@@ -149,7 +151,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     cell: ({ row }) => {
       const invoice = row.original;
       return (
-        <div className="truncate min-w-0 max-w-full">
+        <div className="truncate min-w-0">
           <div className="text-foreground">
             {invoice.customer?.company_name || invoice.customer?.display_name || '-'}
           </div>
@@ -161,7 +163,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
         </div>
       );
     },
-    meta: { width: 'w-48' },
+    meta: { width: 'min-w-[180px]' },
   },
   {
     accessorKey: "vessel.name",
@@ -172,12 +174,12 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     cell: ({ row }) => {
       const invoice = row.original;
       return (
-        <div className="truncate min-w-0 max-w-full text-foreground">
+        <div className="truncate min-w-0 text-foreground">
           {invoice.vessel?.name || '-'}
         </div>
       );
     },
-    meta: { width: 'w-40' },
+    meta: { width: 'min-w-[140px]' },
   },
   {
     accessorKey: "total_amount",
@@ -193,7 +195,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
         </div>
       );
     },
-    meta: { width: 'w-32', className: 'text-left' },
+    meta: { width: 'min-w-[110px]', className: 'text-left' },
   },
   {
     accessorKey: "user.name",
@@ -204,13 +206,31 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     cell: ({ row }) => {
       const invoice = row.original;
       const userName = invoice.user?.name || invoice.userName || '-';
+      const avatarUrl = invoice.user?.avatarUrl || invoice.userAvatar;
+      const initials = getInitials(userName);
+
       return (
-        <div className="text-sm text-gray-600 text-left truncate min-w-0 max-w-full hidden md:table-cell">
-          {userName}
+        <div className="flex items-center gap-2 text-sm text-gray-600 text-left whitespace-nowrap hidden md:table-cell">
+          {userName !== '-' && (
+            <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={userName}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-xs font-medium text-gray-700">
+                  {initials}
+                </span>
+              )}
+            </div>
+          )}
+          <span className="truncate">{userName}</span>
         </div>
       );
     },
-    meta: { width: 'w-32', className: 'hidden md:table-cell' },
+    meta: { width: 'min-w-[160px]', className: 'hidden md:table-cell' },
   },
   {
     accessorKey: "invoice_date",
@@ -226,7 +246,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
         </div>
       );
     },
-    meta: { className: 'hidden md:table-cell' },
+    meta: { width: 'min-w-[120px]', className: 'hidden md:table-cell' },
   },
   {
     accessorKey: "modifiedByUserName",
@@ -241,7 +261,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
       const initials = getInitials(invoice.modifiedByUserName);
 
       return (
-        <div className="flex items-center gap-2 text-sm text-gray-600 text-left whitespace-nowrap overflow-visible">
+        <div className="flex items-center gap-2 text-sm text-gray-600 text-left whitespace-nowrap">
           {modifiedBy !== '-' && (
             <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
               {avatarUrl ? (
@@ -257,11 +277,11 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
               )}
             </div>
           )}
-          <span>{modifiedBy}</span>
+          <span className="truncate">{modifiedBy}</span>
         </div>
       );
     },
-    meta: {},
+    meta: { width: 'min-w-[160px]' },
   },
   {
     accessorKey: "updated_at",
@@ -279,7 +299,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
         </div>
       );
     },
-    meta: {},
+    meta: { width: 'min-w-[120px]' },
   },
   {
     accessorKey: "status",
@@ -295,7 +315,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
         </div>
       );
     },
-    meta: {},
+    meta: { width: 'min-w-[150px]' },
   },
   {
     id: "actions",
