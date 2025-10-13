@@ -339,9 +339,9 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
                 rowId: invoice.id,
                 pos: { top: r.bottom + window.scrollY, left: r.left + window.scrollX },
                 handlers: {
-                  view: (id) => actions.onView?.(invoice),
-                  edit: (id) => actions.onEdit?.(invoice),
-                  del: (id) => actions.onDelete?.(invoice),
+                  view: () => actions.onView?.(invoice),
+                  edit: () => actions.onEdit?.(invoice),
+                  del: () => actions.onDelete?.(invoice),
                 }
               });
             }}
