@@ -3149,6 +3149,8 @@ const CreateInvoice: React.FC = () => {
                 attachmentUrl: base64Data,
                 attachmentName: file.name,
                 attachmentType: file.type,
+                total: previewSummary.finalTotal,
+                subtotal: previewSummary.subtotalWithMarkup,
                 // Preserve existing metadata (taxRate, title, etc.) and update comments
                 metadata: JSON.stringify({
                   ...invoiceData.metadata,
@@ -3224,6 +3226,8 @@ const CreateInvoice: React.FC = () => {
                 secondAttachmentUrl: base64Data,
                 secondAttachmentName: file.name,
                 secondAttachmentType: file.type,
+                total: previewSummary.finalTotal,
+                subtotal: previewSummary.subtotalWithMarkup,
                 // Preserve existing metadata (taxRate, title, etc.) and update comments
                 metadata: JSON.stringify({
                   ...invoiceData.metadata,
