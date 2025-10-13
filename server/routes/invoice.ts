@@ -1306,6 +1306,28 @@ router.post('/:id/approve', async (req: InvoiceRequest, res: Response) => {
     // Mark version as approved
     await versioningService.markVersionAsApproved(invoiceId, latestRevision.revisionNumber);
 
+    // Update invoice with attachment data and status, preserving existing metadata
+    const updateData: any = {
+      status: 'approved',
+    };
+
+    // Only update attachment fields if they're provided in the request
+    if (req.body.attachmentUrl) {
+      updateData.attachmentUrl = req.body.attachmentUrl;
+    }
+    if (req.body.attachmentName) {
+      updateData.attachmentName = req.body.attachmentName;
+    }
+    if (req.body.attachmentType) {
+      updateData.attachmentType = req.body.attachmentType;
+    }
+
+    // Update the invoice record
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: updateData,
+    });
+
     // Log audit event
     await auditService.logInvoiceApproved(
       invoiceId,
@@ -1319,6 +1341,7 @@ router.post('/:id/approve', async (req: InvoiceRequest, res: Response) => {
       userId,
       invoiceId,
       revisionNumber: latestRevision.revisionNumber,
+      hasAttachment: !!req.body.attachmentUrl,
     });
 
     // Send email notification for approval
