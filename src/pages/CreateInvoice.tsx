@@ -3149,7 +3149,11 @@ const CreateInvoice: React.FC = () => {
                 attachmentUrl: base64Data,
                 attachmentName: file.name,
                 attachmentType: file.type,
-                metadata: comments.length > 0 ? JSON.stringify({ comments }) : undefined
+                // Preserve existing metadata (taxRate, title, etc.) and update comments
+                metadata: JSON.stringify({
+                  ...invoiceData.metadata,
+                  comments
+                })
               })
             });
 
@@ -3220,7 +3224,11 @@ const CreateInvoice: React.FC = () => {
                 secondAttachmentUrl: base64Data,
                 secondAttachmentName: file.name,
                 secondAttachmentType: file.type,
-                metadata: comments.length > 0 ? JSON.stringify({ comments }) : undefined
+                // Preserve existing metadata (taxRate, title, etc.) and update comments
+                metadata: JSON.stringify({
+                  ...invoiceData.metadata,
+                  comments
+                })
               })
             });
 
