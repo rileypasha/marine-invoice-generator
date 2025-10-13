@@ -20,32 +20,35 @@ const changeRequestService = createChangeRequestService(prisma);
 
 // Helper function to generate sequential invoice number
 async function generateNextInvoiceNumber(): Promise<string> {
-  // Find the highest existing invoice number
-  const latestInvoice = await prisma.invoice.findFirst({
+  // Find all invoices with REQ- prefix
+  const allInvoices = await prisma.invoice.findMany({
     where: {
       invoiceNumber: {
         startsWith: 'REQ-'
       }
-    },
-    orderBy: {
-      invoiceNumber: 'desc'
     },
     select: {
       invoiceNumber: true
     }
   });
 
-  if (!latestInvoice || !latestInvoice.invoiceNumber) {
+  if (!allInvoices || allInvoices.length === 0) {
     return 'REQ-1';
   }
 
-  // Extract the number from the latest invoice number (e.g., "REQ-123" -> 123)
-  const match = latestInvoice.invoiceNumber.match(/^REQ-(\d+)$/);
-  if (!match) {
-    return 'REQ-1';
+  // Extract and find the maximum number
+  let maxNumber = 0;
+  for (const invoice of allInvoices) {
+    const match = invoice.invoiceNumber?.match(/^REQ-(\d+)$/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxNumber) {
+        maxNumber = num;
+      }
+    }
   }
 
-  const nextNumber = parseInt(match[1], 10) + 1;
+  const nextNumber = maxNumber + 1;
   return `REQ-${nextNumber}`;
 }
 
