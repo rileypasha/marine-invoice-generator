@@ -255,7 +255,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     accessorKey: "modifiedByUserName",
     id: "modified_by",
     header: () => (
-      <div className="text-left">Modified by</div>
+      <span className="text-left">Modified by</span>
     ),
     cell: ({ row }) => {
       const invoice = row.original;
@@ -290,7 +290,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     accessorKey: "updated_at",
     id: "updated_at",
     header: () => (
-      <div className="text-right">Last modified</div>
+      <span className="text-right whitespace-nowrap">Last modified</span>
     ),
     cell: ({ row }) => {
       const invoice = row.original;

@@ -200,7 +200,7 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
       include: {
         customer: { select: { display_name: true, legal_name: true } },
         vessel: { select: { name: true } },
-        user: { select: { name: true, email: true } },
+        user: { select: { name: true, email: true, avatarUrl: true } },
       },
     });
 
@@ -265,7 +265,7 @@ router.get('/:id', async (req: InvoiceRequest, res: Response) => {
       include: {
         customer: true,
         vessel: true,
-        user: { select: { name: true, email: true } },
+        user: { select: { name: true, email: true, avatarUrl: true } },
       },
     });
 

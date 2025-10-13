@@ -112,7 +112,10 @@
       "Bash(~/ngrok.exe http 3000 --log stdout)",
       "Bash(~/ngrok.exe config add-authtoken 33Z9Mu0hu34uBf52QcnHb9egqPT_3gX3fgzjfXuEZdyWFvozY)",
       "Bash(ipconfig)",
-      "Bash(md5sum:*)"
+      "Bash(md5sum:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat(ui): improve New Invoice page UX and comment system\n\n- Remove \"Save and New\" button from New Invoice page\n- Enable vertical scrolling on New Invoice page (fixed overflow-hidden in index.html and index.css)\n- Make page header sticky when scrolling\n- Enable text selection on notes tab for desktop comment feature\n- Style Comment button to match navy blue theme\n- Display comments below invoice preview instead of sidebar\n- Add avatar display support for comments and replies\n- Show user avatars in comment input card while typing\n- Remove \"End of results\" message from Requests table\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(npx tsx:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix(invoice-numbers): correct invoice number generation and renumber existing invoices\n\nFixed critical bug where invoice numbers were all showing \"REQ-10\" due to alphabetical string sorting instead of numerical sorting in the generateNextInvoiceNumber function.\n\nRoot Cause:\n- The function used `orderBy: { invoiceNumber: ''desc'' }` which sorts strings alphabetically\n- String sorting: \"REQ-9\" > \"REQ-56\" > \"REQ-10\" > \"REQ-1\" (incorrect)\n- This caused the function to always find \"REQ-9\" as the \"latest\" and generate \"REQ-10\" for every new invoice\n\nChanges:\n- Updated generateNextInvoiceNumber() to fetch all invoices and find the true maximum number numerically\n- Created migration script (fix-invoice-numbers.ts) to renumber all existing invoices sequentially\n- Successfully renumbered 71 existing invoices from REQ-1 to REQ-71 based on creation date\n- New invoices will now correctly increment from REQ-72 onwards\n\nTesting:\n- Ran migration script: 71 invoices renumbered successfully\n- Next invoice will be REQ-72\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": [],
