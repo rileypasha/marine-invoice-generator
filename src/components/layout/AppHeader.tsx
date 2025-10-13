@@ -23,7 +23,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onProfileClick,
 }) => {
   return (
-    <header role="banner" className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-black/5 md:hidden">
+    <header role="banner" className="app-header fixed top-0 left-0 right-0 z-[3000] bg-white/95 backdrop-blur-[10px] backdrop-saturate-[180%] border-b border-black/5 md:hidden">
       <div className="flex h-14 items-center justify-between" style={{ paddingLeft: '16px', paddingRight: '16px' }}>
         {/* Left: Logo 16px inset */}
         <img

@@ -98,7 +98,7 @@ export const DesktopSidebar = ({
       }}
       {...props}
     >
-      <div style={{ minWidth: "280px", width: "280px" }}>
+      <div className="h-full" style={{ minWidth: "280px", width: "280px" }}>
         {children}
       </div>
     </div>
@@ -205,7 +205,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   return (
     <nav
       className={cn(
-        'fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border md:hidden',
+        'fixed bottom-0 left-0 right-0 z-[3000] bg-white/95 backdrop-blur-[10px] backdrop-saturate-[180%] border-t border-border md:hidden',
         'pb-safe',
         className
       )}

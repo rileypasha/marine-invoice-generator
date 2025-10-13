@@ -3440,7 +3440,7 @@ const CreateInvoice: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header Bar */}
-      <div className="sticky top-0 z-50 w-full border-b bg-background shadow-sm">
+      <div className="sticky top-[56px] md:static md:top-0 z-[2999] w-full border-b bg-white/95 md:bg-background backdrop-blur-[10px] backdrop-saturate-[180%] md:backdrop-blur-none shadow-sm pt-4 md:pt-0">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-2 md:px-6 pt-0 md:pt-6 pb-2 -mt-1 md:mt-0">
           {/* Left: Title + Status Badges */}
           <div className="flex items-center gap-2">

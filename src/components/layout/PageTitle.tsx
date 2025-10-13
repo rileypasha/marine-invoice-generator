@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '../../lib/utils';
 
 interface PageTitleProps {
   /**
@@ -25,6 +26,9 @@ interface PageTitleProps {
  * Renders page titles below the transparent header in the content area.
  * Supports optional subtitle and right-side action buttons.
  *
+ * Mobile: Sticky below the AppHeader with frosted glass blur
+ * Desktop: Normal flow without sticky positioning
+ *
  * Usage:
  * <PageTitle title="New Invoice" rightActions={<SaveButton />} />
  */
@@ -35,7 +39,13 @@ export const PageTitle: React.FC<PageTitleProps> = ({
   className = '',
 }) => {
   return (
-    <div className={`mb-6 ${className}`}>
+    <div className={cn(
+      'mb-6',
+      'md:relative md:z-auto',
+      'sticky top-[56px] z-[2999] bg-white/95 backdrop-blur-[10px] backdrop-saturate-[180%] border-b border-border md:border-0 md:bg-transparent md:backdrop-blur-none md:static',
+      '-mx-4 px-4 pt-6 pb-3 md:mx-0 md:px-0 md:pt-0 md:pb-0',
+      className
+    )}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-semibold text-gray-900 truncate">

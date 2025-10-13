@@ -629,7 +629,7 @@ const Customers: React.FC = () => {
     <>
       <div className="h-full flex flex-col">
         {/* Sticky Toolbar - always visible at top */}
-        <div className="flex-shrink-0 sticky top-0 z-30 bg-white border-b">
+        <div className="flex-shrink-0 sticky top-[56px] md:static md:top-0 z-[2999] bg-white/95 md:bg-white backdrop-blur-[10px] backdrop-saturate-[180%] md:backdrop-blur-none border-b pt-4 md:pt-0">
           <ContactsToolbar
             customers={customers}
             currentGroupBy={currentGroupBy}

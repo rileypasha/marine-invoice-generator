@@ -68,8 +68,6 @@
       color: #000;
       padding-top: 0;
       min-height: var(--header-h);
-      display: flex;
-      align-items: center;
     }
 
     /* Inner row that holds title/menu */
