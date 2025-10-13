@@ -571,14 +571,21 @@ const InvoiceView: React.FC = () => {
       diffData = convertFieldDeltaToPatch(diffData);
     }
 
+    // Filter out items with _deleted flag from current services for proper baseline reconstruction
+    // This ensures deleted items will appear as "removed" when comparing baseline to current
+    const activeLineItems = lineItems.filter(item => !item._deleted);
+
     // Reconstruct the baseline by reversing diff operations
     const gatherData = gatherInvoiceData<LineItem>(invoice);
-    const baseline = reconstructBaseline({ services: gatherData.lineItems }, diffData);
+    const baseline = reconstructBaseline({ services: activeLineItems }, diffData);
 
     console.log('[InvoiceView] Baseline line items:', {
       current: lineItems.length,
+      active: activeLineItems.length,
+      deleted: lineItems.filter(item => item._deleted).length,
       baseline: baseline.services?.length || 0,
-      baselineIds: baseline.services?.map((s: any) => s.id)
+      baselineIds: baseline.services?.map((s: any) => s.id),
+      deletedIds: lineItems.filter(item => item._deleted).map(item => item.id)
     });
 
     return baseline.services || [];
@@ -911,44 +918,73 @@ const InvoiceView: React.FC = () => {
                       <span className="text-right">Tax</span>
                       <span className="text-right">Total</span>
                     </div>
-                {/* Show deleted items first (items in baseline but not in current) */}
-                {baselineLineItems
-                  .filter((baselineItem: any) => !servicesSummary.services.some(s => s.id === baselineItem.id))
-                  .map((deletedItem: any, index: number) => {
-                    const shouldShowRowDiff = invoice.status === 'change_requested' &&
-                      invoice.diff &&
-                      Array.isArray(invoice.diff) &&
-                      invoice.diff.length > 0;
+                {/* Show deleted items first */}
+                {/* Combine two sources: 1) Items in baseline but not in current active services, 2) Items marked with _deleted flag */}
+                {(() => {
+                  const shouldShowRowDiff = invoice.status === 'change_requested' &&
+                    invoice.diff &&
+                    Array.isArray(invoice.diff) &&
+                    invoice.diff.length > 0;
 
-                    return (
-                      <div
-                        key={deletedItem.id}
-                        className={cn(
-                          'grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm',
-                          shouldShowRowDiff && 'border-l-4 bg-red-50 border-red-500 opacity-75'
-                        )}
-                      >
-                        <div className="pr-4">
-                          <p className="font-medium text-red-600 line-through">
-                            {deletedItem.description || 'Untitled Service'}
-                          </p>
-                          <p className="text-xs text-muted-foreground line-through">{deletedItem.type}</p>
-                        </div>
-                        <span className="text-right text-red-600 line-through">
-                          $0.00
-                        </span>
-                        <span className="text-right text-red-600 line-through">
-                          $0.00
-                        </span>
-                        <span className="text-right text-red-600 line-through">
-                          $0.00
-                        </span>
-                        <span className="text-right font-medium text-red-600 line-through">
-                          $0.00
-                        </span>
+                  // Get active services (without _deleted flag)
+                  const activeServiceIds = servicesSummary.services.filter((s: ServiceSummaryItem) => {
+                    // Check if this service ID exists in lineItems with _deleted flag
+                    const lineItem = lineItems.find(item => item.id === s.id);
+                    return !lineItem || !lineItem._deleted;
+                  }).map((s: ServiceSummaryItem) => s.id);
+
+                  // Find items in baseline but not in active services
+                  const removedFromBaseline = baselineLineItems.filter((baselineItem: any) =>
+                    !activeServiceIds.includes(baselineItem.id)
+                  );
+
+                  // Find items in current lineItems with _deleted flag
+                  const markedAsDeleted = lineItems.filter(item => item._deleted);
+
+                  // Combine both, removing duplicates by id
+                  const allDeletedItems = [...removedFromBaseline];
+                  for (const deletedItem of markedAsDeleted) {
+                    if (!allDeletedItems.some((item: any) => item.id === deletedItem.id)) {
+                      allDeletedItems.push(deletedItem);
+                    }
+                  }
+
+                  console.log('[InvoiceView] Deleted items analysis:', {
+                    removedFromBaseline: removedFromBaseline.length,
+                    markedAsDeleted: markedAsDeleted.length,
+                    combined: allDeletedItems.length,
+                    shouldShowRowDiff
+                  });
+
+                  return allDeletedItems.map((deletedItem: any, index: number) => (
+                    <div
+                      key={deletedItem.id || `deleted-${index}`}
+                      className={cn(
+                        'grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm',
+                        shouldShowRowDiff && 'border-l-4 bg-red-50 border-red-500 opacity-75'
+                      )}
+                    >
+                      <div className="pr-4">
+                        <p className="font-medium text-red-600 line-through">
+                          {deletedItem.description || 'Untitled Service'}
+                        </p>
+                        <p className="text-xs text-muted-foreground line-through">{deletedItem.jobType || deletedItem.itemType || deletedItem.type || 'Service'}</p>
                       </div>
-                    );
-                  })}
+                      <span className="text-right text-red-600 line-through">
+                        $0.00
+                      </span>
+                      <span className="text-right text-red-600 line-through">
+                        $0.00
+                      </span>
+                      <span className="text-right text-red-600 line-through">
+                        $0.00
+                      </span>
+                      <span className="text-right font-medium text-red-600 line-through">
+                        $0.00
+                      </span>
+                    </div>
+                  ));
+                })()}
 
                 {/* Show current items */}
                 {servicesSummary.services.map((service, index) => {
