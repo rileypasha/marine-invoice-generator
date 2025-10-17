@@ -16,6 +16,11 @@ export interface ChangeRequestService {
   captureSnapshot(invoiceId: string, currentState: any, userId: string): Promise<void>;
 
   /**
+   * Store baseline snapshot within a transaction (for connection reuse)
+   */
+  captureSnapshotWithTransaction(tx: any, invoiceId: string, currentState: any, userId: string): Promise<void>;
+
+  /**
    * Recompute diff from stored snapshot
    */
   recomputeDiff(invoiceId: string, currentState: any, config?: Partial<DiffConfig>): Promise<DiffResult | null>;
@@ -54,6 +59,35 @@ export function createChangeRequestService(prisma: PrismaClient): ChangeRequestS
         });
       } catch (error) {
         logger.error('Failed to capture change request snapshot', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          invoiceId,
+          userId,
+        });
+        throw error;
+      }
+    },
+
+    /**
+     * Capture snapshot within a transaction (prevents connection timeout)
+     */
+    async captureSnapshotWithTransaction(tx: any, invoiceId: string, currentState: any, userId: string): Promise<void> {
+      try {
+        await tx.invoice.update({
+          where: { id: invoiceId },
+          data: {
+            changeRequestSnapshot: currentState as any,
+            changeRequestDiff: undefined,
+            changeRequestedAt: new Date(),
+            changeRequestedBy: userId,
+          },
+        });
+
+        logger.info('Change request snapshot captured (in transaction)', {
+          invoiceId,
+          userId,
+        });
+      } catch (error) {
+        logger.error('Failed to capture change request snapshot in transaction', {
           error: error instanceof Error ? error.message : 'Unknown error',
           invoiceId,
           userId,

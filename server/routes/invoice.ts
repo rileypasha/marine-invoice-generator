@@ -573,36 +573,6 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     // Check if a baseline snapshot exists for this invoice
     const hasExistingSnapshot = existingInvoice.changeRequestSnapshot != null;
 
-    // If no baseline snapshot exists (for old invoices created before this feature),
-    // capture one now using the current state BEFORE applying new changes
-    if (!hasExistingSnapshot && statusChangingToChangeRequested) {
-      logger.info('No baseline snapshot exists, capturing current state as baseline', {
-        correlationId,
-        invoiceId,
-        oldStatus,
-        newStatus,
-      });
-
-      const snapshotData = typeof existingInvoice.data === 'string'
-        ? JSON.parse(existingInvoice.data)
-        : existingInvoice.data;
-
-      // Log what we're capturing as baseline
-      const lineItemCount = snapshotData?.scope?.lineItems?.length || 0;
-      logger.info('Capturing baseline snapshot', {
-        correlationId,
-        invoiceId,
-        lineItemCount,
-        lineItems: snapshotData?.scope?.lineItems?.map((li: any) => li.description) || [],
-      });
-
-      await changeRequestService.captureSnapshot(
-        invoiceId,
-        snapshotData,
-        userId
-      );
-    }
-
     // Update the invoice
     const { parsedData, vessel, customer, customerId, vesselId, ...restOfInvoiceData } = invoiceData;
 
@@ -657,13 +627,50 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
       dataFieldIsDefined: updateData.data !== undefined,
     });
 
-    const updatedInvoice = await prisma.invoice.update({
-      where: { id: invoiceId },
-      data: updateData,
-      include: {
-        customer: { select: { display_name: true, legal_name: true } },
-        vessel: { select: { name: true } },
-      },
+    // Use Prisma transaction to prevent connection timeout on nested operations
+    const updatedInvoice = await prisma.$transaction(async (tx) => {
+      // If no baseline snapshot exists, capture one WITHIN the transaction
+      if (!hasExistingSnapshot && statusChangingToChangeRequested) {
+        logger.info('No baseline snapshot exists, capturing current state as baseline', {
+          correlationId,
+          invoiceId,
+          oldStatus,
+          newStatus,
+        });
+
+        const snapshotData = typeof existingInvoice.data === 'string'
+          ? JSON.parse(existingInvoice.data)
+          : existingInvoice.data;
+
+        // Log what we're capturing as baseline
+        const lineItemCount = snapshotData?.scope?.lineItems?.length || 0;
+        logger.info('Capturing baseline snapshot', {
+          correlationId,
+          invoiceId,
+          lineItemCount,
+          lineItems: snapshotData?.scope?.lineItems?.map((li: any) => li.description) || [],
+        });
+
+        // Capture snapshot using transaction client
+        await changeRequestService.captureSnapshotWithTransaction(
+          tx,
+          invoiceId,
+          snapshotData,
+          userId
+        );
+      }
+
+      // Update the invoice within the same transaction
+      const invoice = await tx.invoice.update({
+        where: { id: invoiceId },
+        data: updateData,
+        include: {
+          customer: { select: { display_name: true, legal_name: true } },
+          vessel: { select: { name: true } },
+        },
+      });
+
+      return invoice;
     });
 
     // If invoice is (or just became) 'change_requested', compute and store the diff
