@@ -628,6 +628,7 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     });
 
     // Use Prisma transaction to prevent connection timeout on nested operations
+    // Increased timeout to 20 seconds for snapshot capture operations
     const updatedInvoice = await prisma.$transaction(async (tx) => {
       // If no baseline snapshot exists, capture one WITHIN the transaction
       if (!hasExistingSnapshot && statusChangingToChangeRequested) {
@@ -671,6 +672,8 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
       });
 
       return invoice;
+    }, {
+      timeout: 20000, // 20 seconds timeout for snapshot operations
     });
 
     // If invoice is (or just became) 'change_requested', compute and store the diff

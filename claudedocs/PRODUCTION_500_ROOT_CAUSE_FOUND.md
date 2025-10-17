@@ -265,7 +265,35 @@ If Phase 1 doesn't fully resolve the issue:
 
 ## Summary
 
-**Root Cause**: PostgreSQL connection timeout during nested Prisma operations (P1017)
-**Primary Fix**: Use Prisma interactive transactions to keep connection alive
-**Secondary Fix**: Increase connection pool timeouts if needed
+**Root Cause 1**: PostgreSQL connection timeout during nested Prisma operations (P1017) - ✅ FIXED
+**Fix 1**: Use Prisma interactive transactions to keep connection alive - ✅ DEPLOYED
+
+**Root Cause 2**: Transaction timeout (P2028) - Default 5s timeout exceeded - ✅ FIXED
+**Fix 2**: Increased Prisma transaction timeout to 20 seconds - ✅ DEPLOYED
+
 **Expected Result**: All invoice updates succeed, request duration <2 seconds
+
+## Update: Transaction Timeout Fix (P2028)
+
+**New Error Discovered** (2025-10-17 21:47:19):
+```
+Prisma P2028: Transaction already closed
+The timeout for this transaction was 5000 ms, however 6099 ms passed
+```
+
+**Root Cause**: Prisma's default interactive transaction timeout is 5 seconds, but snapshot capture operations take 6+ seconds.
+
+**Solution Applied**: Increased transaction timeout to 20 seconds:
+```typescript
+const updatedInvoice = await prisma.$transaction(async (tx) => {
+  // ... transaction operations
+}, {
+  timeout: 20000, // 20 seconds timeout for snapshot operations
+});
+```
+
+**Expected Result After Both Fixes**:
+- ✅ No more P1017 connection errors
+- ✅ No more P2028 transaction timeout errors
+- ✅ Request duration: <10 seconds (within new timeout limit)
+- ✅ All invoice updates succeed with 200 status
