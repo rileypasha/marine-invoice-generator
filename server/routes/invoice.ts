@@ -495,6 +495,21 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
   try {
     const invoiceData = req.body;
 
+    // Log incoming request for debugging
+    logger.info('PUT /api/v1/invoice/:id - Request received', {
+      correlationId,
+      userId,
+      invoiceId,
+      payloadKeys: Object.keys(invoiceData),
+      dataFieldType: typeof invoiceData.data,
+      dataFieldLength: invoiceData.data ? JSON.stringify(invoiceData.data).length : 0,
+      hasCustomerId: !!invoiceData.customerId,
+      hasVesselId: !!invoiceData.vesselId,
+      status: invoiceData.status,
+      total: invoiceData.total,
+      subtotal: invoiceData.subtotal,
+    });
+
     // Validate invoice data
     if (!invoiceData.total && !invoiceData.subtotal) {
       logger.warn('Invalid invoice data', {
@@ -627,6 +642,20 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     if (vesselId !== null && vesselId !== undefined) {
       updateData.vesselId = vesselId;
     }
+
+    // Log update data before Prisma call for debugging
+    logger.info('About to execute Prisma update', {
+      correlationId,
+      invoiceId,
+      updateDataKeys: Object.keys(updateData),
+      updateDataStatus: updateData.status,
+      updateDataTotal: updateData.total,
+      updateDataSubtotal: updateData.subtotal,
+      hasCustomerId: !!updateData.customerId,
+      hasVesselId: !!updateData.vesselId,
+      dataFieldType: typeof updateData.data,
+      dataFieldIsDefined: updateData.data !== undefined,
+    });
 
     const updatedInvoice = await prisma.invoice.update({
       where: { id: invoiceId },
