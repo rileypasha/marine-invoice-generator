@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Outlet } from 'react-router-dom';
 import {
   FileText,
   User,
@@ -20,7 +20,7 @@ import { AppHeader } from '../components/layout/AppHeader';
 import { useAuth } from '../context/AuthContext';
 
 interface MainLayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 const SidebarContent = () => {
@@ -342,6 +342,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     return false;
   };
 
+  // Support both nested routes (via Outlet) and direct children (for backward compatibility)
+  const content = children || <Outlet />;
+
   return (
     <Sidebar>
       <div className="min-h-screen bg-white">
@@ -377,18 +380,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             {isFullWidthRoute() ? (
               // Full-width layout for Airtable-style pages (like contacts)
               <div className="w-full h-screen">
-                {children}
+                {content}
               </div>
             ) : (
               // Centered layout for other pages
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-0 md:py-8">
-                {children}
+                {content}
               </div>
             )}
           </main>
           {/* Print-only content */}
           <div className="print-only">
-            {children}
+            {content}
           </div>
         </MainContent>
 

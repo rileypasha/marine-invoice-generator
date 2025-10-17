@@ -1,9 +1,9 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   requireAuth?: boolean;
 }
 
@@ -29,10 +29,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!requireAuth && isAuthenticated) {
-    return <Navigate to="/invoices/create" replace />;
+    return <Navigate to="/requests/new" replace />;
   }
 
-  return <>{children}</>;
+  // Support both nested routes (via Outlet) and direct children
+  return children ? <>{children}</> : <Outlet />;
 };
 
 export default ProtectedRoute;
