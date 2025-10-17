@@ -120,7 +120,7 @@ export default defineConfig({
       '.ngrok.io',
     ],
     hmr: {
-      clientPort: 443, // Use HTTPS port for HMR through ngrok
+      // clientPort: 443, // Use HTTPS port for HMR through ngrok - disabled for local dev
     },
     proxy: {
       '/api': {
