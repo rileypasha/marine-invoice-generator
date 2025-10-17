@@ -739,14 +739,21 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
   } catch (error: any) {
     logger.error('Failed to update invoice', {
       error: error.message,
+      stack: error.stack,
       correlationId,
       userId,
       invoiceId,
+      errorName: error.name,
+      errorCode: error.code,
+      // Prisma-specific error details
+      prismaErrorCode: error.code,
+      prismaErrorMeta: error.meta,
     });
 
     res.status(500).json({
       code: 'UPDATE_FAILED',
       message: 'Failed to update invoice',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
       correlationId,
     });
   }
