@@ -779,13 +779,7 @@ router.delete('/:id', async (req: InvoiceRequest, res: Response) => {
       });
     }
 
-    if (invoice.userId !== userId) {
-      return res.status(403).json({
-        code: 'FORBIDDEN',
-        message: 'You do not have access to this invoice',
-        correlationId,
-      });
-    }
+    // Note: Removed ownership check - all authenticated users can delete all invoices
 
     await prisma.invoice.delete({
       where: { id: invoiceId },
