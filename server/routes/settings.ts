@@ -1,48 +1,10 @@
 import { Router, Request, Response } from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import bcrypt from 'bcrypt';
 import { logger } from '../utils/logger';
 import { query } from '../config/database';
 import '../types/session';
 
 const router = Router();
-
-// Configure multer for avatar uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads/avatars');
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const userId = (req as any).userId;
-    const ext = path.extname(file.originalname);
-    cb(null, `avatar-${userId}-${Date.now()}${ext}`);
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed (jpeg, jpg, png, gif, webp)'));
-    }
-  }
-});
 
 interface SettingsRequest extends Request {
   userId?: string;
@@ -188,27 +150,22 @@ router.put('/notifications', async (req: SettingsRequest, res: Response) => {
 });
 
 // PUT /api/v1/settings/profile - Update user profile information
-router.put('/profile', upload.single('avatar'), async (req: SettingsRequest, res: Response) => {
+router.put('/profile', async (req: SettingsRequest, res: Response) => {
   const correlationId = req.correlationId!;
   const userId = req.userId!;
-  const { name, email } = req.body;
-  const avatarFile = req.file;
+  const { name, email, avatar } = req.body;
 
   logger.info('Received profile update request', {
     correlationId,
     userId,
     name,
     email,
-    avatar: avatarFile ? 'uploaded' : 'not provided'
+    avatar: avatar ? 'provided' : 'not provided'
   });
 
   try {
     // Validate input
     if (!name || !email) {
-      // Clean up uploaded file if validation fails
-      if (avatarFile) {
-        fs.unlinkSync(avatarFile.path);
-      }
       return res.status(400).json({
         code: 'INVALID_INPUT',
         message: 'Name and email are required',
@@ -219,10 +176,6 @@ router.put('/profile', upload.single('avatar'), async (req: SettingsRequest, res
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      // Clean up uploaded file if validation fails
-      if (avatarFile) {
-        fs.unlinkSync(avatarFile.path);
-      }
       return res.status(400).json({
         code: 'INVALID_EMAIL',
         message: 'Invalid email format',
@@ -237,10 +190,6 @@ router.put('/profile', upload.single('avatar'), async (req: SettingsRequest, res
     );
 
     if (emailCheck.rows.length > 0) {
-      // Clean up uploaded file if validation fails
-      if (avatarFile) {
-        fs.unlinkSync(avatarFile.path);
-      }
       return res.status(400).json({
         code: 'EMAIL_TAKEN',
         message: 'Email address is already in use',
@@ -248,18 +197,31 @@ router.put('/profile', upload.single('avatar'), async (req: SettingsRequest, res
       });
     }
 
-    // Build avatar URL if file was uploaded
-    let avatarUrl = null;
-    if (avatarFile) {
-      avatarUrl = `/uploads/avatars/${avatarFile.filename}`;
+    // Validate avatar if provided
+    if (avatar) {
+      // Check if it's a valid Base64 data URL
+      const base64Regex = /^data:image\/(jpeg|jpg|png|gif|webp);base64,/;
+      if (!base64Regex.test(avatar)) {
+        return res.status(400).json({
+          code: 'INVALID_AVATAR',
+          message: 'Avatar must be a valid Base64 image data URL (jpeg, jpg, png, gif, or webp)',
+          correlationId,
+        });
+      }
 
-      // Delete old avatar if exists
-      const oldUser = await query('SELECT "avatarUrl" FROM "User" WHERE id = $1', [userId]);
-      if (oldUser.rows.length > 0 && oldUser.rows[0].avatarUrl) {
-        const oldPath = path.join(__dirname, '../../', oldUser.rows[0].avatarUrl);
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
-        }
+      // Extract the Base64 data without the data URL prefix
+      const base64Data = avatar.split(',')[1];
+
+      // Calculate approximate size (Base64 is ~33% larger than binary)
+      const sizeInBytes = (base64Data.length * 3) / 4;
+      const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
+
+      if (sizeInBytes > maxSizeInBytes) {
+        return res.status(400).json({
+          code: 'AVATAR_TOO_LARGE',
+          message: 'Avatar image must be less than 5MB',
+          correlationId,
+        });
       }
     }
 
@@ -268,18 +230,14 @@ router.put('/profile', upload.single('avatar'), async (req: SettingsRequest, res
       `UPDATE "User"
        SET name = $1,
            email = $2,
-           ${avatarUrl ? '"avatarUrl" = $4,' : ''}
+           ${avatar ? '"avatarUrl" = $4,' : ''}
            "updatedAt" = NOW()
        WHERE id = $3
        RETURNING id, name, email, role, "avatarUrl"`,
-      avatarUrl ? [name, email, userId, avatarUrl] : [name, email, userId]
+      avatar ? [name, email, userId, avatar] : [name, email, userId]
     );
 
     if (result.rows.length === 0) {
-      // Clean up uploaded file if user not found
-      if (avatarFile) {
-        fs.unlinkSync(avatarFile.path);
-      }
       return res.status(404).json({
         code: 'USER_NOT_FOUND',
         message: 'User not found',
@@ -294,7 +252,7 @@ router.put('/profile', upload.single('avatar'), async (req: SettingsRequest, res
       userId,
       name,
       email,
-      avatarUpdated: !!avatarFile
+      avatarUpdated: !!avatar
     });
 
     res.json({
@@ -307,18 +265,6 @@ router.put('/profile', upload.single('avatar'), async (req: SettingsRequest, res
     });
 
   } catch (error: any) {
-    // Clean up uploaded file on error
-    if (avatarFile) {
-      try {
-        fs.unlinkSync(avatarFile.path);
-      } catch (unlinkError) {
-        logger.error('Failed to clean up uploaded file', {
-          error: (unlinkError as Error).message,
-          filePath: avatarFile.path
-        });
-      }
-    }
-
     logger.error('Failed to update profile', {
       error: error.message,
       correlationId,

@@ -264,7 +264,8 @@ router.get('/me', async (req, res) => {
         id: true,
         email: true,
         name: true,
-        role: true
+        role: true,
+        avatarUrl: true
       }
     });
 

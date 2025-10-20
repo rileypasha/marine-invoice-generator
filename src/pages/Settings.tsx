@@ -25,8 +25,8 @@ interface NotificationPreferences {
 interface ProfileData {
   name: string;
   email: string;
-  avatarFile?: File | null;
-  avatarUrl?: string;
+  avatar?: string; // Base64 data URL
+  avatarUrl?: string; // Current avatar from database
 }
 
 const Settings: React.FC = () => {
@@ -41,7 +41,7 @@ const Settings: React.FC = () => {
   const [profileData, setProfileData] = useState<ProfileData>({
     name: '',
     email: '',
-    avatarFile: null,
+    avatar: undefined,
     avatarUrl: ''
   });
   const [loading, setLoading] = useState(false);
@@ -58,7 +58,8 @@ const Settings: React.FC = () => {
       setProfileData({
         name: currentUser.name || '',
         email: currentUser.email || '',
-        avatarFile: null
+        avatar: undefined,
+        avatarUrl: currentUser.avatarUrl || ''
       });
     }
   }, [currentUser]);
@@ -215,20 +216,24 @@ const Settings: React.FC = () => {
 
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('name', profileData.name);
-      formData.append('email', profileData.email);
-      if (profileData.avatarFile) {
-        formData.append('avatar', profileData.avatarFile);
+      const requestBody: { name: string; email: string; avatar?: string } = {
+        name: profileData.name,
+        email: profileData.email
+      };
+
+      // Include avatar if a new one was selected
+      if (profileData.avatar) {
+        requestBody.avatar = profileData.avatar;
       }
 
       const response = await fetch(`${API_BASE_URL}/settings/profile`, {
         method: 'PUT',
         headers: {
+          'Content-Type': 'application/json',
           'X-CSRF-Token': csrfToken
         },
         credentials: 'include',
-        body: formData
+        body: JSON.stringify(requestBody)
       });
 
       if (response.ok) {
@@ -288,7 +293,7 @@ const Settings: React.FC = () => {
                   setProfileData({
                     name: currentUser?.name || '',
                     email: currentUser?.email || '',
-                    avatarFile: null,
+                    avatar: undefined,
                     avatarUrl: currentUser?.avatarUrl || ''
                   });
                   setShowModal('profile');
@@ -418,22 +423,17 @@ const Settings: React.FC = () => {
                   </label>
                   <div className="flex items-center gap-3">
                     {/* Show current avatar if exists */}
-                    {(profileData.avatarUrl || profileData.avatarFile) && (
+                    {(profileData.avatar || profileData.avatarUrl) && (
                       <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
                         <img
-                          src={profileData.avatarFile ? URL.createObjectURL(profileData.avatarFile) : profileData.avatarUrl}
+                          src={profileData.avatar || profileData.avatarUrl}
                           alt="Current avatar"
                           className="h-10 w-10 rounded-full object-cover"
                         />
                         <div className="flex flex-col">
                           <span className="text-xs font-medium text-green-700">
-                            {profileData.avatarFile ? 'New image selected' : 'Current avatar'}
+                            {profileData.avatar ? 'New image selected' : 'Current avatar'}
                           </span>
-                          {profileData.avatarFile && (
-                            <span className="text-xs text-gray-600">
-                              {profileData.avatarFile.name}
-                            </span>
-                          )}
                         </div>
                       </div>
                     )}
@@ -441,7 +441,7 @@ const Settings: React.FC = () => {
                     <label className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                       <Upload className="h-4 w-4 mr-2" />
                       <span className="text-sm">
-                        {profileData.avatarUrl || profileData.avatarFile ? 'Change Image' : 'Choose Image'}
+                        {profileData.avatar || profileData.avatarUrl ? 'Change Image' : 'Choose Image'}
                       </span>
                       <input
                         type="file"
@@ -449,7 +449,12 @@ const Settings: React.FC = () => {
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            setProfileData({ ...profileData, avatarFile: file });
+                            // Convert file to Base64
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setProfileData({ ...profileData, avatar: reader.result as string });
+                            };
+                            reader.readAsDataURL(file);
                           }
                         }}
                         className="hidden"
@@ -457,7 +462,7 @@ const Settings: React.FC = () => {
                     </label>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    {profileData.avatarUrl || profileData.avatarFile
+                    {profileData.avatar || profileData.avatarUrl
                       ? 'You can upload a new image to replace your current avatar'
                       : 'Upload an image for your profile picture (optional)'}
                   </p>
