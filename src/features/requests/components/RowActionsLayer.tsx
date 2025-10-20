@@ -22,7 +22,9 @@ export default function RequestsRowActionsLayer() {
     if (open) {
       setArmed(false);
       isProcessingActionRef.current = false;
-      requestAnimationFrame(()=>setArmed(true));
+      // Use a small delay to ensure the opening click is ignored
+      const timer = setTimeout(() => setArmed(true), 50);
+      return () => clearTimeout(timer);
     }
   }, [open]);
 
@@ -170,8 +172,9 @@ export default function RequestsRowActionsLayer() {
         role="menuitem"
         className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
         onClick={() => {
+          isProcessingActionRef.current = true;
           handlers.view(rowId);
-          close();
+          setTimeout(() => close(), 50);
         }}
       >
         <Eye className="h-4 w-4 text-gray-600" />
@@ -181,8 +184,9 @@ export default function RequestsRowActionsLayer() {
         role="menuitem"
         className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
         onClick={() => {
+          isProcessingActionRef.current = true;
           handlers.edit(rowId);
-          close();
+          setTimeout(() => close(), 50);
         }}
       >
         <Edit className="h-4 w-4 text-gray-600" />
@@ -192,8 +196,9 @@ export default function RequestsRowActionsLayer() {
         role="menuitem"
         className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap text-red-600"
         onClick={() => {
+          isProcessingActionRef.current = true;
           handlers.del(rowId);
-          close();
+          setTimeout(() => close(), 50);
         }}
       >
         <Trash2 className="h-4 w-4" />
