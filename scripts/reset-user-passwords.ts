@@ -8,6 +8,9 @@ interface User {
   role: string;
 }
 
+// ⚠️ WARNING: This script resets TEST ACCOUNTS ONLY
+// To reset personal accounts, use: ts-node scripts/reset-single-password.ts <email> <password>
+
 const RESET_USERS: User[] = [
   {
     email: 'test@marinegroupbw.com',
@@ -15,12 +18,8 @@ const RESET_USERS: User[] = [
     password: 'TestPassword123!',
     role: 'admin'
   },
-  {
-    email: 'rpasha@marinegroupbw.com',
-    name: 'Riley Pasha',
-    password: 'RileyPassword123!',
-    role: 'admin'
-  },
+  // NOTE: rpasha@marinegroupbw.com is EXCLUDED from automatic resets
+  // Use reset-single-password.ts to reset personal accounts
   {
     email: 'admin@mginvoices.com',
     name: 'Admin User',
@@ -36,6 +35,9 @@ const RESET_USERS: User[] = [
 ];
 
 async function resetUserPasswords() {
+  console.log('⚠️  WARNING: This will reset TEST ACCOUNT passwords only!');
+  console.log('⚠️  Personal accounts (rpasha@marinegroupbw.com) are excluded.');
+  console.log('⚠️  To reset personal accounts, use: ts-node scripts/reset-single-password.ts <email> <password>\n');
   console.log('🔧 Starting user password reset...');
 
   try {

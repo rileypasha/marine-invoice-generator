@@ -304,7 +304,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     accessorKey: "updated_at",
     id: "updated_at",
     header: () => (
-      <span className="text-right whitespace-nowrap">Last modified</span>
+      <div className="text-right whitespace-nowrap">Last modified</div>
     ),
     cell: ({ row }) => {
       const invoice = row.original;
