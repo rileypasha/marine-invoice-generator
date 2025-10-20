@@ -44,6 +44,12 @@ const formatCurrencyCell = (value?: number | null) => {
   return value.toFixed(2);
 };
 
+const formatCurrency = (value: number | string | undefined): string => {
+  if (!value) return '$0.00';
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
 interface ImportResult {
   success: boolean;
   imported: number;
@@ -1088,7 +1094,7 @@ const Customers: React.FC = () => {
 
       {/* Invoice Modal */}
       {showInvoiceModal && createPortal(
-        <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -1133,7 +1139,7 @@ const Customers: React.FC = () => {
                         </div>
                         <div className="text-right">
                           <div className="font-semibold text-gray-900">
-                            ${invoice.total ? parseFloat(invoice.total).toFixed(2) : '0.00'}
+                            {formatCurrency(invoice.total)}
                           </div>
                           <Button
                             size="sm"
