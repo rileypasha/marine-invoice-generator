@@ -19,6 +19,7 @@ import { ContactsToolbar } from '../components/contacts/ContactsToolbar';
 import { useContactsQueryState, ContactGroupBy, ContactActivity } from '../hooks/useContactsQueryState';
 import { useFileInput } from '../components/hooks/use-file-input';
 import ContactsRowActionsLayer from '../features/contacts/components/ContactsRowActionsLayer';
+import { Pagination } from '../components/ui/pagination';
 
 interface Customer {
   id: string;
@@ -71,9 +72,6 @@ const Customers: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Table state management (controlled)
   const [grouping, setGrouping] = useState<GroupingState>([]);
@@ -118,15 +116,11 @@ const Customers: React.FC = () => {
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
 
   // Fetch all customers from API with URL-driven filtering
-  const fetchCustomers = useCallback(async (page = 1, append = false) => {
+  const fetchCustomers = useCallback(async (page = 1) => {
     if (!isAuthenticated || !csrfToken) return;
 
     try {
-      if (append) {
-        setIsLoadingMore(true);
-      } else {
-        setIsLoading(true);
-      }
+      setIsLoading(true);
 
       // Build query parameters
       const params = new URLSearchParams({
@@ -153,23 +147,16 @@ const Customers: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-
-        if (append) {
-          setCustomers(prev => [...prev, ...(data.customers || [])]);
-        } else {
-          setCustomers(data.customers || []);
-        }
+        setCustomers(data.customers || []);
 
         // Update pagination state
         if (data.pagination) {
           setTotalCustomers(data.pagination.total);
           setTotalPages(data.pagination.totalPages || 1);
           setCurrentPage(page);
-          setHasMore(page < (data.pagination.totalPages || 1));
         } else {
           setTotalCustomers(data.customers?.length || 0);
           setTotalPages(1);
-          setHasMore(false);
         }
       } else {
         console.error('Failed to fetch customers');
@@ -178,7 +165,6 @@ const Customers: React.FC = () => {
       console.error('Error fetching customers:', error);
     } finally {
       setIsLoading(false);
-      setIsLoadingMore(false);
     }
   }, [isAuthenticated, csrfToken, queryState.q, queryState.segment]);
 
@@ -224,38 +210,14 @@ const Customers: React.FC = () => {
   // Load customers on mount and when URL state changes
   useEffect(() => {
     setCurrentPage(1);
-    fetchCustomers(1, false);
+    fetchCustomers(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryState.q, queryState.activity, queryState.fleet, queryState.segment]);
 
-  // Load more function for infinite scroll
-  const loadMore = useCallback(() => {
-    if (!isLoadingMore && !isLoading && hasMore) {
-      const nextPage = currentPage + 1;
-      fetchCustomers(nextPage, true);
-    }
-  }, [isLoadingMore, isLoading, hasMore, currentPage, fetchCustomers]);
-
-  // Intersection Observer for infinite scroll
+  // Fetch customers when page changes
   useEffect(() => {
-    if (!loadMoreRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !isLoadingMore && !isLoading && hasMore) {
-          loadMore();
-        }
-      },
-      {
-        threshold: 0.1,
-        rootMargin: '200px' // Trigger 200px before reaching the element
-      }
-    );
-
-    observer.observe(loadMoreRef.current);
-
-    return () => observer.disconnect();
-  }, [loadMore, isLoadingMore, isLoading, hasMore]);
+    fetchCustomers(currentPage);
+  }, [currentPage, fetchCustomers]);
 
   // Initialize grouping, activity, and fleet from URL on mount only
   useEffect(() => {
@@ -906,21 +868,12 @@ const Customers: React.FC = () => {
             onBulkExport={handleBulkExport}
           />
 
-          {/* Infinite scroll loading indicator */}
-          {hasMore && (
-            <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
-              {isLoadingMore && (
-                <div className="text-xs text-gray-400">Loading more...</div>
-              )}
-            </div>
-          )}
-
-          {/* End of results message */}
-          {!hasMore && filteredCustomers.length > 0 && (
-            <div className="py-8 text-center text-sm text-gray-500">
-              End of results
-            </div>
-          )}
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
           </>
             )}
         </div>
