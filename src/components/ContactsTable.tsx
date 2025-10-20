@@ -551,80 +551,87 @@ export function ContactsTable({
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => {
-                  if (row.getIsGrouped()) {
-                    // Group header row
-                    const groupingValue = row.groupingValue as string;
-                    const subRowsCount = row.subRows.length;
-                    const isExpanded = row.getIsExpanded();
+                (() => {
+                  let visibleRowIndex = 0; // Track visible data rows for banding
+                  return table.getRowModel().rows.map((row) => {
+                    if (row.getIsGrouped()) {
+                      // Group header row
+                      const groupingValue = row.groupingValue as string;
+                      const subRowsCount = row.subRows.length;
+                      const isExpanded = row.getIsExpanded();
 
-                    // Calculate aggregated values for group
-                    const totalRevenue = row.subRows.reduce((sum, subRow) =>
-                      sum + (subRow.original.invoice_total || 0), 0);
-                    const monthlyRevenue = row.subRows.reduce((sum, subRow) =>
-                      sum + (subRow.original.monthly_invoice_total || 0), 0);
+                      // Calculate aggregated values for group
+                      const totalRevenue = row.subRows.reduce((sum, subRow) =>
+                        sum + (subRow.original.invoice_total || 0), 0);
+                      const monthlyRevenue = row.subRows.reduce((sum, subRow) =>
+                        sum + (subRow.original.monthly_invoice_total || 0), 0);
 
+                      return (
+                        <TableRow
+                          key={row.id}
+                          className="sticky top-[48px] z-10 bg-gray-50 hover:bg-gray-100 border-b-2 border-gray-200"
+                        >
+                          <TableCell colSpan={columns.length - 1} className="py-3">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                row.getToggleExpandedHandler()();
+                              }}
+                              className="flex items-center justify-between w-full text-left focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded p-1 -m-1"
+                              aria-expanded={isExpanded}
+                              aria-controls={`group-${row.id}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4 text-gray-500 pointer-events-none" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4 text-gray-500 pointer-events-none" />
+                                )}
+                                <span className="font-medium text-gray-900">{groupingValue}</span>
+                                <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
+                                  {subRowsCount}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                {formatActivityGroupSubtotal(subRowsCount, totalRevenue, monthlyRevenue)}
+                              </div>
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+
+                    // Regular data row - only show if parent is expanded or no grouping
+                    if (row.depth > 0 && !row.getParentRow()?.getIsExpanded()) {
+                      return null;
+                    }
+
+                    const currentIndex = visibleRowIndex++;
                     return (
                       <TableRow
                         key={row.id}
-                        className="sticky top-[48px] z-10 bg-gray-50 hover:bg-gray-100 border-b-2 border-gray-200"
+                        data-state={row.getIsSelected() && "selected"}
+                        className={`border-b border-gray-200 ${
+                          currentIndex % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/50 hover:bg-gray-100'
+                        }`}
                       >
-                        <TableCell colSpan={columns.length - 1} className="py-3">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              row.getToggleExpandedHandler()();
-                            }}
-                            className="flex items-center justify-between w-full text-left focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded p-1 -m-1"
-                            aria-expanded={isExpanded}
-                            aria-controls={`group-${row.id}`}
-                          >
-                            <div className="flex items-center gap-3">
-                              {isExpanded ? (
-                                <ChevronDown className="h-4 w-4 text-gray-500 pointer-events-none" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4 text-gray-500 pointer-events-none" />
-                              )}
-                              <span className="font-medium text-gray-900">{groupingValue}</span>
-                              <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
-                                {subRowsCount}
-                              </span>
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              {formatActivityGroupSubtotal(subRowsCount, totalRevenue, monthlyRevenue)}
-                            </div>
-                          </button>
-                        </TableCell>
+                        {row.getVisibleCells().map((cell) => {
+                          // Skip virtual grouping columns in data rows
+                          if (cell.column.id === 'activityBucket' || cell.column.id === 'monthlyActivityBucket') {
+                            return null;
+                          }
+                          return (
+                            <TableCell key={cell.id}>
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          );
+                        })}
                       </TableRow>
                     );
-                  }
-
-                  // Regular data row - only show if parent is expanded or no grouping
-                  if (row.depth > 0 && !row.getParentRow()?.getIsExpanded()) {
-                    return null;
-                  }
-
-                  return (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() && "selected"}
-                    >
-                      {row.getVisibleCells().map((cell) => {
-                        // Skip virtual grouping columns in data rows
-                        if (cell.column.id === 'activityBucket' || cell.column.id === 'monthlyActivityBucket') {
-                          return null;
-                        }
-                        return (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  );
-                })
+                  });
+                })()
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
