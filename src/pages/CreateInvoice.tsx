@@ -1355,6 +1355,12 @@ const CreateInvoice: React.FC = () => {
             service._deleted = true;
           }
 
+          // Load receipt metadata from database
+          // NOTE: receiptUrl (base64 data) is no longer stored in database to prevent payload size issues
+          // Only receiptName and receiptType are persisted as reference
+          if (item.receiptName) service.receiptName = item.receiptName;
+          if (item.receiptType) service.receiptType = item.receiptType;
+
           return service;
         });
 
@@ -2156,7 +2162,8 @@ const CreateInvoice: React.FC = () => {
           markupRate: snapshot.markupRate,
           isMarkupExempt: snapshot.isMarkupExempt,
           isTaxExempt: snapshot.isTaxExempt,
-          receiptUrl: invoiceData.services[index].receiptUrl || null,
+          // NOTE: Removed receiptUrl to prevent massive payload sizes with base64 data
+          // Keep only receiptName and receiptType for reference
           receiptName: invoiceData.services[index].receiptName || null,
           receiptType: invoiceData.services[index].receiptType || null,
           _deleted: invoiceData.services[index]._deleted || false
@@ -2195,8 +2202,8 @@ const CreateInvoice: React.FC = () => {
           taxStatus: snapshot.taxStatus,
           markupType: snapshot.markupType,
           markupRate: snapshot.markupRate,
-          // Include receipt fields for display
-          receiptUrl: invoiceData.services[index].receiptUrl || null,
+          // NOTE: Removed receiptUrl to prevent massive payload sizes with base64 data
+          // Keep only receiptName and receiptType for reference
           receiptName: invoiceData.services[index].receiptName || null,
           receiptType: invoiceData.services[index].receiptType || null,
           _deleted: invoiceData.services[index]._deleted || false
