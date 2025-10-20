@@ -479,10 +479,11 @@ const Vessels: React.FC = () => {
 
     setIsLoadingInvoices(true);
     try {
-      const response = await fetch(`/api/v1/invoices?vesselId=${vesselId}`, {
+      const response = await fetch(`/api/v1/invoice?vesselId=${vesselId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
         },
         credentials: 'include',
       });

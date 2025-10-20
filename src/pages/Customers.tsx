@@ -276,6 +276,7 @@ const Customers: React.FC = () => {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
         },
         credentials: 'include',
       });
