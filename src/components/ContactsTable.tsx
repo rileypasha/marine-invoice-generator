@@ -23,7 +23,7 @@ import {
   SimpleTableRow as TableRow,
 } from "@/components/ui/simple-table";
 import { ContactSort } from "@/hooks/useContactsQueryState";
-import { MoreHorizontal, ChevronDown, ChevronRight, Download, Trash2, X } from "lucide-react";
+import { MoreVertical, ChevronDown, ChevronRight, Download, Trash2, X } from "lucide-react";
 import { useContactsRowActionsStore } from "@/features/contacts/state/rowActions.store";
 import { bucketByActivity, bucketByMonthlyActivity, formatActivityGroupSubtotal, fmtCurrency } from "@/features/contacts/activity";
 import { Button } from "@/components/ui/button";
@@ -389,39 +389,41 @@ export function ContactsTable({
         const customer = row.original;
 
         return (
-          <button
-            aria-label="Row actions"
-            data-row-actions-trigger
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          <div className="flex items-center justify-start">
+            <button
+              aria-label="Row actions"
+              data-row-actions-trigger
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
 
-              // Smart positioning to prevent dropdown overflow
-              const dropdownWidth = 150; // Estimated width of dropdown menu
-              const buttonRight = r.right + window.scrollX;
-              const viewportWidth = window.innerWidth;
+                // Smart positioning to prevent dropdown overflow
+                const dropdownWidth = 150; // Estimated width of dropdown menu
+                const buttonRight = r.right + window.scrollX;
+                const viewportWidth = window.innerWidth;
 
-              // If dropdown would overflow right edge, align it to the right of the button
-              const left = (buttonRight + dropdownWidth > viewportWidth)
-                ? buttonRight - dropdownWidth  // Align right edges
-                : r.left + window.scrollX;      // Default: align left edges
+                // If dropdown would overflow right edge, align it to the right of the button
+                const left = (buttonRight + dropdownWidth > viewportWidth)
+                  ? buttonRight - dropdownWidth  // Align right edges
+                  : r.left + window.scrollX;      // Default: align left edges
 
-              openRowActions({
-                rowId: customer.id,
-                pos: { top: r.bottom + window.scrollY, left },
-                handlers: {
-                  newInvoice: (id) => onNewInvoice?.(customer),
-                  viewInvoices: (id) => onViewInvoices?.(customer.id),
-                  edit: (id) => onEdit?.(customer.id) || navigate(`/contacts/${customer.id}/edit`),
-                  del: (id) => onDelete?.(customer.id),
-                }
-              });
-            }}
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-5 w-5 p-0"
-          >
-            <MoreHorizontal className="h-3 w-3" />
-          </button>
+                openRowActions({
+                  rowId: customer.id,
+                  pos: { top: r.bottom + window.scrollY, left },
+                  handlers: {
+                    newInvoice: (id) => onNewInvoice?.(customer),
+                    viewInvoices: (id) => onViewInvoices?.(customer.id),
+                    edit: (id) => onEdit?.(customer.id) || navigate(`/contacts/${customer.id}/edit`),
+                    del: (id) => onDelete?.(customer.id),
+                  }
+                });
+              }}
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-gray-100 hover:bg-gray-200 h-8 w-8 p-0"
+            >
+              <MoreVertical className="h-4 w-4 text-gray-600" />
+            </button>
+          </div>
         );
       },
     },
