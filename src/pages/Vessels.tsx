@@ -33,6 +33,12 @@ const formatCurrencyCell = (value?: number | null) => {
   return value.toFixed(2);
 };
 
+const formatCurrency = (value: number | string | undefined): string => {
+  if (!value) return '$0.00';
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
 interface ImportResult {
   success: boolean;
   imported: number;
@@ -875,28 +881,24 @@ const Vessels: React.FC = () => {
                     <div key={invoice.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-4">
-                            <h4 className="font-medium text-gray-900">#{invoice.invoice_number}</h4>
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              invoice.status === 'paid'
-                                ? 'bg-green-100 text-green-800'
-                                : invoice.status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {invoice.status}
-                            </span>
-                          </div>
-                          <div className="mt-1 text-sm text-gray-600">
-                            <div>Created: {new Date(invoice.created_at).toLocaleDateString()}</div>
-                            {invoice.due_date && (
-                              <div>Due: {new Date(invoice.due_date).toLocaleDateString()}</div>
+                          <div className="flex flex-col gap-1">
+                            <div className="font-medium text-gray-900">
+                              {invoice.invoiceNumber || invoice.invoice_number || 'N/A'}
+                            </div>
+                            {(invoice.customerName || invoice.customer?.display_name) && (
+                              <div className="text-sm text-gray-600">
+                                {invoice.customerName || invoice.customer?.display_name}
+                              </div>
                             )}
+                            <div className="text-sm text-gray-600">
+                              {invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() :
+                               invoice.created_at ? new Date(invoice.created_at).toLocaleDateString() : 'N/A'}
+                            </div>
                           </div>
                         </div>
                         <div className="text-right">
                           <div className="font-semibold text-gray-900">
-                            ${invoice.total ? parseFloat(invoice.total).toFixed(2) : '0.00'}
+                            {formatCurrency(invoice.total)}
                           </div>
                           <Button
                             size="sm"
