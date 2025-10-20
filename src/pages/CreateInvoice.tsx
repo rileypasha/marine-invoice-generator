@@ -2415,10 +2415,10 @@ const CreateInvoice: React.FC = () => {
     // Check Manual Entry > Labor services require hours fields
     invoiceData.services.forEach((service, index) => {
       if (service.jobType === 'Manual Entry' && service.itemType === 'Labor') {
-        if (!service.laborHours || service.laborHours <= 0) {
+        if (service.laborHours === undefined || service.laborHours === null || service.laborHours < 0) {
           missingFields.push(`Regular Hours (Service ${index + 1})`);
         }
-        if (!service.otHours || service.otHours <= 0) {
+        if (service.otHours === undefined || service.otHours === null || service.otHours < 0) {
           missingFields.push(`Overtime Hours (Service ${index + 1})`);
         }
       }
@@ -2480,10 +2480,10 @@ const CreateInvoice: React.FC = () => {
     // Check Agent Services require hours fields
     invoiceData.services.forEach((service, index) => {
       if (service.jobType === 'Agent Services') {
-        if (!service.laborHours || service.laborHours <= 0) {
+        if (service.laborHours === undefined || service.laborHours === null || service.laborHours < 0) {
           missingFields.push(`Agent Services Regular Hours (Service ${index + 1})`);
         }
-        if (!service.otHours || service.otHours <= 0) {
+        if (service.otHours === undefined || service.otHours === null || service.otHours < 0) {
           missingFields.push(`Agent Services Overtime Hours (Service ${index + 1})`);
         }
       }

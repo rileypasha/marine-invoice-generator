@@ -349,9 +349,20 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
             onClick={(e) => {
               e.stopPropagation();
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+
+              // Smart positioning to prevent dropdown overflow
+              const dropdownWidth = 150; // Estimated width of dropdown menu
+              const buttonRight = r.right + window.scrollX;
+              const viewportWidth = window.innerWidth;
+
+              // If dropdown would overflow right edge, align it to the right of the button
+              const left = (buttonRight + dropdownWidth > viewportWidth)
+                ? buttonRight - dropdownWidth  // Align right edges
+                : r.left + window.scrollX;      // Default: align left edges
+
               actions.openRowActions?.({
                 rowId: invoice.id,
-                pos: { top: r.bottom + window.scrollY, left: r.left + window.scrollX },
+                pos: { top: r.bottom + window.scrollY, left },
                 handlers: {
                   view: () => {
                     console.log('[InvoiceTableColumns] View handler called', { invoice, onView: actions.onView });
