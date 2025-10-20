@@ -43,9 +43,7 @@ interface InvoicesProps {
   onBulkDelete?: (invoices: Invoice[]) => void;
   onBulkExport?: (invoices: Invoice[]) => void;
   isLoading?: boolean;
-  isLoadingMore?: boolean;
-  loadMoreRef?: React.RefObject<HTMLDivElement>;
-  hasMore?: boolean;
+  paginationComponent?: React.ReactNode;
 }
 
 const Invoices: React.FC<InvoicesProps> = ({
@@ -58,12 +56,10 @@ const Invoices: React.FC<InvoicesProps> = ({
   onBulkDelete,
   onBulkExport,
   isLoading = false,
-  isLoadingMore = false,
-  loadMoreRef,
-  hasMore = false
+  paginationComponent
 }) => {
   const navigate = useNavigate();
-  const { month, view, q, groupBy, sort, filters } = useRequestsQueryState();
+  const { groupBy } = useRequestsQueryState();
 
   // Import state management
   const [showImportModal, setShowImportModal] = useState(false);
@@ -72,93 +68,16 @@ const Invoices: React.FC<InvoicesProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Apply month filter
-  const filteredByMonth = useMemo(() => {
-    if (month === 'all') return invoices;
-
-    return invoices.filter(invoice => {
-      if (!invoice.invoice_date) return false;
-      const invoiceMonth = invoice.invoice_date.slice(0, 7); // YYYY-MM
-      return invoiceMonth === month;
-    });
-  }, [invoices, month]);
-
-  // Apply search filter
-  const filteredBySearch = useMemo(() => {
-    if (!q) return filteredByMonth;
-
-    const searchLower = q.toLowerCase();
-    return filteredByMonth.filter(invoice =>
-      invoice.invoice_number?.toLowerCase().includes(searchLower) ||
-      invoice.customer?.display_name?.toLowerCase().includes(searchLower) ||
-      invoice.customer?.company_name?.toLowerCase().includes(searchLower) ||
-      invoice.vessel?.name?.toLowerCase().includes(searchLower)
-    );
-  }, [filteredByMonth, q]);
-
-  // Apply status filters
-  const filteredData = useMemo(() => {
-    let result = filteredBySearch;
-
-    // Apply contact filter
-    if (filters.contact) {
-      const contactLower = filters.contact.toLowerCase();
-      result = result.filter(invoice =>
-        invoice.customer?.display_name?.toLowerCase().includes(contactLower) ||
-        invoice.customer?.company_name?.toLowerCase().includes(contactLower)
-      );
-    }
-
-    // Apply vessel filter
-    if (filters.vessel) {
-      const vesselLower = filters.vessel.toLowerCase();
-      result = result.filter(invoice =>
-        invoice.vessel?.name?.toLowerCase().includes(vesselLower)
-      );
-    }
-
-    // Apply createdBy filter
-    if (filters.createdBy) {
-      const createdByLower = filters.createdBy.toLowerCase();
-      result = result.filter(invoice =>
-        invoice.userName?.toLowerCase().includes(createdByLower)
-      );
-    }
-
-    // Apply modifiedBy filter
-    if (filters.modifiedBy) {
-      const modifiedByLower = filters.modifiedBy.toLowerCase();
-      result = result.filter(invoice =>
-        invoice.modifiedByUserName?.toLowerCase().includes(modifiedByLower)
-      );
-    }
-
-    // Apply status filter
-    if (filters.status) {
-      result = result.filter(invoice => invoice.status === filters.status);
-    }
-
-    // Apply amount filters
-    if (filters.minAmount) {
-      result = result.filter(invoice => (invoice.total_amount || 0) >= filters.minAmount!);
-    }
-
-    if (filters.maxAmount) {
-      result = result.filter(invoice => (invoice.total_amount || 0) <= filters.maxAmount!);
-    }
-
-    return result;
-  }, [filteredBySearch, filters]);
-
-  // Group invoices by the selected groupBy field
+  // All filtering is now done server-side via InvoicesPage
+  // We only need to handle grouping for display purposes
   const groupedInvoices = useMemo(() => {
     if (groupBy === 'none') {
-      return [{ group: 'All Invoices', invoices: filteredData }];
+      return [{ group: 'All Invoices', invoices }];
     }
 
     const groups: Record<string, Invoice[]> = {};
 
-    filteredData.forEach(invoice => {
+    invoices.forEach(invoice => {
       let groupKey = 'Unknown';
 
       switch (groupBy) {
@@ -194,7 +113,7 @@ const Invoices: React.FC<InvoicesProps> = ({
     return Object.entries(groups)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([group, invoices]) => ({ group, invoices }));
-  }, [filteredData, groupBy]);
+  }, [invoices, groupBy]);
 
   // Handle action callbacks
   const handleAddClick = useCallback(() => {
@@ -220,7 +139,7 @@ const Invoices: React.FC<InvoicesProps> = ({
 
   // Export function
   const handleExportCSV = useCallback(() => {
-    if (filteredData.length === 0) {
+    if (invoices.length === 0) {
       alert('No invoices to export');
       return;
     }
@@ -228,7 +147,7 @@ const Invoices: React.FC<InvoicesProps> = ({
     const headers = ['Invoice #', 'Contact', 'Vessel', 'Amount', 'Created At', 'Status'];
     const csvContent = [
       headers.join(','),
-      ...filteredData.map(invoice => [
+      ...invoices.map(invoice => [
         invoice.invoice_number || `#${invoice.id}`,
         invoice.customer?.display_name || invoice.customer?.company_name || '',
         invoice.vessel?.name || '',
@@ -247,7 +166,7 @@ const Invoices: React.FC<InvoicesProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  }, [filteredData]);
+  }, [invoices]);
 
   // Import function - for now just opens modal
   const handleImportCSV = async () => {
@@ -380,7 +299,7 @@ const Invoices: React.FC<InvoicesProps> = ({
       {/* Fixed Toolbar */}
       <div className="flex-shrink-0">
         <RequestsToolbar
-          requests={filteredData}
+          requests={invoices}
           onAddClick={handleAddClick}
           onPrint={handlePrint}
           onImport={() => setShowImportModal(true)}
@@ -394,14 +313,14 @@ const Invoices: React.FC<InvoicesProps> = ({
           <div className="flex items-center justify-center h-64">
             <div className="text-muted-foreground">Loading requests...</div>
           </div>
-        ) : filteredData.length === 0 ? (
+        ) : invoices.length === 0 ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <svg className="mx-auto h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <div className="text-muted-foreground mb-4">
-                {month === 'all' ? 'No requests found' : `No requests found for ${month}`}
+                No requests found
               </div>
               <button
                 onClick={handleAddClick}
@@ -412,37 +331,31 @@ const Invoices: React.FC<InvoicesProps> = ({
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {groupedInvoices.map(({ group, invoices }) => (
-              <RequestsTable
-                key={group}
-                requests={invoices}
-                sort={sort}
-                onEdit={handleEdit}
-                onDelete={onDelete}
-                onBulkDelete={onBulkDelete}
-                onBulkExport={onBulkExport}
-                onView={onView}
-                onPrint={onPrint}
-                title={groupBy !== 'none' ? (
-                  <h3 className="text-lg font-semibold text-gray-900 px-6 py-3 bg-gray-50 border-b border-gray-200">
-                    {group} ({invoices.length})
-                  </h3>
-                ) : undefined}
-              />
-            ))}
-          </div>
+          <>
+            <div className="space-y-6">
+              {groupedInvoices.map(({ group, invoices }) => (
+                <RequestsTable
+                  key={group}
+                  requests={invoices}
+                  onEdit={handleEdit}
+                  onDelete={onDelete}
+                  onBulkDelete={onBulkDelete}
+                  onBulkExport={onBulkExport}
+                  onView={onView}
+                  onPrint={onPrint}
+                  title={groupBy !== 'none' ? (
+                    <h3 className="text-lg font-semibold text-gray-900 px-6 py-3 bg-gray-50 border-b border-gray-200">
+                      {group} ({invoices.length})
+                    </h3>
+                  ) : undefined}
+                />
+              ))}
+            </div>
+            {/* Pagination */}
+            {paginationComponent}
+          </>
         )}
       </div>
-
-      {/* Infinite Scroll Trigger */}
-      {hasMore && (
-        <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
-          {isLoadingMore && (
-            <div className="text-xs text-gray-400">Loading...</div>
-          )}
-        </div>
-      )}
 
       {/* Import Modal */}
       {showImportModal && createPortal(

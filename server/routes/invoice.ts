@@ -393,7 +393,26 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
         skip,
         take: Number(limit),
         orderBy: { createdAt: 'desc' },
-        include: {
+        select: {
+          id: true,
+          invoiceNumber: true,
+          title: true,
+          status: true,
+          total: true,
+          createdAt: true,
+          updatedAt: true,
+          contactName: true,
+          customerName: true,
+          vesselName: true,
+          userName: true,
+          userEmail: true,
+          modifiedByUserName: true,
+          modifiedByUserEmail: true,
+          modifiedByUserId: true,
+          customerId: true,
+          vesselId: true,
+          userId: true,
+          // Explicitly exclude data field to avoid sending receipt images
           customer: { select: { display_name: true, legal_name: true } },
           vessel: { select: { name: true } },
           user: { select: { name: true, email: true, avatarUrl: true } },
@@ -488,8 +507,8 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
     if (req21InResponse) {
       logger.info('[GET /invoice] REQ-21 in JSON response:', {
         invoiceNumber: req21InResponse.invoiceNumber,
-        contactName: req21InResponse.contactName,
-        customerName: req21InResponse.customerName,
+        contactName: (req21InResponse as any).contactName,
+        customerName: (req21InResponse as any).customerName,
         hasCustomer: !!req21InResponse.customer,
         customerData: req21InResponse.customer ? {
           display_name: req21InResponse.customer.display_name,

@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Invoices from './Invoices';
+import { Pagination } from '../components/ui/pagination';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
+import { useRequestsQueryState } from '../hooks/useRequestsQueryState';
 
 interface Customer {
   id: string;
@@ -79,58 +81,66 @@ const InvoicesPage: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [rawInvoices, setRawInvoices] = useState<ApiInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
   const { isAuthenticated, csrfToken } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const { confirm, dialog } = useConfirmDialog();
 
-  // Initialize filters from URL on mount
-  const [filters, setFilters] = useState<FilterOptions>(() => {
-    const customerIdFromUrl = new URLSearchParams(window.location.search).get('customer_id');
-    return customerIdFromUrl ? { customerId: customerIdFromUrl } : {};
-  });
+  // Use the query state hook to get filters from URL
+  const { month, q: searchTerm, filters } = useRequestsQueryState();
 
-  const fetchInvoices = useCallback(async (page = 1, search = '', filterOptions: FilterOptions = {}, append = false) => {
+  const fetchInvoices = useCallback(async (page: number, currentMonth: string, search: string, currentFilters: any) => {
     if (!isAuthenticated || !csrfToken) return;
 
-    if (append) {
-      setIsLoadingMore(true);
-    } else {
-      setIsLoading(true);
-    }
+    setIsLoading(true);
     try {
       const searchParams = new URLSearchParams({
         page: page.toString(),
         limit: '25'
       });
 
-      if (search.trim()) {
-        searchParams.append('search', search);
+      // Add search parameter
+      if (search && search.trim()) {
+        searchParams.append('search', search.trim());
       }
 
-      // Add filter parameters
-      if (filterOptions.dateRange?.start) {
-        searchParams.append('startDate', filterOptions.dateRange.start.toISOString());
+      // Add month filter (convert to date range)
+      if (currentMonth && currentMonth !== 'all') {
+        const [year, monthNum] = currentMonth.split('-');
+        const startDate = new Date(parseInt(year), parseInt(monthNum) - 1, 1);
+        const endDate = new Date(parseInt(year), parseInt(monthNum), 0, 23, 59, 59);
+        searchParams.append('startDate', startDate.toISOString());
+        searchParams.append('endDate', endDate.toISOString());
       }
-      if (filterOptions.dateRange?.end) {
-        searchParams.append('endDate', filterOptions.dateRange.end.toISOString());
+
+      // Add status filter
+      if (currentFilters.status) {
+        searchParams.append('status', currentFilters.status);
       }
-      if (filterOptions.customerId) {
-        searchParams.append('customerId', filterOptions.customerId);
+
+      // Add amount filters
+      if (currentFilters.minAmount !== undefined) {
+        searchParams.append('minAmount', currentFilters.minAmount.toString());
       }
-      if (filterOptions.vesselId) {
-        searchParams.append('vesselId', filterOptions.vesselId);
+      if (currentFilters.maxAmount !== undefined) {
+        searchParams.append('maxAmount', currentFilters.maxAmount.toString());
       }
-      if (filterOptions.amountRange?.min !== undefined) {
-        searchParams.append('minAmount', filterOptions.amountRange.min.toString());
+
+      // Add contact/vessel/user filters if they exist
+      // Note: API might need to be updated to support these
+      if (currentFilters.contact) {
+        searchParams.append('contact', currentFilters.contact);
       }
-      if (filterOptions.amountRange?.max !== undefined) {
-        searchParams.append('maxAmount', filterOptions.amountRange.max.toString());
+      if (currentFilters.vessel) {
+        searchParams.append('vessel', currentFilters.vessel);
+      }
+      if (currentFilters.createdBy) {
+        searchParams.append('createdBy', currentFilters.createdBy);
+      }
+      if (currentFilters.modifiedBy) {
+        searchParams.append('modifiedBy', currentFilters.modifiedBy);
       }
 
       const response = await fetch(`/api/v1/invoice?${searchParams}`, {
@@ -148,28 +158,18 @@ const InvoicesPage: React.FC = () => {
       const data = await response.json();
 
       // Store raw API data - transformation happens in useMemo
-      if (append) {
-        setRawInvoices(prev => [...prev, ...(data.invoices || [])]);
-      } else {
-        setRawInvoices(data.invoices || []);
-      }
+      setRawInvoices(data.invoices || []);
 
       const currentPageNum = data.pagination?.page || 1;
       const totalPagesNum = data.pagination?.totalPages || 1;
       setCurrentPage(currentPageNum);
-      setHasMore(currentPageNum < totalPagesNum);
+      setTotalPages(totalPagesNum);
 
     } catch (error) {
       console.error('Error fetching invoices:', error);
-      if (!append) {
-        setRawInvoices([]);
-      }
+      setRawInvoices([]);
     } finally {
-      if (append) {
-        setIsLoadingMore(false);
-      } else {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   }, [isAuthenticated, csrfToken]);
 
@@ -206,7 +206,7 @@ const InvoicesPage: React.FC = () => {
     return { total, requested, change_requested, approved };
   }, [transformedInvoices]);
 
-  // Fetch invoices when search or filters change (reset to page 1)
+  // Fetch invoices when query state changes
   useEffect(() => {
     if (!isAuthenticated || !csrfToken) return;
 
@@ -214,7 +214,7 @@ const InvoicesPage: React.FC = () => {
 
     const doFetch = async () => {
       if (!cancelled) {
-        await fetchInvoices(1, searchTerm, filters);
+        await fetchInvoices(currentPage, month, searchTerm, filters);
       }
     };
 
@@ -224,48 +224,13 @@ const InvoicesPage: React.FC = () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, filters]);
+  }, [month, searchTerm, filters, currentPage]);
 
-  // Load more function for infinite scroll
-  const loadMore = useCallback(() => {
-    if (!isLoadingMore && !isLoading && hasMore) {
-      const nextPage = currentPage + 1;
-      fetchInvoices(nextPage, searchTerm, filters, true);
-    }
-  }, [isLoadingMore, isLoading, hasMore, currentPage, searchTerm, filters, fetchInvoices]);
-
-  // Intersection Observer for infinite scroll
+  // Reset to page 1 when month, search, or filters change
   useEffect(() => {
-    if (!loadMoreRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !isLoadingMore && !isLoading && hasMore) {
-          loadMore();
-        }
-      },
-      {
-        threshold: 0.1,
-        rootMargin: '200px' // Trigger 200px before reaching the element
-      }
-    );
-
-    observer.observe(loadMoreRef.current);
-
-    return () => observer.disconnect();
-  }, [loadMore, isLoadingMore, isLoading, hasMore]);
-
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
     setCurrentPage(1);
-    setRawInvoices([]); // Clear existing invoices
-  };
+  }, [month, searchTerm, filters]);
 
-  const handleFiltersChange = (newFilters: FilterOptions) => {
-    setFilters(newFilters);
-    setCurrentPage(1);
-    setRawInvoices([]); // Clear existing invoices
-  };
 
   const handleEdit = useCallback((invoice: Invoice) => {
     navigate(`/requests/${invoice.id}/edit`);
@@ -390,9 +355,13 @@ const InvoicesPage: React.FC = () => {
         onBulkDelete={handleBulkDelete}
         onBulkExport={handleBulkExport}
         isLoading={isLoading}
-        isLoadingMore={isLoadingMore}
-        loadMoreRef={loadMoreRef}
-        hasMore={hasMore}
+        paginationComponent={
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        }
       />
       {dialog}
     </>
