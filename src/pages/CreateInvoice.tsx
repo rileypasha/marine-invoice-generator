@@ -888,10 +888,8 @@ const CreateInvoice: React.FC = () => {
 
   // Helper: Check if a field is in backend diff
   const isFieldInBackendDiff = (path: string, arrayPath?: string[]): boolean => {
-    console.log('[isFieldInBackendDiff] Called:', { path, arrayPath, hasChangeRequestedStatus, diffIndexSize: diffIndex?.size });
-
+    // Early return with minimal logging if no diff data available
     if (!hasChangeRequestedStatus || !diffIndex || diffIndex.size === 0) {
-      console.log('[isFieldInBackendDiff] Early return - no diff data');
       return false;
     }
 
@@ -901,57 +899,27 @@ const CreateInvoice: React.FC = () => {
       const arrayName = arrayPath[0]; // e.g., 'services'
       const itemIndex = parseInt(arrayPath[1], 10); // e.g., 0, 1, 2
 
-      console.log('[isFieldInBackendDiff] Array item check:', {
-        path,
-        arrayName,
-        itemIndex,
-        arrayPathLength: arrayPath.length,
-        fullArrayPath: arrayPath,
-        hasOriginalData: !!originalInvoiceDataRef.current,
-        isEditMode
-      });
-
       // Get the current item - only use first two elements (arrayName, index)
       const itemPath = arrayPath.slice(0, 2);
-      console.log('[isFieldInBackendDiff] Getting item with path:', itemPath);
       const currentItem = getValueFromPath(itemPath);
-      console.log('[isFieldInBackendDiff] Current item:', { currentItem, hasId: !!currentItem?.id });
 
       if (!currentItem || !currentItem.id) {
-        console.log('[isFieldInBackendDiff] No current item or ID');
         return false;
       }
 
       // Check if this item exists in the original data
       if (originalInvoiceDataRef.current && isEditMode) {
         const originalArray = originalInvoiceDataRef.current[arrayName];
-        console.log('[isFieldInBackendDiff] Original array:', {
-          originalArray: originalArray?.map((item: any) => ({ id: item.id, description: item.description })),
-          isArray: Array.isArray(originalArray)
-        });
 
         if (Array.isArray(originalArray)) {
           // Check if any item in the original array has this ID
           const existsInOriginal = originalArray.some((item: any) => item.id === currentItem.id);
-          console.log('[isFieldInBackendDiff] ID match check:', {
-            currentId: currentItem.id,
-            originalIds: originalArray.map((item: any) => item.id),
-            existsInOriginal
-          });
 
           if (!existsInOriginal) {
             // This is a new item, highlight all its fields
-            console.log('[isFieldInBackendDiff] ✅ New array item detected - HIGHLIGHTING:', { path, itemId: currentItem.id });
             return true;
-          } else {
-            console.log('[isFieldInBackendDiff] ❌ Existing item - NOT highlighting:', { path, itemId: currentItem.id });
           }
         }
-      } else {
-        console.log('[isFieldInBackendDiff] No original data or not in edit mode:', {
-          hasOriginalData: !!originalInvoiceDataRef.current,
-          isEditMode
-        });
       }
 
       return false; // Existing item, don't highlight from backend diff
@@ -960,27 +928,21 @@ const CreateInvoice: React.FC = () => {
     // Try exact match for non-array fields
     const delta = getDelta(diffIndex, path);
     if (delta && (delta.op === 'add' || delta.op === 'replace')) {
-      console.log('[isFieldInBackendDiff] ✅ Exact match found - HIGHLIGHTING:', { path, op: delta.op });
       return true;
     }
 
-    console.log('[isFieldInBackendDiff] ❌ No match - NOT highlighting:', path);
     return false;
   };
 
   // Helper: Check if a field should be highlighted (combines both approaches)
   const isFieldHighlighted = (jsonPointerPath: string, arrayPath?: string[]): boolean => {
-    console.log('[isFieldHighlighted] Called with:', { jsonPointerPath, arrayPath, hasChangeRequestedStatus, diffIndexSize: diffIndex?.size });
-
     // Check backend diff first (for saved changes)
     if (isFieldInBackendDiff(jsonPointerPath, arrayPath)) {
-      console.log('[isFieldHighlighted] Backend diff match!', jsonPointerPath);
       return true;
     }
 
     // Check client-side changes (for active editing)
     if (arrayPath && hasFieldChangedClientSide(getValueFromPath(arrayPath), arrayPath)) {
-      console.log('[isFieldHighlighted] Client-side change match!', arrayPath);
       return true;
     }
 
@@ -1097,31 +1059,49 @@ const CreateInvoice: React.FC = () => {
     }
   }, [isEditMode, location.pathname, location.search, location.state, navigate]);
 
-  // Auto-save draft to localStorage for new invoices
+  // Auto-save draft to localStorage for new invoices (debounced)
+  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (isEditMode) return; // Don't save drafts when editing existing invoices
 
-    try {
-      const draftData = {
-        invoiceData,
-        selectedVesselId,
-        selectedCustomerId,
-        // Save the actual vessel and customer objects
-        selectedVessel: selectedVesselObject,
-        selectedCustomer: selectedCustomerObject
-      };
-      console.log('💾 SAVING DRAFT:', {
-        hasVesselId: !!selectedVesselId,
-        hasVessel: !!selectedVesselObject,
-        vesselName: selectedVesselObject?.name,
-        hasCustomerId: !!selectedCustomerId,
-        hasCustomer: !!selectedCustomerObject,
-        customerName: selectedCustomerObject?.display_name
-      });
-      localStorage.setItem('invoice-draft', JSON.stringify(draftData));
-    } catch (err) {
-      console.error('Failed to save draft:', err);
+    // Clear any existing timeout
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
     }
+
+    // Debounce autosave by 500ms to prevent excessive saves
+    autosaveTimeoutRef.current = setTimeout(() => {
+      try {
+        const draftData = {
+          invoiceData,
+          selectedVesselId,
+          selectedCustomerId,
+          // Save the actual vessel and customer objects
+          selectedVessel: selectedVesselObject,
+          selectedCustomer: selectedCustomerObject
+        };
+        console.log('💾 SAVING DRAFT (debounced):', {
+          hasVesselId: !!selectedVesselId,
+          hasVessel: !!selectedVesselObject,
+          vesselName: selectedVesselObject?.name,
+          hasCustomerId: !!selectedCustomerId,
+          hasCustomer: !!selectedCustomerObject,
+          customerName: selectedCustomerObject?.display_name,
+          contactName: invoiceData.customer.contactName
+        });
+        localStorage.setItem('invoice-draft', JSON.stringify(draftData));
+      } catch (err) {
+        console.error('Failed to save draft:', err);
+      }
+    }, 500);
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+    };
   }, [invoiceData, selectedVesselId, selectedCustomerId, selectedVesselObject, selectedCustomerObject, isEditMode]);
 
   // Restore linked vessel and customer from saved draft
@@ -1453,7 +1433,15 @@ const CreateInvoice: React.FC = () => {
           }
         };
 
-        setInvoiceData(loadedInvoiceData);
+        // Preserve manually entered Contact data if it exists in current state
+        // Only preserve if the backend doesn't have a value (prevents overwriting backend updates)
+        setInvoiceData(prev => ({
+          ...loadedInvoiceData,
+          customer: {
+            ...loadedInvoiceData.customer,
+            contactName: loadedInvoiceData.customer.contactName || prev.customer.contactName || ''
+          }
+        }));
 
         // Store original data for client-side change tracking
         // If there's a diff, reconstruct the baseline by reversing the diff operations
@@ -1880,6 +1868,12 @@ const CreateInvoice: React.FC = () => {
       customer: { ...prev.customer, [field]: value }
     }));
     setHasUnsavedChanges(true);
+
+    // Clear customer link when manually editing fields
+    if (selectedCustomerId) {
+      setSelectedCustomerId('');
+      setSelectedCustomerObject(null);
+    }
   };
 
   const handleCustomerPhoneChange = (value: string | undefined) => {
@@ -1890,6 +1884,12 @@ const CreateInvoice: React.FC = () => {
       customer: { ...prev.customer, customerPhone: phoneValue }
     }));
     setHasUnsavedChanges(true);
+
+    // Clear customer link when manually editing fields
+    if (selectedCustomerId) {
+      setSelectedCustomerId('');
+      setSelectedCustomerObject(null);
+    }
 
     if (phoneValue && !isValidPhoneNumber(phoneValue)) {
       setCustomerPhoneError('Please enter a valid phone number');
@@ -2572,6 +2572,7 @@ const CreateInvoice: React.FC = () => {
         customerId: invoiceData.customer.id || null,
         vesselId: invoiceData.vessel.id || null,
         customerName: invoiceData.customer.customerName,
+        contactName: invoiceData.customer.contactName,
         customerEmail: invoiceData.customer.customerEmail,
         customerPhone: invoiceData.customer.customerPhone,
         customerAddress: invoiceData.customer.customerAddress,
@@ -2683,6 +2684,7 @@ const CreateInvoice: React.FC = () => {
         customerId: invoiceData.customer.id || null,
         vesselId: invoiceData.vessel.id || null,
         customerName: invoiceData.customer.customerName,
+        contactName: invoiceData.customer.contactName,
         customerEmail: invoiceData.customer.customerEmail,
         customerPhone: invoiceData.customer.customerPhone,
         vesselName: invoiceData.vessel.name,

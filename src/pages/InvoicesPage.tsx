@@ -176,11 +176,11 @@ const InvoicesPage: React.FC = () => {
     return rawInvoices.map((apiInvoice) => ({
       id: apiInvoice.id,
       invoice_number: apiInvoice.invoiceNumber || `#${apiInvoice.id.substring(0, 8)}`,
-      customer: {
-        display_name: apiInvoice.customer?.display_name || apiInvoice.customerName,
-        company_name: apiInvoice.customer?.legal_name,
-        contact_name: undefined
-      },
+      contactName: apiInvoice.contactName,  // Pass through manually entered contact name
+      customer: apiInvoice.customer ? {  // Only create customer object if there's a linked customer
+        display_name: apiInvoice.customer.display_name,
+        company_name: apiInvoice.customer.legal_name,
+      } : null,
       vessel: {
         name: apiInvoice.vessel?.name || apiInvoice.vesselName
       },

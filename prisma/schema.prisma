@@ -47,6 +47,7 @@ model Invoice {
   vesselWeight      Float?
   vesselBeam        Float?
   customerName      String?            @map("customerName")
+  contactName       String?            @map("contactName")
   customerEmail     String?            @map("customerEmail")
   customerPhone     String?
   customerAddress   String?            @map("customerAddress")

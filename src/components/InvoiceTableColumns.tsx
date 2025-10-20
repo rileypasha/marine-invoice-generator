@@ -11,6 +11,7 @@ import { MoreVertical } from "lucide-react"
 interface Invoice {
   id: string;
   invoice_number?: string;
+  contactName?: string;  // Manually entered contact name (not linked to Customer)
   customer?: {
     company_name?: string;
     display_name?: string;
@@ -150,16 +151,29 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     ),
     cell: ({ row }) => {
       const invoice = row.original;
+
+      // TEMPORARY DEBUG - log first 3 rows
+      if (row.index < 3) {
+        console.log(`[InvoiceTableColumns] Row ${row.index}:`, {
+          id: invoice.id,
+          invoiceNumber: invoice.invoiceNumber || invoice.invoice_number,
+          contactName: invoice.contactName,
+          customerName: invoice.customerName,
+          customer: invoice.customer,
+          customerContactName: invoice.customer?.contact_name,
+          customerDisplayName: invoice.customer?.display_name,
+          customerCompanyName: invoice.customer?.company_name,
+        });
+      }
+
+      // Display contact: prioritize manually entered contactName over linked customer
+      const displayContact = invoice.contactName || invoice.customer?.display_name || invoice.customer?.company_name || '-';
+
       return (
         <div className="truncate min-w-0">
           <div className="text-foreground">
-            {invoice.customer?.company_name || invoice.customer?.display_name || '-'}
+            {displayContact}
           </div>
-          {invoice.customer?.contact_name && (
-            <div className="text-sm text-muted-foreground">
-              {invoice.customer.contact_name}
-            </div>
-          )}
         </div>
       );
     },

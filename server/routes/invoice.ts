@@ -423,18 +423,51 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
     const modifiedByUserMap = new Map(modifiedByUsers.map(u => [u.id, u.avatarUrl]));
 
     // Transform invoices to ensure userName and modifiedByUserName are populated from user relation if missing
-    const invoices = rawInvoices.map(invoice => ({
-      ...invoice,
-      userName: invoice.userName || invoice.user?.name || null,
-      userEmail: invoice.userEmail || invoice.user?.email || null,
-      // For existing invoices without modifiedByUserName, use the creator's name as fallback
-      modifiedByUserName: invoice.modifiedByUserName || invoice.user?.name || invoice.userName || null,
-      modifiedByUserEmail: invoice.modifiedByUserEmail || invoice.user?.email || invoice.userEmail || null,
-      // Include avatar URL from modifiedByUser lookup
-      modifiedByUserAvatar: invoice.modifiedByUserId
-        ? (modifiedByUserMap.get(invoice.modifiedByUserId) || null)
-        : (invoice.user?.avatarUrl || null),
-    }));
+    const invoices = rawInvoices.map(invoice => {
+      // Debug logging for contactName transformation
+      if (invoice.contactName) {
+        logger.info('[GET /invoice] Found invoice with contactName', {
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          contactName: invoice.contactName,
+          hasCustomer: !!invoice.customer,
+          customerDisplayName: invoice.customer?.display_name,
+        });
+      }
+
+      // Only transform customer if there's an actual linked customer
+      // If no customer, keep it null and let frontend use invoice.contactName directly
+      const transformedCustomer = invoice.customer ? {
+          ...invoice.customer,
+          contact_name: invoice.contactName || invoice.customer.display_name || null,
+        } : null;
+
+      // Debug logging for customer transformation
+      if (invoice.contactName && invoice.invoiceNumber === 'REQ-21') {
+        logger.info('[GET /invoice] REQ-21 customer transformation', {
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          contactName: invoice.contactName,
+          hasCustomer: !!invoice.customer,
+          transformedCustomer: transformedCustomer,
+        });
+      }
+
+      return {
+        ...invoice,
+        userName: invoice.userName || invoice.user?.name || null,
+        userEmail: invoice.userEmail || invoice.user?.email || null,
+        // For existing invoices without modifiedByUserName, use the creator's name as fallback
+        modifiedByUserName: invoice.modifiedByUserName || invoice.user?.name || invoice.userName || null,
+        modifiedByUserEmail: invoice.modifiedByUserEmail || invoice.user?.email || invoice.userEmail || null,
+        // Include avatar URL from modifiedByUser lookup
+        modifiedByUserAvatar: invoice.modifiedByUserId
+          ? (modifiedByUserMap.get(invoice.modifiedByUserId) || null)
+          : (invoice.user?.avatarUrl || null),
+        // Transform customer to include contact_name from contactName field
+        customer: transformedCustomer,
+      };
+    });
 
     // Build stats map from groupBy results (no additional query needed)
     const statsMap = {
@@ -449,6 +482,21 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
       if (stat.status === 'change_requested') statsMap.change_requested = stat._count.status;
       if (stat.status === 'approved') statsMap.approved = stat._count.status;
     });
+
+    // DEBUG: Log REQ-21 in response
+    const req21InResponse = invoices.find(inv => inv.invoiceNumber === 'REQ-21');
+    if (req21InResponse) {
+      logger.info('[GET /invoice] REQ-21 in JSON response:', {
+        invoiceNumber: req21InResponse.invoiceNumber,
+        contactName: req21InResponse.contactName,
+        customerName: req21InResponse.customerName,
+        hasCustomer: !!req21InResponse.customer,
+        customerData: req21InResponse.customer ? {
+          display_name: req21InResponse.customer.display_name,
+          contact_name: (req21InResponse.customer as any).contact_name
+        } : null
+      });
+    }
 
     logger.info('Invoices retrieved successfully', {
       correlationId,
