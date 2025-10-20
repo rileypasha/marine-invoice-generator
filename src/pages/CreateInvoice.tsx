@@ -1225,6 +1225,8 @@ const CreateInvoice: React.FC = () => {
 
         console.log('[CreateInvoice] Response from backend:', data);
         console.log('[CreateInvoice] Extracted invoice:', invoice);
+        console.log('[CreateInvoice] invoice.data field (raw):', invoice.data);
+        console.log('[CreateInvoice] invoice.metadata field:', invoice.metadata);
         console.log('Attachment fields:', {
           attachmentUrl: invoice.attachmentUrl,
           attachmentName: invoice.attachmentName,
@@ -1449,6 +1451,45 @@ const CreateInvoice: React.FC = () => {
           }
         }));
 
+        // Extract and set comments from loaded invoice
+        // Priority: metadata.comments (parsed) > invoice.comments > empty array
+        let commentsSource = null;
+        let sourceLocation = 'none';
+
+        // Try to parse metadata if it's a string
+        if (invoice.metadata && typeof invoice.metadata === 'string') {
+          try {
+            const parsedMetadata = JSON.parse(invoice.metadata);
+            if (parsedMetadata.comments) {
+              commentsSource = parsedMetadata.comments;
+              sourceLocation = 'metadata.comments (parsed from string)';
+            }
+          } catch (e) {
+            console.warn('[CreateInvoice] Failed to parse metadata:', e);
+          }
+        } else if (invoice.metadata && typeof invoice.metadata === 'object' && invoice.metadata.comments) {
+          // Metadata is already an object
+          commentsSource = invoice.metadata.comments;
+          sourceLocation = 'metadata.comments (object)';
+        }
+
+        // Fallback to top-level comments field
+        if (!commentsSource && invoice.comments) {
+          commentsSource = invoice.comments;
+          sourceLocation = 'invoice.comments';
+        }
+
+        const existingComments = normalizeInvoiceComments(commentsSource);
+        console.log('[CreateInvoice] Loading comments:', {
+          sourceLocation,
+          rawComments: commentsSource,
+          normalizedComments: existingComments,
+          commentsCount: existingComments.length,
+          metadataType: typeof invoice.metadata,
+          hasInvoiceComments: !!invoice.comments
+        });
+        setComments(existingComments);
+
         // Store original data for client-side change tracking
         // If there's a diff, reconstruct the baseline by reversing the diff operations
         if (diffData && Array.isArray(diffData) && diffData.length > 0) {
@@ -1480,9 +1521,6 @@ const CreateInvoice: React.FC = () => {
         setSelectedCustomerId(resolvedCustomerId ? String(resolvedCustomerId) : '');
         setSelectedVesselId(resolvedVesselId ? String(resolvedVesselId) : '');
         setCustomerPhoneError('');
-
-        const existingComments = normalizeInvoiceComments(invoice.metadata?.comments);
-        setComments(existingComments);
 
         // Store original invoice status
         setOriginalInvoiceStatus(invoice.status || null);
@@ -2173,9 +2211,12 @@ const CreateInvoice: React.FC = () => {
       otRate: 127.5
     };
 
+    // NOTE: Exclude 'comments' from metadataPayload since it will be explicitly set from local state
+    // This prevents accidentally overwriting comments if they exist in invoiceData.metadata
+    const { comments: _, ...metadataWithoutComments } = invoiceData.metadata || {};
     const metadataPayload = {
-      ...invoiceData.metadata,
-      taxRate: invoiceData.metadata.taxRate || 0
+      ...metadataWithoutComments,
+      taxRate: invoiceData.metadata?.taxRate || 0
     };
 
     const parsedData = {
@@ -2574,7 +2615,10 @@ const CreateInvoice: React.FC = () => {
       const payload = {
         title: titleBase || defaultTitle,
         data: JSON.stringify(structuredData),
-        metadata: JSON.stringify(metadataPayload),
+        metadata: JSON.stringify({
+          ...metadataPayload,
+          comments
+        }),
         notes: invoiceData.notes,
         customerId: invoiceData.customer.id || null,
         vesselId: invoiceData.vessel.id || null,
@@ -2686,7 +2730,10 @@ const CreateInvoice: React.FC = () => {
       const payload = {
         title: titleBase || defaultTitle,
         data: JSON.stringify(structuredData),
-        metadata: JSON.stringify(metadataPayload),
+        metadata: JSON.stringify({
+          ...metadataPayload,
+          comments
+        }),
         notes: invoiceData.notes,
         customerId: invoiceData.customer.id || null,
         vesselId: invoiceData.vessel.id || null,
