@@ -1357,9 +1357,8 @@ const CreateInvoice: React.FC = () => {
             service._deleted = true;
           }
 
-          // Load receipt metadata from database
-          // NOTE: receiptUrl (base64 data) is no longer stored in database to prevent payload size issues
-          // Only receiptName and receiptType are persisted as reference
+          // Load receipt data from database (stored as base64 data URLs)
+          if (item.receiptUrl) service.receiptUrl = item.receiptUrl;
           if (item.receiptName) service.receiptName = item.receiptName;
           if (item.receiptType) service.receiptType = item.receiptType;
 
@@ -2200,8 +2199,8 @@ const CreateInvoice: React.FC = () => {
           markupRate: snapshot.markupRate,
           isMarkupExempt: snapshot.isMarkupExempt,
           isTaxExempt: snapshot.isTaxExempt,
-          // NOTE: Removed receiptUrl to prevent massive payload sizes with base64 data
-          // Keep only receiptName and receiptType for reference
+          // Receipt data stored as base64 data URLs (same as main attachments)
+          receiptUrl: invoiceData.services[index].receiptUrl || null,
           receiptName: invoiceData.services[index].receiptName || null,
           receiptType: invoiceData.services[index].receiptType || null,
           _deleted: invoiceData.services[index]._deleted || false
@@ -2243,8 +2242,8 @@ const CreateInvoice: React.FC = () => {
           taxStatus: snapshot.taxStatus,
           markupType: snapshot.markupType,
           markupRate: snapshot.markupRate,
-          // NOTE: Removed receiptUrl to prevent massive payload sizes with base64 data
-          // Keep only receiptName and receiptType for reference
+          // Receipt data stored as base64 data URLs (same as main attachments)
+          receiptUrl: invoiceData.services[index].receiptUrl || null,
           receiptName: invoiceData.services[index].receiptName || null,
           receiptType: invoiceData.services[index].receiptType || null,
           _deleted: invoiceData.services[index]._deleted || false
