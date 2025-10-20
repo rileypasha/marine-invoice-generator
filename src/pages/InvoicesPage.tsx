@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Invoices from './Invoices';
+import { useConfirmDialog } from '../components/ui/confirm-dialog';
 
 interface Customer {
   id: string;
@@ -86,6 +87,7 @@ const InvoicesPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   // Initialize filters from URL on mount
   const [filters, setFilters] = useState<FilterOptions>(() => {
@@ -274,7 +276,17 @@ const InvoicesPage: React.FC = () => {
   }, [navigate]);
 
   const handleDelete = useCallback(async (invoice: Invoice) => {
-    if (!isAuthenticated || !csrfToken || !confirm('Are you sure you want to delete this invoice?')) return;
+    if (!isAuthenticated || !csrfToken) return;
+
+    const confirmed = await confirm({
+      title: 'Delete Invoice',
+      description: 'Are you sure you want to delete this invoice? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      variant: 'destructive'
+    });
+
+    if (!confirmed) return;
 
     try {
       const response = await fetch(`/api/v1/invoice/${invoice.id}`, {
@@ -296,7 +308,7 @@ const InvoicesPage: React.FC = () => {
       console.error('Error deleting invoice:', error);
       alert('Error deleting invoice');
     }
-  }, [isAuthenticated, csrfToken, fetchInvoices, currentPage, searchTerm, filters]);
+  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, currentPage, searchTerm, filters]);
 
   const handlePrint = useCallback((invoice: Invoice) => {
     // Navigate to invoice view page with print parameter to auto-trigger print
@@ -308,7 +320,17 @@ const InvoicesPage: React.FC = () => {
   }, [navigate]);
 
   const handleBulkDelete = useCallback(async (invoices: Invoice[]) => {
-    if (!isAuthenticated || !csrfToken || !confirm(`Are you sure you want to delete ${invoices.length} invoice(s)?`)) return;
+    if (!isAuthenticated || !csrfToken) return;
+
+    const confirmed = await confirm({
+      title: 'Delete Multiple Invoices',
+      description: `Are you sure you want to delete ${invoices.length} invoice(s)? This action cannot be undone.`,
+      confirmLabel: 'Delete All',
+      cancelLabel: 'Cancel',
+      variant: 'destructive'
+    });
+
+    if (!confirmed) return;
 
     try {
       const deletePromises = invoices.map(invoice =>
@@ -329,7 +351,7 @@ const InvoicesPage: React.FC = () => {
       console.error('Error deleting invoices:', error);
       alert('Error deleting invoices');
     }
-  }, [isAuthenticated, csrfToken, fetchInvoices, currentPage, searchTerm, filters]);
+  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, currentPage, searchTerm, filters]);
 
   const handleBulkExport = useCallback((invoices: Invoice[]) => {
     const headers = ['Invoice #', 'Contact', 'Vessel', 'Amount', 'Created At', 'Status'];
@@ -357,20 +379,23 @@ const InvoicesPage: React.FC = () => {
   }, []);
 
   return (
-    <Invoices
-      invoices={transformedInvoices}
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-      onView={handleView}
-      onPrint={handlePrint}
-      onAddNew={handleAddNew}
-      onBulkDelete={handleBulkDelete}
-      onBulkExport={handleBulkExport}
-      isLoading={isLoading}
-      isLoadingMore={isLoadingMore}
-      loadMoreRef={loadMoreRef}
-      hasMore={hasMore}
-    />
+    <>
+      <Invoices
+        invoices={transformedInvoices}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onView={handleView}
+        onPrint={handlePrint}
+        onAddNew={handleAddNew}
+        onBulkDelete={handleBulkDelete}
+        onBulkExport={handleBulkExport}
+        isLoading={isLoading}
+        isLoadingMore={isLoadingMore}
+        loadMoreRef={loadMoreRef}
+        hasMore={hasMore}
+      />
+      {dialog}
+    </>
   );
 };
 
