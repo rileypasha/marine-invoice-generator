@@ -313,10 +313,12 @@ const CreateInvoice: React.FC = () => {
   const [invoiceDiff, setInvoiceDiff] = useState<PatchOperation[] | null>(null);
   const [invoiceStatus, setInvoiceStatus] = useState<string | null>(null);
   const originalInvoiceDataRef = useRef<any>(null);
+  const currentInvoiceIdRef = useRef<string | null>(null);
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [pendingCommentText, setPendingCommentText] = useState('');
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [deletedItemsCount, setDeletedItemsCount] = useState(0);
+  const [showClearConfirmation, setShowClearConfirmation] = useState(false);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const selectionCardRef = useRef<HTMLDivElement | null>(null);
 
@@ -949,6 +951,22 @@ const CreateInvoice: React.FC = () => {
     return false;
   };
 
+  // Helper: Check if an entire service is new (doesn't exist in original baseline)
+  const isNewService = (serviceId: string): boolean => {
+    if (!isEditMode || !originalInvoiceDataRef.current) {
+      return false;
+    }
+
+    const originalServices = originalInvoiceDataRef.current.services;
+    if (!Array.isArray(originalServices)) {
+      return false;
+    }
+
+    // Check if this service ID exists in the original baseline
+    const existsInOriginal = originalServices.some((s: any) => s.id === serviceId);
+    return !existsInOriginal;
+  };
+
   // Helper: Get current value from invoice data using array path
   const getValueFromPath = (path: string[]): any => {
     let value: any = invoiceData;
@@ -1183,6 +1201,41 @@ const CreateInvoice: React.FC = () => {
   // Fetch existing invoice data when in edit mode
   useEffect(() => {
     console.log('[CreateInvoice] useEffect triggered', { isEditMode, isAuthenticated, id });
+
+    // Reset originalInvoiceDataRef when navigating to a different invoice
+    if (id && currentInvoiceIdRef.current !== id) {
+      console.log('[CreateInvoice] Invoice ID changed, resetting originalInvoiceDataRef', {
+        previousId: currentInvoiceIdRef.current,
+        newId: id
+      });
+
+      // Try to restore from sessionStorage first
+      const storageKey = `invoice_baseline_${id}`;
+      const storedBaseline = sessionStorage.getItem(storageKey);
+
+      if (storedBaseline) {
+        try {
+          originalInvoiceDataRef.current = JSON.parse(storedBaseline);
+          console.log('[CreateInvoice] Restored originalInvoiceDataRef from sessionStorage:', {
+            hasServices: !!originalInvoiceDataRef.current?.services,
+            servicesCount: originalInvoiceDataRef.current?.services?.length
+          });
+        } catch (e) {
+          console.error('[CreateInvoice] Failed to parse stored baseline:', e);
+          originalInvoiceDataRef.current = null;
+        }
+      } else {
+        originalInvoiceDataRef.current = null;
+      }
+
+      // Clear storage for old invoice if switching invoices
+      if (currentInvoiceIdRef.current) {
+        const oldStorageKey = `invoice_baseline_${currentInvoiceIdRef.current}`;
+        sessionStorage.removeItem(oldStorageKey);
+      }
+
+      currentInvoiceIdRef.current = id;
+    }
 
     // Don't do anything if not in edit mode or no id
     if (!isEditMode || !id) {
@@ -1490,20 +1543,40 @@ const CreateInvoice: React.FC = () => {
         setComments(existingComments);
 
         // Store original data for client-side change tracking
-        // If there's a diff, reconstruct the baseline by reversing the diff operations
-        if (diffData && Array.isArray(diffData) && diffData.length > 0) {
-          originalInvoiceDataRef.current = reconstructBaseline(loadedInvoiceData, diffData);
-          console.log('[CreateInvoice] originalInvoiceDataRef set from reconstructed baseline:', {
-            hasServices: !!originalInvoiceDataRef.current?.services,
-            servicesCount: originalInvoiceDataRef.current?.services?.length,
-            serviceIds: originalInvoiceDataRef.current?.services?.map((s: any) => ({ id: s.id, description: s.description }))
-          });
+        // Only set originalInvoiceDataRef if it hasn't been set yet (first load of this invoice)
+        // This preserves the original state even after saving, so newly added items stay highlighted
+        if (!originalInvoiceDataRef.current) {
+          // If there's a diff, reconstruct the baseline by reversing the diff operations
+          if (diffData && Array.isArray(diffData) && diffData.length > 0) {
+            originalInvoiceDataRef.current = reconstructBaseline(loadedInvoiceData, diffData);
+            console.log('[CreateInvoice] originalInvoiceDataRef set from reconstructed baseline:', {
+              hasServices: !!originalInvoiceDataRef.current?.services,
+              servicesCount: originalInvoiceDataRef.current?.services?.length,
+              serviceIds: originalInvoiceDataRef.current?.services?.map((s: any) => ({ id: s.id, description: s.description }))
+            });
+          } else {
+            originalInvoiceDataRef.current = JSON.parse(JSON.stringify(loadedInvoiceData));
+            console.log('[CreateInvoice] originalInvoiceDataRef set from current data (no diff):', {
+              hasServices: !!originalInvoiceDataRef.current?.services,
+              servicesCount: originalInvoiceDataRef.current?.services?.length,
+              serviceIds: originalInvoiceDataRef.current?.services?.map((s: any) => ({ id: s.id, description: s.description }))
+            });
+          }
+
+          // Persist to sessionStorage so it survives component unmount/remount
+          if (id) {
+            const storageKey = `invoice_baseline_${id}`;
+            try {
+              sessionStorage.setItem(storageKey, JSON.stringify(originalInvoiceDataRef.current));
+              console.log('[CreateInvoice] Saved baseline to sessionStorage:', storageKey);
+            } catch (e) {
+              console.error('[CreateInvoice] Failed to save baseline to sessionStorage:', e);
+            }
+          }
         } else {
-          originalInvoiceDataRef.current = JSON.parse(JSON.stringify(loadedInvoiceData));
-          console.log('[CreateInvoice] originalInvoiceDataRef set from current data (no diff):', {
+          console.log('[CreateInvoice] originalInvoiceDataRef already set, preserving for green highlights:', {
             hasServices: !!originalInvoiceDataRef.current?.services,
-            servicesCount: originalInvoiceDataRef.current?.services?.length,
-            serviceIds: originalInvoiceDataRef.current?.services?.map((s: any) => ({ id: s.id, description: s.description }))
+            servicesCount: originalInvoiceDataRef.current?.services?.length
           });
         }
 
@@ -2199,10 +2272,11 @@ const CreateInvoice: React.FC = () => {
           markupRate: snapshot.markupRate,
           isMarkupExempt: snapshot.isMarkupExempt,
           isTaxExempt: snapshot.isTaxExempt,
-          // Receipt data stored as base64 data URLs (same as main attachments)
-          receiptUrl: invoiceData.services[index].receiptUrl || null,
-          receiptName: invoiceData.services[index].receiptName || null,
-          receiptType: invoiceData.services[index].receiptType || null,
+          // Receipt data excluded from payload to prevent crashes from large base64 data
+          // Receipts are already persisted when uploaded, no need to re-send them
+          // receiptUrl: invoiceData.services[index].receiptUrl || null,
+          // receiptName: invoiceData.services[index].receiptName || null,
+          // receiptType: invoiceData.services[index].receiptType || null,
           _deleted: invoiceData.services[index]._deleted || false
         }))
       },
@@ -2577,6 +2651,63 @@ const CreateInvoice: React.FC = () => {
 
   const formValidation = getFormValidation();
 
+  // Handle Clear button - reset form to default state
+  const handleClear = () => {
+    // Reset main invoice data to initial empty state
+    setInvoiceData({
+      vessel: { name: '', weight: '', beam: '' },
+      customer: {
+        customerName: '',
+        customerEmail: '',
+        customerPhone: '',
+        customerAddress: '',
+        estimatorName: '',
+        contactName: ''
+      },
+      services: [],
+      notes: '',
+      metadata: { taxRate: 0, comments: [] }
+    });
+
+    // Reset all other form state variables
+    setHasUnsavedChanges(false);
+    setHasAttemptedSave(false);
+    setError(null);
+    setCustomerPhoneError('');
+    setAttachedFile(null);
+    setSecondAttachedFile(null);
+    setAttachmentData(null);
+    setSecondAttachmentData(null);
+    setIsFirstAttachmentNew(false);
+    setIsSecondAttachmentNew(false);
+    setComments([]);
+    setPendingSelection(null);
+    setPendingCommentText('');
+    setReplyDrafts({});
+    setDeletedItemsCount(0);
+
+    // Reset vessel and customer linking states
+    setSelectedVesselId('');
+    setSelectedVesselObject(null);
+    setVesselSearchQuery('');
+    setSelectedCustomerId('');
+    setSelectedCustomerObject(null);
+    setCustomerSearchQuery('');
+
+    // Reset address autocomplete state
+    setAddressSuggestions([]);
+    setShowAddressSuggestions(false);
+
+    // Reset tab to vessel
+    setActiveTab('vessel');
+
+    // Clear localStorage draft
+    localStorage.removeItem('invoice-draft');
+
+    // Close confirmation dialog
+    setShowClearConfirmation(false);
+  };
+
   const handleSave = async () => {
     setHasAttemptedSave(true);
 
@@ -2611,9 +2742,31 @@ const CreateInvoice: React.FC = () => {
         ? `Invoice for ${invoiceData.vessel.name}`
         : 'Invoice Request';
 
+      // Strip receipt data from payload to prevent server crashes from large base64 data
+      // Receipts are already persisted when uploaded, no need to re-send them in updates
+      const stripReceiptData = (data: any): any => {
+        if (!data) return data;
+
+        const stripped = JSON.parse(JSON.stringify(data)); // Deep clone
+
+        // Remove receipt base64 data from line items in scope
+        if (stripped?.scope?.lineItems) {
+          stripped.scope.lineItems = stripped.scope.lineItems.map((item: any) => {
+            if (!item) return item;
+            const { receiptUrl, receiptName, receiptType, receipt, ...itemWithoutReceipt } = item;
+            return itemWithoutReceipt;
+          });
+        }
+
+        return stripped;
+      };
+
+      const cleanParsedData = stripReceiptData(parsedData);
+      const cleanStructuredData = stripReceiptData(structuredData);
+
       const payload = {
         title: titleBase || defaultTitle,
-        data: JSON.stringify(structuredData),
+        data: JSON.stringify(cleanStructuredData),
         metadata: JSON.stringify({
           ...metadataPayload,
           comments
@@ -2634,7 +2787,7 @@ const CreateInvoice: React.FC = () => {
         total: totals.finalTotal,
         grossProfit: totals.grossProfit,
         profitPercent: totals.profitPercent,
-        parsedData,
+        parsedData: cleanParsedData,
         // Preserve diff when editing (so highlights persist on View page)
         ...(isEditMode && invoiceDiff && invoiceDiff.length > 0 && { diff: invoiceDiff }),
         // Only set status to 'approved' if a NEW attachment is being added
@@ -3514,6 +3667,19 @@ const CreateInvoice: React.FC = () => {
 
           {/* Right: Action Buttons */}
           <div className="flex items-center gap-2">
+            {/* Clear Button */}
+            <Button
+              onClick={() => setShowClearConfirmation(true)}
+              disabled={isLoading}
+              variant="outline"
+              className="inline-flex items-center gap-1 rounded-md h-8 px-3 text-xs font-medium shadow-sm"
+            >
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Clear
+            </Button>
+
             {/* Primary Save Button */}
             <Button
               onClick={handleSave}
@@ -4455,6 +4621,7 @@ const CreateInvoice: React.FC = () => {
                                   const hasComment = serviceCommentMap.has(service.id);
                                   const commentId = serviceCommentMap.get(service.id);
                                   const commentIndex = commentId ? comments.findIndex(c => c.id === commentId) : -1;
+                                  const serviceIsNew = isNewService(service.id);
 
                                   return (
                                     <LongPressComment
@@ -4469,7 +4636,12 @@ const CreateInvoice: React.FC = () => {
                                       className="block"
                                       data-service-id={service.id}
                                     >
-                                      <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
+                                      <div className={cn(
+                                        "rounded-lg border p-3 space-y-2",
+                                        serviceIsNew
+                                          ? "bg-green-50 border-green-500 border-l-4"
+                                          : "border-slate-200 bg-white"
+                                      )}>
                                     <div>
                                       <p className={cn("font-medium text-sm", isFieldInBackendDiff(`/services/${index}/description`) ? 'text-green-600 font-semibold' : 'text-slate-800')}>{service.description}</p>
                                       <p className={cn("text-xs text-muted-foreground", isFieldInBackendDiff(`/services/${index}/jobType`) && 'text-green-600 font-semibold')}>{service.jobType}</p>
@@ -4507,8 +4679,13 @@ const CreateInvoice: React.FC = () => {
                                   <span className="text-right">Tax</span>
                                   <span className="text-right">Total</span>
                                 </div>
-                                {previewSummary.services.map((service, index) => (
-                                  <div key={service.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm">
+                                {previewSummary.services.map((service, index) => {
+                                  const serviceIsNew = isNewService(service.id);
+                                  return (
+                                  <div key={service.id} className={cn(
+                                    "grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm",
+                                    serviceIsNew && "bg-green-50 border-l-4 border-l-green-500"
+                                  )}>
                                     <div>
                                       <p className={cn("font-medium", isFieldInBackendDiff(`/services/${index}/description`) ? 'text-green-600 font-semibold' : 'text-slate-800')}>{service.description}</p>
                                       <p className={cn("text-xs text-muted-foreground", isFieldInBackendDiff(`/services/${index}/jobType`) && 'text-green-600 font-semibold')}>{service.jobType}</p>
@@ -4518,7 +4695,8 @@ const CreateInvoice: React.FC = () => {
                                     <div className={cn("text-right text-slate-700", isFieldInBackendDiff(`/services/${index}/taxStatus`) && 'text-green-600 font-semibold')}>{formatCurrency(service.taxAmount)}</div>
                                     <div className="text-right font-medium text-slate-900">{formatCurrency(service.total)}</div>
                                   </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </>
                           )}
@@ -4869,6 +5047,23 @@ const CreateInvoice: React.FC = () => {
               <Button variant="outline" onClick={() => setShowEmailDialog(false)}>Cancel</Button>
               <Button onClick={handleSendEmail} disabled={isEmailSending}>
                 {isEmailSending ? 'Sending...' : 'Send Email'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showClearConfirmation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold mb-4">Clear All Fields?</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Are you sure you want to clear all fields? This will reset all form data including services, vessel info, contact info, and notes. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowClearConfirmation(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleClear}>
+                Clear All Fields
               </Button>
             </div>
           </div>
