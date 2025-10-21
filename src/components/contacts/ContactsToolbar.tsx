@@ -186,7 +186,7 @@ export function ContactsToolbar({
                     <MoreHorizontal className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="z-[100]">
                   {onPrint && (
                     <DropdownMenuItem onClick={onPrint}>
                       <Printer className="mr-2 h-4 w-4" />
