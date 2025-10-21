@@ -867,8 +867,27 @@ const InvoiceView: React.FC = () => {
                 {/* Mobile: Card Layout */}
                 <div className="space-y-3 md:hidden">
                   {servicesSummary.services.map((service, index) => {
+                    // Show diff indicators when we have a valid diff (removed status restriction)
+                    const shouldShowRowDiff = invoice.diff &&
+                      Array.isArray(invoice.diff) &&
+                      invoice.diff.length > 0 &&
+                      diffIndex &&
+                      diffIndex.size > 0;
+
+                    // Check if this item is new by comparing against baseline
+                    const isNewItem = shouldShowRowDiff &&
+                      service.id &&
+                      !baselineLineItems.some((item: any) => item.id === service.id);
+
                     return (
-                      <div key={service.id} className="rounded-lg border border-slate-200 bg-white p-3 space-y-2 relative">
+                      <div
+                        key={service.id}
+                        className={cn(
+                          "rounded-lg border p-3 space-y-2 relative",
+                          isNewItem && "bg-green-50 border-green-500 border-l-4",
+                          !isNewItem && "border-slate-200 bg-white"
+                        )}
+                      >
                       {service.receiptUrl && (
                         <button
                           onClick={(e) => {
@@ -988,9 +1007,8 @@ const InvoiceView: React.FC = () => {
 
                 {/* Show current items */}
                 {servicesSummary.services.map((service, index) => {
-                // Only show diff indicators when status is 'change_requested' AND we have a valid diff
-                const shouldShowRowDiff = invoice.status === 'change_requested' &&
-                  invoice.diff &&
+                // Show diff indicators when we have a valid diff (removed status restriction)
+                const shouldShowRowDiff = invoice.diff &&
                   Array.isArray(invoice.diff) &&
                   invoice.diff.length > 0 &&
                   diffIndex &&
