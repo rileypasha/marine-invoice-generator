@@ -1594,12 +1594,11 @@ const InvoiceView: React.FC = () => {
       <aside className="hidden lg:block sticky top-20 w-[min(380px,32vw)] shrink-0 pl-6">
         {flattenedComments.length > 0 && (
           <div className="max-h-[calc(100vh-120px)] overflow-auto">
-            <div className="relative" style={{ minHeight: previewRef.current?.scrollHeight ? `${previewRef.current.scrollHeight}px` : 'auto' }}>
+            <div className="flex flex-col gap-3">
               {flattenedComments.map((item, index) => (
                 <div
                   key={item.id}
-                  className={`absolute w-full ${item.isReply ? 'pl-8' : ''}`}
-                  style={{ top: `${item.highlight.top}px` }}
+                  className={`w-full ${item.isReply ? 'pl-8' : ''}`}
                 >
                   <CommentCard
                     name={item.author}
