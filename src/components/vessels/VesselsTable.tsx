@@ -21,7 +21,7 @@ import {
   SimpleTableRow as TableRow,
 } from "@/components/ui/simple-table";
 import { VesselSort } from "@/hooks/useVesselsQueryState";
-import { MoreHorizontal, ChevronDown, ChevronRight, Download, Trash2, X } from "lucide-react";
+import { MoreVertical, ChevronDown, ChevronRight, Download, Trash2, X } from "lucide-react";
 import { useRowActionsStore } from "@/features/vessels/state/rowActions.store";
 import { bucketBySize, bucketByActivity, bucketByMonthlyActivity, formatGroupSubtotal, formatCurrency } from "@/features/vessels/grouping";
 import { Button } from "@/components/ui/button";
@@ -314,9 +314,9 @@ export function VesselsTable({
                 }
               });
             }}
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-5 w-5 p-0"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-gray-100 hover:bg-gray-200 h-8 w-8 p-0"
           >
-            <MoreHorizontal className="h-3 w-3" />
+            <MoreVertical className="h-4 w-4 text-gray-600" />
           </button>
         );
       },
