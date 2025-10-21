@@ -165,6 +165,20 @@ export function ContactsToolbar({
     set({ sort: newSort });
   };
 
+  // Check if any activity filter is active
+  const hasActiveFilter = activeActivity !== 'all' || activeFleet !== 'all';
+
+  // Handle clear all filters
+  const handleClearFilters = () => {
+    set({ activity: 'all', fleet: 'all' });
+    if (externalActivityHandler) {
+      externalActivityHandler('all');
+    }
+    if (externalFleetHandler) {
+      externalFleetHandler('all');
+    }
+  };
+
   return (
     <div className={`sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 ${className}`}>
       <div>
@@ -224,7 +238,7 @@ export function ContactsToolbar({
         {/* Row 2: Activity Filter + Controls */}
         <div className="flex items-center justify-between gap-2 py-2 px-2 md:px-6">
           {/* Desktop: Activity Filter */}
-          <div className="hidden md:flex">
+          <div className="hidden md:flex flex-col gap-2">
             <ToolbarSelect
               label="Activity"
               value={selectedActivityValue}
@@ -232,12 +246,22 @@ export function ContactsToolbar({
               onChange={handleActivityChange}
               showCounts={true}
             />
+            {/* Clear all filters button - shown when filters are active */}
+            {hasActiveFilter && (
+              <Button
+                onClick={handleClearFilters}
+                variant="ghost"
+                className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 transition-none w-fit"
+              >
+                Clear all filters
+              </Button>
+            )}
           </div>
 
           {/* Mobile & Desktop: Controls */}
           <div className="flex items-center gap-2 w-full md:w-auto md:justify-end">
             {/* Mobile: Activity Filter - left aligned */}
-            <div className="md:hidden">
+            <div className="md:hidden flex flex-col gap-2">
               <ToolbarSelect
                 label="Activity"
                 value={selectedActivityValue}
@@ -245,6 +269,16 @@ export function ContactsToolbar({
                 onChange={handleActivityChange}
                 showCounts={true}
               />
+              {/* Clear all filters button - shown when filters are active (mobile) */}
+              {hasActiveFilter && (
+                <Button
+                  onClick={handleClearFilters}
+                  variant="ghost"
+                  className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 transition-none w-fit"
+                >
+                  Clear all filters
+                </Button>
+              )}
             </div>
 
             {/* Spacer to push right controls to the right */}
