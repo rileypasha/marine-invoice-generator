@@ -15,6 +15,9 @@ export const TIMEOUTS = {
   AUTO_SAVE_ACTIVE_INTERVAL: 30_000,     // 30 seconds (during active editing)
   AUTO_SAVE_DEBOUNCE: 2_000,             // 2 seconds debounce
 
+  // Draft Storage
+  DRAFT_TTL: 2 * 60 * 1000,              // 2 minutes - auto-expire unsaved drafts
+
   // IndexedDB Operations
   INDEXEDDB_BATCH_DELAY: 100,            // 100ms batch collection window
   INDEXEDDB_BATCH_SIZE: 10,              // Max items per batch
