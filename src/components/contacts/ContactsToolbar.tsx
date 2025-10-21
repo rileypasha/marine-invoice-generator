@@ -180,13 +180,13 @@ export function ContactsToolbar({
           <div className="flex items-center gap-2">
             {/* Overflow menu for print/import/export */}
             {(onPrint || onImport || onExport) && (
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="h-8 px-2 text-xs">
                     <MoreHorizontal className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="z-[100]">
+                <DropdownMenuContent align="end" className="z-[9999]">
                   {onPrint && (
                     <DropdownMenuItem onClick={onPrint}>
                       <Printer className="mr-2 h-4 w-4" />
