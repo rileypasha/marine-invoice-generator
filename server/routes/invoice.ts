@@ -221,7 +221,7 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
       total: invoice.total,
       createdBy: invoice.userName || invoice.userEmail || 'Unknown',
       createdById: invoice.userId || undefined,
-      url: `${process.env.APP_URL || 'http://localhost:3000'}/requests/${invoice.id}`,
+      url: `${process.env.API_BASE_URL || 'http://localhost:3000'}/requests/${invoice.id}`,
     }).catch(err => {
       logger.error('Failed to send new invoice notification', {
         error: err.message,
@@ -759,7 +759,7 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
         total: updatedInvoice.total,
         createdBy: updatedInvoice.modifiedByUserName || updatedInvoice.userName || 'Unknown',
         createdById: updatedInvoice.userId || undefined,
-        url: `${process.env.APP_URL || 'http://localhost:3000'}/requests/${updatedInvoice.id}`,
+        url: `${process.env.API_BASE_URL || 'http://localhost:3000'}/requests/${updatedInvoice.id}`,
       }).catch(err => {
         logger.error('Failed to send change request notification', {
           error: err.message,
@@ -787,7 +787,7 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
         total: updatedInvoice.total,
         createdBy: updatedInvoice.modifiedByUserName || updatedInvoice.userName || 'Unknown',
         createdById: updatedInvoice.userId || undefined,
-        url: `${process.env.APP_URL || 'http://localhost:3000'}/requests/${updatedInvoice.id}`,
+        url: `${process.env.API_BASE_URL || 'http://localhost:3000'}/requests/${updatedInvoice.id}`,
       }).catch(err => {
         logger.error('Failed to send approval notification on status change', {
           error: err.message,
@@ -1449,7 +1449,7 @@ router.post('/:id/approve', async (req: InvoiceRequest, res: Response) => {
       total: invoice.total,
       createdBy: user?.name || user?.email || 'Unknown',
       createdById: invoice.userId || undefined,
-      url: `${process.env.APP_URL || 'http://localhost:3000'}/requests/${invoiceId}`,
+      url: `${process.env.API_BASE_URL || 'http://localhost:3000'}/requests/${invoiceId}`,
     }).catch(err => {
       logger.error('Failed to send approval notification', {
         error: err.message,
