@@ -505,7 +505,7 @@ This is an automated notification. Please do not reply to this email.
           <!-- Header -->
           <tr>
             <td style="padding: 30px 40px; background-color: #059669; border-radius: 8px 8px 0 0;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Invoice Approved</h1>
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Invoice Request Approved</h1>
             </td>
           </tr>
 
