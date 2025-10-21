@@ -17,6 +17,7 @@ import { PatchOperation } from '../types/diff.types';
 import { cn } from '../lib/utils';
 import { isChangeRequested } from '../utils/status';
 import { convertFieldDeltaToPatch, isFieldDeltaFormat } from '../utils/diffConverter';
+import { TIMEOUTS } from '../config/constants';
 import {
   Card,
   CardHeader,
@@ -257,6 +258,30 @@ const CreateInvoice: React.FC = () => {
         const savedDraft = localStorage.getItem('invoice-draft');
         if (savedDraft) {
           const parsed = JSON.parse(savedDraft);
+
+          // Check if draft has expired (older than DRAFT_TTL)
+          if (parsed.timestamp) {
+            const age = Date.now() - parsed.timestamp;
+            if (age > TIMEOUTS.DRAFT_TTL) {
+              console.log('🗑️ Draft expired, clearing:', { age: Math.round(age / 1000) + 's' });
+              localStorage.removeItem('invoice-draft');
+              return {
+                vessel: { name: '', weight: '', beam: '' },
+                customer: {
+                  customerName: '',
+                  customerEmail: '',
+                  customerPhone: '',
+                  customerAddress: '',
+                  estimatorName: '',
+                  contactName: ''
+                },
+                services: [],
+                notes: '',
+                metadata: { taxRate: 0, comments: [] }
+              };
+            }
+          }
+
           // Handle both old format (just invoiceData) and new format (with IDs)
           if (parsed.invoiceData) {
             return parsed.invoiceData;
@@ -1097,7 +1122,9 @@ const CreateInvoice: React.FC = () => {
           selectedCustomerId,
           // Save the actual vessel and customer objects
           selectedVessel: selectedVesselObject,
-          selectedCustomer: selectedCustomerObject
+          selectedCustomer: selectedCustomerObject,
+          // Add timestamp for TTL expiration
+          timestamp: Date.now()
         };
         console.log('💾 SAVING DRAFT (debounced):', {
           hasVesselId: !!selectedVesselId,
@@ -1139,6 +1166,17 @@ const CreateInvoice: React.FC = () => {
 
       if (savedDraft) {
         const parsed = JSON.parse(savedDraft);
+
+        // Check if draft has expired (older than DRAFT_TTL)
+        if (parsed.timestamp) {
+          const age = Date.now() - parsed.timestamp;
+          if (age > TIMEOUTS.DRAFT_TTL) {
+            console.log('🗑️ Draft expired during restore, clearing:', { age: Math.round(age / 1000) + 's' });
+            localStorage.removeItem('invoice-draft');
+            return;
+          }
+        }
+
         console.log('📂 PARSED DRAFT:', {
           hasVesselId: !!parsed.selectedVesselId,
           hasVessel: !!parsed.selectedVessel,
