@@ -22,6 +22,12 @@ export function ExpandingSearch({
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout>();
+  const onChangeRef = useRef(onChange);
+
+  // Keep the ref updated with the latest onChange callback
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   // Debounced onChange
   useEffect(() => {
@@ -30,7 +36,7 @@ export function ExpandingSearch({
     }
 
     timeoutRef.current = setTimeout(() => {
-      onChange(localValue);
+      onChangeRef.current(localValue);
     }, debounceMs);
 
     return () => {
@@ -38,7 +44,7 @@ export function ExpandingSearch({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [localValue, onChange, debounceMs]);
+  }, [localValue, debounceMs]);
 
   // Sync external value changes
   useEffect(() => {
