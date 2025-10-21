@@ -244,6 +244,7 @@ const InvoiceView: React.FC = () => {
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [pendingCommentText, setPendingCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [sessionStorageBaseline, setSessionStorageBaseline] = useState<any>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const selectionCardRef = useRef<HTMLDivElement>(null);
 
@@ -312,6 +313,35 @@ const InvoiceView: React.FC = () => {
 
     fetchInvoice();
   }, [csrfToken, id, isAuthenticated, isPreviewMode, previewData]);
+
+  // Restore baseline from sessionStorage for green highlighting
+  useEffect(() => {
+    if (!id || !invoice || isPreviewMode) {
+      setSessionStorageBaseline(null);
+      return;
+    }
+
+    const storageKey = `invoice_baseline_${id}`;
+    const storedBaseline = sessionStorage.getItem(storageKey);
+
+    if (storedBaseline) {
+      try {
+        const baseline = JSON.parse(storedBaseline);
+        console.log('[InvoiceView] Restored baseline from sessionStorage:', {
+          key: storageKey,
+          hasServices: !!baseline?.services,
+          servicesCount: baseline?.services?.length
+        });
+        setSessionStorageBaseline(baseline);
+      } catch (e) {
+        console.error('[InvoiceView] Failed to parse stored baseline:', e);
+        setSessionStorageBaseline(null);
+      }
+    } else {
+      console.log('[InvoiceView] No baseline found in sessionStorage for key:', storageKey);
+      setSessionStorageBaseline(null);
+    }
+  }, [id, invoice, isPreviewMode]);
 
   useEffect(() => {
     if (searchParams.get('print') === 'true' && invoice && !isLoading && !error) {
@@ -559,9 +589,17 @@ const InvoiceView: React.FC = () => {
     return index;
   }, [invoice?.diff]);
 
-  // Reconstruct baseline line items from diff
+  // Reconstruct baseline line items from diff or sessionStorage
   const baselineLineItems = useMemo(() => {
     if (!invoice?.diff || !Array.isArray(invoice.diff) || invoice.diff.length === 0) {
+      // If no diff from server, try to use sessionStorage baseline
+      if (sessionStorageBaseline?.services) {
+        console.log('[InvoiceView] Using sessionStorage baseline for comparison:', {
+          baselineServicesCount: sessionStorageBaseline.services.length,
+          currentServicesCount: lineItems.length
+        });
+        return sessionStorageBaseline.services;
+      }
       return lineItems;
     }
 
@@ -589,7 +627,7 @@ const InvoiceView: React.FC = () => {
     });
 
     return baseline.services || [];
-  }, [invoice, lineItems]);
+  }, [invoice, lineItems, sessionStorageBaseline]);
 
   const applyMarkup = (cost: number, item: LineItem, scope: any): number => {
     // Check if item is markup exempt
@@ -867,12 +905,13 @@ const InvoiceView: React.FC = () => {
                 {/* Mobile: Card Layout */}
                 <div className="space-y-3 md:hidden">
                   {servicesSummary.services.map((service, index) => {
-                    // Show diff indicators when we have a valid diff (removed status restriction)
-                    const shouldShowRowDiff = invoice.diff &&
+                    // Show diff indicators when we have a valid diff OR sessionStorage baseline (removed status restriction)
+                    const shouldShowRowDiff = (invoice.diff &&
                       Array.isArray(invoice.diff) &&
                       invoice.diff.length > 0 &&
                       diffIndex &&
-                      diffIndex.size > 0;
+                      diffIndex.size > 0) ||
+                      (sessionStorageBaseline && sessionStorageBaseline.services);
 
                     // Check if this item is new by comparing against baseline
                     const isNewItem = shouldShowRowDiff &&
@@ -1007,15 +1046,16 @@ const InvoiceView: React.FC = () => {
 
                 {/* Show current items */}
                 {servicesSummary.services.map((service, index) => {
-                // Show diff indicators when we have a valid diff (removed status restriction)
-                const shouldShowRowDiff = invoice.diff &&
+                // Show diff indicators when we have a valid diff OR sessionStorage baseline (removed status restriction)
+                const shouldShowRowDiff = (invoice.diff &&
                   Array.isArray(invoice.diff) &&
                   invoice.diff.length > 0 &&
                   diffIndex &&
-                  diffIndex.size > 0;
+                  diffIndex.size > 0) ||
+                  (sessionStorageBaseline && sessionStorageBaseline.services);
 
                 if (index === 0) {
-                  console.log(`[InvoiceView] shouldShowRowDiff: status="${invoice.status}", hasDiff=${!!invoice.diff}, diffLength=${invoice.diff?.length}, diffIndexSize=${diffIndex.size}, shouldShowRowDiff=${shouldShowRowDiff}`);
+                  console.log(`[InvoiceView] shouldShowRowDiff: status="${invoice.status}", hasDiff=${!!invoice.diff}, diffLength=${invoice.diff?.length}, diffIndexSize=${diffIndex.size}, hasSessionBaseline=${!!sessionStorageBaseline}, shouldShowRowDiff=${shouldShowRowDiff}`);
                 }
 
                 // Check if this item is new by comparing against baseline
