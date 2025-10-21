@@ -1611,7 +1611,7 @@ const InvoiceView: React.FC = () => {
                     isReply={item.isReply}
                     onEdit={item.isReply ? undefined : (newText) => handleEditComment(item.id, newText)}
                     onDelete={item.isReply ? undefined : () => handleDeleteComment(item.id)}
-                    onReply={item.isReply ? undefined : (text) => handleReplyToComment(item.parentId || item.id, text)}
+                    onReply={(text) => handleReplyToComment(item.parentId || item.id, text)}
                   />
                 </div>
               ))}

@@ -135,8 +135,8 @@ export function CommentCard({
   const ts = formatNiceTs(timestampISO);
 
   const handleCardClick = () => {
-    // Only show reply input if not editing AND reply input isn't already shown AND not a reply
-    if (!isEditing && onReply && !showReplyInput && !isReply) {
+    // Only show reply input if not editing AND reply input isn't already shown
+    if (!isEditing && onReply && !showReplyInput) {
       setShowReplyInput(true);
     }
   };
@@ -262,8 +262,8 @@ export function CommentCard({
             <div className="mt-2 text-sm text-slate-800">{text}</div>
           )}
 
-          {/* Inline reply input (click-to-show) - only for parent comments, not replies */}
-          {onReply && !isEditing && !isReply && showReplyInput && (
+          {/* Inline reply input (click-to-show) */}
+          {onReply && !isEditing && showReplyInput && (
             <div className="mt-2">
               <input
                 autoFocus

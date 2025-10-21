@@ -3672,7 +3672,7 @@ const CreateInvoice: React.FC = () => {
               onClick={() => setShowClearConfirmation(true)}
               disabled={isLoading}
               variant="outline"
-              className="inline-flex items-center gap-1 rounded-md h-8 px-3 text-xs font-medium shadow-sm"
+              className="inline-flex items-center gap-1 rounded-md h-8 px-3 text-xs font-medium shadow-sm text-slate-900"
             >
               <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -5056,12 +5056,12 @@ const CreateInvoice: React.FC = () => {
       {showClearConfirmation && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background rounded-lg shadow-lg p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold mb-4">Clear All Fields?</h2>
+            <h2 className="text-lg font-semibold mb-4 text-slate-900">Clear All Fields?</h2>
             <p className="text-sm text-muted-foreground mb-6">
               Are you sure you want to clear all fields? This will reset all form data including services, vessel info, contact info, and notes. This action cannot be undone.
             </p>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowClearConfirmation(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setShowClearConfirmation(false)} className="text-slate-900">Cancel</Button>
               <Button variant="destructive" onClick={handleClear}>
                 Clear All Fields
               </Button>
