@@ -76,18 +76,25 @@ export function VesselsToolbar({
   const activeSegment = currentSegment ?? segment;
   const activeFleet = currentFleet ?? fleet;
 
+  // Determine selected value based on segment and fleet state
+  const selectedActivityValue = activeFleet !== 'all'
+    ? `${activeFleet}-monthly`
+    : activeSegment;
+
   // Calculate counts if not provided
   const calculatedCounts = counts || {
     all: vessels.length,
     active: vessels.filter(v => (v.invoice_count || 0) > 0).length,
     inactive: vessels.filter(v => (v.invoice_count || 0) === 0).length,
     archived: vessels.filter(v => v.archived === true).length,
-    monthlyActive: vessels.filter(v => (v.monthly_invoice_count || 0) > 0).length,
-    monthlyInactive: vessels.filter(v => (v.monthly_invoice_count || 0) === 0).length,
   };
 
-  // Segment options for ToolbarSelect
-  const segmentOptions: ToolbarSelectOption[] = [
+  // Add monthly counts separately to avoid type issues
+  const monthlyActive = vessels.filter(v => (v.monthly_invoice_count || 0) > 0).length;
+  const monthlyInactive = vessels.filter(v => (v.monthly_invoice_count || 0) === 0).length;
+
+  // Combined activity options for ToolbarSelect
+  const activityOptions: ToolbarSelectOption[] = [
     {
       value: 'all',
       label: 'All Activity'
@@ -103,43 +110,42 @@ export function VesselsToolbar({
       label: 'Inactive',
       icon: <Circle className="h-3.5 w-3.5" />,
       count: calculatedCounts.inactive
-    }
-  ];
-
-  // Fleet options for ToolbarSelect (secondary segment)
-  const fleetOptions: ToolbarSelectOption[] = [
-    { value: 'all', label: 'Monthly Activity' },
+    },
+    { value: 'all-monthly', label: 'Monthly Activity' },
     {
-      value: 'active',
-      label: 'Active',
+      value: 'active-monthly',
+      label: 'Active (Monthly)',
       icon: <CheckCircle className="h-3.5 w-3.5" />,
-      count: calculatedCounts.monthlyActive
+      count: monthlyActive
     },
     {
-      value: 'inactive',
-      label: 'Inactive',
+      value: 'inactive-monthly',
+      label: 'Inactive (Monthly)',
       icon: <Circle className="h-3.5 w-3.5" />,
-      count: calculatedCounts.monthlyInactive
+      count: monthlyInactive
     }
   ];
 
-  const handleSegmentChange = (newSegment: string) => {
-    // Call external handler if provided (updates table state directly)
-    if (externalSegmentHandler) {
-      externalSegmentHandler(newSegment as typeof segment);
+  const handleActivityChange = (newActivity: string) => {
+    // Handle monthly options separately
+    if (newActivity.endsWith('-monthly')) {
+      const baseValue = newActivity.replace('-monthly', '');
+      set({ fleet: baseValue, segment: 'all' });
+      if (externalFleetHandler) {
+        externalFleetHandler(baseValue);
+      }
+      if (externalSegmentHandler) {
+        externalSegmentHandler('all');
+      }
     } else {
-      // Fallback to URL update only
-      set({ segment: newSegment as typeof segment });
-    }
-  };
-
-  const handleFleetChange = (newFleet: string) => {
-    // Call external handler if provided (updates table state directly)
-    if (externalFleetHandler) {
-      externalFleetHandler(newFleet);
-    } else {
-      // Fallback to URL update only
-      set({ fleet: newFleet });
+      // Handle regular segment
+      set({ segment: newActivity as typeof segment, fleet: 'all' });
+      if (externalSegmentHandler) {
+        externalSegmentHandler(newActivity as typeof segment);
+      }
+      if (externalFleetHandler) {
+        externalFleetHandler('all');
+      }
     }
   };
 
@@ -221,28 +227,35 @@ export function VesselsToolbar({
           </div>
         </div>
 
-        {/* Row 2: Toolbar Selects + Controls + Search */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 py-2 px-2 md:px-6">
-          {/* Left side: Dropdown selects */}
-          <div className="flex items-center gap-2">
+        {/* Row 2: Activity Filter + Controls */}
+        <div className="flex items-center justify-between gap-2 py-2 px-2 md:px-6">
+          {/* Desktop: Activity Filter */}
+          <div className="hidden md:flex">
             <ToolbarSelect
-              label="Segment"
-              value={activeSegment}
-              options={segmentOptions}
-              onChange={handleSegmentChange}
-              showCounts={true}
-            />
-            <ToolbarSelect
-              label="Fleet"
-              value={activeFleet}
-              options={fleetOptions}
-              onChange={handleFleetChange}
+              label="Activity"
+              value={selectedActivityValue}
+              options={activityOptions}
+              onChange={handleActivityChange}
               showCounts={true}
             />
           </div>
 
-          {/* Right side: Controls */}
-          <div className="flex items-center gap-2 md:pr-6">
+          {/* Mobile & Desktop: Controls */}
+          <div className="flex items-center gap-2 w-full md:w-auto md:justify-end">
+            {/* Mobile: Activity Filter - left aligned */}
+            <div className="md:hidden">
+              <ToolbarSelect
+                label="Activity"
+                value={selectedActivityValue}
+                options={activityOptions}
+                onChange={handleActivityChange}
+                showCounts={true}
+              />
+            </div>
+
+            {/* Spacer to push right controls to the right */}
+            <div className="flex-1 md:hidden" />
+
             {/* Group/Filter/Sort menus */}
             <VesselsToolbarMenus
               activeGroupBy={activeGroupBy}
