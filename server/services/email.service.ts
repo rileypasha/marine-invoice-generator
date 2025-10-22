@@ -170,7 +170,7 @@ async function notifyNewInvoice(invoiceData: InvoiceData): Promise<void> {
     return;
   }
 
-  const subject = `Invoice Pending Approval - ${invoiceData.invoiceNumber || invoiceData.title}`;
+  const subject = `New Invoice Request - ${invoiceData.invoiceNumber || invoiceData.title}`;
 
   for (const user of users) {
     const text = `
@@ -212,7 +212,7 @@ This is an automated notification. Please do not reply to this email.
           <!-- Header -->
           <tr>
             <td style="padding: 30px 40px; background-color: #003d5b; border-radius: 8px 8px 0 0;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Invoice Pending Approval</h1>
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">New Invoice Request</h1>
             </td>
           </tr>
 
