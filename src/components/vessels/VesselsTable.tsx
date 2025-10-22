@@ -453,7 +453,7 @@ export function VesselsTable({
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => {
+                table.getRowModel().rows.map((row, index) => {
                   if (row.getIsGrouped()) {
                     // Group header row
                     const groupingValue = row.groupingValue as string;
@@ -516,6 +516,9 @@ export function VesselsTable({
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
+                      className={`border-b border-gray-200 ${
+                        index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/50 hover:bg-gray-100'
+                      }`}
                     >
                       {row.getVisibleCells().map((cell) => {
                         // Skip virtual grouping columns in data rows
