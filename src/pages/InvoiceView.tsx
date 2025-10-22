@@ -27,6 +27,7 @@ import { cn } from '../lib/utils';
 import { convertFieldDeltaToPatch, isFieldDeltaFormat } from '../utils/diffConverter';
 import { PatchOperation } from '../types/diff.types';
 import { FileText, X, Paperclip } from 'lucide-react';
+import { CommentCard } from '../components/comments/CommentCard';
 
 interface LineItem {
   id?: string;
@@ -244,6 +245,7 @@ const InvoiceView: React.FC = () => {
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [pendingCommentText, setPendingCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [sessionStorageBaseline, setSessionStorageBaseline] = useState<any>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const selectionCardRef = useRef<HTMLDivElement>(null);
 
@@ -312,6 +314,160 @@ const InvoiceView: React.FC = () => {
 
     fetchInvoice();
   }, [csrfToken, id, isAuthenticated, isPreviewMode, previewData]);
+
+  // Handler for editing comments
+  const handleEditComment = async (commentId: string, newText: string) => {
+    if (!id || !invoice) return;
+
+    try {
+      const response = await fetch(`/api/v1/invoice/${id}/comments/${commentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include',
+        body: JSON.stringify({ text: newText })
+      });
+
+      if (!response.ok) {
+        console.error('Failed to edit comment:', response.statusText);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('[InvoiceView] Comment edited successfully:', data);
+
+      // Update local state with new metadata
+      if (data.metadata) {
+        // Parse metadata if it's a string (backend returns it as JSON string)
+        const parsedMetadata = typeof data.metadata === 'string'
+          ? JSON.parse(data.metadata)
+          : data.metadata;
+
+        console.log('[InvoiceView] Parsed metadata:', parsedMetadata);
+
+        setInvoice(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            metadata: parsedMetadata
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Error editing comment:', error);
+    }
+  };
+
+  // Handler for replying to comments
+  const handleReplyToComment = async (commentId: string, replyText: string) => {
+    if (!id || !invoice) return;
+
+    try {
+      const response = await fetch(`/api/v1/invoice/${id}/comments/${commentId}/reply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include',
+        body: JSON.stringify({ text: replyText })
+      });
+
+      if (!response.ok) {
+        console.error('Failed to add reply:', response.statusText);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('[InvoiceView] Reply added successfully:', data);
+
+      // Update local state with new metadata containing the reply
+      if (data.metadata) {
+        // Parse metadata if it's a string (backend returns it as JSON string)
+        const parsedMetadata = typeof data.metadata === 'string'
+          ? JSON.parse(data.metadata)
+          : data.metadata;
+
+        console.log('[InvoiceView] Parsed metadata:', parsedMetadata);
+
+        setInvoice(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            metadata: parsedMetadata
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Error adding reply:', error);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!invoice || isPreviewMode) return;
+
+    try {
+      const response = await fetch(`/api/v1/invoice/${invoice.id}/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || ''
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete comment');
+      }
+
+      const data = await response.json();
+
+      // Update local state with new metadata
+      if (data.metadata) {
+        setInvoice(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            metadata: data.metadata
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      alert('Failed to delete comment. Please try again.');
+    }
+  };
+
+  // Restore baseline from sessionStorage for green highlighting
+  useEffect(() => {
+    if (!id || !invoice || isPreviewMode) {
+      setSessionStorageBaseline(null);
+      return;
+    }
+
+    const storageKey = `invoice_baseline_${id}`;
+    const storedBaseline = sessionStorage.getItem(storageKey);
+
+    if (storedBaseline) {
+      try {
+        const baseline = JSON.parse(storedBaseline);
+        console.log('[InvoiceView] Restored baseline from sessionStorage:', {
+          key: storageKey,
+          hasServices: !!baseline?.services,
+          servicesCount: baseline?.services?.length
+        });
+        setSessionStorageBaseline(baseline);
+      } catch (e) {
+        console.error('[InvoiceView] Failed to parse stored baseline:', e);
+        setSessionStorageBaseline(null);
+      }
+    } else {
+      console.log('[InvoiceView] No baseline found in sessionStorage for key:', storageKey);
+      setSessionStorageBaseline(null);
+    }
+  }, [id, invoice, isPreviewMode]);
 
   useEffect(() => {
     if (searchParams.get('print') === 'true' && invoice && !isLoading && !error) {
@@ -449,18 +605,13 @@ const InvoiceView: React.FC = () => {
     }
 
     const containerRect = previewRef.current.getBoundingClientRect();
-    const padding = 8;
     const top = rect.top - containerRect.top + previewRef.current.scrollTop;
     const left = rect.left - containerRect.left + previewRef.current.scrollLeft;
-    const width = Math.max(rect.width + padding * 2, 36);
-    const height = Math.max(rect.height + padding * 2, 30);
-    const scrollHeight = previewRef.current.scrollHeight;
-    const scrollWidth = previewRef.current.scrollWidth;
-    const maxTop = Math.max(0, scrollHeight - height - 4);
-    const maxLeft = Math.max(0, scrollWidth - width - 4);
+    const width = rect.width;
+    const height = rect.height;
     const highlight: CommentHighlightRect = {
-      top: Math.max(0, Math.min(top - padding, maxTop)),
-      left: Math.max(0, Math.min(left - padding, maxLeft)),
+      top: Math.max(0, top),
+      left: Math.max(0, left),
       width,
       height,
     };
@@ -559,9 +710,17 @@ const InvoiceView: React.FC = () => {
     return index;
   }, [invoice?.diff]);
 
-  // Reconstruct baseline line items from diff
+  // Reconstruct baseline line items from diff or sessionStorage
   const baselineLineItems = useMemo(() => {
     if (!invoice?.diff || !Array.isArray(invoice.diff) || invoice.diff.length === 0) {
+      // If no diff from server, try to use sessionStorage baseline
+      if (sessionStorageBaseline?.services) {
+        console.log('[InvoiceView] Using sessionStorage baseline for comparison:', {
+          baselineServicesCount: sessionStorageBaseline.services.length,
+          currentServicesCount: lineItems.length
+        });
+        return sessionStorageBaseline.services;
+      }
       return lineItems;
     }
 
@@ -589,7 +748,7 @@ const InvoiceView: React.FC = () => {
     });
 
     return baseline.services || [];
-  }, [invoice, lineItems]);
+  }, [invoice, lineItems, sessionStorageBaseline]);
 
   const applyMarkup = (cost: number, item: LineItem, scope: any): number => {
     // Check if item is markup exempt
@@ -693,6 +852,59 @@ const InvoiceView: React.FC = () => {
     }
   }, [metadata]);
 
+  // Flatten comments + nested replies into a single array for rendering (with replies indented)
+  const flattenedComments = useMemo(() => {
+    console.log('[InvoiceView] Flattening comments. Input count:', comments.length);
+    console.log('[InvoiceView] Comments with replies:', comments.map(c => ({ id: c.id, text: c.text, replyCount: c.replies?.length || 0 })));
+
+    const result: Array<InvoiceComment & { isReply?: boolean; parentId?: string }> = [];
+
+    for (const comment of comments) {
+      // Add parent comment
+      result.push({ ...comment, isReply: false });
+
+      // Add nested replies positioned below parent
+      if (comment.replies && Array.isArray(comment.replies) && comment.replies.length > 0) {
+        console.log(`[InvoiceView] Found ${comment.replies.length} replies for comment "${comment.text}"`);
+        let replyOffset = 0;
+        for (const reply of comment.replies) {
+          replyOffset += 100; // Offset each reply 100px below the previous
+          console.log(`[InvoiceView] Adding reply: "${reply.text}" at offset ${replyOffset}px`);
+          result.push({
+            id: reply.id,
+            author: reply.author,
+            initials: reply.initials,
+            avatarUrl: reply.avatarUrl,
+            text: reply.text,
+            selectionText: '',
+            createdAt: reply.createdAt,
+            highlight: {
+              ...comment.highlight,
+              top: comment.highlight.top + replyOffset,
+            },
+            replies: [],
+            isReply: true,
+            parentId: comment.id,
+          });
+        }
+      }
+    }
+
+    console.log('[InvoiceView] Flattening complete. Output count:', result.length);
+    console.log('[InvoiceView] Flattened items:', result.map(item => ({ id: item.id, text: item.text, isReply: item.isReply })));
+    return result;
+  }, [comments]);
+
+  // Highlight state for hover interactions between comments and invoice rows
+  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeHighlight) {
+      const timer = setTimeout(() => setActiveHighlight(null), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeHighlight]);
+
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -746,48 +958,36 @@ const InvoiceView: React.FC = () => {
   return (
     <div className="min-h-full bg-white">
       <div className="mx-auto flex max-w-6xl flex-col">
-        {/* Page Header */}
-        <div className="bg-white border-b border-slate-200 pl-0 pr-0 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-slate-700" />
-              <h1 className="text-lg font-semibold text-slate-900">Invoice Request Preview</h1>
-            </div>
-            <Button
-              onClick={handleBack}
-              className="bg-[#1e3a5f] text-white hover:bg-[#152d4a] rounded-md px-3 py-1.5 text-sm font-medium h-auto"
-            >
-              <X className="h-3.5 w-3.5 mr-1" />
-              Exit
-            </Button>
-          </div>
-        </div>
+        {/* Two-column grid: invoice preview (left) + comments sidebar (right, desktop only) */}
+        <div className="lg:grid lg:grid-cols-[1fr_min(380px,32vw)] lg:gap-0">
 
-        {/* Comments & Preview Section */}
-        <div className="pl-0 pr-4 py-4 mb-6">
-          <h2 className="text-base font-semibold text-slate-800 mb-1">Comments & Preview</h2>
-          <p className="text-sm text-slate-600 md:hidden">
-            Tap and hold a line item to add a comment
-          </p>
-          <p className="text-sm text-slate-600 hidden md:block">
-            Click on a line item to add a comment
-          </p>
-        </div>
-
+          {/* Left column: Invoice preview */}
+          <section className="min-w-0">
         <div className="relative">
         <div
           ref={previewRef}
           onMouseUp={!isPreviewMode ? handlePreviewMouseUp : undefined}
           className="bg-white rounded-lg border border-slate-200 p-6 space-y-6 text-sm text-slate-700 select-none md:select-auto [-webkit-touch-callout:none]"
         >
-          {/* Header */}
+          {/* Header with Exit button */}
           <div className="pb-4">
-            <h2 className="text-xl font-semibold text-slate-900">
-              {invoice.title || `Invoice for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`}
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              {invoice.status === 'draft' ? 'Draft preview' : invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)} • {new Date(invoice.createdAt).toLocaleDateString()}
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl font-semibold text-slate-900">
+                  {invoice.title || `Invoice for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`}
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  {invoice.status === 'draft' ? 'Draft preview' : invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)} • {new Date(invoice.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+              <Button
+                onClick={handleBack}
+                className="bg-[#1e3a5f] text-white hover:bg-[#152d4a] rounded-md px-3 py-1.5 text-sm font-medium h-auto shrink-0"
+              >
+                <X className="h-3.5 w-3.5 mr-1" />
+                Exit
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-6 border border-slate-200 rounded-lg bg-slate-50 p-4 md:grid-cols-2">
@@ -867,8 +1067,28 @@ const InvoiceView: React.FC = () => {
                 {/* Mobile: Card Layout */}
                 <div className="space-y-3 md:hidden">
                   {servicesSummary.services.map((service, index) => {
+                    // Show diff indicators when we have a valid diff OR sessionStorage baseline (removed status restriction)
+                    const shouldShowRowDiff = (invoice.diff &&
+                      Array.isArray(invoice.diff) &&
+                      invoice.diff.length > 0 &&
+                      diffIndex &&
+                      diffIndex.size > 0) ||
+                      (sessionStorageBaseline && sessionStorageBaseline.services);
+
+                    // Check if this item is new by comparing against baseline
+                    const isNewItem = shouldShowRowDiff &&
+                      service.id &&
+                      !baselineLineItems.some((item: any) => item.id === service.id);
+
                     return (
-                      <div key={service.id} className="rounded-lg border border-slate-200 bg-white p-3 space-y-2 relative">
+                      <div
+                        key={service.id}
+                        className={cn(
+                          "rounded-lg border p-3 space-y-2 relative",
+                          isNewItem && "bg-green-50 border-green-500 border-l-4",
+                          !isNewItem && "border-slate-200 bg-white"
+                        )}
+                      >
                       {service.receiptUrl && (
                         <button
                           onClick={(e) => {
@@ -988,16 +1208,16 @@ const InvoiceView: React.FC = () => {
 
                 {/* Show current items */}
                 {servicesSummary.services.map((service, index) => {
-                // Only show diff indicators when status is 'change_requested' AND we have a valid diff
-                const shouldShowRowDiff = invoice.status === 'change_requested' &&
-                  invoice.diff &&
+                // Show diff indicators when we have a valid diff OR sessionStorage baseline (removed status restriction)
+                const shouldShowRowDiff = (invoice.diff &&
                   Array.isArray(invoice.diff) &&
                   invoice.diff.length > 0 &&
                   diffIndex &&
-                  diffIndex.size > 0;
+                  diffIndex.size > 0) ||
+                  (sessionStorageBaseline && sessionStorageBaseline.services);
 
                 if (index === 0) {
-                  console.log(`[InvoiceView] shouldShowRowDiff: status="${invoice.status}", hasDiff=${!!invoice.diff}, diffLength=${invoice.diff?.length}, diffIndexSize=${diffIndex.size}, shouldShowRowDiff=${shouldShowRowDiff}`);
+                  console.log(`[InvoiceView] shouldShowRowDiff: status="${invoice.status}", hasDiff=${!!invoice.diff}, diffLength=${invoice.diff?.length}, diffIndexSize=${diffIndex.size}, hasSessionBaseline=${!!sessionStorageBaseline}, shouldShowRowDiff=${shouldShowRowDiff}`);
                 }
 
                 // Check if this item is new by comparing against baseline
@@ -1177,9 +1397,9 @@ const InvoiceView: React.FC = () => {
           )}
         </div>
 
-        {/* Line Item Comments Section */}
+        {/* Line Item Comments Section (Mobile only - hidden on desktop where sidebar shows) */}
         {comments.length > 0 && (
-          <div className="space-y-4 px-6 pb-12">
+          <div className="lg:hidden space-y-4 px-6 pb-12">
             <h3 className="text-base font-semibold text-slate-800">Line Item Comments</h3>
             {comments.map((comment, index) => (
               <div key={comment.id} className="rounded-lg border bg-white p-4 shadow-sm">
@@ -1289,31 +1509,28 @@ const InvoiceView: React.FC = () => {
         )}
 
         {comments.length > 0 && (
-          <div className="pointer-events-none absolute inset-0 z-10">
-            {comments.map((comment, index) => {
+          <div className="absolute inset-0 z-10 pointer-events-none">
+            {comments.map((comment) => {
               const width = Math.max(comment.highlight.width, 36);
               const height = Math.max(comment.highlight.height, 30);
+              const isHighlighted = activeHighlight === comment.id;
               return (
-                <React.Fragment key={comment.id}>
-                  <div
-                    className="absolute rounded-md border border-blue-500 bg-blue-500/15"
-                    style={{
-                      top: comment.highlight.top,
-                      left: comment.highlight.left,
-                      width,
-                      height
-                    }}
-                  />
-                  <div
-                    className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-blue-500 text-[11px] font-semibold text-white shadow"
-                    style={{
-                      top: comment.highlight.top,
-                      left: comment.highlight.left
-                    }}
-                  >
-                    {index + 1}
-                  </div>
-                </React.Fragment>
+                <div
+                  key={comment.id}
+                  className={`absolute rounded transition-colors duration-300 pointer-events-auto cursor-pointer ${
+                    isHighlighted
+                      ? 'bg-yellow-200/50'
+                      : 'bg-yellow-100/40 hover:bg-yellow-200/45'
+                  }`}
+                  style={{
+                    top: comment.highlight.top,
+                    left: comment.highlight.left,
+                    width,
+                    height
+                  }}
+                  onMouseEnter={() => setActiveHighlight(comment.id)}
+                  onMouseLeave={() => setActiveHighlight(null)}
+                />
               );
             })}
           </div>
@@ -1371,7 +1588,38 @@ const InvoiceView: React.FC = () => {
           </div>
         )}
       </div>
-      </div>
+      </section>
+
+      {/* Right column: Desktop Comments Sidebar (hidden on mobile) */}
+      <aside className="hidden lg:block sticky top-20 w-[min(380px,32vw)] shrink-0 pl-6">
+        {flattenedComments.length > 0 && (
+          <div className="max-h-[calc(100vh-120px)] overflow-auto">
+            <div className="flex flex-col gap-3">
+              {flattenedComments.map((item, index) => (
+                <div
+                  key={item.id}
+                  className={`w-full ${item.isReply ? 'pl-8' : ''}`}
+                >
+                  <CommentCard
+                    name={item.author}
+                    timestampISO={item.createdAt}
+                    avatarUrl={item.avatarUrl}
+                    text={item.text}
+                    commentId={item.id}
+                    isHighlighted={activeHighlight === item.id}
+                    onHighlight={setActiveHighlight}
+                    isReply={item.isReply}
+                    onEdit={item.isReply ? undefined : (newText) => handleEditComment(item.id, newText)}
+                    onDelete={item.isReply ? undefined : () => handleDeleteComment(item.id)}
+                    onReply={(text) => handleReplyToComment(item.parentId || item.id, text)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </aside>
+    </div>
 
       {/* Receipt Modal */}
       {receiptModalOpen && currentReceipt && (
@@ -1419,6 +1667,7 @@ const InvoiceView: React.FC = () => {
         </div>
       )}
     </div>
+  </div>
   );
 };
 

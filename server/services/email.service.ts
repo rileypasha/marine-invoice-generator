@@ -265,7 +265,7 @@ This is an automated notification. Please do not reply to this email.
           <!-- Footer -->
           <tr>
             <td style="padding: 24px 40px; border-top: 1px solid #e9ecef; border-radius: 0 0 8px 8px; text-align: center;">
-              <img src="cid:logo" alt="Marine Group Boat Works" style="max-width: 200px; height: auto; margin: 0 0 16px 0; display: block;" />
+              <img src="cid:logo" alt="Marine Group Boat Works" style="max-width: 200px; height: auto; margin: 0 auto 16px auto; display: block;" />
               <p style="margin: 0; font-size: 12px; color: #868e96; font-style: italic;">This is an automated notification. Please do not reply to this email.</p>
             </td>
           </tr>
@@ -404,7 +404,7 @@ This is an automated notification. Please do not reply to this email.
           <!-- Footer -->
           <tr>
             <td style="padding: 24px 40px; border-top: 1px solid #e9ecef; border-radius: 0 0 8px 8px; text-align: center;">
-              <img src="cid:logo" alt="Marine Group Boat Works" style="max-width: 200px; height: auto; margin: 0 0 16px 0; display: block;" />
+              <img src="cid:logo" alt="Marine Group Boat Works" style="max-width: 200px; height: auto; margin: 0 auto 16px auto; display: block;" />
               <p style="margin: 0; font-size: 12px; color: #868e96; font-style: italic;">This is an automated notification. Please do not reply to this email.</p>
             </td>
           </tr>
@@ -555,7 +555,7 @@ This is an automated notification. Please do not reply to this email.
           <!-- Footer -->
           <tr>
             <td style="padding: 24px 40px; border-top: 1px solid #e9ecef; border-radius: 0 0 8px 8px; text-align: center;">
-              <img src="cid:logo" alt="Marine Group Boat Works" style="max-width: 200px; height: auto; margin: 0 0 16px 0; display: block;" />
+              <img src="cid:logo" alt="Marine Group Boat Works" style="max-width: 200px; height: auto; margin: 0 auto 16px auto; display: block;" />
               <p style="margin: 0; font-size: 12px; color: #868e96; font-style: italic;">This is an automated notification. Please do not reply to this email.</p>
             </td>
           </tr>

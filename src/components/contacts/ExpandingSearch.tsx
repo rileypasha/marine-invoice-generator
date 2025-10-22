@@ -126,7 +126,7 @@ export function ExpandingSearch({
           placeholder={isExpanded ? placeholder : ''}
           disabled={!isExpanded}
           className={`
-            flex-1 h-8 outline-none transition-all duration-300 bg-transparent text-sm
+            flex-1 h-8 outline-none transition-all duration-300 bg-transparent !text-gray-900 text-sm placeholder:text-gray-400
             ${isExpanded ? 'opacity-100 px-3' : 'opacity-0 w-0 px-0'}
           `}
         />
