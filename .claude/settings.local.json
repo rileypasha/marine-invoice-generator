@@ -16,7 +16,10 @@
       "Bash(curl -s http://localhost:3002/src/components/InvoiceTableColumns.tsx)",
       "Bash(lsof -ti:3000,3001,3002,3003)",
       "Bash(xargs kill)",
-      "Bash(lsof -i:3001)"
+      "Bash(lsof -i:3001)",
+      "Bash(git rm:*)",
+      "Bash(git checkout:*)",
+      "Bash(git clean:*)"
     ],
     "deny": [],
     "ask": [],
