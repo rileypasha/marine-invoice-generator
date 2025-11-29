@@ -46,12 +46,15 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
   className?: string;
 }
 
-export const Textarea: React.FC<TextareaProps> = ({ className = '', ...props }) => (
+export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(({ className = '', ...props }, ref) => (
   <textarea
+    ref={ref}
     className={`flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
     {...props}
   />
-);
+));
+
+Textarea.displayName = 'Textarea';
 
 interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;

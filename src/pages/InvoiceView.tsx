@@ -1102,7 +1102,7 @@ const InvoiceView: React.FC = () => {
                       )}
 
                       <div>
-                        <p className="font-medium text-sm text-slate-800 pr-8">{service.description}</p>
+                        <p className="font-medium text-sm text-slate-800 pr-8 whitespace-pre-wrap break-words">{service.description}</p>
                         <p className="text-xs text-muted-foreground">{service.type}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1185,7 +1185,7 @@ const InvoiceView: React.FC = () => {
                       )}
                     >
                       <div className="pr-4">
-                        <p className="font-medium text-red-600 line-through">
+                        <p className="font-medium text-red-600 line-through whitespace-pre-wrap break-words">
                           {deletedItem.description || 'Untitled Service'}
                         </p>
                         <p className="text-xs text-muted-foreground line-through">{deletedItem.jobType || deletedItem.itemType || deletedItem.type || 'Service'}</p>
@@ -1250,6 +1250,8 @@ const InvoiceView: React.FC = () => {
                             diff={diffIndex}
                             status={invoice.status}
                             isNewItem={isNewItem}
+                            className="whitespace-pre-wrap break-words"
+                            renderMode="block"
                           />
                         </p>
                         {service.receiptUrl && (

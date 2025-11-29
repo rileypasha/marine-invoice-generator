@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { SquarePen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -2477,6 +2477,12 @@ const CreateInvoice: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
+  const resizeTextarea = useCallback((textarea: HTMLTextAreaElement | null) => {
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, []);
+
   const removeService = (id: string) => {
     if (isEditMode) {
       // In edit mode, mark as deleted (with strikethrough)
@@ -4293,12 +4299,16 @@ const CreateInvoice: React.FC = () => {
                         {service.jobType !== 'Clearance Fee' && (
                           <div className="space-y-2">
                             <Label htmlFor={`service-description-${index}`} className="!text-black font-medium">Description <span className="text-red-600">*</span></Label>
-                            <Input
+                            <Textarea
                               id={`service-description-${index}`}
                               value={service.description}
+                              rows={3}
                               onChange={(e) => updateService(service.id, 'description', e.target.value)}
+                              onInput={(e) => resizeTextarea(e.currentTarget)}
+                              ref={resizeTextarea}
                               placeholder="e.g. Engine Repair, oil change, hull cleaning"
                               className={cn(
+                                'whitespace-pre-wrap break-words resize-none overflow-hidden leading-5',
                                 isDeleted
                                   ? getDeletedFieldClasses(isDeleted)
                                   : getChangedFieldClasses(`/services/${index}/description`, ['services', index, 'description'])
@@ -4643,7 +4653,14 @@ const CreateInvoice: React.FC = () => {
                                           : "border-slate-200 bg-white"
                                       )}>
                                     <div>
-                                      <p className={cn("font-medium text-sm", isFieldInBackendDiff(`/services/${index}/description`) ? 'text-green-600 font-semibold' : 'text-slate-800')}>{service.description}</p>
+                                      <p
+                                        className={cn(
+                                          'font-medium text-sm whitespace-pre-wrap break-words',
+                                          isFieldInBackendDiff(`/services/${index}/description`) ? 'text-green-600 font-semibold' : 'text-slate-800'
+                                        )}
+                                      >
+                                        {service.description}
+                                      </p>
                                       <p className={cn("text-xs text-muted-foreground", isFieldInBackendDiff(`/services/${index}/jobType`) && 'text-green-600 font-semibold')}>{service.jobType}</p>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -4687,7 +4704,14 @@ const CreateInvoice: React.FC = () => {
                                     serviceIsNew && "bg-green-50 border-l-4 border-l-green-500"
                                   )}>
                                     <div>
-                                      <p className={cn("font-medium", isFieldInBackendDiff(`/services/${index}/description`) ? 'text-green-600 font-semibold' : 'text-slate-800')}>{service.description}</p>
+                                      <p
+                                        className={cn(
+                                          'font-medium whitespace-pre-wrap break-words',
+                                          isFieldInBackendDiff(`/services/${index}/description`) ? 'text-green-600 font-semibold' : 'text-slate-800'
+                                        )}
+                                      >
+                                        {service.description}
+                                      </p>
                                       <p className={cn("text-xs text-muted-foreground", isFieldInBackendDiff(`/services/${index}/jobType`) && 'text-green-600 font-semibold')}>{service.jobType}</p>
                                     </div>
                                     <div className={cn("text-right text-slate-700", isFieldInBackendDiff(`/services/${index}/manualCost`) && 'text-green-600 font-semibold')}>{formatCurrency(service.baseCost)}</div>

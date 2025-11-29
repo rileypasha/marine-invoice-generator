@@ -90,6 +90,10 @@ export function ChangedValue({
   // Only show diff if status indicates change requested (handles both variants) and diff exists
   const shouldShowDiff = isChangeRequested(status) && diff && diff.size > 0;
 
+  const renderBaseValue = () => (
+    className ? <span className={className}>{value}</span> : <>{value}</>
+  );
+
   // If the parent indicates this is a new item, show it as added
   if (shouldShowDiff && isNewItem) {
     return (
@@ -98,14 +102,14 @@ export function ChangedValue({
   }
 
   if (!shouldShowDiff) {
-    return <>{value}</>;
+    return renderBaseValue();
   }
 
   const delta = getDelta(diff, path);
 
   // No change for this field
   if (!delta) {
-    return <>{value}</>;
+    return renderBaseValue();
   }
 
   const { op } = delta;
