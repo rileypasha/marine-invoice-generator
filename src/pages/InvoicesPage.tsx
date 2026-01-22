@@ -265,7 +265,7 @@ const InvoicesPage: React.FC = () => {
 
       if (response.ok) {
         // Refresh the list
-        fetchInvoices(currentPage, searchTerm, filters);
+        fetchInvoices(currentPage, month, searchTerm, filters);
       } else {
         alert('Failed to delete invoice');
       }
@@ -311,7 +311,7 @@ const InvoicesPage: React.FC = () => {
 
       await Promise.all(deletePromises);
       // Refresh the list
-      fetchInvoices(currentPage, searchTerm, filters);
+      fetchInvoices(currentPage, month, searchTerm, filters);
     } catch (error) {
       console.error('Error deleting invoices:', error);
       alert('Error deleting invoices');

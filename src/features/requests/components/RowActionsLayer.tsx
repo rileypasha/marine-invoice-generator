@@ -3,12 +3,22 @@ import { createPortal } from 'react-dom';
 import { Eye, Edit, Trash2 } from 'lucide-react';
 import { useRequestsRowActionsStore } from '../state/rowActions.store';
 
+const prefetchEditRoute = () => import('../../../pages/CreateInvoice');
+
 export default function RequestsRowActionsLayer() {
   const { open, pos, rowId, handlers, close } = useRequestsRowActionsStore();
   const [armed, setArmed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const boxRef = useRef<HTMLDivElement|null>(null);
   const isProcessingActionRef = useRef(false);
+
+  const handleAction = (action: () => void) => (event: React.PointerEvent | React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    isProcessingActionRef.current = true;
+    action();
+    close();
+  };
 
   // Detect mobile viewport
   useEffect(() => {
@@ -22,9 +32,8 @@ export default function RequestsRowActionsLayer() {
     if (open) {
       setArmed(false);
       isProcessingActionRef.current = false;
-      // Use a small delay to ensure the opening click is ignored
-      const timer = setTimeout(() => setArmed(true), 50);
-      return () => clearTimeout(timer);
+      requestAnimationFrame(() => setArmed(true));
+      prefetchEditRoute().catch(() => {});
     }
   }, [open]);
 
@@ -108,11 +117,7 @@ export default function RequestsRowActionsLayer() {
           <button
             role="menuitem"
             className="flex items-center gap-3 w-full text-left px-6 py-3 text-base hover:bg-gray-50 transition-colors"
-            onClick={() => {
-              isProcessingActionRef.current = true;
-              handlers.view(rowId);
-              setTimeout(() => close(), 50);
-            }}
+            onPointerDown={handleAction(() => handlers.view(rowId))}
           >
             <Eye className="h-5 w-5 text-gray-600" />
             <span>View</span>
@@ -120,11 +125,7 @@ export default function RequestsRowActionsLayer() {
           <button
             role="menuitem"
             className="flex items-center gap-3 w-full text-left px-6 py-3 text-base hover:bg-gray-50 transition-colors"
-            onClick={() => {
-              isProcessingActionRef.current = true;
-              handlers.edit(rowId);
-              setTimeout(() => close(), 50);
-            }}
+            onPointerDown={handleAction(() => handlers.edit(rowId))}
           >
             <Edit className="h-5 w-5 text-gray-600" />
             <span>Edit</span>
@@ -132,11 +133,7 @@ export default function RequestsRowActionsLayer() {
           <button
             role="menuitem"
             className="flex items-center gap-3 w-full text-left px-6 py-3 text-base text-red-600 hover:bg-gray-50 transition-colors"
-            onClick={() => {
-              isProcessingActionRef.current = true;
-              handlers.del(rowId);
-              setTimeout(() => close(), 50);
-            }}
+            onPointerDown={handleAction(() => handlers.del(rowId))}
           >
             <Trash2 className="h-5 w-5" />
             <span>Delete</span>
@@ -171,11 +168,7 @@ export default function RequestsRowActionsLayer() {
       <button
         role="menuitem"
         className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-        onClick={() => {
-          isProcessingActionRef.current = true;
-          handlers.view(rowId);
-          setTimeout(() => close(), 50);
-        }}
+        onPointerDown={handleAction(() => handlers.view(rowId))}
       >
         <Eye className="h-4 w-4 text-gray-600" />
         <span>View</span>
@@ -183,11 +176,7 @@ export default function RequestsRowActionsLayer() {
       <button
         role="menuitem"
         className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-        onClick={() => {
-          isProcessingActionRef.current = true;
-          handlers.edit(rowId);
-          setTimeout(() => close(), 50);
-        }}
+        onPointerDown={handleAction(() => handlers.edit(rowId))}
       >
         <Edit className="h-4 w-4 text-gray-600" />
         <span>Edit</span>
@@ -195,11 +184,7 @@ export default function RequestsRowActionsLayer() {
       <button
         role="menuitem"
         className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap text-red-600"
-        onClick={() => {
-          isProcessingActionRef.current = true;
-          handlers.del(rowId);
-          setTimeout(() => close(), 50);
-        }}
+        onPointerDown={handleAction(() => handlers.del(rowId))}
       >
         <Trash2 className="h-4 w-4" />
         <span>Delete</span>
