@@ -105,101 +105,104 @@ export function DataTable<TData, TValue>({
 
   const selectedRows = table.getFilteredSelectedRowModel().rows.map(row => row.original)
   const hasSelectedRows = selectedRows.length > 0
+  const hasTopBar = hasSelectedRows || !!title || showAddButton || onPrint || onImport || onExport
 
   return (
     <div className="w-full">
-      <div className={`flex items-center ${hasSelectedRows ? 'py-2' : 'py-1'}`}>
-        {!hasSelectedRows ? (
-          <>
-            {title && <div className="flex-1">{title}</div>}
-            <div className="flex items-center gap-2 ml-auto">
-          {(onPrint || onImport || onExport) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-8 px-2 text-xs">
-                  <MoreHorizontal className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {onPrint && (
-                  <DropdownMenuItem onClick={onPrint}>
-                    <Printer className="mr-2 h-4 w-4" />
-                    Print this page
-                  </DropdownMenuItem>
+      {hasTopBar && (
+        <div className={`flex items-center ${hasSelectedRows ? 'py-2' : 'py-1'}`}>
+          {!hasSelectedRows ? (
+            <>
+              {title && <div className="flex-1">{title}</div>}
+              <div className="flex items-center gap-2 ml-auto">
+            {(onPrint || onImport || onExport) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-8 px-2 text-xs">
+                    <MoreHorizontal className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {onPrint && (
+                    <DropdownMenuItem onClick={onPrint}>
+                      <Printer className="mr-2 h-4 w-4" />
+                      Print this page
+                    </DropdownMenuItem>
+                  )}
+                  {onImport && (
+                    <DropdownMenuItem onClick={onImport}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Import data from CSV
+                    </DropdownMenuItem>
+                  )}
+                  {onExport && (
+                    <DropdownMenuItem onClick={onExport}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Export data as CSV
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+                {showAddButton && (
+                  <Button onClick={onAddClick} className="h-8 px-3 text-xs transition-none !bg-[#1E3A5F] !text-white hover:!bg-[#152b47]">
+                    <Plus className="h-3 w-3 mr-1" />
+                    {addButtonText}
+                  </Button>
                 )}
-                {onImport && (
-                  <DropdownMenuItem onClick={onImport}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Import data from CSV
-                  </DropdownMenuItem>
-                )}
-                {onExport && (
-                  <DropdownMenuItem onClick={onExport}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export data as CSV
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-              {showAddButton && (
-                <Button onClick={onAddClick} className="h-8 px-3 text-xs transition-none !bg-[#1E3A5F] !text-white hover:!bg-[#152b47]">
-                  <Plus className="h-3 w-3 mr-1" />
-                  {addButtonText}
-                </Button>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex items-center pl-6">
-              {title && <div className="mr-4">{title}</div>}
-              <span className="text-sm font-medium">
-                {selectedRows.length} item{selectedRows.length === 1 ? '' : 's'} selected
-              </span>
-            </div>
-            <div className="flex items-center gap-2 ml-auto pr-6">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.resetRowSelection()}
-                className="h-8 px-2 text-xs transition-none"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear
-              </Button>
-              {onBulkDelete && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => onBulkDelete(selectedRows)}
-                  className="h-8 px-2 text-xs transition-none"
-                >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Delete
-                </Button>
-              )}
-              {onBulkExport && (
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center pl-6">
+                {title && <div className="mr-4">{title}</div>}
+                <span className="text-sm font-medium">
+                  {selectedRows.length} item{selectedRows.length === 1 ? '' : 's'} selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2 ml-auto pr-6">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => onBulkExport(selectedRows)}
+                  onClick={() => table.resetRowSelection()}
                   className="h-8 px-2 text-xs transition-none"
                 >
-                  <Download className="h-3 w-3 mr-1" />
-                  Export
+                  <X className="h-3 w-3 mr-1" />
+                  Clear
                 </Button>
-              )}
-              {showAddButton && (
-                <Button onClick={onAddClick} className="h-8 px-3 text-xs transition-none !bg-[#1E3A5F] !text-white hover:!bg-[#152b47]">
-                  <Plus className="h-3 w-3 mr-1" />
-                  {addButtonText}
-                </Button>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+                {onBulkDelete && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onBulkDelete(selectedRows)}
+                    className="h-8 px-2 text-xs transition-none"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Delete
+                  </Button>
+                )}
+                {onBulkExport && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onBulkExport(selectedRows)}
+                    className="h-8 px-2 text-xs transition-none"
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    Export
+                  </Button>
+                )}
+                {showAddButton && (
+                  <Button onClick={onAddClick} className="h-8 px-3 text-xs transition-none !bg-[#1E3A5F] !text-white hover:!bg-[#152b47]">
+                    <Plus className="h-3 w-3 mr-1" />
+                    {addButtonText}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
       {searchColumn && (
         <div className="flex justify-end -mt-2 pb-4">
           <div className={`flex items-center border border-gray-300 rounded-md transition-all duration-300 ease-in-out overflow-hidden ${

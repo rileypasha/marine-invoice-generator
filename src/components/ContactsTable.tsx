@@ -527,7 +527,7 @@ export function ContactsTable({
 
         <div className="border-r border-b overflow-x-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="before:content-none">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
