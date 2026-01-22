@@ -112,6 +112,7 @@ interface ServiceSummaryItem {
   id: string;
   description: string;
   type: string;
+  quantity: number;
   cost: number;
   markupAmount: number;
   taxAmount: number;
@@ -795,6 +796,7 @@ const InvoiceView: React.FC = () => {
       let totalTax = 0;
 
       const services: ServiceSummaryItem[] = sanitizedItems.map((item, index) => {
+        const quantity = Number.isFinite(item.quantity) ? Number(item.quantity) : 1;
         const cost = calculateLineItemCost(item);
         const costWithMarkup = applyMarkup(cost, item, scope);
         const markupAmount = costWithMarkup - cost;
@@ -809,6 +811,7 @@ const InvoiceView: React.FC = () => {
           id: item.id || `service-${index}`,
           description: item.description || 'Untitled service',
           type: item.jobType || item.itemType || item.type || 'Service',
+          quantity,
           cost,
           markupAmount,
           taxAmount,
@@ -1110,11 +1113,15 @@ const InvoiceView: React.FC = () => {
                         <p className="font-medium text-sm text-slate-800 pr-8 whitespace-pre-wrap break-words">{service.description}</p>
                         <p className="text-xs text-muted-foreground">{service.type}</p>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <span className="text-slate-500">Cost:</span>
-                          <span className="ml-1 text-slate-700">{formatCurrency(service.cost)}</span>
-                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-slate-500">Qty:</span>
+                            <span className="ml-1 text-slate-700">{service.quantity}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Cost:</span>
+                            <span className="ml-1 text-slate-700">{formatCurrency(service.cost)}</span>
+                          </div>
                         <div>
                           <span className="text-slate-500">Markup:</span>
                           <span className="ml-1 text-slate-700">{formatCurrency(service.markupAmount)}</span>
@@ -1136,8 +1143,9 @@ const InvoiceView: React.FC = () => {
                 {/* Desktop: Table Layout */}
                 <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
                   <div className="min-w-[600px]">
-                    <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    <div className="grid grid-cols-[2fr_0.6fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
                       <span>Item</span>
+                      <span className="text-right">Qty</span>
                       <span className="text-right">Cost</span>
                       <span className="text-right">Markup</span>
                       <span className="text-right">Tax</span>
@@ -1185,7 +1193,7 @@ const InvoiceView: React.FC = () => {
                     <div
                       key={deletedItem.id || `deleted-${index}`}
                       className={cn(
-                        'grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm',
+                        'grid grid-cols-[2fr_0.6fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm',
                         shouldShowRowDiff && 'border-l-4 bg-red-50 border-red-500 opacity-75'
                       )}
                     >
@@ -1195,6 +1203,9 @@ const InvoiceView: React.FC = () => {
                         </p>
                         <p className="text-xs text-muted-foreground line-through">{deletedItem.jobType || deletedItem.itemType || deletedItem.type || 'Service'}</p>
                       </div>
+                      <span className="text-right text-red-600 line-through">
+                        -
+                      </span>
                       <span className="text-right text-red-600 line-through">
                         $0.00
                       </span>
@@ -1239,7 +1250,7 @@ const InvoiceView: React.FC = () => {
                   <div
                     key={service.id}
                     className={cn(
-                      'grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm',
+                      'grid grid-cols-[2fr_0.6fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm',
                       itemDiffOp && 'border-l-4',
                       itemDiffOp?.op === 'add' && 'bg-green-50 border-green-500',
                       itemDiffOp?.op === 'remove' && 'bg-red-50 border-red-500 opacity-75',
@@ -1273,6 +1284,15 @@ const InvoiceView: React.FC = () => {
                       </div>
                       <p className="text-xs text-muted-foreground">{service.type}</p>
                     </div>
+                    <span className="text-right">
+                      <ChangedValue
+                        path={`/lineItems/${index}/quantity`}
+                        value={String(service.quantity)}
+                        diff={diffIndex}
+                        status={invoice.status}
+                        isNewItem={isNewItem}
+                      />
+                    </span>
                     <span className="text-right">
                       <ChangedValue
                         path={`/lineItems/${index}/cost`}
@@ -1682,31 +1702,23 @@ const calculateLineItemCost = (item: LineItem | null | undefined): number => {
   if (!item || typeof item !== 'object') {
     return 0;
   }
-  if (item.manualCost != null && item.manualCost !== 0) {
-    return item.manualCost;
-  }
+  const quantity = Number.isFinite(item.quantity) ? Number(item.quantity) : 1;
 
   let cost = item.cost !== undefined ? parseFloat(String(item.cost)) : 0;
   if (Number.isNaN(cost)) {
     cost = 0;
   }
 
-  const scope = item.scope;
-  if (!scope || typeof scope !== 'object') {
+  if (cost > 0) {
     return cost;
   }
 
-  let markupRate = item.markupRate !== undefined ? item.markupRate : (scope?.markupRate ?? 2.5);
-  markupRate = parseFloat(String(markupRate));
-  if (Number.isNaN(markupRate)) {
-    markupRate = 0;
+  if (item.manualCost != null && item.manualCost !== 0) {
+    const manualCost = parseFloat(String(item.manualCost)) || 0;
+    return item.jobType === 'Clearance Fee' ? manualCost : manualCost * quantity;
   }
 
-  if (markupRate > 1) {
-    markupRate = markupRate / 100;
-  }
-
-  return cost * (1 + markupRate);
+  return 0;
 };
 
 const calculateLineItemTax = (item: LineItem | null | undefined): number => {

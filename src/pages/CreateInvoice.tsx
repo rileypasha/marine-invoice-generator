@@ -2026,12 +2026,15 @@ const CreateInvoice: React.FC = () => {
 
   // Calculation functions based on legacy business logic
   const calculateLineItemCost = (service: Service): number => {
+    const quantity = Number.isFinite(service.quantity) ? Number(service.quantity) : 1;
+
     // Priority: manualCost > cost > calculated from hours
     if (service.manualCost != null && service.manualCost !== 0) {
-      return parseFloat(String(service.manualCost)) || 0;
+      const manualCost = parseFloat(String(service.manualCost)) || 0;
+      return service.jobType === 'Clearance Fee' ? manualCost : manualCost * quantity;
     }
     if (service.rate != null && service.rate !== 0) {
-      return parseFloat(String(service.rate)) * (service.quantity || 1);
+      return parseFloat(String(service.rate)) * quantity;
     }
 
     // Calculate from labor hours for labor items
@@ -2064,7 +2067,7 @@ const CreateInvoice: React.FC = () => {
       return (laborHours * 85) + (otHours * 127.5);
     }
 
-    return service.rate * service.quantity;
+    return service.rate * quantity;
   };
 
   const applyMarkup = (cost: number, service: Service): number => {
@@ -2205,8 +2208,14 @@ const CreateInvoice: React.FC = () => {
       normalizedService.manualCost != null && normalizedService.manualCost > 0
         ? roundCurrency(normalizedService.manualCost)
         : null;
+    const manualCostTotal =
+      manualCostValue !== null
+        ? (normalizedService.jobType === 'Clearance Fee'
+          ? manualCostValue
+          : roundCurrency(manualCostValue * quantity))
+        : null;
 
-    const effectiveBaseCost = manualCostValue !== null ? manualCostValue : baseCost;
+    const effectiveBaseCost = manualCostTotal !== null ? manualCostTotal : baseCost;
     const costWithMarkup = roundCurrency(applyMarkup(effectiveBaseCost, normalizedService));
     const taxAmountValue = roundCurrency(calculateTax(normalizedService, costWithMarkup));
 
@@ -2269,6 +2278,7 @@ const CreateInvoice: React.FC = () => {
           jobType: snapshot.jobType || '',
           itemType: snapshot.itemType || '',
           description: snapshot.description,
+          quantity: snapshot.quantity,
           manualCost: snapshot.manualCost,
           laborHours: snapshot.laborHours || null,
           otHours: snapshot.otHours || null,
@@ -4073,6 +4083,8 @@ const CreateInvoice: React.FC = () => {
                       (service.jobType &&
                         service.jobType !== 'Manual Entry' &&
                         service.jobType !== 'Agent Services');
+                    const shouldShowQuantity =
+                      shouldShowManualCostInputs && service.jobType !== 'Clearance Fee';
 
                     return (
                       <div
@@ -4249,67 +4261,95 @@ const CreateInvoice: React.FC = () => {
                         )}
 
                         {shouldShowManualCostInputs && (
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor={`service-manual-cost-${index}`}
-                              className={
-                                (service.jobType === 'Clearance Fee' && isFieldMissing(`Clearance Fee Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Manual Entry' && service.itemType === 'Material' && isFieldMissing(`Material Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Manual Entry' && service.itemType === 'Subcontractor' && isFieldMissing(`Subcontractor Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Pilotage' && isFieldMissing(`Pilotage Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Car Rental' && isFieldMissing(`Car Rental Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Trash Removal' && isFieldMissing(`Trash Removal Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Good Stew' && isFieldMissing(`Good Stew Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`))
-                                  ? "!text-red-600 font-medium"
-                                  : "!text-black font-medium"
-                              }
-                            >
-                              Cost {(service.jobType === 'Clearance Fee' || service.jobType === 'Pilotage' || service.jobType === 'Car Rental' || service.jobType === 'Trash Removal' || service.jobType === 'Good Stew' || service.jobType === 'Crew Placement' || (service.jobType === 'Manual Entry' && (service.itemType === 'Material' || service.itemType === 'Subcontractor'))) && <span className="text-red-600">*</span>}
-                            </Label>
-                            <Input
-                              id={`service-manual-cost-${index}`}
-                              type="text"
-                              inputMode="decimal"
-                              value={getManualCostInputValue(service, focusedCostId === service.id)}
-                              onChange={(e) =>
-                                updateService(service.id, 'manualCost', e.target.value)
-                              }
-                              onFocus={() => setFocusedCostId(service.id)}
-                              onBlur={() => {
-                                setFocusedCostId(null);
-                                updateService(
-                                  service.id,
-                                  'manualCost',
-                                  service.manualCostInput ?? ''
-                                );
-                              }}
-                              placeholder="$0.00"
-                              className={cn(
-                                isDeleted
-                                  ? getDeletedFieldClasses(isDeleted)
-                                  : getChangedFieldClasses(`/services/${index}/manualCost`, ['services', index, 'manualCost']),
-                                ((service.jobType === 'Clearance Fee' && isFieldMissing(`Clearance Fee Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Manual Entry' && service.itemType === 'Material' && isFieldMissing(`Material Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Manual Entry' && service.itemType === 'Subcontractor' && isFieldMissing(`Subcontractor Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Pilotage' && isFieldMissing(`Pilotage Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Car Rental' && isFieldMissing(`Car Rental Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Trash Removal' && isFieldMissing(`Trash Removal Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Good Stew' && isFieldMissing(`Good Stew Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`))) && "border-red-500 focus:ring-red-500"
-                              )}
-                              style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/manualCost`, ['services', index, 'manualCost'])}
-                            />
-                            {((service.jobType === 'Clearance Fee' && isFieldMissing(`Clearance Fee Cost (Service ${index + 1})`)) ||
-                              (service.jobType === 'Manual Entry' && service.itemType === 'Material' && isFieldMissing(`Material Cost (Service ${index + 1})`)) ||
-                              (service.jobType === 'Manual Entry' && service.itemType === 'Subcontractor' && isFieldMissing(`Subcontractor Cost (Service ${index + 1})`)) ||
-                              (service.jobType === 'Pilotage' && isFieldMissing(`Pilotage Cost (Service ${index + 1})`)) ||
-                              (service.jobType === 'Car Rental' && isFieldMissing(`Car Rental Cost (Service ${index + 1})`)) ||
-                              (service.jobType === 'Trash Removal' && isFieldMissing(`Trash Removal Cost (Service ${index + 1})`)) ||
-                              (service.jobType === 'Good Stew' && isFieldMissing(`Good Stew Cost (Service ${index + 1})`)) ||
-                              (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`))) && (
-                              <p className="text-xs text-red-600">Cost is required for this service type</p>
+                          <div className={cn(shouldShowQuantity ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-2")}>
+                            {shouldShowQuantity && (
+                              <div className="space-y-2">
+                                <Label htmlFor={`service-quantity-${index}`} className="!text-black font-medium">
+                                  Quantity
+                                </Label>
+                                <Input
+                                  id={`service-quantity-${index}`}
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={service.quantityDisplay ?? ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+                                      updateService(service.id, 'quantity', value);
+                                    }
+                                  }}
+                                  placeholder="1"
+                                  className={cn(
+                                    isDeleted
+                                      ? getDeletedFieldClasses(isDeleted)
+                                      : getChangedFieldClasses(`/services/${index}/quantity`, ['services', index, 'quantity'])
+                                  )}
+                                  style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/quantity`, ['services', index, 'quantity'])}
+                                />
+                              </div>
                             )}
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor={`service-manual-cost-${index}`}
+                                className={
+                                  (service.jobType === 'Clearance Fee' && isFieldMissing(`Clearance Fee Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Manual Entry' && service.itemType === 'Material' && isFieldMissing(`Material Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Manual Entry' && service.itemType === 'Subcontractor' && isFieldMissing(`Subcontractor Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Pilotage' && isFieldMissing(`Pilotage Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Car Rental' && isFieldMissing(`Car Rental Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Trash Removal' && isFieldMissing(`Trash Removal Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Good Stew' && isFieldMissing(`Good Stew Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`))
+                                    ? "!text-red-600 font-medium"
+                                    : "!text-black font-medium"
+                                }
+                              >
+                                {shouldShowQuantity ? 'Unit Cost' : 'Cost'} {(service.jobType === 'Clearance Fee' || service.jobType === 'Pilotage' || service.jobType === 'Car Rental' || service.jobType === 'Trash Removal' || service.jobType === 'Good Stew' || service.jobType === 'Crew Placement' || (service.jobType === 'Manual Entry' && (service.itemType === 'Material' || service.itemType === 'Subcontractor'))) && <span className="text-red-600">*</span>}
+                              </Label>
+                              <Input
+                                id={`service-manual-cost-${index}`}
+                                type="text"
+                                inputMode="decimal"
+                                value={getManualCostInputValue(service, focusedCostId === service.id)}
+                                onChange={(e) =>
+                                  updateService(service.id, 'manualCost', e.target.value)
+                                }
+                                onFocus={() => setFocusedCostId(service.id)}
+                                onBlur={() => {
+                                  setFocusedCostId(null);
+                                  updateService(
+                                    service.id,
+                                    'manualCost',
+                                    service.manualCostInput ?? ''
+                                  );
+                                }}
+                                placeholder="$0.00"
+                                className={cn(
+                                  isDeleted
+                                    ? getDeletedFieldClasses(isDeleted)
+                                    : getChangedFieldClasses(`/services/${index}/manualCost`, ['services', index, 'manualCost']),
+                                  ((service.jobType === 'Clearance Fee' && isFieldMissing(`Clearance Fee Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Manual Entry' && service.itemType === 'Material' && isFieldMissing(`Material Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Manual Entry' && service.itemType === 'Subcontractor' && isFieldMissing(`Subcontractor Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Pilotage' && isFieldMissing(`Pilotage Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Car Rental' && isFieldMissing(`Car Rental Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Trash Removal' && isFieldMissing(`Trash Removal Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Good Stew' && isFieldMissing(`Good Stew Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`))) && "border-red-500 focus:ring-red-500"
+                                )}
+                                style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/manualCost`, ['services', index, 'manualCost'])}
+                              />
+                              {((service.jobType === 'Clearance Fee' && isFieldMissing(`Clearance Fee Cost (Service ${index + 1})`)) ||
+                                (service.jobType === 'Manual Entry' && service.itemType === 'Material' && isFieldMissing(`Material Cost (Service ${index + 1})`)) ||
+                                (service.jobType === 'Manual Entry' && service.itemType === 'Subcontractor' && isFieldMissing(`Subcontractor Cost (Service ${index + 1})`)) ||
+                                (service.jobType === 'Pilotage' && isFieldMissing(`Pilotage Cost (Service ${index + 1})`)) ||
+                                (service.jobType === 'Car Rental' && isFieldMissing(`Car Rental Cost (Service ${index + 1})`)) ||
+                                (service.jobType === 'Trash Removal' && isFieldMissing(`Trash Removal Cost (Service ${index + 1})`)) ||
+                                (service.jobType === 'Good Stew' && isFieldMissing(`Good Stew Cost (Service ${index + 1})`)) ||
+                                (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`))) && (
+                                <p className="text-xs text-red-600">Cost is required for this service type</p>
+                              )}
+                            </div>
                           </div>
                         )}
 
