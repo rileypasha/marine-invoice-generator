@@ -413,18 +413,27 @@ const CreateInvoice: React.FC = () => {
       : rawValue;
   };
 
-  const getLaborHoursInputValue = (service: Service, isFocused: boolean): string => {
+  const getHoursInputValue = (
+    inputValue: string | undefined,
+    numericValue: number | undefined,
+    isFocused: boolean
+  ): string => {
+    const hasInputValue = inputValue !== undefined && inputValue !== null && inputValue !== '';
     if (isFocused) {
-      return service.laborHoursInput ?? (service.laborHours !== undefined && service.laborHours !== null && service.laborHours !== 0 ? service.laborHours.toString() : '');
+      return hasInputValue ? inputValue : (numericValue !== undefined && numericValue !== null && numericValue !== 0 ? numericValue.toString() : '');
     }
-    return service.laborHours !== undefined && service.laborHours !== null && service.laborHours !== 0 ? service.laborHours.toString() : '';
+    if (hasInputValue) {
+      return inputValue;
+    }
+    return numericValue !== undefined && numericValue !== null && numericValue !== 0 ? numericValue.toString() : '';
+  };
+
+  const getLaborHoursInputValue = (service: Service, isFocused: boolean): string => {
+    return getHoursInputValue(service.laborHoursInput, service.laborHours, isFocused);
   };
 
   const getOtHoursInputValue = (service: Service, isFocused: boolean): string => {
-    if (isFocused) {
-      return service.otHoursInput ?? (service.otHours !== undefined && service.otHours !== null && service.otHours !== 0 ? service.otHours.toString() : '');
-    }
-    return service.otHours !== undefined && service.otHours !== null && service.otHours !== 0 ? service.otHours.toString() : '';
+    return getHoursInputValue(service.otHoursInput, service.otHours, isFocused);
   };
 
   const clearTextSelection = () => {
@@ -2028,14 +2037,14 @@ const CreateInvoice: React.FC = () => {
     if (service.jobType === 'Manual Entry' && service.itemType === 'Labor') {
       const laborHours = parseFloat(String(service.laborHours)) || 0;
       const otHours = parseFloat(String(service.otHours)) || 0;
-      return (laborHours * 80) + (otHours * 120);
+      return (laborHours * 85) + (otHours * 125);
     }
 
     // Agent Services calculation
     if (service.jobType === 'Agent Services') {
       const laborHours = parseFloat(String(service.laborHours)) || 0;
       const otHours = parseFloat(String(service.otHours)) || 0;
-      return (laborHours * 80) + (otHours * 120);
+      return (laborHours * 85) + (otHours * 125);
     }
 
     // Clearance Fee - use manual cost if set, otherwise auto-calculate
@@ -2539,13 +2548,19 @@ const CreateInvoice: React.FC = () => {
       }
     });
 
+    const normalizeHours = (value: number | null | undefined): number => {
+      return Number.isFinite(value) ? Number(value) : 0;
+    };
+
     // Check Manual Entry > Labor services require hours fields
     invoiceData.services.forEach((service, index) => {
       if (service.jobType === 'Manual Entry' && service.itemType === 'Labor') {
-        if (service.laborHours === undefined || service.laborHours === null || service.laborHours < 0) {
+        const laborHours = normalizeHours(service.laborHours);
+        const otHours = normalizeHours(service.otHours);
+        if (laborHours < 0) {
           missingFields.push(`Regular Hours (Service ${index + 1})`);
         }
-        if (service.otHours === undefined || service.otHours === null || service.otHours < 0) {
+        if (otHours < 0) {
           missingFields.push(`Overtime Hours (Service ${index + 1})`);
         }
       }
@@ -2607,10 +2622,12 @@ const CreateInvoice: React.FC = () => {
     // Check Agent Services require hours fields
     invoiceData.services.forEach((service, index) => {
       if (service.jobType === 'Agent Services') {
-        if (service.laborHours === undefined || service.laborHours === null || service.laborHours < 0) {
+        const laborHours = normalizeHours(service.laborHours);
+        const otHours = normalizeHours(service.otHours);
+        if (laborHours < 0) {
           missingFields.push(`Agent Services Regular Hours (Service ${index + 1})`);
         }
-        if (service.otHours === undefined || service.otHours === null || service.otHours < 0) {
+        if (otHours < 0) {
           missingFields.push(`Agent Services Overtime Hours (Service ${index + 1})`);
         }
       }
