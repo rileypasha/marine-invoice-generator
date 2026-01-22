@@ -86,8 +86,13 @@ export function VesselsToolbar({
     monthlyInactive: vessels.filter(v => (v.monthly_invoice_count || 0) === 0).length,
   };
 
-  // Segment options for ToolbarSelect
-  const segmentOptions: ToolbarSelectOption[] = [
+  // Determine selected value based on segment and fleet state
+  const selectedActivityValue = activeFleet !== 'all'
+    ? `${activeFleet}-monthly`
+    : activeSegment;
+
+  // Combined activity options for ToolbarSelect
+  const activityOptions: ToolbarSelectOption[] = [
     {
       value: 'all',
       label: 'All Activity'
@@ -103,43 +108,35 @@ export function VesselsToolbar({
       label: 'Inactive',
       icon: <Circle className="h-3.5 w-3.5" />,
       count: calculatedCounts.inactive
-    }
-  ];
-
-  // Fleet options for ToolbarSelect (secondary segment)
-  const fleetOptions: ToolbarSelectOption[] = [
-    { value: 'all', label: 'Monthly Activity' },
+    },
+    { value: 'all-monthly', label: 'Monthly Activity' },
     {
-      value: 'active',
-      label: 'Active',
+      value: 'active-monthly',
+      label: 'Active (Monthly)',
       icon: <CheckCircle className="h-3.5 w-3.5" />,
       count: calculatedCounts.monthlyActive
     },
     {
-      value: 'inactive',
-      label: 'Inactive',
+      value: 'inactive-monthly',
+      label: 'Inactive (Monthly)',
       icon: <Circle className="h-3.5 w-3.5" />,
       count: calculatedCounts.monthlyInactive
     }
   ];
 
-  const handleSegmentChange = (newSegment: string) => {
-    // Call external handler if provided (updates table state directly)
-    if (externalSegmentHandler) {
-      externalSegmentHandler(newSegment as typeof segment);
-    } else {
-      // Fallback to URL update only
-      set({ segment: newSegment as typeof segment });
+  const handleActivityChange = (newActivity: string) => {
+    if (newActivity.endsWith('-monthly')) {
+      const baseValue = newActivity.replace('-monthly', '');
+      set({ fleet: baseValue });
+      if (externalFleetHandler) {
+        externalFleetHandler(baseValue);
+      }
+      return;
     }
-  };
 
-  const handleFleetChange = (newFleet: string) => {
-    // Call external handler if provided (updates table state directly)
-    if (externalFleetHandler) {
-      externalFleetHandler(newFleet);
-    } else {
-      // Fallback to URL update only
-      set({ fleet: newFleet });
+    set({ segment: newActivity as typeof segment });
+    if (externalSegmentHandler) {
+      externalSegmentHandler(newActivity as typeof segment);
     }
   };
 
@@ -226,17 +223,10 @@ export function VesselsToolbar({
           {/* Left side: Dropdown selects */}
           <div className="flex items-center gap-2">
             <ToolbarSelect
-              label="Segment"
-              value={activeSegment}
-              options={segmentOptions}
-              onChange={handleSegmentChange}
-              showCounts={true}
-            />
-            <ToolbarSelect
-              label="Fleet"
-              value={activeFleet}
-              options={fleetOptions}
-              onChange={handleFleetChange}
+              label="Activity"
+              value={selectedActivityValue}
+              options={activityOptions}
+              onChange={handleActivityChange}
               showCounts={true}
             />
           </div>

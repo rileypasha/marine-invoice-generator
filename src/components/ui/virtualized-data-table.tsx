@@ -240,7 +240,7 @@ export function VirtualizedDataTable<TData, TValue>({
       )}
 
       {/* Virtualized Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overflow-y-visible">
         <div className="min-w-[1200px] md:min-w-0">
           <div
             ref={tableContainerRef}

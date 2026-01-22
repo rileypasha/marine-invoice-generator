@@ -229,9 +229,9 @@ export function DataTable<TData, TValue>({
         </div>
       )}
       {/* Airtable-style table without card wrapper - wrapped for mobile horizontal scroll */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overflow-y-visible bg-gray-50">
         <div style={{ minWidth: '1200px' }}>
-          <Table className="w-full table-fixed border-collapse">
+          <Table className="w-full table-fixed border-collapse bg-gray-50">
             {colWidths && (
               <colgroup>
                 {colWidths.map(col => (

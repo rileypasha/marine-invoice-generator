@@ -26,7 +26,7 @@ const SimpleTableHeader = React.forwardRef<
   <thead
     ref={ref}
     className={cn(
-      "bg-gray-50/50 [&_tr]:border-b",
+      "sticky top-0 z-30 bg-gray-50 [&_tr]:border-b",
       className
     )}
     {...props}
@@ -80,7 +80,7 @@ const SimpleTableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-12 px-4 text-left align-middle font-medium text-gray-500 [&:has([role=checkbox])]:pr-0",
+      "sticky top-0 z-20 h-12 px-4 text-left align-middle font-medium text-gray-500 bg-gray-50 [&:has([role=checkbox])]:pr-0",
       className
     )}
     {...props}

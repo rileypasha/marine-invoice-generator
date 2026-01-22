@@ -12,8 +12,7 @@ export default function RequestsRowActionsLayer() {
   const boxRef = useRef<HTMLDivElement|null>(null);
   const isProcessingActionRef = useRef(false);
 
-  const handleAction = (action: () => void) => (event: React.PointerEvent | React.MouseEvent) => {
-    event.preventDefault();
+  const handleAction = (action: () => void) => (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     isProcessingActionRef.current = true;
     action();
@@ -40,7 +39,8 @@ export default function RequestsRowActionsLayer() {
   useEffect(()=>{
     if (!open) return;
     const onPD = (ev: PointerEvent) => {
-      const t = ev.target as HTMLElement;
+      const t = ev.target instanceof Element ? ev.target : null;
+      if (!t) return;
       if (!armed) return; // ignore the opening click
       if (isProcessingActionRef.current) return; // Don't close while processing an action
       if (t.closest('[data-row-actions]') || t.closest('[data-row-actions-trigger]')) return;
@@ -117,7 +117,8 @@ export default function RequestsRowActionsLayer() {
           <button
             role="menuitem"
             className="flex items-center gap-3 w-full text-left px-6 py-3 text-base hover:bg-gray-50 transition-colors"
-            onPointerDown={handleAction(() => handlers.view(rowId))}
+            onClick={handleAction(() => handlers.view(rowId))}
+            type="button"
           >
             <Eye className="h-5 w-5 text-gray-600" />
             <span>View</span>
@@ -125,7 +126,8 @@ export default function RequestsRowActionsLayer() {
           <button
             role="menuitem"
             className="flex items-center gap-3 w-full text-left px-6 py-3 text-base hover:bg-gray-50 transition-colors"
-            onPointerDown={handleAction(() => handlers.edit(rowId))}
+            onClick={handleAction(() => handlers.edit(rowId))}
+            type="button"
           >
             <Edit className="h-5 w-5 text-gray-600" />
             <span>Edit</span>
@@ -133,7 +135,8 @@ export default function RequestsRowActionsLayer() {
           <button
             role="menuitem"
             className="flex items-center gap-3 w-full text-left px-6 py-3 text-base text-red-600 hover:bg-gray-50 transition-colors"
-            onPointerDown={handleAction(() => handlers.del(rowId))}
+            onClick={handleAction(() => handlers.del(rowId))}
+            type="button"
           >
             <Trash2 className="h-5 w-5" />
             <span>Delete</span>
@@ -168,7 +171,8 @@ export default function RequestsRowActionsLayer() {
       <button
         role="menuitem"
         className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-        onPointerDown={handleAction(() => handlers.view(rowId))}
+        onClick={handleAction(() => handlers.view(rowId))}
+        type="button"
       >
         <Eye className="h-4 w-4 text-gray-600" />
         <span>View</span>
@@ -176,7 +180,8 @@ export default function RequestsRowActionsLayer() {
       <button
         role="menuitem"
         className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-        onPointerDown={handleAction(() => handlers.edit(rowId))}
+        onClick={handleAction(() => handlers.edit(rowId))}
+        type="button"
       >
         <Edit className="h-4 w-4 text-gray-600" />
         <span>Edit</span>
@@ -184,7 +189,8 @@ export default function RequestsRowActionsLayer() {
       <button
         role="menuitem"
         className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap text-red-600"
-        onPointerDown={handleAction(() => handlers.del(rowId))}
+        onClick={handleAction(() => handlers.del(rowId))}
+        type="button"
       >
         <Trash2 className="h-4 w-4" />
         <span>Delete</span>
