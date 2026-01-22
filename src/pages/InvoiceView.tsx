@@ -773,7 +773,12 @@ const InvoiceView: React.FC = () => {
 
   const calculateTax = (item: LineItem, totalWithMarkup: number): number => {
     // Clearance Fee is always non-taxable
-    if (item.jobType === 'Clearance Fee' || item.isTaxExempt || item.taxStatus === 'no_tax') {
+    if (item.jobType === 'Clearance Fee' || item.isTaxExempt) {
+      return 0;
+    }
+
+    const normalizedStatus = typeof item.taxStatus === 'string' ? item.taxStatus.toLowerCase() : '';
+    if (normalizedStatus !== 'taxable') {
       return 0;
     }
 
@@ -1731,7 +1736,8 @@ const calculateLineItemTax = (item: LineItem | null | undefined): number => {
 
   const totalWithMarkup = cost * (1 + markupRate);
 
-  if (item.taxStatus === 'no_tax') {
+  const normalizedStatus = typeof item.taxStatus === 'string' ? item.taxStatus.toLowerCase() : '';
+  if (normalizedStatus !== 'taxable') {
     return 0;
   }
 

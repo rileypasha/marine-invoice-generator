@@ -1472,6 +1472,7 @@ const CreateInvoice: React.FC = () => {
         const resolvedContactName =
           customerData.contactName ||
           customerData.contact_name ||
+          invoice.contactName ||
           invoice.customer?.contact_name ||
           invoice.customerName ||
           '';
