@@ -280,44 +280,46 @@ export function VesselsTable({
       id: "actions",
       header: "",
       enableHiding: false,
-      meta: { width: 'w-16' },
+      meta: { width: 'w-16', className: 'p-0' },
       cell: ({ row }) => {
         const vessel = row.original;
 
         return (
-          <button
-            aria-label="Row actions"
-            data-row-actions-trigger
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          <div className="flex items-center justify-center">
+            <button
+              aria-label="Row actions"
+              data-row-actions-trigger
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
 
-              // Smart positioning to prevent dropdown overflow
-              const dropdownWidth = 150; // Estimated width of dropdown menu
-              const buttonRight = r.right + window.scrollX;
-              const viewportWidth = window.innerWidth;
+                // Smart positioning to prevent dropdown overflow
+                const dropdownWidth = 150; // Estimated width of dropdown menu
+                const buttonRight = r.right + window.scrollX;
+                const viewportWidth = window.innerWidth;
 
-              // If dropdown would overflow right edge, align it to the right of the button
-              const left = (buttonRight + dropdownWidth > viewportWidth)
-                ? buttonRight - dropdownWidth  // Align right edges
-                : r.left + window.scrollX;      // Default: align left edges
+                // If dropdown would overflow right edge, align it to the right of the button
+                const left = (buttonRight + dropdownWidth > viewportWidth)
+                  ? buttonRight - dropdownWidth  // Align right edges
+                  : r.left + window.scrollX;      // Default: align left edges
 
-              openRowActions({
-                rowId: vessel.id,
-                pos: { top: r.bottom + window.scrollY, left },
-                handlers: {
-                  viewInvoices: (id) => handleViewInvoices(vessel),
-                  newInvoice: (id) => handleNewInvoice(vessel),
-                  edit: (id) => onEdit?.(vessel.id) || navigate(`/vessels/${vessel.id}/edit`),
-                  del: (id) => handleSingleDelete(vessel),
-                }
-              });
-            }}
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-gray-100 hover:bg-gray-200 h-8 w-8 p-0"
-          >
-            <MoreVertical className="h-4 w-4 text-gray-600" />
-          </button>
+                openRowActions({
+                  rowId: vessel.id,
+                  pos: { top: r.bottom + window.scrollY, left },
+                  handlers: {
+                    viewInvoices: (id) => handleViewInvoices(vessel),
+                    newInvoice: (id) => handleNewInvoice(vessel),
+                    edit: (id) => onEdit?.(vessel.id) || navigate(`/vessels/${vessel.id}/edit`),
+                    del: (id) => handleSingleDelete(vessel),
+                  }
+                });
+              }}
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-gray-100 hover:bg-gray-200 h-7 w-4 p-0"
+            >
+              <MoreVertical className="h-4 w-4 text-gray-600" />
+            </button>
+          </div>
         );
       },
     },
@@ -437,8 +439,15 @@ export function VesselsTable({
                     if (header.column.id === 'sizeBucket' || header.column.id === 'activityBucket' || header.column.id === 'monthlyActivityBucket') {
                       return null;
                     }
+                    const columnMeta = header.column.columnDef.meta as any;
+                    const isActions = header.column.id === 'actions';
                     return (
-                      <TableHead key={header.id}>
+                      <TableHead
+                        key={header.id}
+                        className={isActions
+                          ? 'w-8 min-w-[32px] max-w-[32px] p-0'
+                          : `${columnMeta?.width || ''} ${columnMeta?.className || ''}`}
+                      >
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -528,8 +537,15 @@ export function VesselsTable({
                         if (cell.column.id === 'sizeBucket' || cell.column.id === 'activityBucket' || cell.column.id === 'monthlyActivityBucket') {
                           return null;
                         }
+                        const columnMeta = cell.column.columnDef.meta as any;
+                        const isActions = cell.column.id === 'actions';
                         return (
-                          <TableCell key={cell.id}>
+                          <TableCell
+                            key={cell.id}
+                            className={isActions
+                              ? 'w-8 min-w-[32px] max-w-[32px] p-0'
+                              : `${columnMeta?.width || ''} ${columnMeta?.className || ''}`}
+                          >
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </TableCell>
                         );

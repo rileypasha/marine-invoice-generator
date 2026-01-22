@@ -384,12 +384,12 @@ export function ContactsTable({
       id: "actions",
       header: "",
       enableHiding: false,
-      meta: { width: 'w-16' },
+      meta: { width: 'w-16', className: 'p-0' },
       cell: ({ row }) => {
         const customer = row.original;
 
         return (
-          <div className="flex items-center justify-start">
+          <div className="flex items-center justify-center">
             <button
               aria-label="Row actions"
               data-row-actions-trigger
@@ -419,7 +419,7 @@ export function ContactsTable({
                   }
                 });
               }}
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-gray-100 hover:bg-gray-200 h-8 w-8 p-0"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-gray-100 hover:bg-gray-200 h-7 w-4 p-0 mr-2"
             >
               <MoreVertical className="h-4 w-4 text-gray-600" />
             </button>
@@ -535,8 +535,15 @@ export function ContactsTable({
                     if (header.column.id === 'activityBucket' || header.column.id === 'monthlyActivityBucket') {
                       return null;
                     }
+                    const columnMeta = header.column.columnDef.meta as any;
+                    const isActions = header.column.id === 'actions';
                     return (
-                      <TableHead key={header.id}>
+                      <TableHead
+                        key={header.id}
+                        className={isActions
+                          ? 'w-8 min-w-[32px] max-w-[32px] p-0'
+                          : `${columnMeta?.width || ''} ${columnMeta?.className || ''}`}
+                      >
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -619,15 +626,22 @@ export function ContactsTable({
                       >
                         {row.getVisibleCells().map((cell) => {
                           // Skip virtual grouping columns in data rows
-                          if (cell.column.id === 'activityBucket' || cell.column.id === 'monthlyActivityBucket') {
-                            return null;
-                          }
-                          return (
-                            <TableCell key={cell.id}>
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </TableCell>
-                          );
-                        })}
+                        if (cell.column.id === 'activityBucket' || cell.column.id === 'monthlyActivityBucket') {
+                          return null;
+                        }
+                        const columnMeta = cell.column.columnDef.meta as any;
+                        const isActions = cell.column.id === 'actions';
+                        return (
+                          <TableCell
+                            key={cell.id}
+                            className={isActions
+                              ? 'w-8 min-w-[32px] max-w-[32px] p-0'
+                              : `${columnMeta?.width || ''} ${columnMeta?.className || ''}`}
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        );
+                      })}
                       </TableRow>
                     );
                   });
