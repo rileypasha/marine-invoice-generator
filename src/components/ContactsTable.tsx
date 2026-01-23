@@ -281,7 +281,7 @@ export function ContactsTable({
       cell: ({ row }) => {
         const email = row.getValue("email") as string;
         return (
-          <div className="lowercase" title={email || undefined}>
+          <div className="lowercase truncate" title={email || undefined}>
             {email ? (
               <a href={`mailto:${email}`} className="text-black hover:underline">
                 {email}
@@ -297,7 +297,7 @@ export function ContactsTable({
       header: "Phone",
       cell: ({ row }) => {
         const phone = row.getValue("phone") as string;
-        return <div className="whitespace-nowrap">{formatPhoneForDisplay(phone)}</div>;
+        return <div className="whitespace-nowrap truncate">{formatPhoneForDisplay(phone)}</div>;
       },
       meta: { width: 'w-32' },
     },
@@ -314,7 +314,11 @@ export function ContactsTable({
         ]
           .filter(Boolean)
           .join(", ");
-        return <div>{address || "-"}</div>;
+        return (
+          <div className="truncate" title={address || undefined}>
+            {address || "-"}
+          </div>
+        );
       },
       meta: { width: 'w-64' },
     },
@@ -620,7 +624,7 @@ export function ContactsTable({
                       <TableRow
                         key={row.id}
                         data-state={row.getIsSelected() && "selected"}
-                        className={`border-b border-gray-200 ${
+                        className={`h-12 border-b border-gray-200 ${
                           currentIndex % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/50 hover:bg-gray-100'
                         }`}
                       >
@@ -636,7 +640,7 @@ export function ContactsTable({
                             key={cell.id}
                             className={isActions
                               ? 'w-8 min-w-[32px] max-w-[32px] p-0'
-                              : `${columnMeta?.width || ''} ${columnMeta?.className || ''}`}
+                              : `whitespace-nowrap truncate ${columnMeta?.width || ''} ${columnMeta?.className || ''}`}
                           >
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </TableCell>
