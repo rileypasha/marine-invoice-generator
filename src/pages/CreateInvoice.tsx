@@ -2484,18 +2484,12 @@ const CreateInvoice: React.FC = () => {
       missingFields.push("Vessel Name");
     }
 
-    // Check customer fields
-    if (!invoiceData.customer.contactName?.trim()) {
-      missingFields.push("Contact Name");
-    }
-
-    // Check services - at least one service with description and cost/rate
+    // Check services - at least one service with cost/rate
     const hasValidService = invoiceData.services.some(service => {
-      const hasDescription = service.description?.trim();
       const hasCost = service.total > 0 || service.rate > 0 ||
                      (service.manualCost && service.manualCost > 0) ||
                      ((service.laborHours || 0) > 0 || (service.otHours || 0) > 0);
-      return hasDescription && hasCost;
+      return hasCost;
     });
 
     if (!hasValidService) {
@@ -3910,23 +3904,17 @@ const CreateInvoice: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="contact-name" className={isFieldMissing("Contact Name") ? "!text-red-600 font-medium" : "!text-black font-medium"}>
-                        Contact Name <span className="text-red-600">*</span>
+                      <Label htmlFor="contact-name" className="!text-black font-medium">
+                        Contact Name
                       </Label>
                       <Input
                         id="contact-name"
                         value={invoiceData.customer.contactName}
                         onChange={(e) => handleCustomerChange('contactName', e.target.value)}
                         placeholder="e.g. John Smith"
-                        className={cn(
-                          getChangedFieldClasses('/contactName', ['customer', 'contactName']),
-                          isFieldMissing("Contact Name") && "border-red-500 focus:ring-red-500"
-                        )}
+                        className={cn(getChangedFieldClasses('/contactName', ['customer', 'contactName']))}
                         style={getChangedFieldStyles('/contactName', ['customer', 'contactName'])}
                       />
-                      {isFieldMissing("Contact Name") && (
-                        <p className="text-xs text-red-600">Contact name is required</p>
-                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="customer-email" className="!text-black font-medium">Email Address</Label>
@@ -4306,7 +4294,7 @@ const CreateInvoice: React.FC = () => {
                         {/* Description field - hide for Clearance Fee */}
                         {service.jobType !== 'Clearance Fee' && (
                           <div className="space-y-2">
-                            <Label htmlFor={`service-description-${index}`} className="!text-black font-medium">Description <span className="text-red-600">*</span></Label>
+                            <Label htmlFor={`service-description-${index}`} className="!text-black font-medium">Description</Label>
                             <Textarea
                               id={`service-description-${index}`}
                               value={service.description}
@@ -4323,9 +4311,6 @@ const CreateInvoice: React.FC = () => {
                               )}
                               style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/description`, ['services', index, 'description'])}
                             />
-                            {!service.description?.trim() && hasAttemptedSave && (
-                              <p className="text-xs text-red-600">Service description is required</p>
-                            )}
                           </div>
                         )}
 
