@@ -39,6 +39,8 @@ interface InvoicesProps {
   onDelete?: (invoice: Invoice) => void;
   onView?: (invoice: Invoice) => void;
   onPrint?: (invoice: Invoice) => void;
+  onExportPdf?: (invoice: Invoice) => void;
+  onExportCsv?: (invoice: Invoice) => void;
   onAddNew?: () => void;
   onBulkDelete?: (invoices: Invoice[]) => void;
   onBulkExport?: (invoices: Invoice[]) => void;
@@ -52,6 +54,8 @@ const Invoices: React.FC<InvoicesProps> = ({
   onDelete,
   onView,
   onPrint,
+  onExportPdf,
+  onExportCsv,
   onAddNew,
   onBulkDelete,
   onBulkExport,
@@ -343,6 +347,8 @@ const Invoices: React.FC<InvoicesProps> = ({
                   onBulkExport={onBulkExport}
                   onView={onView}
                   onPrint={onPrint}
+                  onExportPdf={onExportPdf}
+                  onExportCsv={onExportCsv}
                   title={groupBy !== 'none' ? (
                     <h3 className="text-lg font-semibold text-gray-900 px-6 py-3 bg-gray-50 border-b border-gray-200">
                       {group} ({invoices.length})

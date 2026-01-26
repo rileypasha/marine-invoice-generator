@@ -26,7 +26,8 @@ import { getLineItemOp } from '../components/invoices/LineItemsDiff';
 import { cn } from '../lib/utils';
 import { convertFieldDeltaToPatch, isFieldDeltaFormat } from '../utils/diffConverter';
 import { PatchOperation } from '../types/diff.types';
-import { FileText, X, Paperclip } from 'lucide-react';
+import { FileText, FileSpreadsheet, X, Paperclip } from 'lucide-react';
+import jsPDF from 'jspdf';
 import { CommentCard } from '../components/comments/CommentCard';
 
 interface LineItem {
@@ -248,6 +249,7 @@ const InvoiceView: React.FC = () => {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [sessionStorageBaseline, setSessionStorageBaseline] = useState<any>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+  const exportOnceRef = useRef<string | null>(null);
   const selectionCardRef = useRef<HTMLDivElement>(null);
 
   const isPreviewMode = id === 'preview' || Boolean(location.state?.previewData);
@@ -498,6 +500,212 @@ const InvoiceView: React.FC = () => {
       navigate('/requests');
     }
   };
+
+  const buildExportFileBase = () => {
+    const vesselLabel = (vessel.name || invoice?.vesselName || 'Unknown').trim() || 'Unknown';
+    const safeVesselLabel = vesselLabel.replace(/[^a-z0-9]+/gi, '_');
+    const dateSource = invoice?.savedAt || invoice?.createdAt || new Date().toISOString();
+    const dateLabel = new Date(dateSource).toISOString().split('T')[0];
+    return `Invoice_${safeVesselLabel}_${dateLabel}`;
+  };
+
+  const handleExportCSV = () => {
+    if (!invoice) {
+      return;
+    }
+
+    const csvHeaders = [
+      'Description',
+      'Type',
+      'Qty',
+      'Base Cost',
+      'Markup',
+      'Tax',
+      'Total'
+    ];
+
+    const csvRows = servicesSummary.services.map(service => [
+      `"${service.description || ''}"`,
+      `"${service.type || ''}"`,
+      Number.isFinite(service.quantity) ? service.quantity : 0,
+      Number(service.cost || 0).toFixed(2),
+      Number(service.markupAmount || 0).toFixed(2),
+      Number(service.taxAmount || 0).toFixed(2),
+      Number(service.total || 0).toFixed(2)
+    ]);
+
+    csvRows.push(
+      ['', '', '', '', '', '', ''],
+      ['', '', '', 'SUBTOTAL', '', '', servicesSummary.subtotalWithMarkup.toFixed(2)],
+      ['', '', '', 'TOTAL TAX', '', '', servicesSummary.totalTax.toFixed(2)],
+      ['', '', '', 'FINAL TOTAL', '', '', servicesSummary.finalTotal.toFixed(2)],
+      ['', '', '', 'GROSS PROFIT', '', '', servicesSummary.grossProfit.toFixed(2)]
+    );
+
+    const csvContent = [
+      `"${invoice.title || `Invoice for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`}"`,
+      `"Contact: ${customer.display_name || customer.contact_name || invoice.customerName || 'N/A'}"`,
+      `"Date: ${formatDate(invoice.savedAt || invoice.createdAt)}"`,
+      '',
+      csvHeaders.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${buildExportFileBase()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    if (!invoice) {
+      return;
+    }
+
+    const pdf = new jsPDF();
+    pdf.setFont('helvetica');
+
+    let yPos = 20;
+    pdf.setFontSize(18);
+    pdf.setTextColor(30, 41, 59);
+    pdf.text('Marine Group', 20, yPos);
+
+    yPos += 8;
+    pdf.setFontSize(12);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(invoice.title || `Invoice for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`, 20, yPos);
+
+    yPos += 6;
+    pdf.setFontSize(9);
+    pdf.text(`Generated: ${new Date().toLocaleString()}`, 20, yPos);
+    yPos += 6;
+    pdf.text(`Invoice ID: ${invoice.invoiceNumber || invoice.id || 'N/A'}`, 20, yPos);
+
+    yPos += 6;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(20, yPos, 190, yPos);
+
+    yPos += 10;
+    pdf.setFontSize(11);
+    pdf.setTextColor(30, 41, 59);
+    pdf.text('Summary', 20, yPos);
+    yPos += 6;
+    pdf.setFontSize(10);
+    pdf.setTextColor(71, 85, 105);
+    pdf.text(`Base Cost: ${formatCurrency(servicesSummary.baseCostTotal)}`, 20, yPos);
+    pdf.text(`Subtotal: ${formatCurrency(servicesSummary.subtotalWithMarkup)}`, 110, yPos);
+    yPos += 6;
+    pdf.text(`Tax: ${formatCurrency(servicesSummary.totalTax)}`, 20, yPos);
+    pdf.text(`Total: ${formatCurrency(servicesSummary.finalTotal)}`, 110, yPos);
+
+    yPos += 10;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(20, yPos, 190, yPos);
+    yPos += 8;
+
+    pdf.setFontSize(11);
+    pdf.setTextColor(30, 41, 59);
+    pdf.text('Vessel & Contact', 20, yPos);
+    yPos += 6;
+    pdf.setFontSize(9);
+    pdf.setTextColor(71, 85, 105);
+    pdf.text(`Vessel: ${vessel.name || invoice.vesselName || 'N/A'}`, 20, yPos);
+    pdf.text(`Weight: ${vessel.weight_tons || vessel.weight || invoice.vesselWeight || '—'} tons`, 20, yPos + 6);
+    pdf.text(`Length: ${vessel.beam_ft || vessel.beam || invoice.vesselBeam || '—'} ft`, 20, yPos + 12);
+    pdf.text(`Contact: ${customer.display_name || customer.contact_name || invoice.customerName || 'N/A'}`, 110, yPos);
+    pdf.text(`Email: ${customer.email || invoice.customerEmail || 'N/A'}`, 110, yPos + 6);
+    pdf.text(`Phone: ${customer.phone || invoice.customerPhone || 'N/A'}`, 110, yPos + 12);
+
+    yPos += 22;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(20, yPos, 190, yPos);
+    yPos += 10;
+
+    pdf.setFontSize(11);
+    pdf.setTextColor(30, 41, 59);
+    pdf.text('Services', 20, yPos);
+    yPos += 8;
+
+    const tableColumnX = [20, 64, 96, 122, 142, 162, 182];
+    const tableHeaders = ['Item', 'Type', 'Qty', 'Cost', 'Markup', 'Tax', 'Total'];
+
+    pdf.setFontSize(8);
+    pdf.setTextColor(71, 85, 105);
+    tableHeaders.forEach((header, idx) => {
+      pdf.text(header, tableColumnX[idx], yPos);
+    });
+
+    yPos += 4;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(20, yPos, 190, yPos);
+    yPos += 6;
+
+    pdf.setFontSize(8);
+    pdf.setTextColor(51, 65, 85);
+
+    servicesSummary.services.forEach(service => {
+      if (yPos > 270) {
+        pdf.addPage();
+        yPos = 20;
+        pdf.setFontSize(8);
+        pdf.setTextColor(71, 85, 105);
+        tableHeaders.forEach((header, idx) => {
+          pdf.text(header, tableColumnX[idx], yPos);
+        });
+        yPos += 4;
+        pdf.setDrawColor(226, 232, 240);
+        pdf.line(20, yPos, 190, yPos);
+        yPos += 6;
+        pdf.setTextColor(51, 65, 85);
+      }
+
+      pdf.text((service.description || '').slice(0, 28), tableColumnX[0], yPos);
+      pdf.text((service.type || '').slice(0, 16), tableColumnX[1], yPos);
+      pdf.text(String(service.quantity ?? 0), tableColumnX[2], yPos, { align: 'right' });
+      pdf.text(formatCurrency(service.cost), tableColumnX[3], yPos, { align: 'right' });
+      pdf.text(formatCurrency(service.markupAmount), tableColumnX[4], yPos, { align: 'right' });
+      pdf.text(formatCurrency(service.taxAmount), tableColumnX[5], yPos, { align: 'right' });
+      pdf.text(formatCurrency(service.total), tableColumnX[6], yPos, { align: 'right' });
+      yPos += 6;
+    });
+
+    const fileName = `${buildExportFileBase()}.pdf`;
+    pdf.save(fileName);
+  };
+
+  useEffect(() => {
+    if (!invoice || isLoading || error) {
+      return;
+    }
+    const exportType = searchParams.get('export');
+    if (!exportType) {
+      exportOnceRef.current = null;
+      return;
+    }
+
+    const exportKey = `${invoice.id}:${exportType}`;
+    if (exportOnceRef.current === exportKey) {
+      return;
+    }
+    exportOnceRef.current = exportKey;
+
+    if (exportType === 'pdf') {
+      handleExportPDF();
+    }
+    if (exportType === 'csv') {
+      handleExportCSV();
+    }
+
+    setSearchParams((params) => {
+      params.delete('export');
+      return params;
+    });
+  }, [invoice, isLoading, error, searchParams, setSearchParams, handleExportPDF, handleExportCSV]);
 
   const handleViewAttachment = (attachmentUrl: string, attachmentType: string, attachmentName: string) => {
     console.log('[InvoiceView] Opening receipt:', { url: attachmentUrl, name: attachmentName, type: attachmentType });
@@ -988,13 +1196,31 @@ const InvoiceView: React.FC = () => {
                   {invoice.status === 'draft' ? 'Draft preview' : invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)} • {new Date(invoice.createdAt).toLocaleDateString()}
                 </p>
               </div>
-              <Button
-                onClick={handleBack}
-                className="bg-[#1e3a5f] text-white hover:bg-[#152d4a] rounded-md px-3 py-1.5 text-sm font-medium h-auto shrink-0"
-              >
-                <X className="h-3.5 w-3.5 mr-1" />
-                Exit
-              </Button>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  onClick={handleExportPDF}
+                  variant="outline"
+                  className="rounded-md px-3 py-1.5 text-sm font-medium h-auto"
+                >
+                  <FileText className="h-3.5 w-3.5 mr-1" />
+                  Export PDF
+                </Button>
+                <Button
+                  onClick={handleExportCSV}
+                  variant="outline"
+                  className="rounded-md px-3 py-1.5 text-sm font-medium h-auto"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5 mr-1" />
+                  Export CSV
+                </Button>
+                <Button
+                  onClick={handleBack}
+                  className="bg-[#1e3a5f] text-white hover:bg-[#152d4a] rounded-md px-3 py-1.5 text-sm font-medium h-auto"
+                >
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Exit
+                </Button>
+              </div>
             </div>
           </div>
 

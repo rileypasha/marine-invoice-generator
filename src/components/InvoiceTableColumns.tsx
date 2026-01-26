@@ -39,6 +39,8 @@ interface InvoiceTableActionsProps {
   onView?: (invoice: Invoice) => void;
   onEdit?: (invoice: Invoice) => void;
   onPrint?: (invoice: Invoice) => void;
+  onExportPdf?: (invoice: Invoice) => void;
+  onExportCsv?: (invoice: Invoice) => void;
   onDelete?: (invoice: Invoice) => void;
   openRowActions?: (args: {rowId: string|number; pos: {top: number; left: number}; handlers: any}) => void;
 }
@@ -372,6 +374,12 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
                     console.log('[InvoiceTableColumns] Edit handler called', { invoice, onEdit: actions.onEdit });
                     actions.onEdit?.(invoice);
                   },
+                  exportPdf: actions.onExportPdf
+                    ? () => actions.onExportPdf?.(invoice)
+                    : undefined,
+                  exportCsv: actions.onExportCsv
+                    ? () => actions.onExportCsv?.(invoice)
+                    : undefined,
                   del: () => {
                     console.log('[InvoiceTableColumns] Delete handler called', { invoice, onDelete: actions.onDelete });
                     actions.onDelete?.(invoice);
