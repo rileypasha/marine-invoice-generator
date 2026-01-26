@@ -280,6 +280,14 @@ const InvoicesPage: React.FC = () => {
     navigate(`/requests/${invoice.id}?print=true`);
   }, [navigate]);
 
+  const handleExportPdf = useCallback((invoice: Invoice) => {
+    navigate(`/requests/${invoice.id}?export=pdf`);
+  }, [navigate]);
+
+  const handleExportCsv = useCallback((invoice: Invoice) => {
+    navigate(`/requests/${invoice.id}?export=csv`);
+  }, [navigate]);
+
   const handleAddNew = useCallback(() => {
     navigate('/requests/new');
   }, [navigate]);
@@ -351,6 +359,8 @@ const InvoicesPage: React.FC = () => {
         onDelete={handleDelete}
         onView={handleView}
         onPrint={handlePrint}
+        onExportPdf={handleExportPdf}
+        onExportCsv={handleExportCsv}
         onAddNew={handleAddNew}
         onBulkDelete={handleBulkDelete}
         onBulkExport={handleBulkExport}

@@ -68,6 +68,8 @@ interface RequestsTableProps {
   onBulkExport?: (selectedRows: Invoice[]) => void;
   onView?: (invoice: Invoice) => void;
   onPrint?: (invoice: Invoice) => void;
+  onExportPdf?: (invoice: Invoice) => void;
+  onExportCsv?: (invoice: Invoice) => void;
   title?: React.ReactNode;
 }
 
@@ -80,6 +82,8 @@ export function RequestsTable({
   onBulkExport,
   onView,
   onPrint,
+  onExportPdf,
+  onExportCsv,
   title
 }: RequestsTableProps) {
   const navigate = useNavigate();
@@ -157,9 +161,11 @@ export function RequestsTable({
     onView,
     onEdit: onEdit ? handleEditWrapper : undefined,
     onPrint,
+    onExportPdf,
+    onExportCsv,
     onDelete,
     openRowActions
-  }), [onView, onEdit, handleEditWrapper, onPrint, onDelete, openRowActions]);
+  }), [onView, onEdit, handleEditWrapper, onPrint, onExportPdf, onExportCsv, onDelete, openRowActions]);
 
   return (
     <DataTable

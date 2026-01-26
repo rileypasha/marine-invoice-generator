@@ -1750,74 +1750,10 @@ const CreateInvoice: React.FC = () => {
     }
   }, [isEditMode, searchParams]);
 
-  // Automatically add/update Clearance Fee based on vessel weight
-  useEffect(() => {
-    const weight = parseFloat(invoiceData.vessel.weight) || 0;
-    console.log('DEBUG Clearance Fee - rawWeight:', invoiceData.vessel.weight, 'parsedWeight:', weight, 'comparison >= 500:', weight >= 500, 'expectedAmount:', weight >= 500 ? 1250 : 950);
-
-    if (weight > 0) {
-      const clearanceFeeIndex = invoiceData.services.findIndex(s => s.jobType === 'Clearance Fee');
-      const clearanceFeeAmount = weight >= 500 ? 1250 : 950;
-
-      if (clearanceFeeIndex === -1) {
-        // Add new Clearance Fee service
-        const newClearanceFee: Service = {
-          id: `clearance-${Date.now()}`,
-          jobType: 'Clearance Fee',
-          description: 'Clearance Fee',
-          quantity: 1,
-          rate: clearanceFeeAmount,
-          manualCost: clearanceFeeAmount,
-          total: clearanceFeeAmount,
-          taxStatus: 'non-taxable',
-          taxRate: 0,
-          markupType: 'exempt',
-          markupRate: 0,
-          isMarkupExempt: true,
-          isTaxExempt: true
-        };
-
-        setInvoiceData(prev => ({
-          ...prev,
-          services: [...prev.services, newClearanceFee]
-        }));
-        setHasUnsavedChanges(true);
-      } else {
-        // Only update if user hasn't manually overridden the cost
-        const existingService = invoiceData.services[clearanceFeeIndex];
-        const currentManualCost = existingService.manualCost || 0;
-
-        // Check if manualCost is either 950 or 1250 (the only valid auto-calculated amounts)
-        const isAutoCalculatedAmount = currentManualCost === 950 || currentManualCost === 1250;
-
-        if (isAutoCalculatedAmount && existingService.rate !== clearanceFeeAmount) {
-          const updatedServices = [...invoiceData.services];
-          updatedServices[clearanceFeeIndex] = {
-            ...existingService,
-            rate: clearanceFeeAmount,
-            manualCost: clearanceFeeAmount,
-            total: clearanceFeeAmount
-          };
-
-          setInvoiceData(prev => ({
-            ...prev,
-            services: updatedServices
-          }));
-          setHasUnsavedChanges(true);
-        }
-      }
-    } else {
-      // Remove Clearance Fee if weight is 0 or empty
-      const clearanceFeeExists = invoiceData.services.some(s => s.jobType === 'Clearance Fee');
-      if (clearanceFeeExists) {
-        setInvoiceData(prev => ({
-          ...prev,
-          services: prev.services.filter(s => s.jobType !== 'Clearance Fee')
-        }));
-        setHasUnsavedChanges(true);
-      }
-    }
-  }, [invoiceData.vessel.weight]);
+  const getClearanceFeeAmount = (weightValue: string): number => {
+    const weight = parseFloat(weightValue) || 0;
+    return weight >= 500 ? 1250 : 950;
+  };
 
   // Cleanup address timeout on unmount
   useEffect(() => {
@@ -2056,8 +1992,7 @@ const CreateInvoice: React.FC = () => {
       if (service.manualCost !== undefined && service.manualCost !== null) {
         return parseFloat(String(service.manualCost)) || 0;
       }
-      const vesselWeight = parseFloat(invoiceData.vessel.weight) || 0;
-      return vesselWeight >= 500 ? 1250 : 950;
+      return getClearanceFeeAmount(invoiceData.vessel.weight);
     }
 
     // Other labor types
@@ -2400,11 +2335,13 @@ const CreateInvoice: React.FC = () => {
   };
 
   const updateService = (id: string, field: keyof Omit<Service, 'id'>, value: string | number | boolean) => {
-    setInvoiceData(prev => ({
-      ...prev,
-      services: prev.services.map(service => {
-        if (service.id === id) {
-          const updated: Service = { ...service };
+    setInvoiceData(prev => {
+      const clearanceFeeAmount = getClearanceFeeAmount(prev.vessel.weight);
+      return {
+        ...prev,
+        services: prev.services.map(service => {
+          if (service.id === id) {
+            const updated: Service = { ...service };
 
           if (field === 'manualCost') {
             const stringValue = typeof value === 'string' ? value : String(value ?? '');
@@ -2450,6 +2387,18 @@ const CreateInvoice: React.FC = () => {
               updated.isMarkupExempt = true;
               // Don't set markupType, leave it as undefined to show placeholder
             } else if (value === 'Clearance Fee') {
+              updated.manualCost = clearanceFeeAmount;
+              updated.manualCostInput = normalizeDecimalInput(String(clearanceFeeAmount), 2);
+              updated.rate = clearanceFeeAmount;
+              updated.quantity = 1;
+              updated.quantityDisplay = '1';
+              if (!updated.description?.trim()) {
+                updated.description = 'Clearance Fee';
+              }
+              updated.taxStatus = 'non-taxable';
+              updated.taxRate = 0;
+              updated.markupType = 'exempt';
+              updated.markupRate = 0;
               updated.isMarkupExempt = true;
               updated.isTaxExempt = true;
             } else if (value === 'Pilotage') {
@@ -2489,11 +2438,12 @@ const CreateInvoice: React.FC = () => {
           const taxAmount = calculateTax(updated, costWithMarkup);
           updated.total = costWithMarkup + taxAmount;
 
-          return updated;
-        }
-        return service;
-      })
-    }));
+            return updated;
+          }
+          return service;
+        })
+      };
+    });
     setHasUnsavedChanges(true);
   };
 
@@ -4578,8 +4528,7 @@ const CreateInvoice: React.FC = () => {
                               </Badge>
                             )}
                             {service.jobType === 'Clearance Fee' && (() => {
-                              const weight = parseFloat(invoiceData.vessel.weight) || 0;
-                              const autoCalculatedAmount = weight >= 500 ? 1250 : 950;
+                              const autoCalculatedAmount = getClearanceFeeAmount(invoiceData.vessel.weight);
                               const currentCost = parseFloat(String(service.manualCost)) || 0;
                               const isManuallyOverridden = currentCost !== autoCalculatedAmount;
 
