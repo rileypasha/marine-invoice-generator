@@ -30,7 +30,7 @@ class AuthStore extends EventEmitter {
     csrfToken: null,
   };
 
-  private listeners = new Set<AuthStateListener>();
+  private stateListeners = new Set<AuthStateListener>();
   private checkInterval: NodeJS.Timeout | null = null;
 
   constructor() {
@@ -60,7 +60,7 @@ class AuthStore extends EventEmitter {
   }
 
   private notifyListeners(): void {
-    this.listeners.forEach(listener => listener({ ...this.state }));
+    this.stateListeners.forEach(listener => listener({ ...this.state }));
     this.emit('stateChange', { ...this.state });
   }
 
@@ -148,8 +148,8 @@ class AuthStore extends EventEmitter {
   }
 
   subscribe(listener: AuthStateListener): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    this.stateListeners.add(listener);
+    return () => this.stateListeners.delete(listener);
   }
 
   async login(credentials: { username: string; password: string }): Promise<boolean> {
@@ -207,7 +207,7 @@ class AuthStore extends EventEmitter {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
     }
-    this.listeners.clear();
+    this.stateListeners.clear();
     this.removeAllListeners();
   }
 }

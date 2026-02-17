@@ -53,7 +53,7 @@ const CreateVessel: React.FC = () => {
       const response = await fetch(`${API_ENDPOINTS.VESSELS}/${vesselId}`, {
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
+          'X-CSRF-Token': csrfToken || ''
         },
         credentials: 'include',
       });
@@ -123,7 +123,7 @@ const CreateVessel: React.FC = () => {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
+          'X-CSRF-Token': csrfToken || ''
         },
         credentials: 'include',
         body: JSON.stringify(vesselPayload)
@@ -184,7 +184,7 @@ const CreateVessel: React.FC = () => {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
+          'X-CSRF-Token': csrfToken || ''
         },
         credentials: 'include',
         body: JSON.stringify(vesselPayload)

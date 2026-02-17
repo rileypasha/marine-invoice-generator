@@ -27,6 +27,7 @@ interface FilterOptions {
 interface ApiInvoice {
   id: string;
   invoiceNumber?: string;
+  contactName?: string;
   title: string;
   status: 'requested' | 'change_requested' | 'approved';
   total: number;
@@ -57,6 +58,7 @@ interface ApiInvoice {
 interface Invoice {
   id: string;
   invoice_number?: string;
+  contactName?: string;
   customer?: {
     company_name?: string;
     display_name?: string;
@@ -71,6 +73,7 @@ interface Invoice {
   };
   userName?: string;
   modifiedByUserName?: string;
+  modifiedByUserAvatar?: string;
   total_amount?: number;
   invoice_date?: string;
   updated_at?: string;
@@ -146,7 +149,7 @@ const InvoicesPage: React.FC = () => {
       const response = await fetch(`/api/v1/invoice?${searchParams}`, {
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
+          'X-CSRF-Token': csrfToken || ''
         },
         credentials: 'include'
       });
@@ -182,7 +185,7 @@ const InvoicesPage: React.FC = () => {
       customer: apiInvoice.customer ? {  // Only create customer object if there's a linked customer
         display_name: apiInvoice.customer.display_name,
         company_name: apiInvoice.customer.legal_name,
-      } : null,
+      } : undefined,
       vessel: {
         name: apiInvoice.vessel?.name || apiInvoice.vesselName
       },
@@ -258,7 +261,7 @@ const InvoicesPage: React.FC = () => {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
+          'X-CSRF-Token': csrfToken || ''
         },
         credentials: 'include'
       });
@@ -311,7 +314,7 @@ const InvoicesPage: React.FC = () => {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken
+            'X-CSRF-Token': csrfToken || ''
           },
           credentials: 'include'
         })

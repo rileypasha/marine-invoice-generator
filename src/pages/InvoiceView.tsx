@@ -52,6 +52,7 @@ interface LineItem {
   receiptName?: string;
   receiptType?: string;
   scope?: any;
+  _deleted?: boolean;
 }
 
 interface Invoice {
@@ -273,7 +274,7 @@ const InvoiceView: React.FC = () => {
         const response = await fetch(`/api/v1/invoice/${id}`, {
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken
+            'X-CSRF-Token': csrfToken || ''
           },
           credentials: 'include'
         });
@@ -327,7 +328,7 @@ const InvoiceView: React.FC = () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
+          'X-CSRF-Token': csrfToken || ''
         },
         credentials: 'include',
         body: JSON.stringify({ text: newText })
@@ -372,7 +373,7 @@ const InvoiceView: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
+          'X-CSRF-Token': csrfToken || ''
         },
         credentials: 'include',
         body: JSON.stringify({ text: replyText })
@@ -998,7 +999,11 @@ const InvoiceView: React.FC = () => {
 
   const servicesSummary = useMemo(() => {
     try {
-      const sanitizedItems = lineItems.filter((item): item is LineItem => Boolean(item) && typeof item === 'object');
+      const sanitizedItems = lineItems.filter((item): item is LineItem => (
+        Boolean(item) &&
+        typeof item === 'object' &&
+        !(item as any)._deleted
+      ));
       let baseCostTotal = 0;
       let subtotalWithMarkup = 0;
       let totalTax = 0;
@@ -1031,16 +1036,23 @@ const InvoiceView: React.FC = () => {
         };
       });
 
-      const finalTotal = subtotalWithMarkup + totalTax;
-      const grossProfit = subtotalWithMarkup - baseCostTotal;
+      const derivedFinalTotal = subtotalWithMarkup + totalTax;
+      const hasPersistedSubtotal = Number.isFinite(invoice?.subtotal);
+      const hasPersistedTaxAmount = Number.isFinite(invoice?.taxAmount);
+      const hasPersistedTotal = Number.isFinite(invoice?.total);
+
+      const effectiveSubtotal = hasPersistedSubtotal ? Number(invoice?.subtotal) : subtotalWithMarkup;
+      const effectiveTax = hasPersistedTaxAmount ? Number(invoice?.taxAmount) : totalTax;
+      const effectiveFinalTotal = hasPersistedTotal ? Number(invoice?.total) : derivedFinalTotal;
+      const grossProfit = effectiveSubtotal - baseCostTotal;
       const grossProfitPercent = baseCostTotal > 0 ? (grossProfit / baseCostTotal) * 100 : 0;
 
       return {
         services,
         baseCostTotal,
-        subtotalWithMarkup,
-        totalTax,
-        finalTotal,
+        subtotalWithMarkup: effectiveSubtotal,
+        totalTax: effectiveTax,
+        finalTotal: effectiveFinalTotal,
         grossProfit,
         grossProfitPercent
       };
@@ -1056,7 +1068,7 @@ const InvoiceView: React.FC = () => {
         grossProfitPercent: 0,
       };
     }
-  }, [lineItems, scope, invoice?.total]);
+  }, [lineItems, scope, invoice?.subtotal, invoice?.taxAmount, invoice?.total]);
 
   const comments: InvoiceComment[] = useMemo(() => {
     try {
@@ -1086,6 +1098,7 @@ const InvoiceView: React.FC = () => {
         for (const reply of comment.replies) {
           replyOffset += 100; // Offset each reply 100px below the previous
           console.log(`[InvoiceView] Adding reply: "${reply.text}" at offset ${replyOffset}px`);
+          const baseHighlight = comment.highlight || { top: 0, left: 0, width: 28, height: 24 };
           result.push({
             id: reply.id,
             author: reply.author,
@@ -1095,8 +1108,8 @@ const InvoiceView: React.FC = () => {
             selectionText: '',
             createdAt: reply.createdAt,
             highlight: {
-              ...comment.highlight,
-              top: comment.highlight.top + replyOffset,
+              ...baseHighlight,
+              top: baseHighlight.top + replyOffset,
             },
             replies: [],
             isReply: true,
@@ -1478,9 +1491,7 @@ const InvoiceView: React.FC = () => {
                     className={cn(
                       'grid grid-cols-[2fr_0.6fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm',
                       itemDiffOp && 'border-l-4',
-                      itemDiffOp?.op === 'add' && 'bg-green-50 border-green-500',
-                      itemDiffOp?.op === 'remove' && 'bg-red-50 border-red-500 opacity-75',
-                      itemDiffOp?.op === 'replace' && 'bg-yellow-50 border-yellow-500'
+                      itemDiffOp?.op === 'add' && 'bg-green-50 border-green-500'
                     )}
                   >
                     <div className="pr-4">
@@ -1764,6 +1775,7 @@ const InvoiceView: React.FC = () => {
         {comments.length > 0 && (
           <div className="absolute inset-0 z-10 pointer-events-none">
             {comments.map((comment) => {
+              if (!comment.highlight) return null;
               const width = Math.max(comment.highlight.width, 36);
               const height = Math.max(comment.highlight.height, 30);
               const isHighlighted = activeHighlight === comment.id;

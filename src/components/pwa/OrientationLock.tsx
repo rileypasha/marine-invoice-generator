@@ -9,10 +9,15 @@ export const OrientationLock: React.FC = () => {
   useEffect(() => {
     const lockOrientation = async () => {
       try {
+        const orientation = screen.orientation as ScreenOrientation & {
+          lock?: (orientation: any) => Promise<void>;
+          unlock?: () => void;
+        };
+
         // Check if Screen Orientation API is available
-        if (screen.orientation && screen.orientation.lock) {
+        if (orientation && orientation.lock) {
           // Lock to portrait mode
-          await screen.orientation.lock('portrait');
+          await orientation.lock('portrait');
           console.log('Screen locked to portrait orientation');
         } else {
           console.warn('Screen Orientation API not supported on this device');
@@ -28,8 +33,11 @@ export const OrientationLock: React.FC = () => {
 
     // Cleanup: unlock when component unmounts (optional)
     return () => {
-      if (screen.orientation && screen.orientation.unlock) {
-        screen.orientation.unlock();
+      const orientation = screen.orientation as ScreenOrientation & {
+        unlock?: () => void;
+      };
+      if (orientation && orientation.unlock) {
+        orientation.unlock();
       }
     };
   }, []);

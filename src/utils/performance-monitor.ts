@@ -129,7 +129,7 @@ class PerformanceMonitor {
       console.log('TCP:', navTiming.connectEnd - navTiming.connectStart, 'ms')
       console.log('Request:', navTiming.responseStart - navTiming.requestStart, 'ms')
       console.log('Response:', navTiming.responseEnd - navTiming.responseStart, 'ms')
-      console.log('DOM Processing:', navTiming.domComplete - navTiming.domLoading, 'ms')
+      console.log('DOM Processing:', navTiming.domComplete - navTiming.domInteractive, 'ms')
       console.log('DOM Content Loaded:', navTiming.domContentLoadedEventEnd - navTiming.domContentLoadedEventStart, 'ms')
       console.log('Total Load Time:', navTiming.loadEventEnd - navTiming.fetchStart, 'ms')
       console.groupEnd()

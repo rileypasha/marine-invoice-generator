@@ -162,7 +162,7 @@ const CreateCustomer: React.FC = () => {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken
+            'X-CSRF-Token': csrfToken || ''
           },
           credentials: 'include',
         });
@@ -218,7 +218,7 @@ const CreateCustomer: React.FC = () => {
       };
 
       // Map frontend fields to backend schema
-      const customerPayload = {
+      const customerPayload: Record<string, string | null> & { id?: string } = {
         display_name: customerData.contactName,
         legal_name: customerData.contactName || null,
         email: customerData.customerEmail || null,
@@ -240,7 +240,7 @@ const CreateCustomer: React.FC = () => {
         method: isEditMode ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
+          'X-CSRF-Token': csrfToken || ''
         },
         credentials: 'include',
         body: JSON.stringify(customerPayload),
@@ -304,7 +304,7 @@ const CreateCustomer: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
+          'X-CSRF-Token': csrfToken || ''
         },
         credentials: 'include',
         body: JSON.stringify(customerPayload),

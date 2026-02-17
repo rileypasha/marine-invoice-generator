@@ -210,27 +210,27 @@ const ArrayItemDiff = memo<ArrayItemDiffProps>(function ArrayItemDiff({
       </div>
 
       {/* Item Content */}
-      {operation === 'remove' && oldValue && (
+      {operation === 'remove' && oldValue !== undefined && oldValue !== null && (
         <div className="text-sm" role="deletion">
           <div className="flex items-start gap-2">
             <span className="text-red-600 font-bold flex-shrink-0 select-none">
               −
             </span>
             <del className="text-red-700 line-through">
-              {renderItemValue(oldValue)}
+              {String(renderItemValue(oldValue))}
             </del>
           </div>
         </div>
       )}
 
-      {operation === 'add' && newValue && (
+      {operation === 'add' && newValue !== undefined && newValue !== null && (
         <div className="text-sm" role="insertion">
           <div className="flex items-start gap-2">
             <span className="text-green-600 font-bold flex-shrink-0 select-none">
               +
             </span>
             <ins className="text-green-700 no-underline">
-              {renderItemValue(newValue)}
+              {String(renderItemValue(newValue))}
             </ins>
           </div>
         </div>

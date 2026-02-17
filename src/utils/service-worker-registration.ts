@@ -114,6 +114,12 @@ export async function sendMessageToServiceWorker(message: any): Promise<any> {
   }
 
   return new Promise((resolve, reject) => {
+    const controller = navigator.serviceWorker.controller
+    if (!controller) {
+      reject(new Error('No active service worker'))
+      return
+    }
+
     const messageChannel = new MessageChannel()
 
     messageChannel.port1.onmessage = event => {
@@ -124,7 +130,7 @@ export async function sendMessageToServiceWorker(message: any): Promise<any> {
       }
     }
 
-    navigator.serviceWorker.controller.postMessage(message, [messageChannel.port2])
+    controller.postMessage(message, [messageChannel.port2])
   })
 }
 

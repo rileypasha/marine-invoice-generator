@@ -19,8 +19,8 @@ export interface PerformanceSnapshot {
     jsHeapSizeLimit: number;
   };
   navigation?: {
-    loadEventEnd: number;
-    domContentLoadedEventEnd: number;
+    loadEventEnd?: number;
+    domContentLoadedEventEnd?: number;
     firstContentfulPaint?: number;
     largestContentfulPaint?: number;
   };

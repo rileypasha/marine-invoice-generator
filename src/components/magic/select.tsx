@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 interface SelectProps {
-  value?: string;
+  value?: string | number;
   onValueChange?: (value: string) => void;
+  disabled?: boolean;
   children: React.ReactNode;
 }
 
@@ -10,6 +11,9 @@ interface SelectTriggerProps {
   children: React.ReactNode;
   className?: string;
   onClick?: () => void;
+  id?: string;
+  style?: React.CSSProperties;
+  disabled?: boolean;
 }
 
 interface SelectValueProps {
@@ -23,13 +27,13 @@ interface SelectContentProps {
 }
 
 interface SelectItemProps {
-  value: string;
+  value: string | number;
   children: React.ReactNode;
   onSelect?: (value: string) => void;
 }
 
 const SelectContext = React.createContext<{
-  value?: string;
+  value?: string | number;
   onValueChange?: (value: string) => void;
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -62,14 +66,18 @@ export const Select: React.FC<SelectProps> = ({ value, onValueChange, children }
   );
 };
 
-export const SelectTrigger: React.FC<SelectTriggerProps> = ({ children, className = '', onClick }) => {
+export const SelectTrigger: React.FC<SelectTriggerProps> = ({ children, className = '', onClick, id, style, disabled }) => {
   const { open, setOpen } = React.useContext(SelectContext);
 
   return (
     <button
+      id={id}
       type="button"
+      style={style}
+      disabled={disabled}
       className={`flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       onClick={() => {
+        if (disabled) return;
         setOpen(!open);
         onClick?.();
       }}
@@ -132,10 +140,10 @@ export const SelectItem: React.FC<SelectItemProps> = ({ value, children, onSelec
   const { onValueChange, setOpen, setSelectedText } = React.useContext(SelectContext);
 
   const handleSelect = () => {
-    onValueChange?.(value);
-    setSelectedText(typeof children === 'string' ? children : value);
+    onValueChange?.(String(value));
+    setSelectedText(typeof children === 'string' ? children : String(value));
     setOpen(false);
-    onSelect?.(value);
+    onSelect?.(String(value));
   };
 
   return (

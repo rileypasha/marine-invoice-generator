@@ -10,6 +10,8 @@ import { MoreVertical } from "lucide-react"
 
 interface Invoice {
   id: string;
+  invoiceNumber?: string;
+  customerName?: string;
   invoice_number?: string;
   contactName?: string;  // Manually entered contact name (not linked to Customer)
   customer?: {

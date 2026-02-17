@@ -105,6 +105,7 @@ interface Service {
   isTaxExempt?: boolean;
   receipt?: File | null;
   receiptName?: string;
+  _deleted?: boolean;
 }
 
 interface PendingSelection {
@@ -140,6 +141,12 @@ interface InvoiceData {
   customer: Customer;
   services: Service[];
   notes: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentType?: string;
+  secondAttachmentUrl?: string;
+  secondAttachmentName?: string;
+  secondAttachmentType?: string;
   metadata: {
     title?: string;
     taxRate?: number;
@@ -1713,7 +1720,12 @@ const CreateInvoice: React.FC = () => {
           customerName: legalName || customerName || '',
           customerEmail: email || '',
           customerPhone: normalizePhoneNumber(phone),
-          customerAddress: formatAddress({ address_line1, city, state, postal_code }) || ''
+          customerAddress: formatAddress({
+            address_line1: address_line1 || undefined,
+            city: city || undefined,
+            state: state || undefined,
+            postal_code: postal_code || undefined
+          }) || ''
         }
       }));
       setCustomerPhoneError('');
@@ -2012,11 +2024,6 @@ const CreateInvoice: React.FC = () => {
         service.jobType === 'Clearance Fee' ||
         service.jobType === 'Agent Services' ||
         (service.jobType === 'Manual Entry' && service.itemType === 'Labor')) {
-      return cost;
-    }
-
-    // For items with markupType set to exempt, no markup
-    if (service.markupType === 'exempt') {
       return cost;
     }
 
@@ -2334,7 +2341,11 @@ const CreateInvoice: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
-  const updateService = (id: string, field: keyof Omit<Service, 'id'>, value: string | number | boolean) => {
+  const updateService = (
+    id: string,
+    field: keyof Omit<Service, 'id'>,
+    value: string | number | boolean | File | null
+  ) => {
     setInvoiceData(prev => {
       const clearanceFeeAmount = getClearanceFeeAmount(prev.vessel.weight);
       return {
@@ -2982,10 +2993,10 @@ const CreateInvoice: React.FC = () => {
       invoiceNumber: `PRINT-${Date.now().toString().slice(-6)}`,
       title: invoiceData.metadata.title || `Invoice for ${invoiceData.vessel.name}`,
       total: finalTotal,
-      subtotal,
+      subtotal: subtotalWithMarkup,
       taxAmount: totalTax,
       grossProfit,
-      profitPercent,
+      profitPercent: grossProfitPercent,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       savedAt: new Date().toISOString(),
@@ -3012,7 +3023,7 @@ const CreateInvoice: React.FC = () => {
         },
         scope: {
           lineItems: calculatedServices,
-          subtotal,
+          subtotal: subtotalWithMarkup,
           taxAmount: totalTax,
           total: finalTotal
         }
@@ -3182,9 +3193,9 @@ const CreateInvoice: React.FC = () => {
 
     pdf.setFontSize(11);
     pdf.setTextColor(30, 41, 59);
-    pdf.text(`Base Cost: ${formatCurrency(baseCostTotal)}`, 120, yPos);
+    pdf.text(`Base Cost: ${formatCurrency(baseCost)}`, 120, yPos);
     yPos += 8;
-    pdf.text(`Subtotal (with markup): ${formatCurrency(subtotalWithMarkup)}`, 120, yPos);
+    pdf.text(`Subtotal (with markup): ${formatCurrency(subtotal)}`, 120, yPos);
     yPos += 8;
     pdf.text(`Tax: ${formatCurrency(totalTax)}`, 120, yPos);
     yPos += 10;
@@ -3194,7 +3205,7 @@ const CreateInvoice: React.FC = () => {
     pdf.setFont('helvetica', 'normal');
     pdf.text(`Gross Profit: ${formatCurrency(grossProfit)}`, 120, yPos);
     yPos += 8;
-    pdf.text(`Gross Profit %: ${grossProfitPercent.toFixed(2)}%`, 120, yPos);
+    pdf.text(`Gross Profit %: ${profitPercent.toFixed(2)}%`, 120, yPos);
 
     // Notes section
     if (invoiceData.notes && invoiceData.notes.trim()) {
@@ -4060,7 +4071,7 @@ const CreateInvoice: React.FC = () => {
                                 className={cn(
                                   isDeleted
                                     ? getDeletedFieldClasses(isDeleted)
-                                    : getChangedFieldClasses(`/services/${index}/jobType`, ['services', index, 'jobType'])
+                                    : getChangedFieldClasses(`/services/${index}/jobType`, ['services', String(index), 'jobType'])
                                 )}
                                 style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                               >
@@ -4220,9 +4231,9 @@ const CreateInvoice: React.FC = () => {
                                   className={cn(
                                     isDeleted
                                       ? getDeletedFieldClasses(isDeleted)
-                                      : getChangedFieldClasses(`/services/${index}/quantity`, ['services', index, 'quantity'])
+                                      : getChangedFieldClasses(`/services/${index}/quantity`, ['services', String(index), 'quantity'])
                                   )}
-                                  style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/quantity`, ['services', index, 'quantity'])}
+                                  style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/quantity`, ['services', String(index), 'quantity'])}
                                 />
                               </div>
                             )}
@@ -4265,7 +4276,7 @@ const CreateInvoice: React.FC = () => {
                                 className={cn(
                                   isDeleted
                                     ? getDeletedFieldClasses(isDeleted)
-                                    : getChangedFieldClasses(`/services/${index}/manualCost`, ['services', index, 'manualCost']),
+                                    : getChangedFieldClasses(`/services/${index}/manualCost`, ['services', String(index), 'manualCost']),
                                   ((service.jobType === 'Clearance Fee' && isFieldMissing(`Clearance Fee Cost (Service ${index + 1})`)) ||
                                   (service.jobType === 'Manual Entry' && service.itemType === 'Material' && isFieldMissing(`Material Cost (Service ${index + 1})`)) ||
                                   (service.jobType === 'Manual Entry' && service.itemType === 'Subcontractor' && isFieldMissing(`Subcontractor Cost (Service ${index + 1})`)) ||
@@ -4275,7 +4286,7 @@ const CreateInvoice: React.FC = () => {
                                   (service.jobType === 'Good Stew' && isFieldMissing(`Good Stew Cost (Service ${index + 1})`)) ||
                                   (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`))) && "border-red-500 focus:ring-red-500"
                                 )}
-                                style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/manualCost`, ['services', index, 'manualCost'])}
+                                style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/manualCost`, ['services', String(index), 'manualCost'])}
                               />
                               {((service.jobType === 'Clearance Fee' && isFieldMissing(`Clearance Fee Cost (Service ${index + 1})`)) ||
                                 (service.jobType === 'Manual Entry' && service.itemType === 'Material' && isFieldMissing(`Material Cost (Service ${index + 1})`)) ||
@@ -4307,9 +4318,9 @@ const CreateInvoice: React.FC = () => {
                                 'whitespace-pre-wrap break-words resize-none overflow-hidden leading-5',
                                 isDeleted
                                   ? getDeletedFieldClasses(isDeleted)
-                                  : getChangedFieldClasses(`/services/${index}/description`, ['services', index, 'description'])
+                                  : getChangedFieldClasses(`/services/${index}/description`, ['services', String(index), 'description'])
                               )}
-                              style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/description`, ['services', index, 'description'])}
+                              style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/description`, ['services', String(index), 'description'])}
                             />
                           </div>
                         )}
@@ -4422,7 +4433,7 @@ const CreateInvoice: React.FC = () => {
                                       className={cn(
                                         isDeleted
                                           ? getDeletedFieldClasses(isDeleted)
-                                          : getChangedFieldClasses(`/services/${index}/taxStatus`, ['services', index, 'taxStatus'])
+                                          : getChangedFieldClasses(`/services/${index}/taxStatus`, ['services', String(index), 'taxStatus'])
                                       )}
                                       style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                                     >
@@ -4452,7 +4463,7 @@ const CreateInvoice: React.FC = () => {
                                       className={cn(
                                         isDeleted
                                           ? getDeletedFieldClasses(isDeleted)
-                                          : getChangedFieldClasses(`/services/${index}/markupType`, ['services', index, 'markupType'])
+                                          : getChangedFieldClasses(`/services/${index}/markupType`, ['services', String(index), 'markupType'])
                                       )}
                                       style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                                     >

@@ -124,7 +124,7 @@ export function ChangedValue({
   // Removed field
   if (op === 'remove') {
     return (
-      <RemovedValue value={delta.value} renderMode={renderMode} className={className} />
+      <RemovedValue value={formatValue(delta.value)} renderMode={renderMode} className={className} />
     );
   }
 

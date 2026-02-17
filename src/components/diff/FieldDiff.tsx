@@ -195,7 +195,6 @@ export const FieldDiffList = memo<FieldDiffListProps>(function FieldDiffList({
           change={change}
           fieldRegistry={fieldRegistry}
           showPath={showPaths}
-          role="listitem"
         />
       ))}
     </div>

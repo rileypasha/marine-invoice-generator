@@ -27,10 +27,17 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       icon: "h-10 w-10",
     };
 
-    const Comp = asChild ? "div" : "button";
+    if (asChild) {
+      return (
+        <div
+          className={cn(baseClasses, variants[variant], sizes[size], className)}
+          {...(props as React.HTMLAttributes<HTMLDivElement>)}
+        />
+      );
+    }
 
     return (
-      <Comp
+      <button
         className={cn(baseClasses, variants[variant], sizes[size], className)}
         ref={ref}
         {...props}

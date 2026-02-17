@@ -112,7 +112,7 @@ export function formatGroupSubtotal(
  * Sum array of values, handling null/undefined
  */
 export function sumValues(values: (number | null | undefined)[]): number {
-  return values.reduce((sum, val) => sum + (val || 0), 0);
+  return values.reduce<number>((sum, val) => sum + (val ?? 0), 0);
 }
 
 /**

@@ -149,11 +149,13 @@ class PerformanceMonitor {
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries()
         const lastEntry = entries[entries.length - 1] as any
+        if (!lastEntry) return
         this.vitals.lcp = lastEntry.renderTime || lastEntry.loadTime
 
-        if (this.config.enableLogging) {
-          const rating = this.vitals.lcp < 2500 ? '✅' : this.vitals.lcp < 4000 ? '⚠️' : '❌'
-          console.log(`${rating} LCP: ${this.vitals.lcp.toFixed(0)}ms`)
+        if (this.config.enableLogging && this.vitals.lcp !== null) {
+          const lcpValue = this.vitals.lcp
+          const rating = lcpValue < 2500 ? 'good' : lcpValue < 4000 ? 'warn' : 'bad'
+          console.log(`${rating} LCP: ${lcpValue.toFixed(0)}ms`)
         }
       })
 
@@ -558,3 +560,4 @@ export function destroyPerformanceMonitoring(): void {
   monitor?.destroy()
   monitor = null
 }
+

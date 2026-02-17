@@ -114,13 +114,13 @@ export function VesselsToolbar({
       value: 'active-monthly',
       label: 'Active (Monthly)',
       icon: <CheckCircle className="h-3.5 w-3.5" />,
-      count: calculatedCounts.monthlyActive
+      count: (calculatedCounts as any).monthlyActive ?? 0
     },
     {
       value: 'inactive-monthly',
       label: 'Inactive (Monthly)',
       icon: <Circle className="h-3.5 w-3.5" />,
-      count: calculatedCounts.monthlyInactive
+      count: (calculatedCounts as any).monthlyInactive ?? 0
     }
   ];
 

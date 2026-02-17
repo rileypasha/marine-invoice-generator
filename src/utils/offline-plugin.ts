@@ -105,7 +105,7 @@ export function createOfflineQueryClient(
 /**
  * Determine if a query should be persisted
  */
-function shouldPersistQuery(queryKey: unknown[]): boolean {
+function shouldPersistQuery(queryKey: readonly unknown[]): boolean {
   if (!Array.isArray(queryKey) || queryKey.length === 0) return false
 
   const route = String(queryKey[0])
@@ -123,7 +123,7 @@ function shouldPersistQuery(queryKey: unknown[]): boolean {
  * Get store name from query key
  */
 function getStoreFromQueryKey(
-  queryKey: unknown[]
+  queryKey: readonly unknown[]
 ): 'requests' | 'customers' | 'vessels' | 'invoices' | null {
   const route = String(queryKey[0])
 
@@ -138,7 +138,7 @@ function getStoreFromQueryKey(
 /**
  * Persist query data to IndexedDB
  */
-async function persistQueryData(queryKey: unknown[], data: unknown): Promise<void> {
+async function persistQueryData(queryKey: readonly unknown[], data: unknown): Promise<void> {
   const store = getStoreFromQueryKey(queryKey)
   if (!store) return
 
@@ -270,6 +270,8 @@ export function createOptimisticMutation<TData, TVariables>({
   onError?: (error: unknown, variables: TVariables, context: any) => void
   onSuccess?: (data: TData, variables: TVariables, context: any) => void
 }) {
+  const client = getQueryClient();
+
   return {
     mutationFn,
     meta: {
@@ -280,20 +282,20 @@ export function createOptimisticMutation<TData, TVariables>({
       const customContext = onMutate ? await onMutate(variables) : undefined
 
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey })
+      await client.cancelQueries({ queryKey })
 
       // Snapshot previous value
-      const previousData = queryClient.getQueryData<TData[]>(queryKey)
+      const previousData = client.getQueryData<TData[]>(queryKey)
 
       // Optimistically update
-      queryClient.setQueryData<TData[]>(queryKey, old => updateFn(old, variables))
+      client.setQueryData<TData[]>(queryKey, old => updateFn(old, variables))
 
       return { previousData, customContext }
     },
     onError: (error: unknown, variables: TVariables, context: any) => {
       // Rollback on error
       if (context?.previousData) {
-        queryClient.setQueryData(queryKey, context.previousData)
+        client.setQueryData(queryKey, context.previousData)
       }
 
       // Call custom onError
@@ -309,7 +311,7 @@ export function createOptimisticMutation<TData, TVariables>({
     },
     onSettled: () => {
       // Refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey })
+      client.invalidateQueries({ queryKey })
     },
   }
 }

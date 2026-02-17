@@ -22,7 +22,7 @@ interface Invoice {
   total_amount?: number;
   invoice_date?: string;
   updated_at?: string;
-  status?: 'saved' | 'draft' | 'submitted';
+  status?: 'requested' | 'change_requested' | 'approved';
 }
 
 interface ImportResult {
@@ -36,13 +36,13 @@ interface ImportResult {
 interface InvoicesProps {
   invoices?: Invoice[];
   onEdit?: (invoice: Invoice) => void;
-  onDelete?: (invoice: Invoice) => void;
+  onDelete?: (invoice: Invoice) => void | Promise<void>;
   onView?: (invoice: Invoice) => void;
   onPrint?: (invoice: Invoice) => void;
   onExportPdf?: (invoice: Invoice) => void;
   onExportCsv?: (invoice: Invoice) => void;
   onAddNew?: () => void;
-  onBulkDelete?: (invoices: Invoice[]) => void;
+  onBulkDelete?: (invoices: Invoice[]) => void | Promise<void>;
   onBulkExport?: (invoices: Invoice[]) => void;
   isLoading?: boolean;
   paginationComponent?: React.ReactNode;
@@ -157,7 +157,7 @@ const Invoices: React.FC<InvoicesProps> = ({
         invoice.vessel?.name || '',
         invoice.total_amount || '0',
         invoice.invoice_date ? new Date(invoice.invoice_date).toLocaleDateString() : '',
-        invoice.status || 'draft'
+        invoice.status || 'requested'
       ].map(field => `"${field}"`).join(','))
     ].join('\n');
 
@@ -264,7 +264,7 @@ const Invoices: React.FC<InvoicesProps> = ({
         customer: { display_name: contact },
         vessel: { name: vessel },
         total_amount: parseFloat(amount) || 0,
-        status: status || 'draft',
+        status: (status as Invoice['status']) || 'requested',
         invoice_date: new Date().toISOString()
       });
     }
@@ -283,9 +283,9 @@ const Invoices: React.FC<InvoicesProps> = ({
   // Generate sample CSV for download
   const downloadSampleCSV = () => {
     const sampleData = `Invoice #,Contact,Vessel,Amount,Status
-"INV-001","ABC Marine Services","MV Ocean Explorer","5000","saved"
-"INV-002","Coastal Shipping Co","SS Baltic Wave","3500","draft"
-"INV-003","Pacific Fleet Ltd","MV Atlantic Star","7500","submitted"`;
+"INV-001","ABC Marine Services","MV Ocean Explorer","5000","requested"
+"INV-002","Coastal Shipping Co","SS Baltic Wave","3500","change_requested"
+"INV-003","Pacific Fleet Ltd","MV Atlantic Star","7500","approved"`;
 
     const blob = new Blob([sampleData], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -420,7 +420,7 @@ const Invoices: React.FC<InvoicesProps> = ({
                     <li><strong>Contact</strong> (required) - Customer/contact name</li>
                     <li><strong>Vessel</strong> (optional) - Vessel name</li>
                     <li><strong>Amount</strong> (required) - Invoice amount</li>
-                    <li><strong>Status</strong> (optional) - saved, draft, or submitted</li>
+                    <li><strong>Status</strong> (optional) - requested, change_requested, or approved</li>
                   </ul>
                 </div>
 

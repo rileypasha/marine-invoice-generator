@@ -185,16 +185,18 @@ const Customers: React.FC = () => {
 
     // Activity filter (active/inactive based on invoice count)
     if (queryState.activity && queryState.activity !== 'all') {
+      const activityValue = String(queryState.activity);
       const hasInvoices = (customer.invoice_count || 0) > 0;
-      if (queryState.activity === 'active' && !hasInvoices) return false;
-      if (queryState.activity === 'inactive' && hasInvoices) return false;
+      if (activityValue === 'active' && !hasInvoices) return false;
+      if (activityValue === 'inactive' && hasInvoices) return false;
     }
 
     // Fleet filter (active/inactive based on monthly invoice count)
     if (queryState.fleet && queryState.fleet !== 'all') {
+      const fleetValue = String(queryState.fleet);
       const hasMonthlyInvoices = (customer.monthly_invoice_count || 0) > 0;
-      if (queryState.fleet === 'active' && !hasMonthlyInvoices) return false;
-      if (queryState.fleet === 'inactive' && hasMonthlyInvoices) return false;
+      if (fleetValue === 'active' && !hasMonthlyInvoices) return false;
+      if (fleetValue === 'inactive' && hasMonthlyInvoices) return false;
     }
 
     // Status filter from filters object (active/inactive based on invoice count)
@@ -855,7 +857,7 @@ const Customers: React.FC = () => {
               <ContactsTable
             customers={filteredCustomers}
             sort={queryState.sort}
-            groupBy={queryState.groupBy}
+            groupBy={queryState.groupBy as 'none' | 'activity' | 'monthlyActivity'}
             grouping={grouping}
             expanded={expanded}
             onGroupingChange={setGrouping}

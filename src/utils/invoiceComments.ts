@@ -23,7 +23,7 @@ export interface InvoiceComment {
   selectionText: string;
   createdAt: string;
   serviceId?: string;
-  highlight: CommentHighlightRect;
+  highlight: CommentHighlightRect | null;
   replies: CommentReply[];
 }
 

@@ -18,6 +18,7 @@ export interface PatchOperation {
   op: DiffOperation;
   path: string;
   value?: unknown;
+  oldValue?: unknown;
 }
 
 /**

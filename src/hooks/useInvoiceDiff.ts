@@ -166,12 +166,15 @@ export function useInvoiceDiff(
       setError(null);
 
       try {
+        const snapshotData =
+          snapshot && typeof snapshot === 'object' ? (snapshot as Record<string, unknown>) : {};
+
         const data = await fetchWithError<VersionCreateResponse>(
           `${API_BASE_URL}/${invoiceIdParam}`,
           {
             method: 'PATCH',
             body: JSON.stringify({
-              ...snapshot,
+              ...snapshotData,
               changeSummary,
             }),
           }

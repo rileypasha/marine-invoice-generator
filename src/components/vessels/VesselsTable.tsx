@@ -363,8 +363,16 @@ export function VesselsTable({
       rowSelection,
     },
     getRowId: (row) => row.id, // Stable unique ID for proper expansion state
-    onGroupingChange,
-    onExpandedChange,
+    onGroupingChange: (updater) => {
+      if (!onGroupingChange) return;
+      const next = typeof updater === 'function' ? updater(grouping) : updater;
+      onGroupingChange(next);
+    },
+    onExpandedChange: (updater) => {
+      if (!onExpandedChange) return;
+      const next = typeof updater === 'function' ? updater(expanded) : updater;
+      onExpandedChange(next);
+    },
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getGroupedRowModel: getGroupedRowModel(),
@@ -492,7 +500,7 @@ export function VesselsTable({
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              row.getToggleExpandedHandler()(e);
+                              row.getToggleExpandedHandler()();
                             }}
                             className="flex items-center justify-between w-full text-left focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded p-1 -m-1"
                             aria-expanded={isExpanded}

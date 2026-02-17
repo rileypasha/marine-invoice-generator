@@ -50,11 +50,14 @@ const buttonVariants = cva(
 
 interface ButtonProps
   extends AriaButtonProps,
-    VariantProps<typeof buttonVariants> {}
+    VariantProps<typeof buttonVariants> {
+  disabled?: boolean;
+}
 
-const Button = ({ className, variant, size, ...props }: ButtonProps) => {
+const Button = ({ className, variant, size, disabled, ...props }: ButtonProps) => {
   return (
     <AriaButton
+      isDisabled={disabled ?? props.isDisabled}
       className={composeRenderProps(className, (className) =>
         cn(
           buttonVariants({

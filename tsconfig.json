@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "commonjs",
+    "module": "ESNext",
     "lib": ["ES2020", "DOM"],
-    "jsx": "react",
+    "jsx": "react-jsx",
     "outDir": "./dist",
     "rootDir": "./",
     "strict": true,
@@ -11,7 +11,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -33,14 +33,16 @@
   },
   "include": [
     "src/**/*",
-    "server/**/*",
-    "tests/**/*"
+    "server/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
     "coverage",
+    "**/__tests__/**",
     "**/*.spec.ts",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "**/*.spec.tsx",
+    "**/*.test.tsx"
   ]
 }

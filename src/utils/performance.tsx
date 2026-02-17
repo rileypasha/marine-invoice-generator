@@ -11,7 +11,7 @@ export function memoComponent<P extends object>(
   Component: React.ComponentType<P>,
   displayName?: string
 ): React.NamedExoticComponent<P> {
-  const MemoizedComponent = React.memo(Component)
+  const MemoizedComponent = React.memo(Component) as unknown as React.NamedExoticComponent<P>
   MemoizedComponent.displayName = displayName || Component.displayName || Component.name
   return MemoizedComponent
 }

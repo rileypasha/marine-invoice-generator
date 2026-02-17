@@ -307,11 +307,24 @@ class ApiClient {
         }, timeout);
 
         try {
-          const headers: HeadersInit = {
+          const headers: Record<string, string> = {
             ...this.defaultHeaders,
-            ...fetchOptions.headers,
             'X-Correlation-ID': correlationId,
           };
+
+          if (fetchOptions.headers instanceof Headers) {
+            fetchOptions.headers.forEach((value, key) => {
+              headers[key] = value;
+            });
+          } else if (Array.isArray(fetchOptions.headers)) {
+            fetchOptions.headers.forEach(([key, value]) => {
+              headers[key] = value;
+            });
+          } else if (fetchOptions.headers && typeof fetchOptions.headers === 'object') {
+            Object.entries(fetchOptions.headers as Record<string, string>).forEach(([key, value]) => {
+              headers[key] = value;
+            });
+          }
 
           if (authStore.csrfToken && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(fetchOptions.method || '')) {
             headers['X-CSRF-Token'] = authStore.csrfToken;
