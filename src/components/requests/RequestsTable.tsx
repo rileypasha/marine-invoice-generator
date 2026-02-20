@@ -4,6 +4,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { createInvoiceColumns } from "@/components/InvoiceTableColumns";
 import { RequestSort } from "@/hooks/useRequestsQueryState";
 import { useRequestsRowActionsStore } from "@/features/requests/state/rowActions.store";
+import { useRequestSection } from "@/hooks/useRequestSection";
 
 // Column width definitions - use actual column IDs from InvoiceTableColumns
 // Desktop widths - reduced left columns to give more space to right columns
@@ -67,6 +68,7 @@ interface RequestsTableProps {
   onBulkDelete?: (selectedRows: Invoice[]) => void;
   onBulkExport?: (selectedRows: Invoice[]) => void;
   onView?: (invoice: Invoice) => void;
+  onCreateInvoice?: (invoice: Invoice) => void;
   onPrint?: (invoice: Invoice) => void;
   onExportPdf?: (invoice: Invoice) => void;
   onExportCsv?: (invoice: Invoice) => void;
@@ -81,6 +83,7 @@ export function RequestsTable({
   onBulkDelete,
   onBulkExport,
   onView,
+  onCreateInvoice,
   onPrint,
   onExportPdf,
   onExportCsv,
@@ -88,6 +91,7 @@ export function RequestsTable({
 }: RequestsTableProps) {
   const navigate = useNavigate();
   const openRowActions = useRequestsRowActionsStore((s) => s.openAt);
+  const { singularLabel } = useRequestSection();
 
   // Proper responsive detection using React state
   const [isMobile, setIsMobile] = useState(false);
@@ -160,12 +164,14 @@ export function RequestsTable({
   const columns = useMemo(() => createInvoiceColumns({
     onView,
     onEdit: onEdit ? handleEditWrapper : undefined,
+    onCreateInvoice,
     onPrint,
     onExportPdf,
     onExportCsv,
     onDelete,
-    openRowActions
-  }), [onView, onEdit, handleEditWrapper, onPrint, onExportPdf, onExportCsv, onDelete, openRowActions]);
+    openRowActions,
+    numberColumnLabel: `${singularLabel} #`
+  }), [onView, onEdit, handleEditWrapper, onCreateInvoice, onPrint, onExportPdf, onExportCsv, onDelete, openRowActions, singularLabel]);
 
   return (
     <DataTable

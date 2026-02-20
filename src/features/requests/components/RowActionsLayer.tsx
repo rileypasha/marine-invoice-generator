@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Eye, Edit, FileSpreadsheet, FileText, Trash2 } from 'lucide-react';
+import { Eye, Edit, FileSpreadsheet, FileText, PlusCircle, Trash2 } from 'lucide-react';
 import { useRequestsRowActionsStore } from '../state/rowActions.store';
 
 const prefetchEditRoute = () => import('../../../pages/CreateInvoice');
@@ -132,6 +132,17 @@ export default function RequestsRowActionsLayer() {
             <Edit className="h-5 w-5 text-gray-600" />
             <span>Edit</span>
           </button>
+          {handlers.createInvoice && (
+            <button
+              role="menuitem"
+              className="flex items-center gap-3 w-full text-left px-6 py-3 text-base hover:bg-gray-50 transition-colors"
+              onClick={handleAction(() => handlers.createInvoice!(rowId))}
+              type="button"
+            >
+              <PlusCircle className="h-5 w-5 text-gray-600" />
+              <span>Create Invoice</span>
+            </button>
+          )}
           {handlers.exportPdf && (
             <button
               role="menuitem"
@@ -208,6 +219,17 @@ export default function RequestsRowActionsLayer() {
         <Edit className="h-4 w-4 text-gray-600" />
         <span>Edit</span>
       </button>
+      {handlers.createInvoice && (
+        <button
+          role="menuitem"
+          className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
+          onClick={handleAction(() => handlers.createInvoice!(rowId))}
+          type="button"
+        >
+          <PlusCircle className="h-4 w-4 text-gray-600" />
+          <span>Create Invoice</span>
+        </button>
+      )}
       {handlers.exportPdf && (
         <button
           role="menuitem"

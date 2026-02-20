@@ -106,7 +106,7 @@ function RoutePrefetcher() {
         const href = link.getAttribute('href')!
 
         // Prefetch route based on href
-        if (href.startsWith('/requests') || href.startsWith('/invoices')) {
+        if (href.startsWith('/requests') || href.startsWith('/estimates') || href.startsWith('/invoices')) {
           prefetchRoute(() => import('./pages/InvoicesPage'))
         } else if (href.startsWith('/contacts') || href.startsWith('/customers')) {
           prefetchRoute(() => import('./pages/Customers'))
@@ -187,6 +187,17 @@ function App() {
                 }
               />
               <Route
+                path="/estimates"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <InvoicesPage />
+                      <ConditionalRequestsRowActions />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/contacts"
                 element={
                   <ProtectedRoute>
@@ -210,6 +221,16 @@ function App() {
               />
               <Route
                 path="/requests/new"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <CreateInvoice />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/estimates/new"
                 element={
                   <ProtectedRoute>
                     <MainLayout>
@@ -269,6 +290,16 @@ function App() {
                 }
               />
               <Route
+                path="/estimates/:id/edit"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <CreateInvoice />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/requests/preview"
                 element={
                   <ProtectedRoute>
@@ -279,7 +310,27 @@ function App() {
                 }
               />
               <Route
+                path="/estimates/preview"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <InvoiceView />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/requests/:id"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <InvoiceView />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/estimates/:id"
                 element={
                   <ProtectedRoute>
                     <MainLayout>

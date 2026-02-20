@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { ExpandingSearch } from '../contacts/ExpandingSearch';
 import { useRequestsQueryState } from '@/hooks/useRequestsQueryState';
 import { RequestsMenus } from './RequestsMenus';
+import { useRequestSection } from '@/hooks/useRequestSection';
 
 interface RequestsToolbarProps {
   // Request data for counts
@@ -41,6 +42,7 @@ export function RequestsToolbar({
   onExport,
   className = ''
 }: RequestsToolbarProps) {
+  const { isEstimate, singularLabel } = useRequestSection();
   const {
     month,
     q,
@@ -82,8 +84,8 @@ export function RequestsToolbar({
           <div className="flex items-center gap-2">
             <h2 className="flex items-center gap-2 text-xl md:text-2xl font-semibold text-gray-900">
               <FileText className="h-4 w-4 md:h-5 md:w-5" />
-              <span className="hidden sm:inline">Invoice Requests</span>
-              <span className="sm:hidden">Invoice Requests</span>
+              <span className="hidden sm:inline">{isEstimate ? 'Estimates' : 'Invoice Requests'}</span>
+              <span className="sm:hidden">{isEstimate ? 'Estimates' : 'Invoice Requests'}</span>
             </h2>
           </div>
 
@@ -119,13 +121,13 @@ export function RequestsToolbar({
               </DropdownMenu>
             )}
 
-            {/* Add Invoice Button */}
+            {/* Add Button */}
             <Button
               onClick={onAddClick}
               className="h-8 px-3 text-xs transition-none !bg-[#1E3A5F] !text-white hover:!bg-[#152b47]"
             >
               <Plus className="h-3 w-3 mr-1" />
-              <span className="hidden sm:inline">Add Invoice</span>
+              <span className="hidden sm:inline">Add {singularLabel}</span>
               <span className="sm:hidden">Add</span>
             </Button>
           </div>
@@ -171,7 +173,7 @@ export function RequestsToolbar({
             <ExpandingSearch
               value={q}
               onChange={handleSearchChange}
-              placeholder="Search requests..."
+              placeholder={isEstimate ? 'Search estimates...' : 'Search requests...'}
               autoFocus={true}
               debounceMs={250}
             />

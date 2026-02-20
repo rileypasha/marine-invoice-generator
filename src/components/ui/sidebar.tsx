@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import React, { useState, createContext, useContext } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
@@ -123,6 +123,7 @@ export const SidebarLink = ({
   className?: string;
   props?: any;
 }) => {
+  const location = useLocation();
   const { open, animate } = useSidebar();
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -144,7 +145,12 @@ export const SidebarLink = ({
       <Link
         ref={buttonRef as React.RefObject<HTMLAnchorElement>}
         to={link.href}
-        onClick={link.onClick}
+        onClick={(event) => {
+          if (location.pathname === link.href) {
+            event.preventDefault();
+          }
+          link.onClick?.();
+        }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={() => setShowTooltip(false)}
         className={cn(

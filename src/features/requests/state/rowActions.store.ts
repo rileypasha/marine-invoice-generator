@@ -4,6 +4,7 @@ type Handlers = {
   view: (rowId: string|number)=>void;
   edit: (rowId: string|number)=>void;
   print: (rowId: string|number)=>void;
+  createInvoice?: (rowId: string|number)=>void;
   exportPdf?: (rowId: string|number)=>void;
   exportCsv?: (rowId: string|number)=>void;
   del: (rowId: string|number)=>void;

@@ -23,6 +23,7 @@ model User {
   notifyOnChangeRequest  String        @default("none") @map("notifyOnChangeRequest")
   notifyOnApproval       String        @default("none") @map("notifyOnApproval")
   invoices         Invoice[]
+  estimates        Estimate[]
   vessels          Vessel[]
   invoiceRevisions InvoiceRevision[]
   passwordResetTokens PasswordResetToken[]
@@ -94,6 +95,62 @@ model Invoice {
   @@map("Invoice")
 }
 
+model Estimate {
+  id                String             @id
+  estimateNumber    String?            @map("estimateNumber")
+  title             String
+  status            String             @default("requested")
+  data              String
+  metadata          String?
+  userId            String?            @map("userId")
+  userName          String?
+  userEmail         String?
+  modifiedByUserId  String?            @map("modifiedByUserId")
+  modifiedByUserName String?           @map("modifiedByUserName")
+  modifiedByUserEmail String?          @map("modifiedByUserEmail")
+  vesselName        String?
+  vesselWeight      Float?
+  vesselBeam        Float?
+  customerName      String?            @map("customerName")
+  contactName       String?            @map("contactName")
+  customerEmail     String?            @map("customerEmail")
+  customerPhone     String?
+  customerAddress   String?            @map("customerAddress")
+  subtotal          Float              @default(0)
+  taxAmount         Float              @default(0)
+  total             Float              @default(0)
+  grossProfit       Float              @default(0)
+  profitPercent     Float              @default(0)
+  market            String?
+  notes             String?
+  createdAt         DateTime           @default(now()) @map("createdAt")
+  updatedAt         DateTime           @default(now()) @updatedAt @map("updatedAt")
+  savedAt           DateTime           @default(now())
+  submittedAt       DateTime?
+  hasChanges        Boolean            @default(false)
+  comments          String?
+  hasUnreadChanges  Boolean            @default(false)
+  lastMasterViewAt  DateTime?
+  customerId        String?            @map("customerId")
+  vesselId          String?            @map("vesselId")
+  attachmentUrl     String?
+  attachmentName    String?
+  attachmentType    String?
+  secondAttachmentUrl String?
+  secondAttachmentName String?
+  secondAttachmentType String?
+  customer          Customer?          @relation(fields: [customerId], references: [id])
+  user              User?              @relation(fields: [userId], references: [id])
+  vessel            Vessel?            @relation(fields: [vesselId], references: [id])
+
+  @@index([customerName])
+  @@index([status, savedAt])
+  @@index([userEmail])
+  @@index([vesselId])
+  @@index([status])
+  @@map("Estimate")
+}
+
 model Customer {
   id            String    @id
   display_name  String    @unique
@@ -112,6 +169,7 @@ model Customer {
   created_at    DateTime  @default(now())
   updated_at    DateTime
   invoices      Invoice[]
+  estimates     Estimate[]
 
   @@index([display_name])
   @@index([email])
@@ -140,6 +198,7 @@ model Vessel {
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
   invoices            Invoice[]
+  estimates           Estimate[]
   user                User      @relation(fields: [userId], references: [id])
 
   @@unique([userId, registration_number])

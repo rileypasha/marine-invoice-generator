@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Invoices from './Invoices';
 import { Pagination } from '../components/ui/pagination';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
 import { useRequestsQueryState } from '../hooks/useRequestsQueryState';
+import { useRequestSection } from '../hooks/useRequestSection';
 
 interface Customer {
   id: string;
@@ -86,10 +87,12 @@ const InvoicesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const latestFetchIdRef = useRef(0);
   const { isAuthenticated, csrfToken } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { confirm, dialog } = useConfirmDialog();
+  const { isEstimate, singularLabel, pluralLabel, documentTypeParam, toEdit, toView, toNew } = useRequestSection();
 
   // Use the query state hook to get filters from URL
   const { month, q: searchTerm, filters } = useRequestsQueryState();
@@ -97,6 +100,7 @@ const InvoicesPage: React.FC = () => {
   const fetchInvoices = useCallback(async (page: number, currentMonth: string, search: string, currentFilters: any) => {
     if (!isAuthenticated || !csrfToken) return;
 
+    const fetchId = ++latestFetchIdRef.current;
     setIsLoading(true);
     try {
       const searchParams = new URLSearchParams({
@@ -108,6 +112,7 @@ const InvoicesPage: React.FC = () => {
       if (search && search.trim()) {
         searchParams.append('search', search.trim());
       }
+      searchParams.append('documentType', documentTypeParam);
 
       // Add month filter (convert to date range)
       if (currentMonth && currentMonth !== 'all') {
@@ -160,6 +165,11 @@ const InvoicesPage: React.FC = () => {
 
       const data = await response.json();
 
+      // Ignore stale responses that finish after a newer request.
+      if (fetchId !== latestFetchIdRef.current) {
+        return;
+      }
+
       // Store raw API data - transformation happens in useMemo
       setRawInvoices(data.invoices || []);
 
@@ -169,12 +179,17 @@ const InvoicesPage: React.FC = () => {
       setTotalPages(totalPagesNum);
 
     } catch (error) {
+      if (fetchId !== latestFetchIdRef.current) {
+        return;
+      }
       console.error('Error fetching invoices:', error);
       setRawInvoices([]);
     } finally {
-      setIsLoading(false);
+      if (fetchId === latestFetchIdRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [isAuthenticated, csrfToken]);
+  }, [isAuthenticated, csrfToken, documentTypeParam]);
 
   // Memoize transformation to prevent re-computation on every render
   const transformedInvoices = useMemo(() => {
@@ -209,7 +224,7 @@ const InvoicesPage: React.FC = () => {
     return { total, requested, change_requested, approved };
   }, [transformedInvoices]);
 
-  // Fetch invoices when query state changes
+  // Fetch records when query state or section type changes.
   useEffect(() => {
     if (!isAuthenticated || !csrfToken) return;
 
@@ -226,29 +241,33 @@ const InvoicesPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, searchTerm, filters, currentPage]);
+  }, [isAuthenticated, csrfToken, fetchInvoices, month, searchTerm, filters, currentPage]);
 
-  // Reset to page 1 when month, search, or filters change
+  // Reset to page 1 when filters or section type changes.
   useEffect(() => {
     setCurrentPage(1);
-  }, [month, searchTerm, filters]);
+  }, [month, searchTerm, filters, documentTypeParam]);
+
+  // Avoid rendering stale rows when switching between requests and estimates.
+  useEffect(() => {
+    setRawInvoices([]);
+  }, [documentTypeParam]);
 
 
   const handleEdit = useCallback((invoice: Invoice) => {
-    navigate(`/requests/${invoice.id}/edit`);
-  }, [navigate]);
+    navigate(toEdit(invoice.id));
+  }, [navigate, toEdit]);
 
   const handleView = useCallback((invoice: Invoice) => {
-    navigate(`/requests/${invoice.id}`);
-  }, [navigate]);
+    navigate(toView(invoice.id));
+  }, [navigate, toView]);
 
   const handleDelete = useCallback(async (invoice: Invoice) => {
     if (!isAuthenticated || !csrfToken) return;
 
     const confirmed = await confirm({
-      title: 'Delete Invoice',
-      description: 'Are you sure you want to delete this invoice? This action cannot be undone.',
+      title: `Delete ${singularLabel}`,
+      description: `Are you sure you want to delete this ${singularLabel.toLowerCase()}? This action cannot be undone.`,
       confirmLabel: 'Delete',
       cancelLabel: 'Cancel',
       variant: 'destructive'
@@ -257,7 +276,7 @@ const InvoicesPage: React.FC = () => {
     if (!confirmed) return;
 
     try {
-      const response = await fetch(`/api/v1/invoice/${invoice.id}`, {
+      const response = await fetch(`/api/v1/invoice/${invoice.id}?documentType=${documentTypeParam}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -270,37 +289,37 @@ const InvoicesPage: React.FC = () => {
         // Refresh the list
         fetchInvoices(currentPage, month, searchTerm, filters);
       } else {
-        alert('Failed to delete invoice');
+        alert(`Failed to delete ${singularLabel.toLowerCase()}`);
       }
     } catch (error) {
       console.error('Error deleting invoice:', error);
-      alert('Error deleting invoice');
+      alert(`Error deleting ${singularLabel.toLowerCase()}`);
     }
-  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, currentPage, searchTerm, filters]);
+  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, currentPage, searchTerm, filters, singularLabel, documentTypeParam]);
 
   const handlePrint = useCallback((invoice: Invoice) => {
     // Navigate to invoice view page with print parameter to auto-trigger print
-    navigate(`/requests/${invoice.id}?print=true`);
-  }, [navigate]);
+    navigate(`${toView(invoice.id)}?print=true`);
+  }, [navigate, toView]);
 
   const handleExportPdf = useCallback((invoice: Invoice) => {
-    navigate(`/requests/${invoice.id}?export=pdf`);
-  }, [navigate]);
+    navigate(`${toView(invoice.id)}?export=pdf`);
+  }, [navigate, toView]);
 
   const handleExportCsv = useCallback((invoice: Invoice) => {
-    navigate(`/requests/${invoice.id}?export=csv`);
-  }, [navigate]);
+    navigate(`${toView(invoice.id)}?export=csv`);
+  }, [navigate, toView]);
 
   const handleAddNew = useCallback(() => {
-    navigate('/requests/new');
-  }, [navigate]);
+    navigate(toNew());
+  }, [navigate, toNew]);
 
   const handleBulkDelete = useCallback(async (invoices: Invoice[]) => {
     if (!isAuthenticated || !csrfToken) return;
 
     const confirmed = await confirm({
-      title: 'Delete Multiple Invoices',
-      description: `Are you sure you want to delete ${invoices.length} invoice(s)? This action cannot be undone.`,
+      title: `Delete Multiple ${pluralLabel}`,
+      description: `Are you sure you want to delete ${invoices.length} ${singularLabel.toLowerCase()}(s)? This action cannot be undone.`,
       confirmLabel: 'Delete All',
       cancelLabel: 'Cancel',
       variant: 'destructive'
@@ -310,7 +329,7 @@ const InvoicesPage: React.FC = () => {
 
     try {
       const deletePromises = invoices.map(invoice =>
-        fetch(`/api/v1/invoice/${invoice.id}`, {
+        fetch(`/api/v1/invoice/${invoice.id}?documentType=${documentTypeParam}`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
@@ -325,12 +344,37 @@ const InvoicesPage: React.FC = () => {
       fetchInvoices(currentPage, month, searchTerm, filters);
     } catch (error) {
       console.error('Error deleting invoices:', error);
-      alert('Error deleting invoices');
+      alert(`Error deleting ${pluralLabel.toLowerCase()}`);
     }
-  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, currentPage, searchTerm, filters]);
+  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, currentPage, searchTerm, filters, singularLabel, pluralLabel, documentTypeParam]);
+
+  const handleCreateInvoiceFromEstimate = useCallback(async (invoice: Invoice) => {
+    if (!isAuthenticated || !csrfToken || !isEstimate) return;
+
+    try {
+      const response = await fetch(`/api/v1/invoice/${invoice.id}/create-invoice`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || ''
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create invoice: ${response.status}`);
+      }
+
+      await fetchInvoices(currentPage, month, searchTerm, filters);
+      alert('Invoice created from estimate successfully.');
+    } catch (error) {
+      console.error('Error creating invoice from estimate:', error);
+      alert('Failed to create invoice from estimate');
+    }
+  }, [isAuthenticated, csrfToken, isEstimate, fetchInvoices, currentPage, month, searchTerm, filters]);
 
   const handleBulkExport = useCallback((invoices: Invoice[]) => {
-    const headers = ['Invoice #', 'Contact', 'Vessel', 'Amount', 'Created At', 'Status'];
+    const headers = [`${singularLabel} #`, 'Contact', 'Vessel', 'Amount', 'Created At', 'Status'];
     const csvContent = [
       headers.join(','),
       ...invoices.map(invoice => [
@@ -347,12 +391,12 @@ const InvoicesPage: React.FC = () => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `invoices-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `${pluralLabel.toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  }, []);
+  }, [pluralLabel, singularLabel]);
 
   return (
     <>
@@ -361,6 +405,7 @@ const InvoicesPage: React.FC = () => {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}
+        onCreateInvoice={isEstimate ? handleCreateInvoiceFromEstimate : undefined}
         onPrint={handlePrint}
         onExportPdf={handleExportPdf}
         onExportCsv={handleExportCsv}

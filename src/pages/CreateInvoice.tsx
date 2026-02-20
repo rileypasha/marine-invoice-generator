@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { SquarePen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useRequestSection } from '../hooks/useRequestSection';
 import { gatherInvoiceData } from '../utils/invoiceData';
 import {
   InvoiceComment,
@@ -246,6 +247,8 @@ const CreateInvoice: React.FC = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const { isAuthenticated, csrfToken, currentUser } = useAuth();
+  const { singularLabel, pluralLabel, documentTypeParam, toList, toPreview } = useRequestSection();
+  const withDocumentType = (url: string) => `${url}${url.includes('?') ? '&' : '?'}documentType=${documentTypeParam}`;
 
   const isEditMode = !!id;
 
@@ -1270,7 +1273,7 @@ const CreateInvoice: React.FC = () => {
 
     const fetchInvoiceData = async () => {
       try {
-        const response = await fetch(`/api/v1/invoice/${id}`, {
+        const response = await fetch(withDocumentType(`/api/v1/invoice/${id}`), {
           headers: {
             'Content-Type': 'application/json',
             ...(csrfToken && { 'X-CSRF-Token': csrfToken })
@@ -1666,7 +1669,7 @@ const CreateInvoice: React.FC = () => {
       // Automatically update status to "change_requested"
       const updateStatus = async () => {
         try {
-          const response = await fetch(`/api/v1/invoice/${id}`, {
+          const response = await fetch(withDocumentType(`/api/v1/invoice/${id}`), {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -2708,7 +2711,7 @@ const CreateInvoice: React.FC = () => {
     }
 
     if (!isAuthenticated || !csrfToken) {
-      setError('Please log in to save invoices');
+      setError(`Please log in to save ${pluralLabel.toLowerCase()}`);
       return;
     }
 
@@ -2716,7 +2719,7 @@ const CreateInvoice: React.FC = () => {
     setError(null);
 
     try {
-      const url = isEditMode ? `/api/v1/invoice/${id}` : '/api/v1/invoice/save';
+      const url = isEditMode ? withDocumentType(`/api/v1/invoice/${id}`) : withDocumentType('/api/v1/invoice/save');
       const method = isEditMode ? 'PUT' : 'POST';
 
       const {
@@ -2728,8 +2731,8 @@ const CreateInvoice: React.FC = () => {
 
       const titleBase = invoiceData.metadata.title?.trim();
       const defaultTitle = invoiceData.vessel.name
-        ? `Invoice for ${invoiceData.vessel.name}`
-        : 'Invoice Request';
+        ? `${singularLabel} for ${invoiceData.vessel.name}`
+        : `${singularLabel} Request`;
 
       // Strip receipt data from payload to prevent server crashes from large base64 data
       // Receipts are already persisted when uploaded, no need to re-send them in updates
@@ -2827,7 +2830,7 @@ const CreateInvoice: React.FC = () => {
       }
 
       // Navigate to invoice requests table on success
-      navigate('/requests');
+      navigate(toList());
 
     } catch (error: any) {
       console.error('Error saving invoice:', error);
@@ -2845,7 +2848,7 @@ const CreateInvoice: React.FC = () => {
     }
 
     if (!isAuthenticated || !csrfToken) {
-      setError('Please log in to save invoices');
+      setError(`Please log in to save ${pluralLabel.toLowerCase()}`);
       return;
     }
 
@@ -2853,7 +2856,7 @@ const CreateInvoice: React.FC = () => {
     setError(null);
 
     try {
-      const url = isEditMode ? `/api/v1/invoice/${id}` : '/api/v1/invoice/save';
+      const url = isEditMode ? withDocumentType(`/api/v1/invoice/${id}`) : withDocumentType('/api/v1/invoice/save');
       const method = isEditMode ? 'PUT' : 'POST';
 
       const {
@@ -2865,8 +2868,8 @@ const CreateInvoice: React.FC = () => {
 
       const titleBase = invoiceData.metadata.title?.trim();
       const defaultTitle = invoiceData.vessel.name
-        ? `Invoice for ${invoiceData.vessel.name}`
-        : 'Invoice Request';
+        ? `${singularLabel} for ${invoiceData.vessel.name}`
+        : `${singularLabel} Request`;
 
       const payload = {
         title: titleBase || defaultTitle,
@@ -2991,7 +2994,7 @@ const CreateInvoice: React.FC = () => {
       previewMode: true,
       id: 'print',
       invoiceNumber: `PRINT-${Date.now().toString().slice(-6)}`,
-      title: invoiceData.metadata.title || `Invoice for ${invoiceData.vessel.name}`,
+      title: invoiceData.metadata.title || `${singularLabel} for ${invoiceData.vessel.name}`,
       total: finalTotal,
       subtotal: subtotalWithMarkup,
       taxAmount: totalTax,
@@ -3031,7 +3034,7 @@ const CreateInvoice: React.FC = () => {
     };
 
     // Navigate to preview with print parameter
-    navigate('/requests/preview?print=true', {
+    navigate(`${toPreview()}?print=true`, {
       state: { previewData: printData }
     });
   };
@@ -3071,11 +3074,11 @@ const CreateInvoice: React.FC = () => {
 
     pdf.setFontSize(14);
     pdf.setTextColor(100, 116, 139);
-    pdf.text('Invoice Request Summary', 20, 28);
+    pdf.text(`${singularLabel} Request Summary`, 20, 28);
 
     pdf.setFontSize(10);
     pdf.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 20, 36);
-    pdf.text(`Invoice Ref: INV-${Date.now().toString().slice(-6)}`, 20, 42);
+    pdf.text(`${singularLabel} Ref: INV-${Date.now().toString().slice(-6)}`, 20, 42);
 
     // Divider
     pdf.setDrawColor(226, 232, 240);
@@ -3226,7 +3229,7 @@ const CreateInvoice: React.FC = () => {
     }
 
     // Save the PDF
-    const fileName = `Invoice_${invoiceData.vessel.name || 'Unknown'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const fileName = `${singularLabel}_${invoiceData.vessel.name || 'Unknown'}_${new Date().toISOString().split('T')[0]}.pdf`;
     pdf.save(fileName);
   };
 
@@ -3292,7 +3295,7 @@ const CreateInvoice: React.FC = () => {
       }
 
       const result = await response.json();
-      alert('Invoice email sent successfully!');
+      alert(`${singularLabel} email sent successfully!`);
       setShowEmailDialog(false);
 
     } catch (error) {
@@ -3341,7 +3344,7 @@ const CreateInvoice: React.FC = () => {
             // Build the complete payload to preserve all data
             const { structuredData, metadataPayload } = buildInvoiceSubmissionPayload();
 
-            const response = await fetch(`/api/v1/invoice/${id}`, {
+            const response = await fetch(withDocumentType(`/api/v1/invoice/${id}`), {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
@@ -3428,7 +3431,7 @@ const CreateInvoice: React.FC = () => {
             // Build the complete payload to preserve all data
             const { structuredData, metadataPayload } = buildInvoiceSubmissionPayload();
 
-            const response = await fetch(`/api/v1/invoice/${id}`, {
+            const response = await fetch(withDocumentType(`/api/v1/invoice/${id}`), {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
@@ -3557,7 +3560,7 @@ const CreateInvoice: React.FC = () => {
     // Create CSV content
     const csvContent = [
       // Invoice header info
-      `"Invoice for ${invoiceData.vessel.name}"`, 
+      `"${singularLabel} for ${invoiceData.vessel.name}"`, 
       `"Contact: ${invoiceData.customer.customerName}"`, 
       `"Date: ${new Date().toLocaleDateString()}"`, 
       '',
@@ -3571,7 +3574,7 @@ const CreateInvoice: React.FC = () => {
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
 
-    const fileName = `Invoice_${invoiceData.vessel.name || 'Unknown'}_${new Date().toISOString().split('T')[0]}.csv`;
+    const fileName = `${singularLabel}_${invoiceData.vessel.name || 'Unknown'}_${new Date().toISOString().split('T')[0]}.csv`;
     link.setAttribute('download', fileName);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
@@ -3608,7 +3611,7 @@ const CreateInvoice: React.FC = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-sm text-muted-foreground">Loading invoice data...</p>
+          <p className="text-sm text-muted-foreground">{`Loading ${singularLabel.toLowerCase()} data...`}</p>
         </div>
       </div>
     );
@@ -3626,8 +3629,8 @@ const CreateInvoice: React.FC = () => {
           </div>
           <h2 className="text-lg font-semibold mb-2">Error</h2>
           <p className="text-sm text-muted-foreground mb-4">{error}</p>
-          <Button onClick={() => navigate('/requests')}> 
-            Back to Invoices
+          <Button onClick={() => navigate(toList())}> 
+            {`Back to ${pluralLabel}`}
           </Button>
         </div>
       </div>
@@ -3643,7 +3646,7 @@ const CreateInvoice: React.FC = () => {
           <div className="flex items-center gap-2">
             <h1 className="flex items-center gap-2 text-xl md:text-2xl font-semibold text-foreground">
               <SquarePen className="h-5 w-5" />
-              {isEditMode ? 'Edit Invoice' : 'New Invoice Request'}
+              {isEditMode ? `Edit ${singularLabel}` : `New ${singularLabel} Request`}
             </h1>
 
             {/* Unsaved Changes Indicator */}
@@ -4583,8 +4586,8 @@ const CreateInvoice: React.FC = () => {
                             <h2 className="text-lg font-semibold text-slate-900">
                               {invoiceData.metadata.title?.trim() ||
                                 (invoiceData.vessel.name
-                                  ? `Invoice for ${invoiceData.vessel.name}`
-                                  : 'Invoice Request')}
+                                  ? `${singularLabel} for ${invoiceData.vessel.name}`
+                                  : `${singularLabel} Request`)}
                             </h2>
                             <p className="text-xs text-muted-foreground">Draft preview • {new Date().toLocaleDateString()}</p>
                           </div>
@@ -4863,13 +4866,13 @@ const CreateInvoice: React.FC = () => {
             {isEditMode && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Attach Invoice</CardTitle>
+                  <CardTitle className="text-base">{`Attach ${singularLabel}`}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Show read-only original attachment when re-approving */}
                   {statusChangedToChangeRequested && attachedFile ? (
                     <div className="space-y-2">
-                      <Label>Original Invoice</Label>
+                      <Label>{`Original ${singularLabel}`}</Label>
                       <div className="flex items-center justify-between p-3 bg-muted rounded-md">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <svg className="w-5 h-5 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4904,7 +4907,7 @@ const CreateInvoice: React.FC = () => {
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Original approved invoice (read-only)
+                        {`Original approved ${singularLabel.toLowerCase()} (read-only)`}
                       </p>
                     </div>
                   ) : (
@@ -4976,7 +4979,7 @@ const CreateInvoice: React.FC = () => {
 
                   {statusChangedToChangeRequested && attachedFile && (
                     <div className="space-y-2 pt-4 border-t">
-                      <Label htmlFor="second-invoice-attachment">Updated Invoice</Label>
+                      <Label htmlFor="second-invoice-attachment">{`Updated ${singularLabel}`}</Label>
                       <Input
                         id="second-invoice-attachment"
                         type="file"
@@ -4986,7 +4989,7 @@ const CreateInvoice: React.FC = () => {
                         className="cursor-pointer"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Upload revised invoice (PDF, PNG, JPEG - max 10MB)
+                        {`Upload revised ${singularLabel.toLowerCase()} (PDF, PNG, JPEG - max 10MB)`}
                       </p>
 
                       {secondAttachedFile && (
@@ -5049,7 +5052,7 @@ const CreateInvoice: React.FC = () => {
       {showEmailDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background rounded-lg shadow-lg p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold mb-4">Send Invoice Email</h2>
+            <h2 className="text-lg font-semibold mb-4">{`Send ${singularLabel} Email`}</h2>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email-recipient">Recipient</Label>

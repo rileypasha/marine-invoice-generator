@@ -29,6 +29,7 @@ import { PatchOperation } from '../types/diff.types';
 import { FileText, FileSpreadsheet, X, Paperclip } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { CommentCard } from '../components/comments/CommentCard';
+import { useRequestSection } from '../hooks/useRequestSection';
 
 interface LineItem {
   id?: string;
@@ -235,6 +236,8 @@ const InvoiceView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { singularLabel, sectionLabel, documentTypeParam, toList, toNew } = useRequestSection();
+  const withDocumentType = (url: string) => `${url}${url.includes('?') ? '&' : '?'}documentType=${documentTypeParam}`;
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, csrfToken, currentUser: user } = useAuth();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -271,7 +274,7 @@ const InvoiceView: React.FC = () => {
 
     const fetchInvoice = async () => {
       try {
-        const response = await fetch(`/api/v1/invoice/${id}`, {
+        const response = await fetch(withDocumentType(`/api/v1/invoice/${id}`), {
           headers: {
             'Content-Type': 'application/json',
             'X-CSRF-Token': csrfToken || ''
@@ -324,7 +327,7 @@ const InvoiceView: React.FC = () => {
     if (!id || !invoice) return;
 
     try {
-      const response = await fetch(`/api/v1/invoice/${id}/comments/${commentId}`, {
+      const response = await fetch(withDocumentType(`/api/v1/invoice/${id}/comments/${commentId}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -369,7 +372,7 @@ const InvoiceView: React.FC = () => {
     if (!id || !invoice) return;
 
     try {
-      const response = await fetch(`/api/v1/invoice/${id}/comments/${commentId}/reply`, {
+      const response = await fetch(withDocumentType(`/api/v1/invoice/${id}/comments/${commentId}/reply`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -413,7 +416,7 @@ const InvoiceView: React.FC = () => {
     if (!invoice || isPreviewMode) return;
 
     try {
-      const response = await fetch(`/api/v1/invoice/${invoice.id}/comments/${commentId}`, {
+      const response = await fetch(withDocumentType(`/api/v1/invoice/${invoice.id}/comments/${commentId}`), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -493,12 +496,12 @@ const InvoiceView: React.FC = () => {
 
   const handleBack = () => {
     if (isPreviewMode && formState) {
-      const returnTo = formState.returnTo || '/requests/new';
+      const returnTo = formState.returnTo || toNew();
       navigate(returnTo, { state: { restoredFormState: formState } });
     } else if (isPreviewMode) {
       navigate(-1);
     } else {
-      navigate('/requests');
+      navigate(toList());
     }
   };
 
@@ -507,7 +510,7 @@ const InvoiceView: React.FC = () => {
     const safeVesselLabel = vesselLabel.replace(/[^a-z0-9]+/gi, '_');
     const dateSource = invoice?.savedAt || invoice?.createdAt || new Date().toISOString();
     const dateLabel = new Date(dateSource).toISOString().split('T')[0];
-    return `Invoice_${safeVesselLabel}_${dateLabel}`;
+    return `${singularLabel}_${safeVesselLabel}_${dateLabel}`;
   };
 
   const handleExportCSV = () => {
@@ -544,7 +547,7 @@ const InvoiceView: React.FC = () => {
     );
 
     const csvContent = [
-      `"${invoice.title || `Invoice for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`}"`,
+      `"${invoice.title || `${singularLabel} for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`}"`,
       `"Contact: ${customer.display_name || customer.contact_name || invoice.customerName || 'N/A'}"`,
       `"Date: ${formatDate(invoice.savedAt || invoice.createdAt)}"`,
       '',
@@ -579,13 +582,13 @@ const InvoiceView: React.FC = () => {
     yPos += 8;
     pdf.setFontSize(12);
     pdf.setTextColor(100, 116, 139);
-    pdf.text(invoice.title || `Invoice for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`, 20, yPos);
+    pdf.text(invoice.title || `${singularLabel} for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`, 20, yPos);
 
     yPos += 6;
     pdf.setFontSize(9);
     pdf.text(`Generated: ${new Date().toLocaleString()}`, 20, yPos);
     yPos += 6;
-    pdf.text(`Invoice ID: ${invoice.invoiceNumber || invoice.id || 'N/A'}`, 20, yPos);
+    pdf.text(`${singularLabel} ID: ${invoice.invoiceNumber || invoice.id || 'N/A'}`, 20, yPos);
 
     yPos += 6;
     pdf.setDrawColor(226, 232, 240);
@@ -727,7 +730,7 @@ const InvoiceView: React.FC = () => {
 
     setIsSubmittingReply(true);
     try {
-      const response = await fetch(`/api/v1/invoice/${invoice.id}/comments/${commentId}/reply`, {
+      const response = await fetch(withDocumentType(`/api/v1/invoice/${invoice.id}/comments/${commentId}/reply`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -851,7 +854,7 @@ const InvoiceView: React.FC = () => {
 
     setIsSubmittingComment(true);
     try {
-      const response = await fetch(`/api/v1/invoice/${invoice.id}/comments`, {
+      const response = await fetch(withDocumentType(`/api/v1/invoice/${invoice.id}/comments`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1152,7 +1155,7 @@ const InvoiceView: React.FC = () => {
           </CardHeader>
           <CardContent className="flex justify-end">
             <Button variant="outline" onClick={handleBack}>
-              {isPreviewMode ? 'Back to create invoice' : 'Back to requests'}
+              {isPreviewMode ? `Back to create ${singularLabel.toLowerCase()}` : `Back to ${sectionLabel.toLowerCase()}`}
             </Button>
           </CardContent>
         </Card>
@@ -1165,12 +1168,12 @@ const InvoiceView: React.FC = () => {
       <div className="flex min-h-[60vh] items-center justify-center px-4">
         <Card className="max-w-lg">
           <CardHeader>
-            <CardTitle>Invoice unavailable</CardTitle>
-            <CardDescription>The requested invoice could not be found.</CardDescription>
+            <CardTitle>{`${singularLabel} unavailable`}</CardTitle>
+            <CardDescription>{`The requested ${singularLabel.toLowerCase()} could not be found.`}</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-end">
             <Button variant="outline" onClick={handleBack}>
-              {isPreviewMode ? 'Back to create invoice' : 'Back to requests'}
+              {isPreviewMode ? `Back to create ${singularLabel.toLowerCase()}` : `Back to ${sectionLabel.toLowerCase()}`}
             </Button>
           </CardContent>
         </Card>
@@ -1181,7 +1184,7 @@ const InvoiceView: React.FC = () => {
   const invoiceDate = formatDate(invoice.savedAt || invoice.createdAt || Date.now().toString());
   const createdAtLabel = formatDateTime(invoice.createdAt);
   const updatedAtLabel = formatDateTime(invoice.updatedAt);
-  const invoiceTitle = invoice.title?.trim() || (vessel.name ? `Invoice for ${vessel.name}` : 'Invoice Request');
+  const invoiceTitle = invoice.title?.trim() || (vessel.name ? `${singularLabel} for ${vessel.name}` : `${singularLabel} Request`);
   const invoiceNumber = invoice.invoiceNumber || (invoice.id ? invoice.id.substring(0, 8) : '—');
 
   return (
@@ -1203,7 +1206,7 @@ const InvoiceView: React.FC = () => {
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl font-semibold text-slate-900">
-                  {invoice.title || `Invoice for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`}
+                  {invoice.title || `${singularLabel} for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`}
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
                   {invoice.status === 'draft' ? 'Draft preview' : invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)} • {new Date(invoice.createdAt).toLocaleDateString()}
@@ -1621,14 +1624,14 @@ const InvoiceView: React.FC = () => {
                     onClick={() => handleViewAttachment(
                       invoice.attachmentUrl!,
                       invoice.attachmentType || 'application/pdf',
-                      invoice.attachmentName || 'Invoice Attachment'
+                      invoice.attachmentName || `${singularLabel} Attachment`
                     )}
                     className="flex items-center gap-2 w-full px-4 py-3 text-left bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
                   >
                     <Paperclip className="h-4 w-4 text-slate-600" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-900 truncate">
-                        {invoice.attachmentName || 'Invoice Attachment'}
+                        {invoice.attachmentName || `${singularLabel} Attachment`}
                       </p>
                       <p className="text-xs text-slate-500">
                         {invoice.attachmentType || 'Unknown type'}

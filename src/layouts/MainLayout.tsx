@@ -6,6 +6,7 @@ import {
   Ship,
   Settings,
   SquarePen,
+  ClipboardList,
   PanelLeftOpen,
   PanelLeftClose
 } from 'lucide-react';
@@ -70,6 +71,12 @@ const SidebarContent = () => {
       label: 'Requests',
       href: '/requests',
       icon: <FileText className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+      onClick: handleLinkClick,
+    },
+    {
+      label: 'Estimates',
+      href: '/estimates',
+      icon: <ClipboardList className="text-gray-700 h-4 w-4 flex-shrink-0" />,
       onClick: handleLinkClick,
     },
     {
@@ -278,6 +285,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       icon: FileText,
     },
     {
+      id: 'estimates',
+      label: 'Estimates',
+      href: '/estimates',
+      icon: ClipboardList,
+    },
+    {
       id: 'contacts',
       label: 'Contacts',
       href: '/contacts',
@@ -302,8 +315,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     switch (location.pathname) {
       case '/requests/new':
         return 'New Request';
+      case '/estimates/new':
+        return 'New Estimate';
       case '/requests':
         return 'Invoice Requests';
+      case '/estimates':
+        return 'Estimates';
       case '/contacts':
         return 'Contact Directory';
       case '/contacts/create':
@@ -318,6 +335,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         if (location.pathname.startsWith('/requests/')) {
           return 'Request Details';
         }
+        if (location.pathname.startsWith('/estimates/')) {
+          return 'Estimate Details';
+        }
         if (location.pathname.startsWith('/contacts/') && location.pathname.endsWith('/edit')) {
           return 'Contact Directory';
         }
@@ -327,15 +347,23 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   // Check if current route needs full-width layout (Airtable-style)
   const isFullWidthRoute = () => {
-    if (location.pathname === '/contacts' || location.pathname === '/vessels' || location.pathname === '/requests') {
+    if (
+      location.pathname === '/contacts' ||
+      location.pathname === '/vessels' ||
+      location.pathname === '/requests' ||
+      location.pathname === '/estimates'
+    ) {
       return true;
     }
 
-    if (location.pathname === '/requests/new') {
+    if (location.pathname === '/requests/new' || location.pathname === '/estimates/new') {
       return true;
     }
 
-    if (location.pathname.startsWith('/requests/') && location.pathname.endsWith('/edit')) {
+    if (
+      (location.pathname.startsWith('/requests/') && location.pathname.endsWith('/edit')) ||
+      (location.pathname.startsWith('/estimates/') && location.pathname.endsWith('/edit'))
+    ) {
       return true;
     }
 

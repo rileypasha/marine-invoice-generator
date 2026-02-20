@@ -41,10 +41,12 @@ interface InvoiceTableActionsProps {
   onView?: (invoice: Invoice) => void;
   onEdit?: (invoice: Invoice) => void;
   onPrint?: (invoice: Invoice) => void;
+  onCreateInvoice?: (invoice: Invoice) => void;
   onExportPdf?: (invoice: Invoice) => void;
   onExportCsv?: (invoice: Invoice) => void;
   onDelete?: (invoice: Invoice) => void;
   openRowActions?: (args: {rowId: string|number; pos: {top: number; left: number}; handlers: any}) => void;
+  numberColumnLabel?: string;
 }
 
 // Create formatters once outside component to prevent recreation on every render
@@ -135,7 +137,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     accessorKey: "invoice_number",
     id: "invoice_number",
     header: () => (
-      <div className="!pl-3">Request #</div>
+      <div className="!pl-3">{actions.numberColumnLabel || 'Request #'}</div>
     ),
     cell: ({ row }) => {
       const invoice = row.original;
@@ -376,6 +378,9 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
                     console.log('[InvoiceTableColumns] Edit handler called', { invoice, onEdit: actions.onEdit });
                     actions.onEdit?.(invoice);
                   },
+                  createInvoice: actions.onCreateInvoice
+                    ? () => actions.onCreateInvoice?.(invoice)
+                    : undefined,
                   exportPdf: actions.onExportPdf
                     ? () => actions.onExportPdf?.(invoice)
                     : undefined,

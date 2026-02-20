@@ -18,28 +18,65 @@ const versioningService = createVersioningService(prisma);
 const auditService = createAuditService(prisma);
 const changeRequestService = createChangeRequestService(prisma);
 
-// Helper function to generate sequential invoice number
-async function generateNextInvoiceNumber(): Promise<string> {
-  // Find all invoices with REQ- prefix
-  const allInvoices = await prisma.invoice.findMany({
+interface InvoiceRequest extends Request {
+  userId?: string;
+  correlationId?: string;
+}
+
+type DocumentType = 'invoice' | 'estimate';
+
+const getDocumentType = (req: InvoiceRequest): DocumentType => {
+  const queryType = typeof req.query.documentType === 'string' ? req.query.documentType : undefined;
+  const bodyType = typeof (req.body as any)?.documentType === 'string' ? (req.body as any).documentType : undefined;
+  const rawType = (queryType || bodyType || '').toLowerCase();
+  return rawType === 'estimate' ? 'estimate' : 'invoice';
+};
+
+const getDocumentTypeFilter = (documentType: DocumentType) => {
+  if (documentType === 'estimate') return {};
+
+  // Legacy estimate rows accidentally saved in Invoice table should stay hidden.
+  return {
+    OR: [
+      { market: null },
+      { market: '' },
+      { market: 'invoice' as const },
+      { market: { not: 'estimate' } },
+    ],
+  };
+};
+
+const getPrimaryModel = (documentType: DocumentType) =>
+  documentType === 'estimate' ? (prisma as any).estimate : (prisma as any).invoice;
+
+const getNumberField = (documentType: DocumentType) =>
+  documentType === 'estimate' ? 'estimateNumber' : 'invoiceNumber';
+
+// Helper function to generate sequential number
+async function generateNextInvoiceNumber(documentType: DocumentType): Promise<string> {
+  const model = getPrimaryModel(documentType);
+  const numberField = getNumberField(documentType);
+  const prefix = documentType === 'estimate' ? 'EST-' : 'REQ-';
+
+  const allRows = await model.findMany({
     where: {
-      invoiceNumber: {
-        startsWith: 'REQ-'
+      [numberField]: {
+        startsWith: prefix
       }
     },
     select: {
-      invoiceNumber: true
+      [numberField]: true
     }
   });
 
-  if (!allInvoices || allInvoices.length === 0) {
-    return 'REQ-1';
+  if (!allRows || allRows.length === 0) {
+    return `${prefix}1`;
   }
 
-  // Extract and find the maximum number
   let maxNumber = 0;
-  for (const invoice of allInvoices) {
-    const match = invoice.invoiceNumber?.match(/^REQ-(\d+)$/);
+  for (const row of allRows) {
+    const value = row[numberField];
+    const match = typeof value === 'string' ? value.match(new RegExp(`^${prefix}(\\d+)$`)) : null;
     if (match) {
       const num = parseInt(match[1], 10);
       if (num > maxNumber) {
@@ -48,13 +85,7 @@ async function generateNextInvoiceNumber(): Promise<string> {
     }
   }
 
-  const nextNumber = maxNumber + 1;
-  return `REQ-${nextNumber}`;
-}
-
-interface InvoiceRequest extends Request {
-  userId?: string;
-  correlationId?: string;
+  return `${prefix}${maxNumber + 1}`;
 }
 
 // POST /api/v1/invoice/save
@@ -65,6 +96,9 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
 
   try {
     const invoiceData = req.body;
+    const documentType = getDocumentType(req);
+    const model = getPrimaryModel(documentType);
+    const numberField = getNumberField(documentType);
 
     // Validate invoice data
     if (!invoiceData.total && !invoiceData.subtotal) {
@@ -84,8 +118,8 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
       });
     }
 
-    // Generate invoice number if not provided
-    const invoiceNumber = invoiceData.invoiceNumber || await generateNextInvoiceNumber();
+    // Generate document number if not provided
+    const generatedNumber = invoiceData[numberField] || invoiceData.invoiceNumber || await generateNextInvoiceNumber(documentType);
 
     const providedIdRaw =
       typeof invoiceData.id === 'string' ? invoiceData.id.trim() : invoiceData.id;
@@ -93,10 +127,11 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
     // Check for existing invoice for idempotency (by ID if provided)
     let existingInvoice = null;
     if (typeof providedIdRaw === 'string' && providedIdRaw.length > 0) {
-      existingInvoice = await prisma.invoice.findFirst({
+      existingInvoice = await model.findFirst({
         where: {
           id: providedIdRaw,
           userId,
+          ...getDocumentTypeFilter(documentType),
         },
       });
     }
@@ -124,11 +159,11 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
     if (existingInvoice) {
       // Update existing invoice instead of creating duplicate
       console.log('[Invoice Save] Updating invoice with modifiedByUserName:', user?.name);
-      const updatedInvoice = await prisma.invoice.update({
+      const updatedInvoice = await model.update({
         where: { id: existingInvoice.id },
         data: {
           ...restOfInvoiceData,
-          invoiceNumber,
+          [numberField]: generatedNumber,
           userId,
           modifiedByUserId: userId,
           modifiedByUserName: user?.name || null,
@@ -140,6 +175,7 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
           secondAttachmentUrl: invoiceData.secondAttachmentUrl || existingInvoice.secondAttachmentUrl,
           secondAttachmentName: invoiceData.secondAttachmentName || existingInvoice.secondAttachmentName,
           secondAttachmentType: invoiceData.secondAttachmentType || existingInvoice.secondAttachmentType,
+          market: documentType,
         },
         include: {
           customer: { select: { display_name: true, legal_name: true } },
@@ -155,6 +191,10 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
         idempotencyKey,
         total: updatedInvoice.total,
       });
+
+      if (documentType === 'estimate') {
+        updatedInvoice.invoiceNumber = updatedInvoice.estimateNumber;
+      }
 
       return res.status(200).json({
         id: updatedInvoice.id,
@@ -177,11 +217,11 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
       ? restOfInvoiceData.data
       : JSON.stringify(restOfInvoiceData.lineItems || []);
 
-    const invoice = await prisma.invoice.create({
+    const invoice = await model.create({
       data: {
         ...restOfInvoiceData,
         data: dataField,
-        invoiceNumber,
+        [numberField]: generatedNumber,
         userId,
         userName: user?.name || null,
         userEmail: user?.email || null,
@@ -195,6 +235,7 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
         secondAttachmentUrl: invoiceData.secondAttachmentUrl || null,
         secondAttachmentName: invoiceData.secondAttachmentName || null,
         secondAttachmentType: invoiceData.secondAttachmentType || null,
+        market: documentType,
         id: invoiceId,
       },
       include: {
@@ -212,22 +253,28 @@ router.post('/save', async (req: InvoiceRequest, res: Response) => {
       total: invoice.total,
     });
 
-    // Send email notification for new invoice (async, don't block response)
-    notifyNewInvoice({
-      invoiceNumber: invoice.invoiceNumber || undefined,
-      title: invoice.title,
-      customerName: invoice.customerName || undefined,
-      vesselName: invoice.vesselName || undefined,
-      total: invoice.total,
-      createdBy: invoice.userName || invoice.userEmail || 'Unknown',
-      createdById: invoice.userId || undefined,
-      url: `${process.env.API_BASE_URL || 'http://localhost:3000'}/requests/${invoice.id}`,
-    }).catch(err => {
-      logger.error('Failed to send new invoice notification', {
-        error: err.message,
-        invoiceId: invoice.id,
+    if (documentType === 'invoice') {
+      // Send email notification for new invoice (async, don't block response)
+      notifyNewInvoice({
+        invoiceNumber: invoice.invoiceNumber || undefined,
+        title: invoice.title,
+        customerName: invoice.customerName || undefined,
+        vesselName: invoice.vesselName || undefined,
+        total: invoice.total,
+        createdBy: invoice.userName || invoice.userEmail || 'Unknown',
+        createdById: invoice.userId || undefined,
+        url: `${process.env.API_BASE_URL || 'http://localhost:3000'}/requests/${invoice.id}`,
+      }).catch(err => {
+        logger.error('Failed to send new invoice notification', {
+          error: err.message,
+          invoiceId: invoice.id,
+        });
       });
-    });
+    }
+
+    if (documentType === 'estimate') {
+      invoice.invoiceNumber = invoice.estimateNumber;
+    }
 
     res.status(200).json({
       id: invoice.id,
@@ -258,10 +305,12 @@ router.get('/:id', async (req: InvoiceRequest, res: Response) => {
   const correlationId = req.correlationId!;
   const userId = req.userId!;
   const invoiceId = req.params.id;
+  const documentType = getDocumentType(req);
 
   try {
-    const invoice = await prisma.invoice.findUnique({
-      where: { id: invoiceId },
+    const model = getPrimaryModel(documentType);
+    const invoice = await model.findFirst({
+      where: { id: invoiceId, ...getDocumentTypeFilter(documentType) },
       include: {
         customer: true,
         vessel: true,
@@ -291,9 +340,9 @@ router.get('/:id', async (req: InvoiceRequest, res: Response) => {
       invoiceId,
     });
 
-    // Add diff if status indicates change requested (handles both variants)
+    // Add diff only for invoice workflow
     let diff = null;
-    if (isChangeRequested(invoice.status)) {
+    if (documentType === 'invoice' && isChangeRequested(invoice.status)) {
       diff = await changeRequestService.getCurrentDiff(invoiceId);
       logger.info('Diff retrieved for change requested invoice', {
         correlationId,
@@ -301,6 +350,10 @@ router.get('/:id', async (req: InvoiceRequest, res: Response) => {
         hasDiff: !!diff,
         diffLength: diff ? diff.length : 0,
       });
+    }
+
+    if (documentType === 'estimate') {
+      invoice.invoiceNumber = invoice.estimateNumber;
     }
 
     res.json({
@@ -330,72 +383,82 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
   const correlationId = req.correlationId!;
   const userId = req.userId!;
   const { page = 1, limit = 10, status, search, startDate, endDate, customerId, vesselId, minAmount, maxAmount } = req.query;
+  const documentType = getDocumentType(req);
 
   try {
+    const model = getPrimaryModel(documentType);
+    const numberField = getNumberField(documentType);
     const skip = (Number(page) - 1) * Number(limit);
 
     // Build where clause - show all invoices to all users
     const where: any = {
-      status: { not: 'draft' }, // Exclude legacy draft records
+      AND: [
+        { status: { not: 'draft' } }, // Exclude legacy draft records
+        getDocumentTypeFilter(documentType),
+      ],
     };
 
     if (status) {
-      where.status = status;
+      where.AND.push({ status });
     }
 
     if (search) {
-      where.OR = [
-        { invoiceNumber: { contains: search as string, mode: 'insensitive' } },
-        { title: { contains: search as string, mode: 'insensitive' } },
-        { customer: { displayName: { contains: search as string, mode: 'insensitive' } } },
-        { vessel: { name: { contains: search as string, mode: 'insensitive' } } },
-      ];
+      where.AND.push({
+        OR: [
+          { [numberField]: { contains: search as string, mode: 'insensitive' } },
+          { title: { contains: search as string, mode: 'insensitive' } },
+          { customer: { display_name: { contains: search as string, mode: 'insensitive' } } },
+          { vessel: { name: { contains: search as string, mode: 'insensitive' } } },
+        ],
+      });
     }
 
     // Date range filter
     if (startDate || endDate) {
-      where.createdAt = {};
+      const createdAtFilter: any = {};
       if (startDate) {
-        where.createdAt.gte = new Date(startDate as string);
+        createdAtFilter.gte = new Date(startDate as string);
       }
       if (endDate) {
         const endDateObj = new Date(endDate as string);
         endDateObj.setHours(23, 59, 59, 999); // Include the entire end date
-        where.createdAt.lte = endDateObj;
+        createdAtFilter.lte = endDateObj;
       }
+      where.AND.push({ createdAt: createdAtFilter });
     }
 
     // Customer filter
     if (customerId) {
-      where.customerId = customerId as string;
+      where.AND.push({ customerId: customerId as string });
     }
 
     // Vessel filter
     if (vesselId) {
-      where.vesselId = vesselId as string;
+      where.AND.push({ vesselId: vesselId as string });
     }
 
     // Amount range filter
     if (minAmount || maxAmount) {
-      where.total = {};
+      const totalFilter: any = {};
       if (minAmount) {
-        where.total.gte = parseFloat(minAmount as string);
+        totalFilter.gte = parseFloat(minAmount as string);
       }
       if (maxAmount) {
-        where.total.lte = parseFloat(maxAmount as string);
+        totalFilter.lte = parseFloat(maxAmount as string);
       }
+      where.AND.push({ total: totalFilter });
     }
 
     // Execute all queries in parallel for maximum performance
     const [rawInvoices, total, stats] = await Promise.all([
-      prisma.invoice.findMany({
+      model.findMany({
         where,
         skip,
         take: Number(limit),
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
-          invoiceNumber: true,
+          [numberField]: true,
           title: true,
           status: true,
           total: true,
@@ -418,17 +481,17 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
           user: { select: { name: true, email: true, avatarUrl: true } },
         },
       }),
-      prisma.invoice.count({ where }),
+      model.count({ where }),
       // Calculate stats in parallel instead of sequential
-      prisma.invoice.groupBy({
+      model.groupBy({
         by: ['status'],
-        where: { status: { not: 'draft' } },
+        where,
         _count: { status: true },
       }),
     ]);
 
     // Get unique user IDs from modifiedByUserId fields
-    const modifiedByUserIds = Array.from(new Set(rawInvoices.map(inv => inv.modifiedByUserId).filter(Boolean))) as string[];
+    const modifiedByUserIds = Array.from(new Set(rawInvoices.map((inv: any) => inv.modifiedByUserId).filter(Boolean))) as string[];
 
     // Fetch all modifier users in one query
     const modifiedByUsers = modifiedByUserIds.length > 0
@@ -442,7 +505,10 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
     const modifiedByUserMap = new Map(modifiedByUsers.map(u => [u.id, u.avatarUrl]));
 
     // Transform invoices to ensure userName and modifiedByUserName are populated from user relation if missing
-    const invoices = rawInvoices.map(invoice => {
+    const invoices = rawInvoices.map((invoice: any) => {
+      if (documentType === 'estimate') {
+        invoice.invoiceNumber = invoice.estimateNumber;
+      }
       // Debug logging for contactName transformation
       if (invoice.contactName) {
         logger.info('[GET /invoice] Found invoice with contactName', {
@@ -490,20 +556,20 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
 
     // Build stats map from groupBy results (no additional query needed)
     const statsMap = {
-      total: stats.reduce((sum, stat) => sum + stat._count.status, 0),
+      total: stats.reduce((sum: number, stat: any) => sum + stat._count.status, 0),
       requested: 0,
       change_requested: 0,
       approved: 0,
     };
 
-    stats.forEach(stat => {
+    stats.forEach((stat: any) => {
       if (stat.status === 'requested') statsMap.requested = stat._count.status;
       if (stat.status === 'change_requested') statsMap.change_requested = stat._count.status;
       if (stat.status === 'approved') statsMap.approved = stat._count.status;
     });
 
     // DEBUG: Log REQ-21 in response
-    const req21InResponse = invoices.find(inv => inv.invoiceNumber === 'REQ-21');
+    const req21InResponse = invoices.find((inv: any) => inv.invoiceNumber === 'REQ-21');
     if (req21InResponse) {
       logger.info('[GET /invoice] REQ-21 in JSON response:', {
         invoiceNumber: req21InResponse.invoiceNumber,
@@ -558,9 +624,12 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
   const correlationId = req.correlationId!;
   const userId = req.userId!;
   const invoiceId = req.params.id;
+  const documentType = getDocumentType(req);
 
   try {
     const invoiceData = req.body;
+    const model = getPrimaryModel(documentType);
+    const numberField = getNumberField(documentType);
 
     // Log incoming request for debugging
     logger.info('PUT /api/v1/invoice/:id - Request received', {
@@ -596,9 +665,10 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     }
 
     // Check if invoice exists
-    const existingInvoice = await prisma.invoice.findUnique({
+    const existingInvoice = await model.findFirst({
       where: {
         id: invoiceId,
+        ...getDocumentTypeFilter(documentType),
       },
     });
 
@@ -619,7 +689,11 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     // Note: Removed ownership check - all authenticated users can update all invoices
 
     // Generate invoice number if not provided (keep existing if available)
-    const invoiceNumber = invoiceData.invoiceNumber || existingInvoice.invoiceNumber || await generateNextInvoiceNumber();
+    const invoiceNumber =
+      invoiceData[numberField] ||
+      invoiceData.invoiceNumber ||
+      existingInvoice[numberField] ||
+      await generateNextInvoiceNumber(documentType);
 
     // Determine new status
     const newStatus = invoiceData.status || 'change_requested';
@@ -646,7 +720,7 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     // Build update data - explicitly preserve attachments and data field if not provided
     const updateData: any = {
       ...restOfInvoiceData,
-      invoiceNumber,
+      [numberField]: invoiceNumber,
       status: newStatus,
       userId: existingInvoice.userId, // Preserve original creator's ID
       // Preserve attachment fields if not provided (check for both undefined and null)
@@ -670,6 +744,7 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
         : existingInvoice.secondAttachmentType,
       // Preserve data field (contains receipts and services) if not provided
       data: invoiceData.data !== undefined ? invoiceData.data : existingInvoice.data,
+      market: documentType,
     };
 
     // Only include customerId and vesselId if they're not null
@@ -696,7 +771,7 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
 
     // TEMP FIX: Skip snapshot capture - JSONB update takes 5.8s on Render, causes P1017 timeout
     // TODO: Move snapshot to async background job after responding to user
-    const updatedInvoice = await prisma.invoice.update({
+    const updatedInvoice = await model.update({
       where: { id: invoiceId },
       data: updateData,
       include: {
@@ -706,7 +781,7 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     });
 
     // If invoice is (or just became) 'change_requested', compute and store the diff
-    if (statusChangingToChangeRequested || statusRemainsChangeRequested) {
+    if (documentType === 'invoice' && (statusChangingToChangeRequested || statusRemainsChangeRequested)) {
       logger.info('Computing diff for change request', {
         correlationId,
         invoiceId,
@@ -742,7 +817,7 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
     });
 
     // Send email notification if invoice is in change_requested status (either just changed to it OR modified while in it)
-    if (statusChangingToChangeRequested || statusRemainsChangeRequested) {
+    if (documentType === 'invoice' && (statusChangingToChangeRequested || statusRemainsChangeRequested)) {
       logger.info('Sending change request notification', {
         correlationId,
         invoiceId: updatedInvoice.id,
@@ -770,7 +845,7 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
 
     // Send email notification if status changed to approved
     const statusChangingToApproved = oldStatus !== 'approved' && newStatus === 'approved';
-    if (statusChangingToApproved) {
+    if (documentType === 'invoice' && statusChangingToApproved) {
       logger.info('Sending approval notification', {
         correlationId,
         invoiceId: updatedInvoice.id,
@@ -794,6 +869,10 @@ router.put('/:id', async (req: InvoiceRequest, res: Response) => {
           invoiceId: updatedInvoice.id,
         });
       });
+    }
+
+    if (documentType === 'estimate') {
+      updatedInvoice.invoiceNumber = updatedInvoice.estimateNumber;
     }
 
     res.status(200).json({
@@ -832,10 +911,12 @@ router.delete('/:id', async (req: InvoiceRequest, res: Response) => {
   const correlationId = req.correlationId!;
   const userId = req.userId!;
   const invoiceId = req.params.id;
+  const documentType = getDocumentType(req);
 
   try {
-    const invoice = await prisma.invoice.findUnique({
-      where: { id: invoiceId },
+    const model = getPrimaryModel(documentType);
+    const invoice = await model.findFirst({
+      where: { id: invoiceId, ...getDocumentTypeFilter(documentType) },
     });
 
     if (!invoice) {
@@ -848,7 +929,7 @@ router.delete('/:id', async (req: InvoiceRequest, res: Response) => {
 
     // Note: Removed ownership check - all authenticated users can delete all invoices
 
-    await prisma.invoice.delete({
+    await model.delete({
       where: { id: invoiceId },
     });
 
@@ -874,6 +955,107 @@ router.delete('/:id', async (req: InvoiceRequest, res: Response) => {
     res.status(500).json({
       code: 'DELETE_FAILED',
       message: 'Failed to delete invoice',
+      correlationId,
+    });
+  }
+});
+
+// POST /api/v1/invoice/:id/create-invoice
+router.post('/:id/create-invoice', async (req: InvoiceRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+  const userId = req.userId!;
+  const estimateId = req.params.id;
+
+  try {
+    const estimate = await (prisma as any).estimate.findFirst({
+      where: { id: estimateId },
+    });
+
+    if (!estimate) {
+      return res.status(404).json({
+        code: 'ESTIMATE_NOT_FOUND',
+        message: 'Estimate not found',
+        correlationId,
+      });
+    }
+
+    const actor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+
+    const nextInvoiceNumber = await generateNextInvoiceNumber('invoice');
+
+    const createdInvoice = await prisma.invoice.create({
+      data: {
+        id: randomUUID(),
+        invoiceNumber: nextInvoiceNumber,
+        title: estimate.title,
+        status: 'requested',
+        data: estimate.data,
+        metadata: estimate.metadata,
+        userId,
+        userName: actor?.name || estimate.userName || null,
+        userEmail: actor?.email || estimate.userEmail || null,
+        modifiedByUserId: userId,
+        modifiedByUserName: actor?.name || null,
+        modifiedByUserEmail: actor?.email || null,
+        vesselName: estimate.vesselName,
+        vesselWeight: estimate.vesselWeight,
+        vesselBeam: estimate.vesselBeam,
+        customerName: estimate.customerName,
+        contactName: estimate.contactName,
+        customerEmail: estimate.customerEmail,
+        customerPhone: estimate.customerPhone,
+        customerAddress: estimate.customerAddress,
+        subtotal: estimate.subtotal,
+        taxAmount: estimate.taxAmount,
+        total: estimate.total,
+        grossProfit: estimate.grossProfit,
+        profitPercent: estimate.profitPercent,
+        market: 'invoice',
+        notes: estimate.notes,
+        savedAt: new Date(),
+        customerId: estimate.customerId,
+        vesselId: estimate.vesselId,
+        attachmentUrl: estimate.attachmentUrl,
+        attachmentName: estimate.attachmentName,
+        attachmentType: estimate.attachmentType,
+        secondAttachmentUrl: estimate.secondAttachmentUrl,
+        secondAttachmentName: estimate.secondAttachmentName,
+        secondAttachmentType: estimate.secondAttachmentType,
+      },
+      include: {
+        customer: { select: { display_name: true, legal_name: true } },
+        vessel: { select: { name: true } },
+        user: { select: { name: true, email: true, avatarUrl: true } },
+      },
+    });
+
+    logger.info('Invoice created from estimate', {
+      correlationId,
+      userId,
+      estimateId,
+      invoiceId: createdInvoice.id,
+      invoiceNumber: createdInvoice.invoiceNumber,
+    });
+
+    res.status(200).json({
+      message: 'Invoice created from estimate successfully',
+      invoice: createdInvoice,
+      correlationId,
+    });
+  } catch (error: any) {
+    logger.error('Failed to create invoice from estimate', {
+      error: error.message,
+      correlationId,
+      userId,
+      estimateId,
+    });
+
+    res.status(500).json({
+      code: 'CREATE_INVOICE_FROM_ESTIMATE_FAILED',
+      message: 'Failed to create invoice from estimate',
       correlationId,
     });
   }
@@ -1005,14 +1187,16 @@ router.patch('/:id', async (req: InvoiceRequest, res: Response) => {
   const correlationId = req.correlationId!;
   const userId = req.userId!;
   const invoiceId = req.params.id;
+  const documentType = getDocumentType(req);
 
   try {
     const invoiceData = req.body;
 
     // Check if invoice exists
-    const existingInvoice = await prisma.invoice.findUnique({
+    const existingInvoice = await prisma.invoice.findFirst({
       where: {
         id: invoiceId,
+        ...getDocumentTypeFilter(documentType),
       },
     });
 
@@ -1549,8 +1733,10 @@ router.post('/:id/comments', async (req: InvoiceRequest, res: Response) => {
   const correlationId = req.correlationId!;
   const userId = req.userId!;
   const invoiceId = req.params.id;
+  const documentType = getDocumentType(req);
 
   try {
+    const model = getPrimaryModel(documentType);
     const { text, selectionText, highlight } = req.body;
 
     if (!text || typeof text !== 'string' || !text.trim()) {
@@ -1596,8 +1782,8 @@ router.post('/:id/comments', async (req: InvoiceRequest, res: Response) => {
     }
 
     // Check if invoice exists
-    const invoice = await prisma.invoice.findUnique({
-      where: { id: invoiceId },
+    const invoice = await model.findFirst({
+      where: { id: invoiceId, ...getDocumentTypeFilter(documentType) },
       select: { id: true, metadata: true },
     });
 
@@ -1661,7 +1847,7 @@ router.post('/:id/comments', async (req: InvoiceRequest, res: Response) => {
     metadata.comments.push(newComment);
 
     // Update invoice metadata
-    const updatedInvoice = await prisma.invoice.update({
+    const updatedInvoice = await model.update({
       where: { id: invoiceId },
       data: {
         metadata: JSON.stringify(metadata),
@@ -1704,8 +1890,10 @@ router.post('/:id/comments/:commentId/reply', async (req: InvoiceRequest, res: R
   const userId = req.userId!;
   const invoiceId = req.params.id;
   const commentId = req.params.commentId;
+  const documentType = getDocumentType(req);
 
   try {
+    const model = getPrimaryModel(documentType);
     const { text } = req.body;
 
     if (!text || typeof text !== 'string' || !text.trim()) {
@@ -1724,8 +1912,8 @@ router.post('/:id/comments/:commentId/reply', async (req: InvoiceRequest, res: R
     }
 
     // Check if invoice exists
-    const invoice = await prisma.invoice.findUnique({
-      where: { id: invoiceId },
+    const invoice = await model.findFirst({
+      where: { id: invoiceId, ...getDocumentTypeFilter(documentType) },
       select: { id: true, metadata: true },
     });
 
@@ -1804,7 +1992,7 @@ router.post('/:id/comments/:commentId/reply', async (req: InvoiceRequest, res: R
     comment.replies.push(newReply);
 
     // Update invoice metadata
-    const updatedInvoice = await prisma.invoice.update({
+    const updatedInvoice = await model.update({
       where: { id: invoiceId },
       data: {
         metadata: JSON.stringify(metadata),

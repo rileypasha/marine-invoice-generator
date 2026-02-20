@@ -5,6 +5,7 @@ import { Button, Label } from '../components/magic/index';
 import { RequestsToolbar } from '../components/requests/RequestsToolbar';
 import { RequestsTable } from '../components/requests/RequestsTable';
 import { useRequestsQueryState } from '../hooks/useRequestsQueryState';
+import { useRequestSection } from '../hooks/useRequestSection';
 
 interface Invoice {
   id: string;
@@ -38,6 +39,7 @@ interface InvoicesProps {
   onEdit?: (invoice: Invoice) => void;
   onDelete?: (invoice: Invoice) => void | Promise<void>;
   onView?: (invoice: Invoice) => void;
+  onCreateInvoice?: (invoice: Invoice) => void;
   onPrint?: (invoice: Invoice) => void;
   onExportPdf?: (invoice: Invoice) => void;
   onExportCsv?: (invoice: Invoice) => void;
@@ -53,6 +55,7 @@ const Invoices: React.FC<InvoicesProps> = ({
   onEdit,
   onDelete,
   onView,
+  onCreateInvoice,
   onPrint,
   onExportPdf,
   onExportCsv,
@@ -64,6 +67,7 @@ const Invoices: React.FC<InvoicesProps> = ({
 }) => {
   const navigate = useNavigate();
   const { groupBy } = useRequestsQueryState();
+  const { singularLabel, pluralLabel, toNew, toEdit } = useRequestSection();
 
   // Import state management
   const [showImportModal, setShowImportModal] = useState(false);
@@ -76,7 +80,7 @@ const Invoices: React.FC<InvoicesProps> = ({
   // We only need to handle grouping for display purposes
   const groupedInvoices = useMemo(() => {
     if (groupBy === 'none') {
-      return [{ group: 'All Invoices', invoices }];
+      return [{ group: `All ${pluralLabel}`, invoices }];
     }
 
     const groups: Record<string, Invoice[]> = {};
@@ -117,25 +121,25 @@ const Invoices: React.FC<InvoicesProps> = ({
     return Object.entries(groups)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([group, invoices]) => ({ group, invoices }));
-  }, [invoices, groupBy]);
+  }, [invoices, groupBy, pluralLabel]);
 
   // Handle action callbacks
   const handleAddClick = useCallback(() => {
     if (onAddNew) {
       onAddNew();
     } else {
-      navigate('/requests/new');
+      navigate(toNew());
     }
-  }, [onAddNew, navigate]);
+  }, [onAddNew, navigate, toNew]);
 
   const handleEdit = useCallback((id: string) => {
     const invoice = invoices.find(inv => inv.id === id);
     if (invoice && onEdit) {
       onEdit(invoice);
     } else {
-      navigate(`/requests/${id}/edit`);
+      navigate(toEdit(id));
     }
-  }, [invoices, onEdit, navigate]);
+  }, [invoices, onEdit, navigate, toEdit]);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -144,11 +148,11 @@ const Invoices: React.FC<InvoicesProps> = ({
   // Export function
   const handleExportCSV = useCallback(() => {
     if (invoices.length === 0) {
-      alert('No invoices to export');
+      alert(`No ${pluralLabel.toLowerCase()} to export`);
       return;
     }
 
-    const headers = ['Invoice #', 'Contact', 'Vessel', 'Amount', 'Created At', 'Status'];
+    const headers = [`${singularLabel} #`, 'Contact', 'Vessel', 'Amount', 'Created At', 'Status'];
     const csvContent = [
       headers.join(','),
       ...invoices.map(invoice => [
@@ -165,12 +169,12 @@ const Invoices: React.FC<InvoicesProps> = ({
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `invoices-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `${pluralLabel.toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  }, [invoices]);
+  }, [invoices, pluralLabel, singularLabel]);
 
   // Import function - for now just opens modal
   const handleImportCSV = async () => {
@@ -183,7 +187,7 @@ const Invoices: React.FC<InvoicesProps> = ({
       const invoiceData = parseInvoiceCSV(csvContent);
 
       if (invoiceData.length === 0) {
-        alert('No valid invoice data found in CSV file');
+        alert(`No valid ${singularLabel.toLowerCase()} data found in CSV file`);
         setIsImporting(false);
         return;
       }
@@ -282,7 +286,7 @@ const Invoices: React.FC<InvoicesProps> = ({
 
   // Generate sample CSV for download
   const downloadSampleCSV = () => {
-    const sampleData = `Invoice #,Contact,Vessel,Amount,Status
+    const sampleData = `${singularLabel} #,Contact,Vessel,Amount,Status
 "INV-001","ABC Marine Services","MV Ocean Explorer","5000","requested"
 "INV-002","Coastal Shipping Co","SS Baltic Wave","3500","change_requested"
 "INV-003","Pacific Fleet Ltd","MV Atlantic Star","7500","approved"`;
@@ -291,7 +295,7 @@ const Invoices: React.FC<InvoicesProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'sample_invoices.csv';
+    a.download = `sample_${pluralLabel.toLowerCase()}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -315,7 +319,7 @@ const Invoices: React.FC<InvoicesProps> = ({
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="text-muted-foreground">Loading requests...</div>
+            <div className="text-muted-foreground">{`Loading ${pluralLabel.toLowerCase()}...`}</div>
           </div>
         ) : invoices.length === 0 ? (
           <div className="flex items-center justify-center h-64">
@@ -324,13 +328,13 @@ const Invoices: React.FC<InvoicesProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <div className="text-muted-foreground mb-4">
-                No requests found
+                {`No ${pluralLabel.toLowerCase()} found`}
               </div>
               <button
                 onClick={handleAddClick}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#1E3A5F] hover:bg-[#152b47]"
               >
-                Create Your First Request
+                {`Create Your First ${singularLabel}`}
               </button>
             </div>
           </div>
@@ -346,6 +350,7 @@ const Invoices: React.FC<InvoicesProps> = ({
                   onBulkDelete={onBulkDelete}
                   onBulkExport={onBulkExport}
                   onView={onView}
+                  onCreateInvoice={onCreateInvoice}
                   onPrint={onPrint}
                   onExportPdf={onExportPdf}
                   onExportCsv={onExportCsv}
@@ -367,7 +372,7 @@ const Invoices: React.FC<InvoicesProps> = ({
       {showImportModal && createPortal(
         <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Import Invoices from CSV</h3>
+            <h3 className="text-lg font-semibold mb-4">{`Import ${pluralLabel} from CSV`}</h3>
 
             {!importResult ? (
               <div className="space-y-4">
@@ -416,10 +421,10 @@ const Invoices: React.FC<InvoicesProps> = ({
                 <div className="text-sm text-gray-600">
                   <p className="font-medium mb-2">CSV column headers:</p>
                   <ul className="list-disc list-inside space-y-1">
-                    <li><strong>Invoice #</strong> (required) - Invoice number</li>
+                    <li><strong>{singularLabel} #</strong> (required) - {singularLabel} number</li>
                     <li><strong>Contact</strong> (required) - Customer/contact name</li>
                     <li><strong>Vessel</strong> (optional) - Vessel name</li>
-                    <li><strong>Amount</strong> (required) - Invoice amount</li>
+                    <li><strong>Amount</strong> (required) - {singularLabel} amount</li>
                     <li><strong>Status</strong> (optional) - requested, change_requested, or approved</li>
                   </ul>
                 </div>
@@ -453,12 +458,12 @@ const Invoices: React.FC<InvoicesProps> = ({
                     {importResult.success ? '✅ Import Complete' : '⚠️ Import Results'}
                   </h4>
                   <div className="space-y-1 text-sm">
-                    <p><strong>{importResult.imported}</strong> invoices imported successfully</p>
+                    <p><strong>{importResult.imported}</strong> {pluralLabel.toLowerCase()} imported successfully</p>
                     {importResult.skipped > 0 && (
                       <p><strong>{importResult.skipped}</strong> rows skipped (missing required data)</p>
                     )}
                     {importResult.failed > 0 && (
-                      <p className="text-red-600"><strong>{importResult.failed}</strong> invoices failed to import</p>
+                      <p className="text-red-600"><strong>{importResult.failed}</strong> {pluralLabel.toLowerCase()} failed to import</p>
                     )}
                   </div>
                 </div>
