@@ -394,9 +394,9 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
                 }
               });
             }}
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-gray-100 hover:bg-gray-200 h-8 w-8 p-0"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-gray-100 hover:bg-gray-200 h-8 w-8 p-0"
           >
-            <MoreVertical className="h-4 w-4 text-gray-600" />
+            <MoreVertical className="h-4 w-4 text-gray-600 pointer-events-none" />
           </button>
         </div>
       );

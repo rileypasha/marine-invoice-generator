@@ -9,6 +9,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import MainLayout from './layouts/MainLayout'
 import { FloatingInstallButton } from './components/pwa/FloatingInstallButton'
 import { OrientationLock } from './components/pwa/OrientationLock'
+import { ToastProvider } from './components/ui/toast'
 // import { ChunkErrorBoundary, RouteErrorBoundary } from './components/ErrorBoundary'
 // import { initPerformanceMonitoring } from './utils/performance-monitoring'
 import { useRequestsRowActionsStore } from './features/requests/state/rowActions.store'
@@ -145,6 +146,7 @@ function App() {
     // <ChunkErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
+          <ToastProvider>
           <Router>
             <RoutePrefetcher />
             {/* <OfflineBanner /> */}
@@ -367,6 +369,7 @@ function App() {
               </div>
             </>
           </Router>
+          </ToastProvider>
         </AuthProvider>
       </QueryClientProvider>
     // </ChunkErrorBoundary>

@@ -6,6 +6,7 @@ import { Pagination } from '../components/ui/pagination';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
 import { useRequestsQueryState } from '../hooks/useRequestsQueryState';
 import { useRequestSection } from '../hooks/useRequestSection';
+import { useToast } from '../components/ui/toast';
 
 interface Customer {
   id: string;
@@ -93,6 +94,7 @@ const InvoicesPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { confirm, dialog } = useConfirmDialog();
   const { isEstimate, singularLabel, pluralLabel, documentTypeParam, toEdit, toView, toNew } = useRequestSection();
+  const { toast } = useToast();
 
   // Use the query state hook to get filters from URL
   const { month, q: searchTerm, filters } = useRequestsQueryState();
@@ -289,13 +291,13 @@ const InvoicesPage: React.FC = () => {
         // Refresh the list
         fetchInvoices(currentPage, month, searchTerm, filters);
       } else {
-        alert(`Failed to delete ${singularLabel.toLowerCase()}`);
+        toast(`Failed to delete ${singularLabel.toLowerCase()}`, 'error');
       }
     } catch (error) {
       console.error('Error deleting invoice:', error);
-      alert(`Error deleting ${singularLabel.toLowerCase()}`);
+      toast(`Error deleting ${singularLabel.toLowerCase()}`, 'error');
     }
-  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, currentPage, searchTerm, filters, singularLabel, documentTypeParam]);
+  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, currentPage, searchTerm, filters, singularLabel, documentTypeParam, toast]);
 
   const handlePrint = useCallback((invoice: Invoice) => {
     // Navigate to invoice view page with print parameter to auto-trigger print
@@ -344,9 +346,9 @@ const InvoicesPage: React.FC = () => {
       fetchInvoices(currentPage, month, searchTerm, filters);
     } catch (error) {
       console.error('Error deleting invoices:', error);
-      alert(`Error deleting ${pluralLabel.toLowerCase()}`);
+      toast(`Error deleting ${pluralLabel.toLowerCase()}`, 'error');
     }
-  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, currentPage, searchTerm, filters, singularLabel, pluralLabel, documentTypeParam]);
+  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, currentPage, searchTerm, filters, singularLabel, pluralLabel, documentTypeParam, toast]);
 
   const handleCreateInvoiceFromEstimate = useCallback(async (invoice: Invoice) => {
     if (!isAuthenticated || !csrfToken || !isEstimate) return;
@@ -366,12 +368,12 @@ const InvoicesPage: React.FC = () => {
       }
 
       await fetchInvoices(currentPage, month, searchTerm, filters);
-      alert('Invoice created from estimate successfully.');
+      toast('Invoice created from estimate successfully.');
     } catch (error) {
       console.error('Error creating invoice from estimate:', error);
-      alert('Failed to create invoice from estimate');
+      toast('Failed to create invoice from estimate', 'error');
     }
-  }, [isAuthenticated, csrfToken, isEstimate, fetchInvoices, currentPage, month, searchTerm, filters]);
+  }, [isAuthenticated, csrfToken, isEstimate, fetchInvoices, currentPage, month, searchTerm, filters, toast]);
 
   const handleBulkExport = useCallback((invoices: Invoice[]) => {
     const headers = [`${singularLabel} #`, 'Contact', 'Vessel', 'Amount', 'Created At', 'Status'];
