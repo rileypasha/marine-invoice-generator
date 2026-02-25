@@ -312,6 +312,14 @@ const InvoicesPage: React.FC = () => {
     navigate(`${toView(invoice.id)}?export=csv`);
   }, [navigate, toView]);
 
+  const handleExportPdf = useCallback((invoice: Invoice) => {
+    navigate(`/requests/${invoice.id}?export=pdf`);
+  }, [navigate]);
+
+  const handleExportCsv = useCallback((invoice: Invoice) => {
+    navigate(`/requests/${invoice.id}?export=csv`);
+  }, [navigate]);
+
   const handleAddNew = useCallback(() => {
     navigate(toNew());
   }, [navigate, toNew]);
