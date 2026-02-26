@@ -518,41 +518,141 @@ const InvoiceView: React.FC = () => {
       return;
     }
 
-    const csvHeaders = [
-      'Description',
-      'Type',
-      'Qty',
-      'Base Cost',
-      'Markup',
-      'Tax',
-      'Total'
+    // QuickBooks Enterprise / SaaSant import format
+    const qbHeaders = [
+      'Invoice No', 'Customer', 'Invoice Date', 'Due Date', 'Terms', 'PO No', 'Ship Date',
+      'Shipping Address Line 1', 'Shipping Address Line 2', 'Shipping Address Line 3', 'Shipping Address Line 4',
+      'Shipping Address City', 'Shipping Address State', 'Shipping Address Postal Code', 'Shipping Address Country',
+      'FOB',
+      'Billing Address Line 1', 'Billing Address Line 2', 'Billing Address Line 3', 'Billing Address Line 4',
+      'Billing Address City', 'Billing Address State', 'Billing Address Postal Code', 'Billing Address Country',
+      'Sales Rep', 'Shipping Method', 'Print Later', 'Email Later',
+      'Memo', 'Customer Message', 'Email', 'Phone', 'Class',
+      'Product/Service', 'Product/Service Quantity', 'Product/Service Rate', 'Unit Of Measure',
+      'Product/Service Description', 'Product/Service Amount', 'Product/Service Service Date', 'Product/Service Class',
+      'Product/Service Sales Tax',
+      'Other', 'Other 1', 'Other 2', 'Sales Tax', 'Customer Sales Tax Code', 'Template', 'AR Account',
+      'Product/Service Inventory Site', 'Product/Service Inventory BIN',
+      'Amount Received', 'Currency', 'Exchange Rate', 'PO Number'
     ];
 
-    const csvRows = servicesSummary.services.map(service => [
-      `"${service.description || ''}"`,
-      `"${service.type || ''}"`,
-      Number.isFinite(service.quantity) ? service.quantity : 0,
-      Number(service.cost || 0).toFixed(2),
-      Number(service.markupAmount || 0).toFixed(2),
-      Number(service.taxAmount || 0).toFixed(2),
-      Number(service.total || 0).toFixed(2)
-    ]);
+    const csvEscape = (val: string | number | undefined | null): string => {
+      if (val === undefined || val === null) return '';
+      const str = String(val);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
 
-    csvRows.push(
-      ['', '', '', '', '', '', ''],
-      ['', '', '', 'SUBTOTAL', '', '', servicesSummary.subtotalWithMarkup.toFixed(2)],
-      ['', '', '', 'TOTAL TAX', '', '', servicesSummary.totalTax.toFixed(2)],
-      ['', '', '', 'FINAL TOTAL', '', '', servicesSummary.finalTotal.toFixed(2)],
-      ['', '', '', 'GROSS PROFIT', '', '', servicesSummary.grossProfit.toFixed(2)]
-    );
+    // Format date as MM/DD/YYYY for QuickBooks
+    const formatQBDate = (dateStr?: string | null): string => {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (Number.isNaN(d.getTime())) return '';
+      return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+    };
 
-    const csvContent = [
-      `"${invoice.title || `${singularLabel} for ${vessel.name || invoice.vesselName || 'Unnamed Vessel'}`}"`,
-      `"Contact: ${customer.display_name || customer.contact_name || invoice.customerName || 'N/A'}"`,
-      `"Date: ${formatDate(invoice.savedAt || invoice.createdAt)}"`,
-      '',
-      csvHeaders.join(','),
-      ...csvRows.map(row => row.join(','))
+    // Calculate due date from terms
+    const calculateDueDate = (invoiceDateStr: string, terms: string): string => {
+      const match = terms.match(/Net\s+(\d+)/i);
+      if (!match) return '';
+      const d = new Date(invoiceDateStr);
+      if (Number.isNaN(d.getTime())) return '';
+      d.setDate(d.getDate() + parseInt(match[1], 10));
+      return formatQBDate(d.toISOString());
+    };
+
+    // Gather invoice-level fields
+    const invoiceNo = '';
+    const customerName = vessel.name || invoice.vesselName || '';
+    const invoiceDateRaw = invoice.savedAt || invoice.createdAt;
+    const invoiceDate = formatQBDate(invoiceDateRaw);
+    const terms = primaryData?.terms || scope?.terms || '';
+    const dueDate = terms && invoiceDateRaw ? calculateDueDate(invoiceDateRaw, terms) : '';
+    const memo = primaryData?.notes || invoice.notes || '';
+    const salesRep = '';
+    const email = '';
+    const phone = '';
+
+    // Address fields from customer data
+    const custData = primaryData?.customer || {};
+    const addressLine1 = custData.address || customer.address || '';
+    const addressCity = custData.city || '';
+    const addressState = custData.state || '';
+    const addressPostalCode = custData.zipCode || custData.postal_code || '';
+    const addressCountry = custData.country || 'US';
+
+    // Build an empty row (55 columns)
+    const emptyRow = (): string[] => new Array(qbHeaders.length).fill('');
+
+    // Build the header-level portion of a row (columns 0-32)
+    const buildHeaderColumns = (): string[] => {
+      const row = emptyRow();
+      row[0] = invoiceNo;                   // Invoice No
+      row[1] = customerName;                // Customer
+      row[2] = invoiceDate;                 // Invoice Date
+      row[3] = dueDate;                     // Due Date
+      row[4] = terms;                       // Terms
+      // 5 PO No, 6 Ship Date — empty
+      row[7] = addressLine1;                // Shipping Address Line 1
+      // 8-10 Shipping Address Lines 2-4 — empty
+      row[11] = addressCity;                // Shipping Address City
+      row[12] = addressState;               // Shipping Address State
+      row[13] = addressPostalCode;          // Shipping Address Postal Code
+      row[14] = addressCountry;             // Shipping Address Country
+      // 15 FOB — empty
+      row[16] = addressLine1;               // Billing Address Line 1
+      // 17-19 Billing Address Lines 2-4 — empty
+      row[20] = addressCity;                // Billing Address City
+      row[21] = addressState;               // Billing Address State
+      row[22] = addressPostalCode;          // Billing Address Postal Code
+      row[23] = addressCountry;             // Billing Address Country
+      row[24] = salesRep;                   // Sales Rep
+      // 25 Shipping Method, 26 Print Later, 27 Email Later — empty
+      row[28] = memo;                       // Memo
+      // 29 Customer Message — empty
+      row[30] = email;                      // Email
+      row[31] = phone;                      // Phone
+      // 32 Class — empty
+      return row;
+    };
+
+    // Fill product/service columns (33-41) on a row
+    const fillLineItemColumns = (row: string[], service: ServiceSummaryItem): void => {
+      const qty = Number.isFinite(service.quantity) ? service.quantity : 1;
+      const rate = qty > 0 ? service.totalBeforeTax / qty : 0;
+      row[33] = service.description || '';                           // Product/Service
+      row[34] = String(qty);                                        // Quantity
+      row[35] = rate.toFixed(2);                                    // Rate
+      // 36 Unit Of Measure — empty
+      row[37] = service.description || '';                           // Description
+      row[38] = service.totalBeforeTax.toFixed(2);                  // Amount
+      row[39] = invoiceDate;                                        // Service Date
+      // 40 Product/Service Class — empty
+      row[41] = service.taxAmount > 0 ? 'Tax' : 'Non';             // Sales Tax
+    };
+
+    // Build CSV rows: first line item row includes header fields, subsequent rows are line-item only
+    const csvRows: string[][] = [];
+    const services = servicesSummary.services;
+
+    if (services.length === 0) {
+      // Export with header info only, no line items
+      csvRows.push(buildHeaderColumns());
+    } else {
+      services.forEach((service, index) => {
+        const row = index === 0 ? buildHeaderColumns() : emptyRow();
+        fillLineItemColumns(row, service);
+        csvRows.push(row);
+      });
+    }
+
+    // Add BOM for Excel UTF-8 compatibility, then header + data rows
+    const bom = '\uFEFF';
+    const csvContent = bom + [
+      qbHeaders.map(csvEscape).join(','),
+      ...csvRows.map(row => row.map(csvEscape).join(','))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -965,7 +1065,7 @@ const InvoiceView: React.FC = () => {
 
   const applyMarkup = (cost: number, item: LineItem, scope: any): number => {
     // Check if item is markup exempt
-    if (item.isMarkupExempt || item.markupType === 'exempt' || item.jobType === 'Clearance Fee') {
+    if (item.isMarkupExempt || item.markupType === 'No Markup' || item.markupType === 'exempt' || item.jobType === 'Clearance Fee') {
       return cost;
     }
 
@@ -985,7 +1085,7 @@ const InvoiceView: React.FC = () => {
   };
 
   const calculateTax = (item: LineItem, totalWithMarkup: number): number => {
-    // Clearance Fee is always non-taxable
+    // Clearance Fee is always Non-Taxable
     if (item.jobType === 'Clearance Fee' || item.isTaxExempt) {
       return 0;
     }

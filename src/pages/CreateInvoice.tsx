@@ -96,9 +96,9 @@ interface Service {
   otHoursInput?: string;
   manualCost?: number;
   manualCostInput?: string;
-  taxStatus?: 'taxable' | 'non-taxable' | 'exempt';
+  taxStatus?: 'taxable' | 'Non-Taxable' | 'exempt';
   taxRate?: number;
-  markupType?: 'preset-2.5' | 'preset-12.5' | 'custom' | 'exempt';
+  markupType?: 'preset-2.5' | 'preset-12.5' | 'custom' | 'No Markup';
   markupRate?: number;
   receiptUrl?: string;  // base64 data URL
   receiptType?: string; // MIME type
@@ -203,7 +203,7 @@ const normalizeTaxStatus = (value: any): Service['taxStatus'] | undefined => {
     return 'taxable';
   }
   if (normalized === 'nontaxable') {
-    return 'non-taxable';
+    return 'Non-Taxable';
   }
   if (normalized === 'exempt') {
     return 'exempt';
@@ -225,8 +225,8 @@ const normalizeMarkupType = (value: any): Service['markupType'] | undefined => {
   if (normalized === 'custom') {
     return 'custom';
   }
-  if (normalized === 'exempt') {
-    return 'exempt';
+  if (normalized === 'exempt' || normalized === 'no-markup' || normalized === 'nomarkup') {
+    return 'No Markup';
   }
   return undefined;
 };
@@ -2023,7 +2023,7 @@ const CreateInvoice: React.FC = () => {
   const applyMarkup = (cost: number, service: Service): number => {
     // Check if item is markup exempt
     if (service.isMarkupExempt ||
-        service.markupType === 'exempt' ||
+        service.markupType === 'No Markup' ||
         service.jobType === 'Clearance Fee' ||
         service.jobType === 'Agent Services' ||
         (service.jobType === 'Manual Entry' && service.itemType === 'Labor')) {
@@ -2049,7 +2049,7 @@ const CreateInvoice: React.FC = () => {
   };
 
   const calculateTax = (service: Service, totalWithMarkup: number): number => {
-    // Clearance Fee is always non-taxable
+    // Clearance Fee is always Non-Taxable
     if (service.jobType === 'Clearance Fee') {
       return 0;
     }
@@ -2070,7 +2070,7 @@ const CreateInvoice: React.FC = () => {
       return taxAmount;
     }
 
-    // For non-taxable, exempt, or undefined taxStatus
+    // For Non-Taxable, exempt, or undefined taxStatus
     return 0;
  };
 
@@ -2330,10 +2330,10 @@ const CreateInvoice: React.FC = () => {
       otHoursInput: '',
       manualCost: 0,
       manualCostInput: '',
-      taxStatus: undefined,
+      taxStatus: 'Non-Taxable',
       taxRate: 0.0875,
-      markupType: undefined,
-      markupRate: undefined,
+      markupType: 'No Markup',
+      markupRate: 0,
       isMarkupExempt: false,
       isTaxExempt: false
     };
@@ -2406,12 +2406,9 @@ const CreateInvoice: React.FC = () => {
               updated.rate = clearanceFeeAmount;
               updated.quantity = 1;
               updated.quantityDisplay = '1';
-              if (!updated.description?.trim()) {
-                updated.description = 'Clearance Fee';
-              }
-              updated.taxStatus = 'non-taxable';
+              updated.taxStatus = 'Non-Taxable';
               updated.taxRate = 0;
-              updated.markupType = 'exempt';
+              updated.markupType = 'No Markup';
               updated.markupRate = 0;
               updated.isMarkupExempt = true;
               updated.isTaxExempt = true;
@@ -2585,6 +2582,34 @@ const CreateInvoice: React.FC = () => {
     invoiceData.services.forEach((service, index) => {
       if (service.jobType === 'Crew Placement' && (!service.manualCost || service.manualCost <= 0)) {
         missingFields.push(`Crew Placement Cost (Service ${index + 1})`);
+      }
+    });
+
+    // Check Consulting Services require Cost field
+    invoiceData.services.forEach((service, index) => {
+      if (service.jobType === 'Consulting Services' && (!service.manualCost || service.manualCost <= 0)) {
+        missingFields.push(`Consulting Services Cost (Service ${index + 1})`);
+      }
+    });
+
+    // Check Fueling Services require Cost field
+    invoiceData.services.forEach((service, index) => {
+      if (service.jobType === 'Fueling Services' && (!service.manualCost || service.manualCost <= 0)) {
+        missingFields.push(`Fueling Services Cost (Service ${index + 1})`);
+      }
+    });
+
+    // Check Provisioning Services require Cost field
+    invoiceData.services.forEach((service, index) => {
+      if (service.jobType === 'Provisioning Services' && (!service.manualCost || service.manualCost <= 0)) {
+        missingFields.push(`Provisioning Services Cost (Service ${index + 1})`);
+      }
+    });
+
+    // Check Shipping Services require Cost field
+    invoiceData.services.forEach((service, index) => {
+      if (service.jobType === 'Shipping Services' && (!service.manualCost || service.manualCost <= 0)) {
+        missingFields.push(`Shipping Services Cost (Service ${index + 1})`);
       }
     });
 
@@ -3646,7 +3671,7 @@ const CreateInvoice: React.FC = () => {
           <div className="flex items-center gap-2">
             <h1 className="flex items-center gap-2 text-xl md:text-2xl font-semibold text-foreground">
               <SquarePen className="h-5 w-5" />
-              {isEditMode ? `Edit ${singularLabel}` : `New ${singularLabel} Request`}
+              {isEditMode ? `Edit ${singularLabel}` : `New ${singularLabel}`}
             </h1>
 
             {/* Unsaved Changes Indicator */}
@@ -3715,7 +3740,7 @@ const CreateInvoice: React.FC = () => {
               />
               <TabButton
                 id="services"
-                label="Services"
+                label="Items"
                 isActive={activeTab === 'services'}
                 onClick={() => setActiveTab('services')}
               />
@@ -4004,7 +4029,7 @@ const CreateInvoice: React.FC = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className={isFieldMissing("At least one service") ? "text-base text-red-600" : "text-base"}>
-                    Services & Line Items <span className="text-red-600">*</span>
+                    Items <span className="text-red-600">*</span>
                   </CardTitle>
                   <CardDescription>
                     Add services, labor, and materials for this invoice
@@ -4048,7 +4073,7 @@ const CreateInvoice: React.FC = () => {
                       >
                         <div className="flex items-center justify-between">
                           <h4 className={cn("text-sm font-medium", isDeleted && "text-red-600 line-through")}>
-                            {isDeleted ? "Deleted Service Item" : "Service Item"}
+                            {isDeleted ? `Deleted Item #${index + 1}` : `Item #${index + 1}`}
                           </h4>
                           <Button
                             variant="outline"
@@ -4063,7 +4088,7 @@ const CreateInvoice: React.FC = () => {
 
                         <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", isDeleted && "pointer-events-none opacity-60")}>
                           <div className="space-y-2">
-                            <Label htmlFor={`service-job-type-${index}`} className={isDeleted ? "line-through text-red-600" : "!text-black font-medium"}>Service Type <span className="text-red-600">*</span></Label>
+                            <Label htmlFor={`service-job-type-${index}`} className={isDeleted ? "line-through text-red-600" : "!text-black font-medium"}>Item Type <span className="text-red-600">*</span></Label>
                             <Select
                               value={service.jobType || ''}
                               onValueChange={(value) => updateService(service.id, 'jobType', value)}
@@ -4078,17 +4103,21 @@ const CreateInvoice: React.FC = () => {
                                 )}
                                 style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                               >
-                                <SelectValue placeholder="Select service type..." />
+                                <SelectValue placeholder="Select item type..." />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="Manual Entry">Manual Entry</SelectItem>
-                                <SelectItem value="Clearance Fee">Clearance Fee</SelectItem>
-                                <SelectItem value="Pilotage">Pilotage</SelectItem>
-                                <SelectItem value="Car Rental">Car Rental</SelectItem>
-                                <SelectItem value="Trash Removal">Trash Removal</SelectItem>
-                                <SelectItem value="Good Stew">Good Stew</SelectItem>
-                                <SelectItem value="Crew Placement">Crew Placement</SelectItem>
                                 <SelectItem value="Agent Services">Agent Services</SelectItem>
+                                <SelectItem value="Car Rental">Car Rental Service</SelectItem>
+                                <SelectItem value="Clearance Fee">Clearance Fee</SelectItem>
+                                <SelectItem value="Consulting Services">Consulting Services</SelectItem>
+                                <SelectItem value="Crew Placement">Crew Placement Services</SelectItem>
+                                <SelectItem value="Fueling Services">Fueling Services</SelectItem>
+                                <SelectItem value="Good Stew">Good Stew Sales</SelectItem>
+                                <SelectItem value="Manual Entry">Manual Entry</SelectItem>
+                                <SelectItem value="Pilotage">Pilotage</SelectItem>
+                                <SelectItem value="Provisioning Services">Provisioning Services</SelectItem>
+                                <SelectItem value="Shipping Services">Shipping Services</SelectItem>
+                                <SelectItem value="Trash Removal">Trash Removal</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -4251,12 +4280,16 @@ const CreateInvoice: React.FC = () => {
                                   (service.jobType === 'Car Rental' && isFieldMissing(`Car Rental Cost (Service ${index + 1})`)) ||
                                   (service.jobType === 'Trash Removal' && isFieldMissing(`Trash Removal Cost (Service ${index + 1})`)) ||
                                   (service.jobType === 'Good Stew' && isFieldMissing(`Good Stew Cost (Service ${index + 1})`)) ||
-                                  (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`))
+                                  (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Consulting Services' && isFieldMissing(`Consulting Services Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Fueling Services' && isFieldMissing(`Fueling Services Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Provisioning Services' && isFieldMissing(`Provisioning Services Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Shipping Services' && isFieldMissing(`Shipping Services Cost (Service ${index + 1})`))
                                     ? "!text-red-600 font-medium"
                                     : "!text-black font-medium"
                                 }
                               >
-                                {shouldShowQuantity ? 'Unit Cost' : 'Cost'} {(service.jobType === 'Clearance Fee' || service.jobType === 'Pilotage' || service.jobType === 'Car Rental' || service.jobType === 'Trash Removal' || service.jobType === 'Good Stew' || service.jobType === 'Crew Placement' || (service.jobType === 'Manual Entry' && (service.itemType === 'Material' || service.itemType === 'Subcontractor'))) && <span className="text-red-600">*</span>}
+                                {shouldShowQuantity ? 'Unit Cost' : 'Cost'} {(service.jobType === 'Clearance Fee' || service.jobType === 'Pilotage' || service.jobType === 'Car Rental' || service.jobType === 'Trash Removal' || service.jobType === 'Good Stew' || service.jobType === 'Crew Placement' || service.jobType === 'Consulting Services' || service.jobType === 'Fueling Services' || service.jobType === 'Provisioning Services' || service.jobType === 'Shipping Services' || (service.jobType === 'Manual Entry' && (service.itemType === 'Material' || service.itemType === 'Subcontractor'))) && <span className="text-red-600">*</span>}
                               </Label>
                               <Input
                                 id={`service-manual-cost-${index}`}
@@ -4287,7 +4320,11 @@ const CreateInvoice: React.FC = () => {
                                   (service.jobType === 'Car Rental' && isFieldMissing(`Car Rental Cost (Service ${index + 1})`)) ||
                                   (service.jobType === 'Trash Removal' && isFieldMissing(`Trash Removal Cost (Service ${index + 1})`)) ||
                                   (service.jobType === 'Good Stew' && isFieldMissing(`Good Stew Cost (Service ${index + 1})`)) ||
-                                  (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`))) && "border-red-500 focus:ring-red-500"
+                                  (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Consulting Services' && isFieldMissing(`Consulting Services Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Fueling Services' && isFieldMissing(`Fueling Services Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Provisioning Services' && isFieldMissing(`Provisioning Services Cost (Service ${index + 1})`)) ||
+                                  (service.jobType === 'Shipping Services' && isFieldMissing(`Shipping Services Cost (Service ${index + 1})`))) && "border-red-500 focus:ring-red-500"
                                 )}
                                 style={isDeleted ? getDeletedFieldStyles(isDeleted) : getChangedFieldStyles(`/services/${index}/manualCost`, ['services', String(index), 'manualCost'])}
                               />
@@ -4298,15 +4335,19 @@ const CreateInvoice: React.FC = () => {
                                 (service.jobType === 'Car Rental' && isFieldMissing(`Car Rental Cost (Service ${index + 1})`)) ||
                                 (service.jobType === 'Trash Removal' && isFieldMissing(`Trash Removal Cost (Service ${index + 1})`)) ||
                                 (service.jobType === 'Good Stew' && isFieldMissing(`Good Stew Cost (Service ${index + 1})`)) ||
-                                (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`))) && (
-                                <p className="text-xs text-red-600">Cost is required for this service type</p>
+                                (service.jobType === 'Crew Placement' && isFieldMissing(`Crew Placement Cost (Service ${index + 1})`)) ||
+                                (service.jobType === 'Consulting Services' && isFieldMissing(`Consulting Services Cost (Service ${index + 1})`)) ||
+                                (service.jobType === 'Fueling Services' && isFieldMissing(`Fueling Services Cost (Service ${index + 1})`)) ||
+                                (service.jobType === 'Provisioning Services' && isFieldMissing(`Provisioning Services Cost (Service ${index + 1})`)) ||
+                                (service.jobType === 'Shipping Services' && isFieldMissing(`Shipping Services Cost (Service ${index + 1})`))) && (
+                                <p className="text-xs text-red-600">Cost is required for this item type</p>
                               )}
                             </div>
                           </div>
                         )}
 
-                        {/* Description field - hide for Clearance Fee */}
-                        {service.jobType !== 'Clearance Fee' && (
+                        {/* Description field */}
+                        {(
                           <div className="space-y-2">
                             <Label htmlFor={`service-description-${index}`} className="!text-black font-medium">Description</Label>
                             <Textarea
@@ -4428,7 +4469,7 @@ const CreateInvoice: React.FC = () => {
                                   </div>
                                 ) : (
                                   <Select
-                                    value={service.taxStatus || ''}
+                                    value={service.taxStatus || 'Non-Taxable'}
                                     onValueChange={(value) => updateService(service.id, 'taxStatus', value)}
                                   >
                                     <SelectTrigger
@@ -4440,11 +4481,11 @@ const CreateInvoice: React.FC = () => {
                                       )}
                                       style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                                     >
-                                      <SelectValue placeholder="Non-Taxable" />
+                                      <SelectValue>{service.taxStatus === 'taxable' ? 'Taxable (8.75%)' : service.taxStatus || 'Non-Taxable'}</SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="taxable">Taxable (8.75%)</SelectItem>
-                                      <SelectItem value="non-taxable">Non-Taxable</SelectItem>
+                                      <SelectItem value="Non-Taxable">Non-Taxable</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 )}
@@ -4457,7 +4498,7 @@ const CreateInvoice: React.FC = () => {
                                   </div>
                                 ) : (
                                   <Select
-                                    value={service.markupType || ''}
+                                    value={service.markupType || 'No Markup'}
                                     onValueChange={(value) => updateService(service.id, 'markupType', value)}
                                     disabled={service.isMarkupExempt}
                                   >
@@ -4470,13 +4511,18 @@ const CreateInvoice: React.FC = () => {
                                       )}
                                       style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                                     >
-                                      <SelectValue placeholder="No Markup" />
+                                      <SelectValue>
+                                        {service.markupType === 'preset-2.5' ? '2.5%' :
+                                         service.markupType === 'preset-12.5' ? '12.5%' :
+                                         service.markupType === 'custom' ? 'Custom Markup' :
+                                         'No Markup'}
+                                      </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="preset-2.5">2.5%</SelectItem>
                                       <SelectItem value="preset-12.5">12.5%</SelectItem>
                                       <SelectItem value="custom">Custom Markup</SelectItem>
-                                      <SelectItem value="exempt">No Markup</SelectItem>
+                                      <SelectItem value="No Markup">No Markup</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 )}
@@ -4512,7 +4558,7 @@ const CreateInvoice: React.FC = () => {
 
                         <div className="border-t pt-2">
                           <div className="flex justify-between items-center text-sm font-medium">
-                            <span>Line Total:</span>
+                            <span>Item Total:</span>
                             <span className="text-lg">{formatCurrency(service.total)}</span>
                           </div>
                           <div className="flex flex-wrap gap-2 mt-2">

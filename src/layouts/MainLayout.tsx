@@ -68,7 +68,7 @@ const SidebarContent = () => {
       onClick: handleLinkClick,
     },
     {
-      label: 'Requests',
+      label: 'Invoices',
       href: '/requests',
       icon: <FileText className="text-gray-700 h-4 w-4 flex-shrink-0" />,
       onClick: handleLinkClick,
@@ -280,7 +280,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     },
     {
       id: 'requests',
-      label: 'Requests',
+      label: 'Invoices',
       href: '/requests',
       icon: FileText,
     },
@@ -314,11 +314,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const getPageTitle = () => {
     switch (location.pathname) {
       case '/requests/new':
-        return 'New Request';
+        return 'New Invoice';
       case '/estimates/new':
         return 'New Estimate';
       case '/requests':
-        return 'Invoice Requests';
+        return 'Invoices';
       case '/estimates':
         return 'Estimates';
       case '/contacts':

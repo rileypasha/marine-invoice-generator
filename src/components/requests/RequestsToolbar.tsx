@@ -84,8 +84,8 @@ export function RequestsToolbar({
           <div className="flex items-center gap-2">
             <h2 className="flex items-center gap-2 text-xl md:text-2xl font-semibold text-gray-900">
               <FileText className="h-4 w-4 md:h-5 md:w-5" />
-              <span className="hidden sm:inline">{isEstimate ? 'Estimates' : 'Invoice Requests'}</span>
-              <span className="sm:hidden">{isEstimate ? 'Estimates' : 'Invoice Requests'}</span>
+              <span className="hidden sm:inline">{isEstimate ? 'Estimates' : 'Invoices'}</span>
+              <span className="sm:hidden">{isEstimate ? 'Estimates' : 'Invoices'}</span>
             </h2>
           </div>
 

@@ -1,10 +1,19 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, createContext, useContext } from "react";
 import { cn } from "../../lib/utils";
+
+// Context to pass selected value info from Select to SelectValue
+interface SelectContextValue {
+  selectedLabel?: React.ReactNode;
+  hasValue: boolean;
+}
+
+const SelectContext = createContext<SelectContextValue>({ hasValue: false });
 
 interface SelectProps {
   children: React.ReactNode;
   onValueChange?: (value: string) => void;
   value?: string;
+  disabled?: boolean;
 }
 
 interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -13,7 +22,6 @@ interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 interface SelectValueProps {
   placeholder?: string;
-  value?: string;
   children?: React.ReactNode;
 }
 
@@ -32,9 +40,23 @@ interface SelectItemProps extends React.HTMLAttributes<HTMLDivElement> {
   isSelected?: boolean;
 }
 
-function Select({ children, onValueChange, value }: SelectProps) {
+function Select({ children, onValueChange, value, disabled }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
+
+  // Build a value-to-label map from SelectContent > SelectItem children
+  const labelMap = new Map<string, React.ReactNode>();
+  React.Children.forEach(children, child => {
+    if (React.isValidElement(child) && child.type === SelectContent) {
+      React.Children.forEach(child.props.children, item => {
+        if (React.isValidElement(item) && item.type === SelectItem) {
+          labelMap.set(item.props.value, item.props.children);
+        }
+      });
+    }
+  });
+
+  const selectedLabel = value ? labelMap.get(value) : undefined;
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -52,27 +74,30 @@ function Select({ children, onValueChange, value }: SelectProps) {
   }, [isOpen]);
 
   return (
-    <div ref={selectRef} className="relative">
-      {React.Children.map(children, child => {
-        if (React.isValidElement(child)) {
-          if (child.type === SelectTrigger) {
-            return React.cloneElement(child, {
-              onClick: () => setIsOpen(!isOpen),
-              isOpen
-            } as any);
+    <SelectContext.Provider value={{ selectedLabel, hasValue: !!value }}>
+      <div ref={selectRef} className="relative">
+        {React.Children.map(children, child => {
+          if (React.isValidElement(child)) {
+            if (child.type === SelectTrigger) {
+              return React.cloneElement(child, {
+                onClick: disabled ? undefined : () => setIsOpen(!isOpen),
+                isOpen,
+                disabled,
+              } as any);
+            }
+            if (child.type === SelectContent) {
+              return React.cloneElement(child, {
+                isOpen,
+                onClose: () => setIsOpen(false),
+                onValueChange,
+                value
+              } as any);
+            }
           }
-          if (child.type === SelectContent) {
-            return React.cloneElement(child, {
-              isOpen,
-              onClose: () => setIsOpen(false),
-              onValueChange,
-              value
-            } as any);
-          }
-        }
-        return child;
-      })}
-    </div>
+          return child;
+        })}
+      </div>
+    </SelectContext.Provider>
   );
 }
 
@@ -100,11 +125,16 @@ function SelectTrigger({ className, children, onClick, isOpen, ...props }: Selec
   );
 }
 
-function SelectValue({ placeholder, value, children }: SelectValueProps) {
+function SelectValue({ placeholder, children }: SelectValueProps) {
+  const { selectedLabel, hasValue } = useContext(SelectContext);
+
   if (React.Children.count(children) > 0) {
     return <>{children}</>;
   }
-  return <span className={value ? "" : "text-muted-foreground"}>{value || placeholder}</span>;
+  if (hasValue && selectedLabel != null) {
+    return <span>{selectedLabel}</span>;
+  }
+  return <span className="text-muted-foreground">{placeholder}</span>;
 }
 
 function SelectContent({ className, children, isOpen, onClose, onValueChange, value }: SelectContentProps) {

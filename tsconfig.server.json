@@ -1,5 +1,8 @@
 {
   "extends": "./tsconfig.json",
+  "ts-node": {
+    "files": true
+  },
   "compilerOptions": {
     "outDir": "./dist/server",
     "rootDir": "./server",
@@ -7,7 +10,8 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": ["ES2020"],
-    "types": ["node", "express"]
+    "types": ["node", "express"],
+    "typeRoots": ["./node_modules/@types", "./server/types"]
   },
   "include": [
     "server/**/*"
