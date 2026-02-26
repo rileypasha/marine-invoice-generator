@@ -127,7 +127,6 @@
     "@playwright/test": "^1.35.1",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^14.0.0",
-    "@types/connect-pg-simple": "^7.0.3",
     "@types/jest": "^29.5.2",
     "@types/react": "^18.2.14",
     "@types/react-dom": "^18.2.6",
