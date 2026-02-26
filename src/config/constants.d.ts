@@ -41,10 +41,9 @@ export declare const DATABASE: {
     readonly INDEXEDDB_NAME: "InvoiceSaveQueue";
     readonly INDEXEDDB_VERSION: 3;
     readonly STORE_NAME: "queued_saves";
-    readonly REDIS_SESSION_PREFIX: "sess:";
-    readonly REDIS_SESSION_TTL: 1800;
-    readonly REDIS_IDEMPOTENCY_PREFIX: "idempotency:";
-    readonly REDIS_IDEMPOTENCY_TTL: 3600;
+    readonly SESSION_TTL_SECONDS: 1800;
+    readonly SESSION_PRUNE_INTERVAL: 300;
+    readonly IDEMPOTENCY_TTL: 3600;
 };
 export declare const NETWORK: {
     readonly REQUEST_SIZE_LIMIT: "10mb";

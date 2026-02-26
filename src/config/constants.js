@@ -61,11 +61,11 @@ exports.DATABASE = {
     INDEXEDDB_NAME: 'InvoiceSaveQueue',
     INDEXEDDB_VERSION: 3, // Increment for schema changes
     STORE_NAME: 'queued_saves',
-    // Redis Configuration
-    REDIS_SESSION_PREFIX: 'sess:',
-    REDIS_SESSION_TTL: 1800, // 30 minutes in seconds
-    REDIS_IDEMPOTENCY_PREFIX: 'idempotency:',
-    REDIS_IDEMPOTENCY_TTL: 3600, // 1 hour in seconds
+    // Session Configuration
+    SESSION_TTL_SECONDS: 1800, // 30 minutes in seconds
+    SESSION_PRUNE_INTERVAL: 300, // Clean expired sessions every 5 minutes
+    // Idempotency Configuration
+    IDEMPOTENCY_TTL: 3600, // 1 hour in seconds
 };
 // Network Configuration
 exports.NETWORK = {
