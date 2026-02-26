@@ -2509,7 +2509,7 @@ const CreateInvoice: React.FC = () => {
 
     // Check Clearance Fee services require Cost field
     invoiceData.services.forEach((service, index) => {
-      if (service.jobType === 'Clearance Fee' && (!service.manualCost || service.manualCost <= 0)) {
+      if (service.jobType === 'Clearance Fee' && (service.manualCost == null || service.manualCost < 0)) {
         missingFields.push(`Clearance Fee Cost (Service ${index + 1})`);
       }
     });
@@ -2535,7 +2535,7 @@ const CreateInvoice: React.FC = () => {
     // Check Manual Entry > Material services require Cost field
     invoiceData.services.forEach((service, index) => {
       if (service.jobType === 'Manual Entry' && service.itemType === 'Material') {
-        if (!service.manualCost || service.manualCost <= 0) {
+        if (service.manualCost == null || service.manualCost < 0) {
           missingFields.push(`Material Cost (Service ${index + 1})`);
         }
       }
@@ -2544,7 +2544,7 @@ const CreateInvoice: React.FC = () => {
     // Check Manual Entry > Subcontractor services require Cost field
     invoiceData.services.forEach((service, index) => {
       if (service.jobType === 'Manual Entry' && service.itemType === 'Subcontractor') {
-        if (!service.manualCost || service.manualCost <= 0) {
+        if (service.manualCost == null || service.manualCost < 0) {
           missingFields.push(`Subcontractor Cost (Service ${index + 1})`);
         }
       }
@@ -2552,63 +2552,63 @@ const CreateInvoice: React.FC = () => {
 
     // Check Pilotage services require Cost field
     invoiceData.services.forEach((service, index) => {
-      if (service.jobType === 'Pilotage' && (!service.manualCost || service.manualCost <= 0)) {
+      if (service.jobType === 'Pilotage' && (service.manualCost == null || service.manualCost < 0)) {
         missingFields.push(`Pilotage Cost (Service ${index + 1})`);
       }
     });
 
     // Check Car Rental services require Cost field
     invoiceData.services.forEach((service, index) => {
-      if (service.jobType === 'Car Rental' && (!service.manualCost || service.manualCost <= 0)) {
+      if (service.jobType === 'Car Rental' && (service.manualCost == null || service.manualCost < 0)) {
         missingFields.push(`Car Rental Cost (Service ${index + 1})`);
       }
     });
 
     // Check Trash Removal services require Cost field
     invoiceData.services.forEach((service, index) => {
-      if (service.jobType === 'Trash Removal' && (!service.manualCost || service.manualCost <= 0)) {
+      if (service.jobType === 'Trash Removal' && (service.manualCost == null || service.manualCost < 0)) {
         missingFields.push(`Trash Removal Cost (Service ${index + 1})`);
       }
     });
 
     // Check Good Stew services require Cost field
     invoiceData.services.forEach((service, index) => {
-      if (service.jobType === 'Good Stew' && (!service.manualCost || service.manualCost <= 0)) {
+      if (service.jobType === 'Good Stew' && (service.manualCost == null || service.manualCost < 0)) {
         missingFields.push(`Good Stew Cost (Service ${index + 1})`);
       }
     });
 
     // Check Crew Placement services require Cost field
     invoiceData.services.forEach((service, index) => {
-      if (service.jobType === 'Crew Placement' && (!service.manualCost || service.manualCost <= 0)) {
+      if (service.jobType === 'Crew Placement' && (service.manualCost == null || service.manualCost < 0)) {
         missingFields.push(`Crew Placement Cost (Service ${index + 1})`);
       }
     });
 
     // Check Consulting Services require Cost field
     invoiceData.services.forEach((service, index) => {
-      if (service.jobType === 'Consulting Services' && (!service.manualCost || service.manualCost <= 0)) {
+      if (service.jobType === 'Consulting Services' && (service.manualCost == null || service.manualCost < 0)) {
         missingFields.push(`Consulting Services Cost (Service ${index + 1})`);
       }
     });
 
     // Check Fueling Services require Cost field
     invoiceData.services.forEach((service, index) => {
-      if (service.jobType === 'Fueling Services' && (!service.manualCost || service.manualCost <= 0)) {
+      if (service.jobType === 'Fueling Services' && (service.manualCost == null || service.manualCost < 0)) {
         missingFields.push(`Fueling Services Cost (Service ${index + 1})`);
       }
     });
 
     // Check Provisioning Services require Cost field
     invoiceData.services.forEach((service, index) => {
-      if (service.jobType === 'Provisioning Services' && (!service.manualCost || service.manualCost <= 0)) {
+      if (service.jobType === 'Provisioning Services' && (service.manualCost == null || service.manualCost < 0)) {
         missingFields.push(`Provisioning Services Cost (Service ${index + 1})`);
       }
     });
 
     // Check Shipping Services require Cost field
     invoiceData.services.forEach((service, index) => {
-      if (service.jobType === 'Shipping Services' && (!service.manualCost || service.manualCost <= 0)) {
+      if (service.jobType === 'Shipping Services' && (service.manualCost == null || service.manualCost < 0)) {
         missingFields.push(`Shipping Services Cost (Service ${index + 1})`);
       }
     });
@@ -3701,15 +3701,16 @@ const CreateInvoice: React.FC = () => {
             <Button
               onClick={handleSave}
               disabled={isLoading}
-              className={`inline-flex items-center gap-1 rounded-md bg-[#1E3A5F] h-8 px-3 text-xs font-medium text-white shadow-sm hover:bg-[#152b47] focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]/50 ${hasUnsavedChanges ? 'shadow-lg' : ''}`}
+              className={`inline-flex items-center gap-2 rounded-md bg-[#1E3A5F] h-9 px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#152b47] focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]/50 ${hasUnsavedChanges ? 'shadow-lg' : ''}`}
             >
               {isLoading ? (
-                <svg className="h-3 w-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
               ) : (
-                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 448 512" aria-hidden="true">
+                  <path d="M64 32C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V173.3c0-17-6.7-33.3-18.7-45.3L352 50.7C340 38.7 323.7 32 306.7 32H64zm0 96c0-17.7 14.3-32 32-32H288c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V128zm128 176a64 64 0 1 1 0 128 64 64 0 1 1 0-128z" />
                 </svg>
               )}
               {isEditMode ? 'Update' : 'Save'}
@@ -4289,7 +4290,7 @@ const CreateInvoice: React.FC = () => {
                                     : "!text-black font-medium"
                                 }
                               >
-                                {shouldShowQuantity ? 'Unit Cost' : 'Cost'} {(service.jobType === 'Clearance Fee' || service.jobType === 'Pilotage' || service.jobType === 'Car Rental' || service.jobType === 'Trash Removal' || service.jobType === 'Good Stew' || service.jobType === 'Crew Placement' || service.jobType === 'Consulting Services' || service.jobType === 'Fueling Services' || service.jobType === 'Provisioning Services' || service.jobType === 'Shipping Services' || (service.jobType === 'Manual Entry' && (service.itemType === 'Material' || service.itemType === 'Subcontractor'))) && <span className="text-red-600">*</span>}
+                                {shouldShowQuantity ? 'Rate' : 'Cost'} {(service.jobType === 'Clearance Fee' || service.jobType === 'Pilotage' || service.jobType === 'Car Rental' || service.jobType === 'Trash Removal' || service.jobType === 'Good Stew' || service.jobType === 'Crew Placement' || service.jobType === 'Consulting Services' || service.jobType === 'Fueling Services' || service.jobType === 'Provisioning Services' || service.jobType === 'Shipping Services' || (service.jobType === 'Manual Entry' && (service.itemType === 'Material' || service.itemType === 'Subcontractor'))) && <span className="text-red-600">*</span>}
                               </Label>
                               <Input
                                 id={`service-manual-cost-${index}`}
@@ -4598,7 +4599,7 @@ const CreateInvoice: React.FC = () => {
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v14m-7-7h14" />
                     </svg>
-                    Add Service
+                    Add Item
                   </Button>
                 </CardContent>
               </Card>
