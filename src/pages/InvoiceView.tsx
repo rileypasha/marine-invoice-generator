@@ -118,6 +118,7 @@ interface ServiceSummaryItem {
   quantity: number;
   cost: number;
   markupAmount: number;
+  markupPercentage: number;
   taxAmount: number;
   totalBeforeTax: number;
   total: number;
@@ -236,7 +237,7 @@ const InvoiceView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { singularLabel, sectionLabel, documentTypeParam, toList, toNew } = useRequestSection();
+  const { singularLabel, sectionLabel, documentTypeParam, toList, toNew, isEstimate } = useRequestSection();
   const withDocumentType = (url: string) => `${url}${url.includes('?') ? '&' : '?'}documentType=${documentTypeParam}`;
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, csrfToken, currentUser: user } = useAuth();
@@ -518,24 +519,6 @@ const InvoiceView: React.FC = () => {
       return;
     }
 
-    // QuickBooks Enterprise / SaaSant import format
-    const qbHeaders = [
-      'Invoice No', 'Customer', 'Invoice Date', 'Due Date', 'Terms', 'PO No', 'Ship Date',
-      'Shipping Address Line 1', 'Shipping Address Line 2', 'Shipping Address Line 3', 'Shipping Address Line 4',
-      'Shipping Address City', 'Shipping Address State', 'Shipping Address Postal Code', 'Shipping Address Country',
-      'FOB',
-      'Billing Address Line 1', 'Billing Address Line 2', 'Billing Address Line 3', 'Billing Address Line 4',
-      'Billing Address City', 'Billing Address State', 'Billing Address Postal Code', 'Billing Address Country',
-      'Sales Rep', 'Shipping Method', 'Print Later', 'Email Later',
-      'Memo', 'Customer Message', 'Email', 'Phone', 'Class',
-      'Product/Service', 'Product/Service Quantity', 'Product/Service Rate', 'Unit Of Measure',
-      'Product/Service Description', 'Product/Service Amount', 'Product/Service Service Date', 'Product/Service Class',
-      'Product/Service Sales Tax',
-      'Other', 'Other 1', 'Other 2', 'Sales Tax', 'Customer Sales Tax Code', 'Template', 'AR Account',
-      'Product/Service Inventory Site', 'Product/Service Inventory BIN',
-      'Amount Received', 'Currency', 'Exchange Rate', 'PO Number'
-    ];
-
     const csvEscape = (val: string | number | undefined | null): string => {
       if (val === undefined || val === null) return '';
       const str = String(val);
@@ -545,113 +528,196 @@ const InvoiceView: React.FC = () => {
       return str;
     };
 
-    // Format date as MM/DD/YYYY for QuickBooks
+    // Format date as M/D/YYYY for QuickBooks
     const formatQBDate = (dateStr?: string | null): string => {
       if (!dateStr) return '';
       const d = new Date(dateStr);
       if (Number.isNaN(d.getTime())) return '';
-      return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+      return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
     };
 
     // Calculate due date from terms
-    const calculateDueDate = (invoiceDateStr: string, terms: string): string => {
+    const calculateDueDate = (baseDateStr: string, terms: string): string => {
       const match = terms.match(/Net\s+(\d+)/i);
       if (!match) return '';
-      const d = new Date(invoiceDateStr);
+      const d = new Date(baseDateStr);
       if (Number.isNaN(d.getTime())) return '';
       d.setDate(d.getDate() + parseInt(match[1], 10));
       return formatQBDate(d.toISOString());
     };
 
-    // Gather invoice-level fields
-    const invoiceNo = '';
+    // Shared field gathering
     const customerName = vessel.name || invoice.vesselName || '';
-    const invoiceDateRaw = invoice.savedAt || invoice.createdAt;
-    const invoiceDate = formatQBDate(invoiceDateRaw);
+    const dateRaw = invoice.savedAt || invoice.createdAt;
+    const formattedDate = formatQBDate(dateRaw);
     const terms = primaryData?.terms || scope?.terms || '';
-    const dueDate = terms && invoiceDateRaw ? calculateDueDate(invoiceDateRaw, terms) : '';
+    const dueDate = terms && dateRaw ? calculateDueDate(dateRaw, terms) : '';
     const memo = primaryData?.notes || invoice.notes || '';
-    const salesRep = '';
-    const email = '';
-    const phone = '';
-
-    // Address fields from customer data
     const custData = primaryData?.customer || {};
     const addressLine1 = custData.address || customer.address || '';
     const addressCity = custData.city || '';
     const addressState = custData.state || '';
     const addressPostalCode = custData.zipCode || custData.postal_code || '';
     const addressCountry = custData.country || '';
-
-    // Build an empty row (55 columns)
-    const emptyRow = (): string[] => new Array(qbHeaders.length).fill('');
-
-    // Build the header-level portion of a row (columns 0-32)
-    const buildHeaderColumns = (): string[] => {
-      const row = emptyRow();
-      row[0] = invoiceNo;                   // Invoice No
-      row[1] = customerName;                // Customer
-      row[2] = invoiceDate;                 // Invoice Date
-      row[3] = dueDate;                     // Due Date
-      row[4] = terms;                       // Terms
-      // 5 PO No, 6 Ship Date — empty
-      row[7] = addressLine1;                // Shipping Address Line 1
-      // 8-10 Shipping Address Lines 2-4 — empty
-      row[11] = addressCity;                // Shipping Address City
-      row[12] = addressState;               // Shipping Address State
-      row[13] = addressPostalCode;          // Shipping Address Postal Code
-      row[14] = addressCountry;             // Shipping Address Country
-      // 15 FOB — empty
-      row[16] = addressLine1;               // Billing Address Line 1
-      // 17-19 Billing Address Lines 2-4 — empty
-      row[20] = addressCity;                // Billing Address City
-      row[21] = addressState;               // Billing Address State
-      row[22] = addressPostalCode;          // Billing Address Postal Code
-      row[23] = addressCountry;             // Billing Address Country
-      row[24] = salesRep;                   // Sales Rep
-      // 25 Shipping Method, 26 Print Later, 27 Email Later — empty
-      row[28] = memo;                       // Memo
-      // 29 Customer Message — empty
-      row[30] = email;                      // Email
-      row[31] = phone;                      // Phone
-      // 32 Class — empty
-      return row;
-    };
-
-    // Fill product/service columns (33-41) on a row
-    const fillLineItemColumns = (row: string[], service: ServiceSummaryItem): void => {
-      const qty = Number.isFinite(service.quantity) ? service.quantity : 1;
-      const rate = qty > 0 ? service.totalBeforeTax / qty : 0;
-      row[33] = service.type || '';                                  // Product/Service
-      row[34] = String(qty);                                        // Quantity
-      row[35] = rate.toFixed(2);                                    // Rate
-      // 36 Unit Of Measure — empty
-      row[37] = service.description || '';                           // Description
-      row[38] = service.totalBeforeTax.toFixed(2);                  // Amount
-      row[39] = invoiceDate;                                        // Service Date
-      // 40 Product/Service Class — empty
-      row[41] = service.taxAmount > 0 ? 'Tax' : 'Non';             // Sales Tax
-    };
-
-    // Build CSV rows: first line item row includes header fields, subsequent rows are line-item only
-    const csvRows: string[][] = [];
     const services = servicesSummary.services;
 
-    if (services.length === 0) {
-      // Export with header info only, no line items
-      csvRows.push(buildHeaderColumns());
+    let headers: string[];
+    let csvRows: string[][];
+
+    if (isEstimate) {
+      // SaaSant Estimate import format for QuickBooks
+      headers = [
+        'Estimate No', 'Customer', 'Estimate Date', 'Due Date', 'Terms', 'PO No', 'Status', 'Ship Date',
+        'Shipping Address Line 1', 'Shipping Address Line 2', 'Shipping Address Line 3', 'Shipping Address Line 4',
+        'Shipping Address City', 'Shipping Address State', 'Shipping Address Postal Code', 'Shipping Address Country',
+        'FOB',
+        'Billing Address Line 1', 'Billing Address Line 2', 'Billing Address Line 3', 'Billing Address Line 4',
+        'Billing Address City', 'Billing Address State', 'Billing Address Postal Code', 'Billing Address Country',
+        'Sales Rep', 'Shipping Method', 'Print Later', 'Email Later',
+        'Memo', 'Message to Customer', 'First Name', 'Last Name', 'Email', 'Phone', 'Fax', 'Class',
+        'Product/Service', 'Product/Service Description', ' Inventory Site', ' Inventory BIN', 'Unit of Measure',
+        'Product/Service Quantity', 'Product/Service Rate', 'Product/Service Amount',
+        'Product/Service Service Date', 'Product/Service Class',
+        'Product/Service Sales Tax Code', 'Product/Service Taxable',
+        'Markup Price', 'Markup Percentage',
+        'Other ', 'Other 1', 'Other 2', 'Sales Tax Item', 'Customer Sales Tax Code', 'Template', 'AR Account',
+        'Amount Received', 'Currency', 'Exchange Rate'
+      ];
+
+      const emptyRow = (): string[] => new Array(headers.length).fill('');
+
+      const buildEstimateRow = (): string[] => {
+        const row = emptyRow();
+        row[0] = '';                            // Estimate No
+        row[1] = customerName;                  // Customer
+        row[2] = formattedDate;                 // Estimate Date
+        row[3] = dueDate;                       // Due Date
+        row[4] = terms;                         // Terms
+        // 5 PO No, 6 Status, 7 Ship Date — empty
+        row[8] = addressLine1;                  // Shipping Address Line 1
+        // 9-11 Shipping Lines 2-4 — empty
+        row[12] = addressCity;                  // Shipping Address City
+        row[13] = addressState;                 // Shipping Address State
+        row[14] = addressPostalCode;            // Shipping Address Postal Code
+        row[15] = addressCountry;               // Shipping Address Country
+        // 16 FOB — empty
+        row[17] = addressLine1;                 // Billing Address Line 1
+        // 18-20 Billing Lines 2-4 — empty
+        row[21] = addressCity;                  // Billing Address City
+        row[22] = addressState;                 // Billing Address State
+        row[23] = addressPostalCode;            // Billing Address Postal Code
+        row[24] = addressCountry;               // Billing Address Country
+        // 25 Sales Rep, 26 Shipping Method, 27 Print Later, 28 Email Later — empty
+        row[29] = memo;                         // Memo
+        // 30 Message to Customer, 31-35 Name/Email/Phone/Fax, 36 Class — empty
+        return row;
+      };
+
+      const fillEstimateLineItem = (row: string[], service: ServiceSummaryItem): void => {
+        const qty = Number.isFinite(service.quantity) ? service.quantity : 1;
+        const rate = qty > 0 ? service.totalBeforeTax / qty : 0;
+        row[37] = service.type || '';                               // Product/Service
+        row[38] = service.description || '';                         // Product/Service Description
+        // 39 Inventory Site, 40 Inventory BIN, 41 Unit of Measure — empty
+        row[42] = String(qty);                                      // Quantity
+        row[43] = rate.toFixed(2);                                  // Rate
+        row[44] = service.totalBeforeTax.toFixed(2);                // Amount
+        row[45] = formattedDate;                                    // Service Date
+        // 46 Product/Service Class — empty
+        row[47] = service.taxAmount > 0 ? 'TAX' : 'NON';           // Sales Tax Code
+        row[48] = service.taxAmount > 0 ? 'T' : 'F';               // Taxable
+        row[49] = service.markupAmount > 0 ? service.markupAmount.toFixed(2) : '';  // Markup Price
+        row[50] = service.markupPercentage > 0 ? service.markupPercentage.toFixed(2) : '';  // Markup Percentage
+      };
+
+      csvRows = [];
+      if (services.length === 0) {
+        csvRows.push(buildEstimateRow());
+      } else {
+        services.forEach((service) => {
+          const row = buildEstimateRow();
+          fillEstimateLineItem(row, service);
+          csvRows.push(row);
+        });
+      }
     } else {
-      services.forEach((service) => {
-        const row = buildHeaderColumns();
-        fillLineItemColumns(row, service);
-        csvRows.push(row);
-      });
+      // QuickBooks Enterprise / SaaSant Invoice import format
+      headers = [
+        'Invoice No', 'Customer', 'Invoice Date', 'Due Date', 'Terms', 'PO No', 'Ship Date',
+        'Shipping Address Line 1', 'Shipping Address Line 2', 'Shipping Address Line 3', 'Shipping Address Line 4',
+        'Shipping Address City', 'Shipping Address State', 'Shipping Address Postal Code', 'Shipping Address Country',
+        'FOB',
+        'Billing Address Line 1', 'Billing Address Line 2', 'Billing Address Line 3', 'Billing Address Line 4',
+        'Billing Address City', 'Billing Address State', 'Billing Address Postal Code', 'Billing Address Country',
+        'Sales Rep', 'Shipping Method', 'Print Later', 'Email Later',
+        'Memo', 'Customer Message', 'Email', 'Phone', 'Class',
+        'Product/Service', 'Product/Service Quantity', 'Product/Service Rate', 'Unit Of Measure',
+        'Product/Service Description', 'Product/Service Amount', 'Product/Service Service Date', 'Product/Service Class',
+        'Product/Service Sales Tax',
+        'Other', 'Other 1', 'Other 2', 'Sales Tax', 'Customer Sales Tax Code', 'Template', 'AR Account',
+        'Product/Service Inventory Site', 'Product/Service Inventory BIN',
+        'Amount Received', 'Currency', 'Exchange Rate', 'PO Number'
+      ];
+
+      const emptyRow = (): string[] => new Array(headers.length).fill('');
+
+      const buildInvoiceRow = (): string[] => {
+        const row = emptyRow();
+        row[0] = '';                            // Invoice No
+        row[1] = customerName;                  // Customer
+        row[2] = formattedDate;                 // Invoice Date
+        row[3] = dueDate;                       // Due Date
+        row[4] = terms;                         // Terms
+        // 5 PO No, 6 Ship Date — empty
+        row[7] = addressLine1;                  // Shipping Address Line 1
+        // 8-10 Shipping Address Lines 2-4 — empty
+        row[11] = addressCity;                  // Shipping Address City
+        row[12] = addressState;                 // Shipping Address State
+        row[13] = addressPostalCode;            // Shipping Address Postal Code
+        row[14] = addressCountry;               // Shipping Address Country
+        // 15 FOB — empty
+        row[16] = addressLine1;                 // Billing Address Line 1
+        // 17-19 Billing Address Lines 2-4 — empty
+        row[20] = addressCity;                  // Billing Address City
+        row[21] = addressState;                 // Billing Address State
+        row[22] = addressPostalCode;            // Billing Address Postal Code
+        row[23] = addressCountry;               // Billing Address Country
+        // 24 Sales Rep, 25 Shipping Method, 26 Print Later, 27 Email Later — empty
+        row[28] = memo;                         // Memo
+        // 29 Customer Message, 30 Email, 31 Phone, 32 Class — empty
+        return row;
+      };
+
+      const fillInvoiceLineItem = (row: string[], service: ServiceSummaryItem): void => {
+        const qty = Number.isFinite(service.quantity) ? service.quantity : 1;
+        const rate = qty > 0 ? service.totalBeforeTax / qty : 0;
+        row[33] = service.type || '';                               // Product/Service
+        row[34] = String(qty);                                      // Quantity
+        row[35] = rate.toFixed(2);                                  // Rate
+        // 36 Unit Of Measure — empty
+        row[37] = service.description || '';                         // Description
+        row[38] = service.totalBeforeTax.toFixed(2);                // Amount
+        row[39] = formattedDate;                                    // Service Date
+        // 40 Product/Service Class — empty
+        row[41] = service.taxAmount > 0 ? 'Tax' : 'Non';           // Sales Tax
+      };
+
+      csvRows = [];
+      if (services.length === 0) {
+        csvRows.push(buildInvoiceRow());
+      } else {
+        services.forEach((service) => {
+          const row = buildInvoiceRow();
+          fillInvoiceLineItem(row, service);
+          csvRows.push(row);
+        });
+      }
     }
 
     // Add BOM for Excel UTF-8 compatibility, then header + data rows
     const bom = '\uFEFF';
     const csvContent = bom + [
-      qbHeaders.map(csvEscape).join(','),
+      headers.map(csvEscape).join(','),
       ...csvRows.map(row => row.map(csvEscape).join(','))
     ].join('\n');
 
@@ -1069,19 +1135,36 @@ const InvoiceView: React.FC = () => {
       return cost;
     }
 
-    // Get markup rate
-    let markupRate = item.markupRate !== undefined ? item.markupRate : (scope?.markupRate ?? 2.5);
-    markupRate = parseFloat(String(markupRate));
-    if (Number.isNaN(markupRate)) {
-      markupRate = 0;
+    // Get markup rate — check preset types first, then fall back to numeric markupRate
+    let markupPercent = 0;
+    if (item.markupType === '2.5%' || item.markupType === 'preset-2.5') {
+      markupPercent = 2.5;
+    } else if (item.markupType === '12.5%' || item.markupType === 'preset-12.5') {
+      markupPercent = 12.5;
+    } else if (item.markupType === 'custom' && item.markupRate !== undefined) {
+      markupPercent = parseFloat(String(item.markupRate));
+      if (Number.isNaN(markupPercent)) markupPercent = 0;
+      // If rate is <= 1, assume it's already a decimal (e.g. 0.025 = 2.5%), convert to percentage
+      if (markupPercent > 0 && markupPercent <= 1) {
+        markupPercent = markupPercent * 100;
+      }
+    } else if (item.markupRate !== undefined) {
+      // Legacy: numeric markupRate without a markupType
+      markupPercent = parseFloat(String(item.markupRate));
+      if (Number.isNaN(markupPercent)) markupPercent = 0;
+      if (markupPercent > 0 && markupPercent <= 1) {
+        markupPercent = markupPercent * 100;
+      }
+    } else if (scope?.markupRate !== undefined) {
+      // Fallback to scope-level markup
+      markupPercent = parseFloat(String(scope.markupRate));
+      if (Number.isNaN(markupPercent)) markupPercent = 0;
+      if (markupPercent > 0 && markupPercent <= 1) {
+        markupPercent = markupPercent * 100;
+      }
     }
 
-    // If rate is > 1, assume it's a percentage, convert to decimal
-    if (markupRate > 1) {
-      markupRate = markupRate / 100;
-    }
-
-    return cost * (1 + markupRate);
+    return cost * (1 + markupPercent / 100);
   };
 
   const calculateTax = (item: LineItem, totalWithMarkup: number): number => {
@@ -1123,13 +1206,20 @@ const InvoiceView: React.FC = () => {
         subtotalWithMarkup += costWithMarkup;
         totalTax += taxAmount;
 
+        const markupPercentage = cost > 0 && markupAmount > 0 ? (markupAmount / cost) * 100 : 0;
+
         return {
           id: item.id || `service-${index}`,
           description: item.description || 'Untitled service',
-          type: item.jobType || item.itemType || item.type || 'Service',
+          type: ({
+            'Car Rental': 'Car Rental Service',
+            'Crew Placement': 'Crew Placement Services',
+            'Good Stew': 'Good Stew Sales',
+          } as Record<string, string>)[item.jobType || item.itemType || item.type || ''] || item.jobType || item.itemType || item.type || 'Service',
           quantity,
           cost,
           markupAmount,
+          markupPercentage,
           taxAmount,
           totalBeforeTax: costWithMarkup,
           total,

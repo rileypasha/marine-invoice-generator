@@ -96,9 +96,9 @@ interface Service {
   otHoursInput?: string;
   manualCost?: number;
   manualCostInput?: string;
-  taxStatus?: 'taxable' | 'Non-Taxable' | 'exempt';
+  taxStatus?: 'Taxable' | 'Non-Taxable' | 'exempt';
   taxRate?: number;
-  markupType?: 'preset-2.5' | 'preset-12.5' | 'custom' | 'No Markup';
+  markupType?: '2.5%' | '12.5%' | 'custom' | 'No Markup';
   markupRate?: number;
   receiptUrl?: string;  // base64 data URL
   receiptType?: string; // MIME type
@@ -200,7 +200,7 @@ const normalizeTaxStatus = (value: any): Service['taxStatus'] | undefined => {
   }
   const normalized = String(value).toLowerCase().replace(/[_ –-]/g, '');
   if (normalized === 'taxable') {
-    return 'taxable';
+    return 'Taxable';
   }
   if (normalized === 'nontaxable') {
     return 'Non-Taxable';
@@ -216,11 +216,11 @@ const normalizeMarkupType = (value: any): Service['markupType'] | undefined => {
     return undefined;
   }
   const normalized = String(value).toLowerCase().replace(/[_ ]/g, '-');
-  if (normalized === 'preset-2.5' || normalized === 'preset-25' || normalized === 'preset2.5') {
-    return 'preset-2.5';
+  if (normalized === '2.5%' || normalized === 'preset-2.5' || normalized === 'preset-25' || normalized === 'preset2.5') {
+    return '2.5%';
   }
-  if (normalized === 'preset-12.5' || normalized === 'preset-125' || normalized === 'preset12.5') {
-    return 'preset-12.5';
+  if (normalized === '12.5%' || normalized === 'preset-12.5' || normalized === 'preset-125' || normalized === 'preset12.5') {
+    return '12.5%';
   }
   if (normalized === 'custom') {
     return 'custom';
@@ -2036,9 +2036,9 @@ const CreateInvoice: React.FC = () => {
     }
 
     let markupRate = 0;
-    if (service.markupType === 'preset-2.5') {
+    if (service.markupType === '2.5%') {
       markupRate = 2.5;
-    } else if (service.markupType === 'preset-12.5') {
+    } else if (service.markupType === '12.5%') {
       markupRate = 12.5;
     } else if (service.markupType === 'custom' && service.markupRate) {
       markupRate = service.markupRate;
@@ -2055,7 +2055,7 @@ const CreateInvoice: React.FC = () => {
     }
 
     // Check tax status - if explicitly set to taxable, calculate tax
-    if (service.taxStatus === 'taxable') {
+    if (service.taxStatus === 'Taxable') {
       const defaultTaxRate =
         (invoiceData.metadata.taxRate != null && invoiceData.metadata.taxRate !== 0) ? invoiceData.metadata.taxRate / 100 : 0.0875;
       const taxRate = typeof service.taxRate === 'number' ? service.taxRate : defaultTaxRate;
@@ -4482,10 +4482,10 @@ const CreateInvoice: React.FC = () => {
                                       )}
                                       style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                                     >
-                                      <SelectValue>{service.taxStatus === 'taxable' ? 'Taxable (8.75%)' : service.taxStatus || 'Non-Taxable'}</SelectValue>
+                                      <SelectValue>{service.taxStatus === 'Taxable' ? 'Taxable (8.75%)' : service.taxStatus || 'Non-Taxable'}</SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="taxable">Taxable (8.75%)</SelectItem>
+                                      <SelectItem value="Taxable">Taxable (8.75%)</SelectItem>
                                       <SelectItem value="Non-Taxable">Non-Taxable</SelectItem>
                                     </SelectContent>
                                   </Select>
@@ -4513,15 +4513,15 @@ const CreateInvoice: React.FC = () => {
                                       style={isDeleted ? getDeletedFieldStyles(isDeleted) : undefined}
                                     >
                                       <SelectValue>
-                                        {service.markupType === 'preset-2.5' ? '2.5%' :
-                                         service.markupType === 'preset-12.5' ? '12.5%' :
+                                        {service.markupType === '2.5%' ? '2.5%' :
+                                         service.markupType === '12.5%' ? '12.5%' :
                                          service.markupType === 'custom' ? 'Custom Markup' :
                                          'No Markup'}
                                       </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="preset-2.5">2.5%</SelectItem>
-                                      <SelectItem value="preset-12.5">12.5%</SelectItem>
+                                      <SelectItem value="2.5%">2.5%</SelectItem>
+                                      <SelectItem value="12.5%">12.5%</SelectItem>
                                       <SelectItem value="custom">Custom Markup</SelectItem>
                                       <SelectItem value="No Markup">No Markup</SelectItem>
                                     </SelectContent>
