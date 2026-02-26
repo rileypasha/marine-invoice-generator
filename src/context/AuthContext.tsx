@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiRequest, API_ENDPOINTS } from '../config/api';
+import { useSessionKeepAlive } from '../hooks/useSessionKeepAlive';
 
 interface User {
   id: string;
@@ -120,6 +121,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     checkAuth();
   }, []);
+
+  // Keep the server session alive while the user is actively interacting
+  useSessionKeepAlive(!!currentUser);
 
   const value: AuthContextType = {
     currentUser,

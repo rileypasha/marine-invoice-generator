@@ -192,6 +192,20 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// Keep-alive endpoint - lightweight session touch for active users
+router.post('/keep-alive', (req, res) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  // Touch the session to reset expiry
+  if (req.session.touch) {
+    req.session.touch();
+  }
+
+  res.json({ ok: true });
+});
+
 // Logout endpoint
 router.post('/logout', (req, res) => {
   req.session.destroy((err) => {

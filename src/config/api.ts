@@ -22,6 +22,7 @@ export const API_ENDPOINTS = {
     LOGIN: '/api/v1/auth/login',
     LOGOUT: '/api/v1/auth/logout',
     CHECK: '/api/v1/auth/check',
+    KEEP_ALIVE: '/api/v1/auth/keep-alive',
     REGISTER: '/api/v1/auth/register',
   },
 
