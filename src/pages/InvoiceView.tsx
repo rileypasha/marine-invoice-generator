@@ -581,7 +581,7 @@ const InvoiceView: React.FC = () => {
     const addressCity = custData.city || '';
     const addressState = custData.state || '';
     const addressPostalCode = custData.zipCode || custData.postal_code || '';
-    const addressCountry = custData.country || 'US';
+    const addressCountry = custData.country || '';
 
     // Build an empty row (55 columns)
     const emptyRow = (): string[] => new Array(qbHeaders.length).fill('');
@@ -622,7 +622,7 @@ const InvoiceView: React.FC = () => {
     const fillLineItemColumns = (row: string[], service: ServiceSummaryItem): void => {
       const qty = Number.isFinite(service.quantity) ? service.quantity : 1;
       const rate = qty > 0 ? service.totalBeforeTax / qty : 0;
-      row[33] = service.description || '';                           // Product/Service
+      row[33] = service.type || '';                                  // Product/Service
       row[34] = String(qty);                                        // Quantity
       row[35] = rate.toFixed(2);                                    // Rate
       // 36 Unit Of Measure — empty
@@ -641,8 +641,8 @@ const InvoiceView: React.FC = () => {
       // Export with header info only, no line items
       csvRows.push(buildHeaderColumns());
     } else {
-      services.forEach((service, index) => {
-        const row = index === 0 ? buildHeaderColumns() : emptyRow();
+      services.forEach((service) => {
+        const row = buildHeaderColumns();
         fillLineItemColumns(row, service);
         csvRows.push(row);
       });
