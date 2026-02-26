@@ -6,7 +6,7 @@
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "vite",
-    "dev:server": "nodemon --watch server --ext ts --exec ts-node server/app.ts",
+    "dev:server": "nodemon --watch server --ext ts --exec \"ts-node --project tsconfig.server.json\" server/app.ts",
     "dev:client": "vite",
     "dev:auth": "node legacy-auth-server.js",
     "build": "vite build",
