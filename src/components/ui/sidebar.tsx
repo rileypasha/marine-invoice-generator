@@ -95,12 +95,13 @@ export const DesktopSidebar = ({
   return (
     <div
       className={cn(
-        "fixed left-0 top-0 h-screen px-1 py-2 hidden md:flex md:flex-col bg-white border-r border-gray-200 w-[280px] flex-shrink-0 z-40",
+        "fixed left-0 top-0 h-screen px-2 py-3 hidden md:flex md:flex-col bg-[#fafafa] border-r border-gray-200/80 w-[280px] flex-shrink-0 z-40",
         className
       )}
       style={{
         width: open ? "280px" : "56px",
-        overflow: "hidden"
+        overflow: "hidden",
+        transition: "width 200ms cubic-bezier(0.4, 0, 0.2, 1)",
       }}
       {...props}
     >
@@ -160,8 +161,8 @@ export const SidebarLink = ({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={() => setShowTooltip(false)}
         className={cn(
-          `flex items-center py-2 justify-start ${
-            open ? 'gap-2 pl-3' : 'gap-0 pl-0'
+          `flex items-center py-[7px] justify-start ${
+            open ? 'gap-2.5 pl-3' : 'gap-0 pl-0'
           }`,
           className
         )}
@@ -169,7 +170,7 @@ export const SidebarLink = ({
       >
         {link.icon}
         <span
-          className="text-gray-900 text-sm whitespace-pre inline-block !p-0 !m-0"
+          className="text-[13px] font-medium whitespace-pre inline-block !p-0 !m-0"
           style={{
             display: open ? "inline-block" : "none"
           }}
@@ -177,14 +178,15 @@ export const SidebarLink = ({
           {link.label}
         </span>
       </Link>
-      {/* Simple tooltip */}
+      {/* Tooltip */}
       {showTooltip && (
         <div
-          className="fixed px-2 py-1 bg-black text-white text-xs rounded-lg shadow-lg pointer-events-none whitespace-nowrap z-[9999]"
+          className="fixed px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-md shadow-lg pointer-events-none whitespace-nowrap z-[9999]"
           style={{
             left: `${tooltipPosition.x}px`,
             top: `${tooltipPosition.y}px`,
-            transform: 'translateY(-50%)'
+            transform: 'translateY(-50%)',
+            animation: 'tooltipIn 100ms ease-out',
           }}
         >
           {link.label}

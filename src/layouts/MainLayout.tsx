@@ -35,87 +35,87 @@ const SidebarContent = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { open, setOpen } = useSidebar();
+  const { currentUser } = useAuth();
   const [isLogoHovered, setIsLogoHovered] = React.useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = React.useState(false);
-  const [showExpandTooltip, setShowExpandTooltip] = React.useState(false);
-  const [tooltipPosition, setTooltipPosition] = React.useState({ x: 0, y: 0 });
   const expandButtonRef = React.useRef<HTMLButtonElement>(null);
-  // ChatGPT-style hover effects: hover:bg-gray-200, rounded-lg, tooltips
-
 
   const toggleSidebar = () => {
     setOpen(!open);
-    // Reset hover states to ensure clean state
     setIsLogoHovered(false);
     setIsSidebarHovered(false);
-    setShowExpandTooltip(false);
   };
 
-  const handleExpandButtonMouseEnter = () => {
-    // Tooltip disabled - was causing blurry rendering
-    return;
-  };
-
-  const handleExpandButtonMouseLeave = () => {
-    setShowExpandTooltip(false);
-  };
-
-  // Close sidebar when a link is clicked (mobile only)
   const handleLinkClick = () => {
     if (window.innerWidth < 768) {
       setOpen(false);
     }
   };
 
-  // Build navigation links for Magic UI sidebar
-  const links = [
+  const navigationLinks = [
     {
       label: 'Invoices',
       href: '/requests',
-      icon: <FileText className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+      icon: <FileText className="h-[18px] w-[18px] flex-shrink-0" />,
       onClick: handleLinkClick,
     },
     {
       label: 'Estimates',
       href: '/estimates',
-      icon: <ClipboardList className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+      icon: <ClipboardList className="h-[18px] w-[18px] flex-shrink-0" />,
       onClick: handleLinkClick,
     },
     {
       label: 'Upload PDF',
       href: '/upload-pdf',
-      icon: <Upload className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+      icon: <Upload className="h-[18px] w-[18px] flex-shrink-0" />,
       onClick: handleLinkClick,
     },
+  ];
+
+  const workspaceLinks = [
     {
       label: 'Contacts',
       href: '/contacts',
-      icon: <User className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+      icon: <User className="h-[18px] w-[18px] flex-shrink-0" />,
       onClick: handleLinkClick,
     },
     {
       label: 'Vessels',
       href: '/vessels',
-      icon: <Ship className="text-gray-700 h-4 w-4 flex-shrink-0" />,
-      onClick: handleLinkClick,
-    },
-    {
-      label: 'Settings',
-      href: '/settings',
-      icon: <Settings className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+      icon: <Ship className="h-[18px] w-[18px] flex-shrink-0" />,
       onClick: handleLinkClick,
     },
   ];
 
-  // Separate settings link for bottom placement (desktop only)
-  const settingsLink = {
-    label: 'Settings',
-    href: '/settings',
-    icon: <Settings className="text-gray-700 h-4 w-4 flex-shrink-0" />,
-    onClick: handleLinkClick,
-  };
-
   const isActive = (href: string) => location.pathname === href;
+
+  const renderLink = (link: typeof navigationLinks[0], idx: number) => (
+    <div key={idx} className="relative">
+      {isActive(link.href) && (
+        <div
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-gray-900 rounded-r-full"
+          style={{ animation: 'fadeScaleIn 150ms ease-out' }}
+        />
+      )}
+      <SidebarLink
+        link={{
+          ...link,
+          icon: React.cloneElement(link.icon as React.ReactElement, {
+            className: `h-[18px] w-[18px] flex-shrink-0 transition-colors duration-150 ${
+              isActive(link.href) ? 'text-gray-900' : 'text-gray-400'
+            }`,
+            strokeWidth: isActive(link.href) ? 2 : 1.75,
+          })
+        }}
+        className={`pr-2 py-[7px] ml-1 mr-1 rounded-md relative z-20 transition-all duration-150 ${
+          isActive(link.href)
+            ? 'bg-gray-100/70 text-gray-900'
+            : 'hover:bg-gray-100/50 text-gray-500 hover:text-gray-700'
+        }`}
+      />
+    </div>
+  );
 
   return (
     <div
@@ -123,89 +123,58 @@ const SidebarContent = () => {
       onMouseEnter={() => setIsSidebarHovered(true)}
       onMouseLeave={() => setIsSidebarHovered(false)}
     >
-      {/* Top section with logo and navigation */}
-      <div className="flex flex-col">
-        {/* Logo */}
+      {/* Top section */}
+      <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+        {/* Logo Area */}
         <div
-          className={`flex items-center py-2 relative justify-start`}
+          className={`flex items-center h-14 mb-1 ${open ? 'px-3' : 'pl-1'}`}
           onMouseEnter={() => setIsLogoHovered(true)}
           onMouseLeave={() => setIsLogoHovered(false)}
         >
-          {/* Logo with individual hover */}
-          <div
-            className={`relative rounded-lg transition-colors duration-300`}
-          >
-            {/* Full logo when expanded */}
-            <div className={`flex items-center relative z-10 ${!open && (isLogoHovered || isSidebarHovered) ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+          <div className="relative flex items-center flex-1 min-w-0">
+            <div className={`flex items-center transition-opacity duration-200 ${!open && (isLogoHovered || isSidebarHovered) ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <img
-                className={`flex-shrink-0 ${open ? 'h-8 w-auto' : 'h-10 w-10'}`}
-                style={{ marginLeft: '6px' }}
+                className={`flex-shrink-0 ${open ? 'h-7 w-auto' : 'h-8 w-8'}`}
                 src={open ? '/mgbw_logo.svg' : '/collapsed_logo.svg'}
                 alt="Marine Group Boat Works"
               />
             </div>
+
+            {!open && (isLogoHovered || isSidebarHovered) && (
+              <button
+                ref={expandButtonRef}
+                onClick={toggleSidebar}
+                className="absolute inset-y-0 left-0 flex items-center pl-[7px] transition-colors duration-150"
+              >
+                <PanelLeftOpen className="h-[18px] w-[18px] text-gray-400" />
+              </button>
+            )}
           </div>
 
-          {/* Toggle Button */}
-          {!open && (isLogoHovered || isSidebarHovered) && (
-            <button
-              ref={expandButtonRef}
-              onClick={toggleSidebar}
-              onMouseEnter={handleExpandButtonMouseEnter}
-              onMouseLeave={handleExpandButtonMouseLeave}
-              className="absolute pl-3 pr-4 py-2 ml-0 rounded-lg hover:bg-gray-50 z-10 bg-white"
-              style={{
-                left: '1px'
-              }}
-            >
-              <PanelLeftOpen className="h-5 w-5 text-gray-400" />
-            </button>
-          )}
-
-          {/* Expand Button Tooltip */}
-          {showExpandTooltip && (
-            <div
-              className="fixed px-2 py-1 bg-black text-white text-xs rounded-md shadow-lg pointer-events-none whitespace-nowrap z-[9999]"
-              style={{
-                left: `${tooltipPosition.x}px`,
-                top: `${tooltipPosition.y}px`,
-                transform: 'translateY(-50%)',
-                WebkitFontSmoothing: 'antialiased',
-                MozOsxFontSmoothing: 'grayscale'
-              }}
-            >
-              Open sidebar
-            </div>
-          )}
           {open && (
             <button
               onClick={toggleSidebar}
-              className="absolute p-1.5 rounded-lg hover:bg-gray-50 z-50"
-              style={{
-                right: '8px'
-              }}
+              className="p-1.5 rounded-md hover:bg-gray-100/80 text-gray-400 hover:text-gray-600 transition-all duration-150 flex-shrink-0"
             >
-              <PanelLeftClose className="h-4 w-4 text-gray-400" />
+              <PanelLeftClose className="h-4 w-4" />
             </button>
           )}
         </div>
 
-        {/* Navigation Links */}
-        <div className="mt-1 flex flex-col gap-2">
-          {/* New button with dropdown picker */}
+        {/* New button */}
+        <div className="px-1 mb-0.5">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className={`flex items-center py-2 justify-start ${
-                  open ? 'gap-2' : 'gap-0'
-                } pl-1 pr-2 ml-0 rounded-lg relative z-20 transition-colors duration-300 hover:bg-gray-50 text-gray-600`}
+                className={`flex items-center w-full py-[7px] ${
+                  open ? 'gap-2.5 pl-3 pr-2' : 'pl-[7px]'
+                } rounded-md relative z-20 transition-all duration-150 hover:bg-gray-100/50 text-gray-600 hover:text-gray-800 group`}
               >
                 <SquarePen
-                  className="h-5 w-5 flex-shrink-0 text-gray-600"
-                  style={{ marginLeft: '8px' }}
+                  className="h-[18px] w-[18px] flex-shrink-0 text-gray-400 group-hover:text-gray-600 transition-colors duration-150"
                 />
                 <span
-                  className="text-gray-900 text-sm whitespace-pre inline-block !p-0 !m-0"
+                  className="text-[13px] font-medium text-gray-700 whitespace-pre"
                   style={{ display: open ? 'inline-block' : 'none' }}
                 >
                   New
@@ -223,53 +192,87 @@ const SidebarContent = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
 
-          {links.filter(link => link.label !== 'Settings').map((link, idx) => (
-            <SidebarLink
-              key={idx}
-              link={{
-                ...link,
-                icon: React.cloneElement(link.icon as React.ReactElement, {
-                  className: `h-5 w-5 flex-shrink-0 ${
-                    isActive(link.href)
-                      ? 'text-gray-900'
-                      : 'text-gray-600'
-                  }`,
-                  style: { marginLeft: '8px' }
-                })
-              }}
-              className={`pl-1 pr-2 py-2 ml-0 rounded-lg relative z-20 transition-colors duration-300 ${
-                isActive(link.href)
-                  ? 'bg-gray-100 text-gray-900'
-                  : 'hover:bg-gray-50 text-gray-600'
-              }`}
-            />
-          ))}
+        {/* Separator */}
+        <div className="mx-3 my-1.5 border-t border-gray-200/60" />
+
+        {/* Navigation section */}
+        {open && (
+          <div className="px-3 pt-2 pb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400/80 select-none">
+              Navigation
+            </span>
+          </div>
+        )}
+        <div className="flex flex-col gap-0.5 px-1">
+          {navigationLinks.map(renderLink)}
+        </div>
+
+        {/* Workspace section */}
+        {open && (
+          <div className="px-3 pt-4 pb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400/80 select-none">
+              Workspace
+            </span>
+          </div>
+        )}
+        <div className="flex flex-col gap-0.5 px-1">
+          {workspaceLinks.map(renderLink)}
         </div>
       </div>
 
-      {/* Bottom section with settings */}
-      <div className="mt-auto pt-4 border-t border-gray-200">
-        <SidebarLink
-          link={{
-            ...settingsLink,
-            icon: React.cloneElement(settingsLink.icon as React.ReactElement, {
-              className: `h-5 w-5 flex-shrink-0 ${
-                isActive(settingsLink.href)
-                  ? 'text-gray-900'
-                  : 'text-gray-600'
-              }`,
-              style: { marginLeft: '8px' }
-            })
-          }}
-          className={`pl-1 pr-2 py-2 ml-0 rounded-lg relative z-20 transition-colors duration-300 ${
-            isActive(settingsLink.href)
-              ? 'bg-gray-100 text-gray-900'
-              : 'hover:bg-gray-50 text-gray-600'
-          }`}
-        />
-      </div>
+      {/* Bottom section: User profile */}
+      <div className="mt-auto pt-2">
+        <div className="mx-3 mb-2 border-t border-gray-200/60" />
 
+        <div
+          className={`flex items-center ${open ? 'justify-between px-3 py-2' : 'justify-center py-2'} rounded-md mx-1 hover:bg-gray-100/50 transition-colors duration-150 cursor-pointer group`}
+          onClick={() => { navigate('/settings'); handleLinkClick(); }}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 ring-1 ring-gray-200/80">
+              {currentUser?.avatarUrl ? (
+                <img
+                  src={currentUser.avatarUrl}
+                  alt={currentUser.name || 'User'}
+                  className="h-full w-full object-cover"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              ) : (
+                <span className="text-xs font-medium text-gray-500">
+                  {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+                </span>
+              )}
+            </div>
+
+            {open && (
+              <div className="flex flex-col min-w-0">
+                <span className="text-[13px] font-medium text-gray-900 truncate leading-tight">
+                  {currentUser?.name || 'User'}
+                </span>
+                <span className="text-[11px] text-gray-400 truncate leading-tight">
+                  {currentUser?.email || ''}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {open && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/settings');
+                handleLinkClick();
+              }}
+              className="p-1 rounded-md hover:bg-gray-200/60 text-gray-400 hover:text-gray-600 transition-all duration-150 opacity-0 group-hover:opacity-100 flex-shrink-0"
+              aria-label="Settings"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
