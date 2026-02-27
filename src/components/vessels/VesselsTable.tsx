@@ -282,10 +282,10 @@ export function VesselsTable({
                   rowId: vessel.id,
                   pos: { top: r.bottom + window.scrollY, left },
                   handlers: {
-                    viewInvoices: (id: string) => handleViewInvoices(vessel),
-                    newInvoice: (id: string) => handleNewInvoice(vessel),
-                    edit: (id: string) => onEdit?.(vessel.id) || navigate(`/vessels/${vessel.id}/edit`),
-                    del: (id: string) => handleSingleDelete(vessel),
+                    viewInvoices: () => handleViewInvoices(vessel),
+                    newInvoice: () => handleNewInvoice(vessel),
+                    edit: () => onEdit?.(vessel.id) || navigate(`/vessels/${vessel.id}/edit`),
+                    del: () => handleSingleDelete(vessel),
                   }
                 });
               }}

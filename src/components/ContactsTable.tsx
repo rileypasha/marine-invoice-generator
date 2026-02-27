@@ -331,10 +331,10 @@ export function ContactsTable({
                   rowId: customer.id,
                   pos: { top: r.bottom + window.scrollY, left },
                   handlers: {
-                    newInvoice: (id: string) => onNewInvoice?.(customer),
-                    viewInvoices: (id: string) => onViewInvoices?.(customer.id),
-                    edit: (id: string) => onEdit?.(customer.id) || navigate(`/contacts/${customer.id}/edit`),
-                    del: (id: string) => onDelete?.(customer.id),
+                    newInvoice: () => onNewInvoice?.(customer),
+                    viewInvoices: () => onViewInvoices?.(customer.id),
+                    edit: () => onEdit?.(customer.id) || navigate(`/contacts/${customer.id}/edit`),
+                    del: () => onDelete?.(customer.id),
                   }
                 });
               }}

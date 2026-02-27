@@ -18,6 +18,7 @@ interface SelectTriggerProps {
 
 interface SelectValueProps {
   placeholder?: string;
+  children?: React.ReactNode;
 }
 
 interface SelectContentProps {
@@ -95,8 +96,12 @@ export const SelectTrigger: React.FC<SelectTriggerProps> = ({ children, classNam
   );
 };
 
-export const SelectValue: React.FC<SelectValueProps> = ({ placeholder = 'Select...' }) => {
+export const SelectValue: React.FC<SelectValueProps> = ({ placeholder = 'Select...', children }) => {
   const { value, selectedText } = React.useContext(SelectContext);
+
+  if (children) {
+    return <span>{children}</span>;
+  }
 
   return (
     <span className={!value ? 'text-muted-foreground' : ''}>

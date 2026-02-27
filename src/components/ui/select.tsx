@@ -48,8 +48,9 @@ function Select({ children, onValueChange, value, disabled }: SelectProps) {
   const labelMap = new Map<string, React.ReactNode>();
   React.Children.forEach(children, child => {
     if (React.isValidElement(child) && child.type === SelectContent) {
-      React.Children.forEach(child.props.children, item => {
-        if (React.isValidElement(item) && item.type === SelectItem) {
+      const contentProps = child.props as SelectContentProps;
+      React.Children.forEach(contentProps.children, item => {
+        if (React.isValidElement<SelectItemProps>(item) && item.type === SelectItem) {
           labelMap.set(item.props.value, item.props.children);
         }
       });
