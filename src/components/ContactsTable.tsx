@@ -23,7 +23,7 @@ import {
   SimpleTableRow as TableRow,
 } from "@/components/ui/simple-table";
 import { ContactSort } from "@/hooks/useContactsQueryState";
-import { MoreVertical, ChevronDown, ChevronRight, Download, Trash2, X } from "lucide-react";
+import { MoreVertical, ChevronDown, ChevronRight, Download, Trash2 } from "lucide-react";
 import { useContactsRowActionsStore } from "@/features/contacts/state/rowActions.store";
 import { bucketByActivity, bucketByMonthlyActivity, formatActivityGroupSubtotal, fmtCurrency } from "@/features/contacts/activity";
 import { Button } from "@/components/ui/button";
@@ -413,15 +413,6 @@ export function ContactsTable({
                 </span>
               </div>
               <div className="flex items-center gap-2 ml-auto pr-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.resetRowSelection()}
-                  className="h-7 px-2 text-xs transition-none"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Clear
-                </Button>
                 {onBulkDelete && (
                   <Button
                     variant="destructive"

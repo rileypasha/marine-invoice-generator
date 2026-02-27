@@ -21,7 +21,7 @@ import {
   SimpleTableRow as TableRow,
 } from "@/components/ui/simple-table";
 import { VesselSort } from "@/hooks/useVesselsQueryState";
-import { MoreVertical, ChevronDown, ChevronRight, Download, Trash2, X } from "lucide-react";
+import { MoreVertical, ChevronDown, ChevronRight, Download, Trash2 } from "lucide-react";
 import { useRowActionsStore } from "@/features/vessels/state/rowActions.store";
 import { bucketBySize, bucketByActivity, bucketByMonthlyActivity, formatGroupSubtotal, formatCurrency } from "@/features/vessels/grouping";
 import { Button } from "@/components/ui/button";
@@ -381,15 +381,6 @@ export function VesselsTable({
                 </span>
               </div>
               <div className="flex items-center gap-2 ml-auto pr-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.resetRowSelection()}
-                  className="h-7 px-2 text-xs transition-none"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Clear
-                </Button>
                 {onBulkDelete && (
                   <Button
                     variant="destructive"

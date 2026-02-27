@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronDown, MoreHorizontal, Plus, Printer, Upload, Download, Trash2, X, Search } from "lucide-react"
+import { ArrowUpDown, ChevronDown, MoreHorizontal, Plus, Printer, Upload, Download, Trash2, Search } from "lucide-react"
 
 import { SimpleButton as Button } from "@/components/ui/simple-button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -199,15 +199,6 @@ export function DataTable<TData, TValue>({
               </span>
             </div>
             <div className="flex items-center gap-2 ml-auto pr-6">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.resetRowSelection()}
-                className="h-7 px-2 text-xs transition-none"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear
-              </Button>
               {onBulkDelete && (
                 <Button
                   variant="destructive"
