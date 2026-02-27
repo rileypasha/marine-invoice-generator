@@ -45,6 +45,12 @@ async function sendEmail(options: EmailOptions): Promise<boolean> {
       subject: options.subject,
       text: options.text,
       html: options.html,
+      trackingSettings: {
+        clickTracking: {
+          enable: false,
+          enableText: false,
+        },
+      },
     };
 
     if (options.attachments) {
