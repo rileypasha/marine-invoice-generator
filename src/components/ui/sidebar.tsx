@@ -95,7 +95,7 @@ export const DesktopSidebar = ({
   return (
     <div
       className={cn(
-        "fixed left-0 top-0 h-screen px-2 py-3 hidden md:flex md:flex-col bg-[#003d5b] border-r border-[#002d45] w-[280px] flex-shrink-0 z-40",
+        "fixed left-0 top-0 h-screen px-2 py-3 hidden md:flex md:flex-col bg-[#003d5b] w-[280px] flex-shrink-0 z-40",
         className
       )}
       style={{

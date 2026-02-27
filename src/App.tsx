@@ -78,13 +78,88 @@ const ConditionalContactsRowActions = () => {
   return open ? <ContactsRowActionsLayer /> : null
 }
 
-// Enhanced loading fallback with skeleton
+// Modern SaaS page loader — skeleton UI with shimmer
 const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen bg-gray-50">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto mb-4"></div>
-      <p className="text-sm text-gray-600">Loading...</p>
+  <div className="min-h-screen bg-white">
+    {/* Subtle top progress bar */}
+    <div className="fixed top-0 left-0 right-0 z-50 h-[2px] bg-gray-100 overflow-hidden">
+      <div
+        className="h-full bg-[#003d5b]/70 rounded-r-full"
+        style={{
+          animation: 'progressSlide 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+        }}
+      />
     </div>
+
+    {/* Content skeleton mimicking real page layout */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-16">
+      {/* Page header skeleton */}
+      <div className="mb-8">
+        <div className="h-7 w-40 bg-gray-100 rounded-md skeleton-shimmer" />
+        <div className="h-4 w-64 bg-gray-50 rounded-md mt-3 skeleton-shimmer" style={{ animationDelay: '0.08s' }} />
+      </div>
+
+      {/* Action bar skeleton */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="h-9 w-28 bg-gray-100 rounded-lg skeleton-shimmer" style={{ animationDelay: '0.12s' }} />
+        <div className="h-9 w-9 bg-gray-50 rounded-lg skeleton-shimmer" style={{ animationDelay: '0.16s' }} />
+        <div className="flex-1" />
+        <div className="h-9 w-48 bg-gray-50 rounded-lg skeleton-shimmer" style={{ animationDelay: '0.2s' }} />
+      </div>
+
+      {/* Table / card skeleton */}
+      <div className="border border-gray-100 rounded-xl overflow-hidden">
+        {/* Table header */}
+        <div className="flex items-center gap-4 px-5 py-3.5 bg-gray-50/60 border-b border-gray-100">
+          {[96, 140, 120, 80, 100].map((w, i) => (
+            <div key={i} className="h-3 bg-gray-200/60 rounded skeleton-shimmer" style={{ width: w, animationDelay: `${0.04 * i}s` }} />
+          ))}
+        </div>
+        {/* Table rows */}
+        {[0, 1, 2, 3, 4, 5].map((row) => (
+          <div
+            key={row}
+            className="flex items-center gap-4 px-5 py-4 border-b border-gray-50 last:border-b-0"
+          >
+            <div className="h-3.5 bg-gray-100 rounded skeleton-shimmer" style={{ width: 88, animationDelay: `${0.24 + row * 0.06}s` }} />
+            <div className="h-3.5 bg-gray-50 rounded skeleton-shimmer" style={{ width: 148, animationDelay: `${0.28 + row * 0.06}s` }} />
+            <div className="h-3.5 bg-gray-50 rounded skeleton-shimmer" style={{ width: 112, animationDelay: `${0.32 + row * 0.06}s` }} />
+            <div className="h-3.5 bg-gray-50 rounded skeleton-shimmer" style={{ width: 72, animationDelay: `${0.36 + row * 0.06}s` }} />
+            <div className="flex-1" />
+            <div className="h-6 w-16 bg-gray-50 rounded-full skeleton-shimmer" style={{ animationDelay: `${0.4 + row * 0.06}s` }} />
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <style>{`
+      @keyframes progressSlide {
+        0% { width: 0%; margin-left: 0%; }
+        50% { width: 60%; margin-left: 20%; }
+        100% { width: 0%; margin-left: 100%; }
+      }
+      .skeleton-shimmer {
+        position: relative;
+        overflow: hidden;
+      }
+      .skeleton-shimmer::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.6) 50%,
+          transparent 100%
+        );
+        animation: shimmer 1.8s ease-in-out infinite;
+        animation-delay: inherit;
+      }
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+    `}</style>
   </div>
 )
 

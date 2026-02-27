@@ -52,6 +52,21 @@ const SidebarContent = () => {
     }
   };
 
+  const createLinks = [
+    {
+      label: 'New',
+      href: '#new',
+      icon: <SquarePen className="h-[18px] w-[18px] flex-shrink-0" />,
+      onClick: handleLinkClick,
+    },
+    {
+      label: 'Upload',
+      href: '/upload-pdf',
+      icon: <Upload className="h-[18px] w-[18px] flex-shrink-0" />,
+      onClick: handleLinkClick,
+    },
+  ];
+
   const navigationLinks = [
     {
       label: 'Invoices',
@@ -63,12 +78,6 @@ const SidebarContent = () => {
       label: 'Estimates',
       href: '/estimates',
       icon: <ClipboardList className="h-[18px] w-[18px] flex-shrink-0" />,
-      onClick: handleLinkClick,
-    },
-    {
-      label: 'Upload PDF',
-      href: '/upload-pdf',
-      icon: <Upload className="h-[18px] w-[18px] flex-shrink-0" />,
       onClick: handleLinkClick,
     },
   ];
@@ -103,15 +112,15 @@ const SidebarContent = () => {
           ...link,
           icon: React.cloneElement(link.icon as React.ReactElement, {
             className: `h-[18px] w-[18px] flex-shrink-0 transition-colors duration-150 ${
-              isActive(link.href) ? 'text-white' : 'text-white/50'
+              isActive(link.href) ? 'text-white' : 'text-white/60'
             }`,
             strokeWidth: isActive(link.href) ? 2 : 1.75,
           })
         }}
         className={`pr-2 py-[7px] ml-1 mr-1 rounded-md relative z-20 transition-all duration-150 ${
           isActive(link.href)
-            ? 'bg-white/15 text-white'
-            : 'hover:bg-white/10 text-white/60 hover:text-white'
+            ? 'text-white'
+            : 'hover:bg-white/5 text-white/60 hover:text-white'
         }`}
       />
     </div>
@@ -134,8 +143,8 @@ const SidebarContent = () => {
           <div className="relative flex items-center flex-1 min-w-0">
             <div className={`flex items-center transition-opacity duration-200 ${!open && (isLogoHovered || isSidebarHovered) ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <img
-                className={`flex-shrink-0 ${open ? 'h-7 w-auto' : 'h-8 w-8'}`}
-                src={open ? '/marine_group_global_services_vector_logo_white-01.svg' : '/marine_group_global_services_vector_logo_white_cropped-01-02.svg'}
+                className={`flex-shrink-0 ${open ? 'h-9 w-auto' : 'h-8 w-8'}`}
+                src={open ? '/marine_group_global_services_vector_logo_white_3-01.svg' : '/marine_group_global_services_vector_logo_white_cropped-01-02.svg'}
                 alt="Marine Group Global Services"
               />
             </div>
@@ -146,7 +155,7 @@ const SidebarContent = () => {
                 onClick={toggleSidebar}
                 className="absolute inset-y-0 left-0 flex items-center pl-[7px] transition-colors duration-150"
               >
-                <PanelLeftOpen className="h-[18px] w-[18px] text-white/50" />
+                <PanelLeftOpen className="h-[18px] w-[18px] text-white/60" />
               </button>
             )}
           </div>
@@ -154,48 +163,57 @@ const SidebarContent = () => {
           {open && (
             <button
               onClick={toggleSidebar}
-              className="p-1.5 rounded-md hover:bg-white/10 text-white/50 hover:text-white transition-all duration-150 flex-shrink-0"
+              className="p-1.5 rounded-md hover:bg-white/5 text-white/60 hover:text-white transition-all duration-150 flex-shrink-0"
             >
               <PanelLeftClose className="h-4 w-4" />
             </button>
           )}
         </div>
 
-        {/* New button */}
-        <div className="px-1 mb-0.5">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className={`flex items-center w-full py-[7px] ${
-                  open ? 'gap-2.5 pl-3 pr-2' : 'pl-[7px]'
-                } rounded-md relative z-20 transition-all duration-150 hover:bg-white/10 text-white/60 hover:text-white group`}
-              >
-                <SquarePen
-                  className="h-[18px] w-[18px] flex-shrink-0 text-white/50 group-hover:text-white transition-colors duration-150"
-                />
-                <span
-                  className="text-[13px] font-medium text-white whitespace-pre"
-                  style={{ display: open ? 'inline-block' : 'none' }}
+        {/* Create section */}
+        {open && (
+          <div className="px-3 pt-2 pb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40 select-none">
+              Create
+            </span>
+          </div>
+        )}
+        <div className="flex flex-col gap-0.5 px-1">
+          {/* New (with dropdown) */}
+          <div className="relative">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`flex items-center w-full py-[7px] ${
+                    open ? 'gap-2.5 pl-3 pr-2' : 'pl-0'
+                  } ml-1 mr-1 rounded-md relative z-20 transition-all duration-150 hover:bg-white/5 text-white/60 hover:text-white group`}
                 >
-                  New
-                </span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="start" sideOffset={8}>
-              <DropdownMenuItem onSelect={() => { navigate('/requests/new'); handleLinkClick(); }}>
-                <FileText className="mr-2 h-4 w-4" />
-                New Invoice
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => { navigate('/estimates/new'); handleLinkClick(); }}>
-                <ClipboardList className="mr-2 h-4 w-4" />
-                New Estimate
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  <SquarePen
+                    className="h-[18px] w-[18px] flex-shrink-0 text-white/60 group-hover:text-white transition-colors duration-150"
+                  />
+                  <span
+                    className="text-[13px] font-medium text-white whitespace-pre"
+                    style={{ display: open ? 'inline-block' : 'none' }}
+                  >
+                    New
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="start" sideOffset={8}>
+                <DropdownMenuItem onSelect={() => { navigate('/requests/new'); handleLinkClick(); }}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  New Invoice
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => { navigate('/estimates/new'); handleLinkClick(); }}>
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  New Estimate
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          {/* Upload PDF */}
+          {renderLink(createLinks[1], 1)}
         </div>
-
-        {/* Separator */}
-        <div className="mx-3 my-1.5 border-t border-white/15" />
 
         {/* Navigation section */}
         {open && (
@@ -224,10 +242,10 @@ const SidebarContent = () => {
 
       {/* Bottom section: User profile */}
       <div className="mt-auto pt-2">
-        <div className="mx-3 mb-2 border-t border-white/15" />
+        {open && <div className="mx-3 mb-2 border-t border-white/10" />}
 
         <div
-          className={`flex items-center ${open ? 'justify-between px-3 py-2' : 'justify-center py-2'} rounded-md mx-1 hover:bg-white/10 transition-colors duration-150 cursor-pointer group`}
+          className={`flex items-center ${open ? 'justify-between px-3 py-2' : 'justify-center py-2'} rounded-md mx-1 hover:bg-white/5 transition-colors duration-150 cursor-pointer group`}
           onClick={() => { navigate('/settings'); handleLinkClick(); }}
         >
           <div className="flex items-center gap-2.5 min-w-0">
@@ -251,7 +269,7 @@ const SidebarContent = () => {
                 <span className="text-[13px] font-medium text-white truncate leading-tight">
                   {currentUser?.name || 'User'}
                 </span>
-                <span className="text-[11px] text-white/50 truncate leading-tight">
+                <span className="text-[11px] text-white/60 truncate leading-tight">
                   {currentUser?.email || ''}
                 </span>
               </div>
@@ -265,7 +283,7 @@ const SidebarContent = () => {
                 navigate('/settings');
                 handleLinkClick();
               }}
-              className="p-1 rounded-md hover:bg-white/10 text-white/50 hover:text-white transition-all duration-150 opacity-0 group-hover:opacity-100 flex-shrink-0"
+              className="p-1 rounded-md hover:bg-white/5 text-white/60 hover:text-white transition-all duration-150 opacity-0 group-hover:opacity-100 flex-shrink-0"
               aria-label="Settings"
             >
               <Settings className="h-4 w-4" />
