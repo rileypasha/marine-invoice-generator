@@ -2,6 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Use default cursor globally — prevents pointer cursor flickering */
+@layer base {
+  *,
+  button,
+  a,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  select,
+  label[for],
+  summary {
+    cursor: default !important;
+  }
+
+  /* Keep text cursor for text inputs */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="number"],
+  input[type="date"],
+  input[type="time"],
+  textarea,
+  [contenteditable="true"] {
+    cursor: text !important;
+  }
+}
+
 /* Safe-area and hit target utilities for mobile PWA */
 @layer base {
   :root {
