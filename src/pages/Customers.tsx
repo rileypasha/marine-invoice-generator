@@ -832,8 +832,44 @@ const Customers: React.FC = () => {
         {/* Content - flex-1 and overflow-y-auto makes this the scrollable area */}
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-muted-foreground">Loading contacts...</div>
+              <div className="w-full">
+                <div className="flex items-center px-5 py-3 border-b border-gray-100 bg-gray-50/40">
+                  <div className="w-10 flex-shrink-0"><div className="h-4 w-5 bg-gray-200/60 rounded skeleton-shimmer" /></div>
+                  <div className="flex-[2] min-w-0 pr-3"><div className="h-3 w-20 bg-gray-200/50 rounded skeleton-shimmer" /></div>
+                  <div className="flex-[2] min-w-0 pr-3"><div className="h-3 w-14 bg-gray-200/50 rounded skeleton-shimmer" /></div>
+                  <div className="flex-[1.5] min-w-0 pr-3"><div className="h-3 w-14 bg-gray-200/50 rounded skeleton-shimmer" /></div>
+                  <div className="flex-[2] min-w-0 pr-3"><div className="h-3 w-16 bg-gray-200/50 rounded skeleton-shimmer" /></div>
+                  <div className="flex-[1] min-w-0 pr-3"><div className="h-3 w-12 bg-gray-200/50 rounded skeleton-shimmer ml-auto" /></div>
+                  <div className="w-10 flex-shrink-0" />
+                </div>
+                {Array.from({ length: 8 }).map((_, row) => (
+                  <div key={row} className="flex items-center px-5 py-3.5 border-b border-gray-50">
+                    <div className="w-10 flex-shrink-0"><div className="h-4 w-5 bg-gray-100 rounded skeleton-shimmer" /></div>
+                    <div className="flex-[2] min-w-0 pr-3"><div className="h-3.5 bg-gray-100 rounded skeleton-shimmer" style={{ width: `${55 + (row % 3) * 15}%` }} /></div>
+                    <div className="flex-[2] min-w-0 pr-3"><div className="h-3.5 bg-gray-50 rounded skeleton-shimmer" style={{ width: `${50 + (row % 2) * 20}%` }} /></div>
+                    <div className="flex-[1.5] min-w-0 pr-3"><div className="h-3.5 bg-gray-50 rounded skeleton-shimmer" style={{ width: `${60 + (row % 3) * 12}%` }} /></div>
+                    <div className="flex-[2] min-w-0 pr-3"><div className="h-3.5 bg-gray-50 rounded skeleton-shimmer" style={{ width: `${45 + (row % 2) * 18}%` }} /></div>
+                    <div className="flex-[1] min-w-0 pr-3"><div className="h-3.5 bg-gray-50 rounded skeleton-shimmer ml-auto" style={{ width: '60%' }} /></div>
+                    <div className="w-10 flex-shrink-0"><div className="h-4 w-5 bg-gray-50 rounded skeleton-shimmer" /></div>
+                  </div>
+                ))}
+                <style>{`
+                  .skeleton-shimmer {
+                    position: relative;
+                    overflow: hidden;
+                  }
+                  .skeleton-shimmer::after {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%);
+                    animation: skeletonShimmer 1.8s ease-in-out infinite;
+                  }
+                  @keyframes skeletonShimmer {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                  }
+                `}</style>
               </div>
             ) : customers.length === 0 ? (
               <div className="text-center py-8">

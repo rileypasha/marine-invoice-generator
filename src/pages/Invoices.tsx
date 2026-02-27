@@ -318,8 +318,54 @@ const Invoices: React.FC<InvoicesProps> = ({
       {/* Scrollable Table Content */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-muted-foreground">{`Loading ${pluralLabel.toLowerCase()}...`}</div>
+          <div className="w-full">
+            {/* Skeleton table header */}
+            <div className="flex items-center px-5 py-3 border-b border-gray-100 bg-gray-50/40">
+              <div className="w-10 flex-shrink-0"><div className="h-4 w-5 bg-gray-200/60 rounded skeleton-shimmer" /></div>
+              <div className="flex-[1] min-w-0 pr-3"><div className="h-3 w-12 bg-gray-200/50 rounded skeleton-shimmer" /></div>
+              <div className="flex-[2] min-w-0 pr-3"><div className="h-3 w-16 bg-gray-200/50 rounded skeleton-shimmer" /></div>
+              <div className="flex-[2] min-w-0 pr-3"><div className="h-3 w-16 bg-gray-200/50 rounded skeleton-shimmer" /></div>
+              <div className="flex-[0.7] min-w-0 pr-3"><div className="h-3 w-8 bg-gray-200/50 rounded skeleton-shimmer" /></div>
+              <div className="flex-[1] min-w-0 pr-3"><div className="h-3 w-10 bg-gray-200/50 rounded skeleton-shimmer ml-auto" /></div>
+              <div className="flex-[1] min-w-0 pr-3"><div className="h-3 w-14 bg-gray-200/50 rounded skeleton-shimmer ml-auto" /></div>
+              <div className="flex-[1] min-w-0 pr-3"><div className="h-3 w-16 bg-gray-200/50 rounded skeleton-shimmer ml-auto" /></div>
+              <div className="flex-[1] min-w-0 pr-3"><div className="h-3 w-16 bg-gray-200/50 rounded skeleton-shimmer" /></div>
+              <div className="flex-[1] min-w-0 pr-3"><div className="h-3 w-20 bg-gray-200/50 rounded skeleton-shimmer" /></div>
+              <div className="w-10 flex-shrink-0" />
+            </div>
+            {/* Skeleton table rows */}
+            {Array.from({ length: 8 }).map((_, row) => (
+              <div key={row} className="flex items-center px-5 py-3.5 border-b border-gray-50">
+                <div className="w-10 flex-shrink-0"><div className="h-4 w-5 bg-gray-100 rounded skeleton-shimmer" /></div>
+                <div className="flex-[1] min-w-0 pr-3"><div className="h-3.5 bg-gray-100 rounded skeleton-shimmer" style={{ width: '70%' }} /></div>
+                <div className="flex-[2] min-w-0 pr-3"><div className="h-3.5 bg-gray-50 rounded skeleton-shimmer" style={{ width: `${60 + (row % 3) * 15}%` }} /></div>
+                <div className="flex-[2] min-w-0 pr-3"><div className="h-3.5 bg-gray-50 rounded skeleton-shimmer" style={{ width: `${55 + (row % 2) * 20}%` }} /></div>
+                <div className="flex-[0.7] min-w-0 pr-3"><div className="h-3.5 bg-gray-50 rounded skeleton-shimmer" style={{ width: '40%' }} /></div>
+                <div className="flex-[1] min-w-0 pr-3"><div className="h-3.5 bg-gray-50 rounded skeleton-shimmer ml-auto" style={{ width: '65%' }} /></div>
+                <div className="flex-[1] min-w-0 pr-3"><div className="h-3.5 bg-gray-50 rounded skeleton-shimmer ml-auto" style={{ width: '60%' }} /></div>
+                <div className="flex-[1] min-w-0 pr-3"><div className="h-3.5 bg-gray-50 rounded skeleton-shimmer ml-auto" style={{ width: '70%' }} /></div>
+                <div className="flex-[1] min-w-0 pr-3"><div className="h-6 w-16 bg-gray-50 rounded-full skeleton-shimmer" /></div>
+                <div className="flex-[1] min-w-0 pr-3"><div className="h-3.5 bg-gray-50 rounded skeleton-shimmer" style={{ width: '75%' }} /></div>
+                <div className="w-10 flex-shrink-0"><div className="h-4 w-5 bg-gray-50 rounded skeleton-shimmer" /></div>
+              </div>
+            ))}
+            <style>{`
+              .skeleton-shimmer {
+                position: relative;
+                overflow: hidden;
+              }
+              .skeleton-shimmer::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%);
+                animation: skeletonShimmer 1.8s ease-in-out infinite;
+              }
+              @keyframes skeletonShimmer {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+              }
+            `}</style>
           </div>
         ) : invoices.length === 0 ? (
           <div className="flex items-center justify-center h-64">

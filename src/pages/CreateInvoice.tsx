@@ -3633,11 +3633,60 @@ const CreateInvoice: React.FC = () => {
   // Loading state for edit mode
   if (isFetchingData) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-sm text-muted-foreground">{`Loading ${singularLabel.toLowerCase()} data...`}</p>
+      <div className="min-h-screen bg-background px-4 sm:px-6 lg:px-8 pt-8">
+        <div className="max-w-5xl mx-auto">
+          {/* Header skeleton */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="h-7 w-40 bg-gray-100 rounded-md ci-shimmer" />
+            <div className="flex gap-2">
+              <div className="h-9 w-20 bg-gray-100 rounded-lg ci-shimmer" />
+              <div className="h-9 w-28 bg-gray-100 rounded-lg ci-shimmer" />
+            </div>
+          </div>
+          {/* Form fields skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i}>
+                <div className="h-3 w-20 bg-gray-200/50 rounded mb-2 ci-shimmer" />
+                <div className="h-10 bg-gray-100 rounded-lg ci-shimmer" />
+              </div>
+            ))}
+          </div>
+          {/* Line items skeleton */}
+          <div className="border border-gray-100 rounded-xl overflow-hidden">
+            <div className="flex items-center gap-4 px-5 py-3 bg-gray-50/40 border-b border-gray-100">
+              {[140, 64, 72, 80].map((w, i) => (
+                <div key={i} className="h-3 bg-gray-200/50 rounded ci-shimmer" style={{ width: w }} />
+              ))}
+            </div>
+            {Array.from({ length: 3 }).map((_, row) => (
+              <div key={row} className="flex items-center gap-4 px-5 py-4 border-b border-gray-50">
+                <div className="h-3.5 bg-gray-100 rounded ci-shimmer" style={{ width: 120 + (row % 2) * 20 }} />
+                <div className="h-3.5 bg-gray-50 rounded ci-shimmer" style={{ width: 48 }} />
+                <div className="h-3.5 bg-gray-50 rounded ci-shimmer" style={{ width: 64 }} />
+                <div className="flex-1" />
+                <div className="h-3.5 w-20 bg-gray-50 rounded ci-shimmer" />
+              </div>
+            ))}
+          </div>
         </div>
+        <style>{`
+          .ci-shimmer {
+            position: relative;
+            overflow: hidden;
+          }
+          .ci-shimmer::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%);
+            animation: ciShimmer 1.8s ease-in-out infinite;
+          }
+          @keyframes ciShimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+          }
+        `}</style>
       </div>
     );
   }

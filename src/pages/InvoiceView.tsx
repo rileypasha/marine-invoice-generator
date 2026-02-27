@@ -1331,8 +1331,64 @@ const InvoiceView: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="text-muted-foreground">Loading invoice…</div>
+      <div className="min-h-[60vh] max-w-4xl mx-auto px-4 pt-8">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <div className="h-7 w-48 bg-gray-100 rounded-md iv-shimmer" />
+            <div className="h-4 w-32 bg-gray-50 rounded-md mt-2 iv-shimmer" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-9 w-24 bg-gray-100 rounded-lg iv-shimmer" />
+            <div className="h-9 w-24 bg-gray-50 rounded-lg iv-shimmer" />
+          </div>
+        </div>
+        {/* Info block skeleton */}
+        <div className="border border-gray-100 rounded-xl p-6 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i}>
+                <div className="h-3 w-16 bg-gray-200/50 rounded mb-2 iv-shimmer" />
+                <div className="h-5 bg-gray-100 rounded iv-shimmer" style={{ width: 80 + (i % 3) * 24 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Line items skeleton */}
+        <div className="border border-gray-100 rounded-xl overflow-hidden">
+          <div className="flex items-center gap-4 px-5 py-3 bg-gray-50/40 border-b border-gray-100">
+            {[120, 64, 72, 72, 80].map((w, i) => (
+              <div key={i} className="h-3 bg-gray-200/50 rounded iv-shimmer" style={{ width: w }} />
+            ))}
+          </div>
+          {Array.from({ length: 4 }).map((_, row) => (
+            <div key={row} className="flex items-center gap-4 px-5 py-4 border-b border-gray-50">
+              <div className="h-3.5 bg-gray-100 rounded iv-shimmer" style={{ width: 112 + (row % 2) * 20 }} />
+              <div className="h-3.5 bg-gray-50 rounded iv-shimmer" style={{ width: 48 }} />
+              <div className="h-3.5 bg-gray-50 rounded iv-shimmer" style={{ width: 64 }} />
+              <div className="h-3.5 bg-gray-50 rounded iv-shimmer" style={{ width: 64 }} />
+              <div className="flex-1" />
+              <div className="h-3.5 w-20 bg-gray-50 rounded iv-shimmer" />
+            </div>
+          ))}
+        </div>
+        <style>{`
+          .iv-shimmer {
+            position: relative;
+            overflow: hidden;
+          }
+          .iv-shimmer::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%);
+            animation: ivShimmer 1.8s ease-in-out infinite;
+          }
+          @keyframes ivShimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+          }
+        `}</style>
       </div>
     );
   }
