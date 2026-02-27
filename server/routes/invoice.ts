@@ -444,7 +444,7 @@ router.get('/:id', async (req: InvoiceRequest, res: Response) => {
 router.get('/', async (req: InvoiceRequest, res: Response) => {
   const correlationId = req.correlationId!;
   const userId = req.userId!;
-  const { page = 1, limit = 10, status, search, startDate, endDate, customerId, vesselId, minAmount, maxAmount } = req.query;
+  const { page = 1, limit = 10, status, search, startDate, endDate, customerId, vesselId, minAmount, maxAmount, contact, vessel, createdBy, modifiedBy } = req.query;
   const documentType = getDocumentType(req);
 
   try {
@@ -497,6 +497,46 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
     // Vessel filter
     if (vesselId) {
       where.AND.push({ vesselId: vesselId as string });
+    }
+
+    // Contact name filter
+    if (contact) {
+      where.AND.push({
+        OR: [
+          { contactName: { contains: contact as string, mode: 'insensitive' } },
+          { customer: { display_name: { contains: contact as string, mode: 'insensitive' } } },
+        ],
+      });
+    }
+
+    // Vessel name filter
+    if (vessel) {
+      where.AND.push({
+        OR: [
+          { vesselName: { contains: vessel as string, mode: 'insensitive' } },
+          { vessel: { name: { contains: vessel as string, mode: 'insensitive' } } },
+        ],
+      });
+    }
+
+    // Created by filter
+    if (createdBy) {
+      where.AND.push({
+        OR: [
+          { userName: { contains: createdBy as string, mode: 'insensitive' } },
+          { userEmail: { contains: createdBy as string, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    // Modified by filter
+    if (modifiedBy) {
+      where.AND.push({
+        OR: [
+          { modifiedByUserName: { contains: modifiedBy as string, mode: 'insensitive' } },
+          { modifiedByUserEmail: { contains: modifiedBy as string, mode: 'insensitive' } },
+        ],
+      });
     }
 
     // Amount range filter

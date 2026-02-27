@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { ChevronDown, Users, Ship, Receipt, Hash, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, UserCog } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Ship, Receipt, Hash, ArrowUp, ArrowDown, X, UserCog, Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,8 +11,6 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { SimpleButton as Button } from '@/components/ui/simple-button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CountBadge from '@/components/ui/count-badge';
 import { RequestGroupBy, RequestSort, RequestFilters } from '@/hooks/useRequestsQueryState';
 
@@ -89,18 +88,21 @@ interface FilterMenuProps {
 }
 
 function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
-  const [contactInput, setContactInput] = useState('');
-  const [vesselInput, setVesselInput] = useState('');
-  const [createdByInput, setCreatedByInput] = useState('');
-  const [modifiedByInput, setModifiedByInput] = useState('');
-  const [minAmountInput, setMinAmountInput] = useState('');
-  const [maxAmountInput, setMaxAmountInput] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [contactInput, setContactInput] = useState(activeFilters.contact || '');
+  const [vesselInput, setVesselInput] = useState(activeFilters.vessel || '');
+  const [createdByInput, setCreatedByInput] = useState(activeFilters.createdBy || '');
+  const [modifiedByInput, setModifiedByInput] = useState(activeFilters.modifiedBy || '');
+
+  // Sync local inputs when filters change externally (e.g. URL navigation)
+  useEffect(() => { setContactInput(activeFilters.contact || ''); }, [activeFilters.contact]);
+  useEffect(() => { setVesselInput(activeFilters.vessel || ''); }, [activeFilters.vessel]);
+  useEffect(() => { setCreatedByInput(activeFilters.createdBy || ''); }, [activeFilters.createdBy]);
+  useEffect(() => { setModifiedByInput(activeFilters.modifiedBy || ''); }, [activeFilters.modifiedBy]);
 
   const filterCount = Object.keys(activeFilters).length;
   const ariaLabel = filterCount > 0 ? `Filter, ${filterCount} applied` : 'Filter options';
 
-  const handleFilterChange = (key: string, value: any) => {
+  const updateFilter = (key: string, value: any) => {
     const newFilters = { ...activeFilters };
     if (value === false || value === '' || value === null || value === undefined) {
       delete newFilters[key];
@@ -110,63 +112,34 @@ function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
     onFiltersChange(newFilters);
   };
 
-  const applyContactFilter = () => {
-    if (contactInput.trim()) {
-      console.log('[Filter] Applying contact filter:', contactInput.trim());
-      handleFilterChange('contact', contactInput.trim());
-      setContactInput(''); // Clear input after applying
-    }
-  };
-
-  const applyVesselFilter = () => {
-    if (vesselInput.trim()) {
-      console.log('[Filter] Applying vessel filter:', vesselInput.trim());
-      handleFilterChange('vessel', vesselInput.trim());
-      setVesselInput('');
-    }
-  };
-
-  const applyCreatedByFilter = () => {
-    if (createdByInput.trim()) {
-      console.log('[Filter] Applying createdBy filter:', createdByInput.trim());
-      handleFilterChange('createdBy', createdByInput.trim());
-      setCreatedByInput('');
-    }
-  };
-
-  const applyModifiedByFilter = () => {
-    if (modifiedByInput.trim()) {
-      console.log('[Filter] Applying modifiedBy filter:', modifiedByInput.trim());
-      handleFilterChange('modifiedBy', modifiedByInput.trim());
-      setModifiedByInput('');
-    }
-  };
-
-  const applyAmountRangeFilter = () => {
-    if (minAmountInput) {
-      handleFilterChange('minAmount', parseFloat(minAmountInput));
-    }
-    if (maxAmountInput) {
-      handleFilterChange('maxAmount', parseFloat(maxAmountInput));
-    }
-  };
-
-  const applyStatusFilter = (status: string) => {
-    setSelectedStatus(status);
-    handleFilterChange('status', status);
-  };
-
-  const removeFilter = (key: string) => {
-    handleFilterChange(key, null);
-    // Clear corresponding input
+  const clearFilter = (key: string) => {
+    updateFilter(key, null);
     if (key === 'contact') setContactInput('');
     if (key === 'vessel') setVesselInput('');
     if (key === 'createdBy') setCreatedByInput('');
     if (key === 'modifiedBy') setModifiedByInput('');
-    if (key === 'minAmount') setMinAmountInput('');
-    if (key === 'maxAmount') setMaxAmountInput('');
-    if (key === 'status') setSelectedStatus('');
   };
+
+  const clearAll = () => {
+    onFiltersChange({});
+    setContactInput('');
+    setVesselInput('');
+    setCreatedByInput('');
+    setModifiedByInput('');
+  };
+
+  const statusOptions = [
+    { value: 'requested', label: 'Pending', dotColor: 'bg-amber-400' },
+    { value: 'approved', label: 'Approved', dotColor: 'bg-emerald-400' },
+    { value: 'change_requested', label: 'Revision', dotColor: 'bg-blue-400' },
+  ];
+
+  const textFilters = [
+    { key: 'contact', label: 'Contact', icon: Users, value: contactInput, setValue: setContactInput, placeholder: 'Filter by name...' },
+    { key: 'vessel', label: 'Vessel', icon: Ship, value: vesselInput, setValue: setVesselInput, placeholder: 'Filter by vessel...' },
+    { key: 'createdBy', label: 'Created by', icon: UserCog, value: createdByInput, setValue: setCreatedByInput, placeholder: 'Filter by creator...' },
+    { key: 'modifiedBy', label: 'Modified by', icon: UserCog, value: modifiedByInput, setValue: setModifiedByInput, placeholder: 'Filter by modifier...' },
+  ];
 
   return (
     <ToolbarMenuButtonWithBadge
@@ -175,289 +148,139 @@ function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
       ariaLabel={ariaLabel}
     >
       <div
-        className="w-[400px] overflow-x-hidden"
+        className="w-[320px]"
         onKeyDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
-        <DropdownMenuLabel>Filter requests</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-
-        {/* Contact Filter */}
-        <div className="px-2 py-2">
-          <DropdownMenuLabel className="text-xs text-gray-500 px-0 flex items-center gap-1">
-            <Users className="h-3 w-3" />
-            Contact
-          </DropdownMenuLabel>
-          <div className="flex gap-1 mt-1">
-            <Input
-              placeholder="Enter contact name..."
-              value={contactInput}
-              onChange={(e) => setContactInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && applyContactFilter()}
-              className="h-8 text-sm flex-1"
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={applyContactFilter}
-              className="h-8 px-3 shrink-0"
+        {/* Header */}
+        <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
+          <span className="text-[13px] font-semibold text-gray-900">Filters</span>
+          {filterCount > 0 && (
+            <button
+              onClick={clearAll}
+              className="text-[12px] text-gray-400 hover:text-red-500 transition-colors"
             >
-              Apply
-            </Button>
-          </div>
-          {activeFilters.contact && (
-            <div className="mt-1 flex items-center gap-1 text-xs text-gray-600">
-              <span className="bg-gray-100 px-2 py-1 rounded">
-                {activeFilters.contact}
-              </span>
-              <button
-                onClick={() => removeFilter('contact')}
-                className="text-red-500 hover:text-red-700"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
+              Reset all
+            </button>
           )}
         </div>
 
-        <DropdownMenuSeparator />
-
-        {/* Vessel Filter */}
-        <div className="px-2 py-2">
-          <DropdownMenuLabel className="text-xs text-gray-500 px-0 flex items-center gap-1">
-            <Ship className="h-3 w-3" />
-            Vessel
-          </DropdownMenuLabel>
-          <div className="flex gap-1 mt-1">
-            <Input
-              placeholder="Enter vessel name..."
-              value={vesselInput}
-              onChange={(e) => setVesselInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && applyVesselFilter()}
-              className="h-8 text-sm flex-1"
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={applyVesselFilter}
-              className="h-8 px-3 shrink-0"
-            >
-              Apply
-            </Button>
-          </div>
-          {activeFilters.vessel && (
-            <div className="mt-1 flex items-center gap-1 text-xs text-gray-600">
-              <span className="bg-gray-100 px-2 py-1 rounded">
-                {activeFilters.vessel}
-              </span>
-              <button
-                onClick={() => removeFilter('vessel')}
-                className="text-red-500 hover:text-red-700"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        <DropdownMenuSeparator />
-
-        {/* Created By Filter */}
-        <div className="px-2 py-2">
-          <DropdownMenuLabel className="text-xs text-gray-500 px-0 flex items-center gap-1">
-            <UserCog className="h-3 w-3" />
-            Created By
-          </DropdownMenuLabel>
-          <div className="flex gap-1 mt-1">
-            <Input
-              placeholder="Enter creator name..."
-              value={createdByInput}
-              onChange={(e) => setCreatedByInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && applyCreatedByFilter()}
-              className="h-8 text-sm flex-1"
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={applyCreatedByFilter}
-              className="h-8 px-3 shrink-0"
-            >
-              Apply
-            </Button>
-          </div>
-          {activeFilters.createdBy && (
-            <div className="mt-1 flex items-center gap-1 text-xs text-gray-600">
-              <span className="bg-gray-100 px-2 py-1 rounded">
-                {activeFilters.createdBy}
-              </span>
-              <button
-                onClick={() => removeFilter('createdBy')}
-                className="text-red-500 hover:text-red-700"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        <DropdownMenuSeparator />
-
-        {/* Modified By Filter */}
-        <div className="px-2 py-2">
-          <DropdownMenuLabel className="text-xs text-gray-500 px-0 flex items-center gap-1">
-            <UserCog className="h-3 w-3" />
-            Modified By
-          </DropdownMenuLabel>
-          <div className="flex gap-1 mt-1">
-            <Input
-              placeholder="Enter modifier name..."
-              value={modifiedByInput}
-              onChange={(e) => setModifiedByInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && applyModifiedByFilter()}
-              className="h-8 text-sm"
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={applyModifiedByFilter}
-              className="h-8 px-3 shrink-0"
-            >
-              Apply
-            </Button>
-          </div>
-          {activeFilters.modifiedBy && (
-            <div className="mt-1 flex items-center gap-1 text-xs text-gray-600">
-              <span className="bg-gray-100 px-2 py-1 rounded">
-                {activeFilters.modifiedBy}
-              </span>
-              <button
-                onClick={() => removeFilter('modifiedBy')}
-                className="text-red-500 hover:text-red-700"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        <DropdownMenuSeparator />
-
-        {/* Status Filter */}
-        <div className="px-2 py-2">
-          <DropdownMenuLabel className="text-xs text-gray-500 px-0 flex items-center gap-1">
-            <Receipt className="h-3 w-3" />
-            Status
-          </DropdownMenuLabel>
-          <div className="flex gap-1 mt-1">
-            <Select
-              value={selectedStatus}
-              onValueChange={(value) => {
-                setSelectedStatus(value);
-                applyStatusFilter(value);
-              }}
-            >
-              <SelectTrigger className="h-8 text-sm flex-1">
-                <SelectValue placeholder="Select status..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="requested">Requested</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="change_requested">Change requested</SelectItem>
-              </SelectContent>
-            </Select>
-            {activeFilters.status && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  removeFilter('status');
-                  setSelectedStatus('');
-                }}
-                className="h-8 px-3 shrink-0"
-              >
-                Clear
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <DropdownMenuSeparator />
-
-        {/* Amount Range Filter */}
-        <div className="px-2 py-2">
-          <DropdownMenuLabel className="text-xs text-gray-500 px-0">Amount Range</DropdownMenuLabel>
-          <div className="mt-1 space-y-2">
-            <div className="flex gap-1 items-center">
-              <span className="text-xs text-gray-500 w-12">Min:</span>
-              <Input
-                type="number"
-                placeholder="0.00"
-                value={minAmountInput}
-                onChange={(e) => setMinAmountInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && applyAmountRangeFilter()}
-                className="h-8 text-sm"
-              />
-            </div>
-            <div className="flex gap-1 items-center">
-              <span className="text-xs text-gray-500 w-12">Max:</span>
-              <Input
-                type="number"
-                placeholder="0.00"
-                value={maxAmountInput}
-                onChange={(e) => setMaxAmountInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && applyAmountRangeFilter()}
-                className="h-8 text-sm"
-              />
-            </div>
-            <Button
-              size="sm"
-              onClick={applyAmountRangeFilter}
-              className="h-8 w-full"
-            >
-              Apply Range
-            </Button>
-          </div>
-          {(activeFilters.minAmount !== undefined || activeFilters.maxAmount !== undefined) && (
-            <div className="mt-2 flex items-center gap-1 text-xs text-gray-600">
-              <span className="bg-gray-100 px-2 py-1 rounded">
-                ${activeFilters.minAmount || 0} - ${activeFilters.maxAmount || '∞'}
-              </span>
-              <button
-                onClick={() => {
-                  removeFilter('minAmount');
-                  removeFilter('maxAmount');
-                }}
-                className="text-red-500 hover:text-red-700"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
-        </div>
-
+        {/* Active filter chips */}
         {filterCount > 0 && (
-          <>
-            <DropdownMenuSeparator />
-            <div className="px-2 py-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onFiltersChange({});
-                  setContactInput('');
-                  setVesselInput('');
-                  setCreatedByInput('');
-                  setModifiedByInput('');
-                  setMinAmountInput('');
-                  setMaxAmountInput('');
-                  setSelectedStatus('');
-                }}
-                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                Clear all filters
-              </Button>
-            </div>
-          </>
+          <div className="flex flex-wrap gap-1.5 px-3 pb-2.5">
+            {Object.entries(activeFilters).map(([key, value]) => {
+              const labelMap: Record<string, string> = {
+                contact: 'Contact', vessel: 'Vessel', createdBy: 'Created by',
+                modifiedBy: 'Modified by', status: 'Status',
+              };
+              const displayValue = key === 'status'
+                ? (statusOptions.find(s => s.value === value)?.label || value)
+                : value;
+              return (
+                <span
+                  key={key}
+                  className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 text-[11px] font-medium bg-[#1E3A5F]/[0.08] text-[#1E3A5F] rounded-md"
+                >
+                  {labelMap[key] || key}: {displayValue}
+                  <button
+                    onClick={() => clearFilter(key)}
+                    className="p-0.5 rounded hover:bg-[#1E3A5F]/[0.1] transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
         )}
+
+        <div className="h-px bg-gray-100" />
+
+        {/* Text filters */}
+        <div className="px-3 pt-2 pb-1 space-y-2.5">
+          {textFilters.map(({ key, label, icon: Icon, value, setValue, placeholder }) => {
+            const isActive = !!activeFilters[key];
+            return (
+              <div key={key}>
+                <label className="flex items-center gap-1.5 text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">
+                  <Icon className="h-3 w-3" />
+                  {label}
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-300 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (value.trim()) {
+                          updateFilter(key, value.trim());
+                        } else {
+                          clearFilter(key);
+                        }
+                      }
+                    }}
+                    placeholder={placeholder}
+                    className={cn(
+                      "w-full h-8 pl-7 pr-7 text-[13px] rounded-md transition-all",
+                      "placeholder:text-gray-300 focus:outline-none",
+                      isActive
+                        ? "bg-[#1E3A5F]/[0.04] border border-[#1E3A5F]/20 text-gray-900 focus:border-[#1E3A5F]/40 focus:ring-1 focus:ring-[#1E3A5F]/10"
+                        : "bg-gray-50 border border-gray-200 text-gray-700 focus:border-gray-300 focus:ring-1 focus:ring-gray-200"
+                    )}
+                  />
+                  {isActive && (
+                    <button
+                      onClick={() => clearFilter(key)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="h-px bg-gray-100 mt-1" />
+
+        {/* Status filter */}
+        <div className="px-3 pt-2 pb-2.5">
+          <label className="flex items-center gap-1.5 text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">
+            Status
+          </label>
+          <div className="flex gap-1.5">
+            {statusOptions.map((opt) => {
+              const isActive = activeFilters.status === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => updateFilter('status', isActive ? null : opt.value)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-medium rounded-md border transition-all",
+                    isActive
+                      ? "bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-sm"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  )}
+                >
+                  <span className={cn(
+                    "h-1.5 w-1.5 rounded-full flex-shrink-0",
+                    isActive ? "bg-white/80" : opt.dotColor
+                  )} />
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="h-px bg-gray-100" />
+        <div className="px-3 py-2">
+          <span className="text-[11px] text-gray-300">Press Enter to apply text filters</span>
+        </div>
       </div>
     </ToolbarMenuButtonWithBadge>
   );
