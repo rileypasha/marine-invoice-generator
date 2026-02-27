@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { SimpleButton as Button } from './ui/simple-button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { useAuth } from '../context/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface LoginFormData {
   email: string;
@@ -17,6 +17,19 @@ interface EmployeeLoginPortalProps {
   companyName?: string;
   isLoading?: boolean;
 }
+
+const formContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.07, delayChildren: 0.15 }
+  }
+};
+
+const formItemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } }
+};
 
 const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
   onLogin = () => {},
@@ -107,28 +120,84 @@ const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
   const isFormValid = formData.email.trim() && formData.password.trim();
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4 pb-20 md:pb-4">
-      <Card className="w-full max-w-sm md:max-w-md p-8 md:p-12 rounded-2xl shadow-xl border bg-white">
-        <CardHeader className="text-center p-0 mb-10 md:mb-12">
-          <div className="flex justify-center mt-4 md:mt-4">
-            <img
-              src="/mgbw_logo.svg"
-              alt="Marine Group Logo"
-              className="w-64 md:w-80 h-auto object-contain"
-            />
-          </div>
-        </CardHeader>
+    <div className="fixed inset-0 flex flex-col md:grid md:grid-cols-[45fr_55fr]">
 
-        <CardContent>
-          {error && (
-            <div className="mb-6 p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-              <span className="flex-1">{error}</span>
-            </div>
-          )}
+      {/* ── Desktop Hero Panel ── */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="hidden md:flex relative flex-col items-center justify-center overflow-visible bg-gradient-to-br from-[#0F1D30] via-[#1E3A5F] to-[#162D4A]"
+      >
+        <div className="relative z-10 flex flex-col items-center text-center px-16">
+          <motion.img
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            src="/bw_logo.svg"
+            alt="Marine Group Boat Works"
+            className="w-64 max-w-full h-auto brightness-0 invert"
+          />
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="w-12 h-px bg-white/25 mt-8"
+          />
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="text-white/60 text-sm font-light tracking-widest uppercase mt-6"
+          >
+            Invoicing Portal
+          </motion.p>
+        </div>
+      </motion.div>
+
+      {/* ── Mobile Header ── */}
+      <div className="flex md:hidden items-center justify-center py-8 px-6 bg-gradient-to-r from-[#0F1D30] to-[#1E3A5F]">
+        <img
+          src="/bw_logo.svg"
+          alt="Marine Group Boat Works"
+          className="w-52 h-auto brightness-0 invert"
+        />
+      </div>
+
+      {/* ── Form Panel ── */}
+      <div className="flex-1 flex items-start md:items-center justify-center px-6 py-10 md:py-0 overflow-y-auto bg-white">
+        <motion.div
+          variants={formContainerVariants}
+          initial="hidden"
+          animate="visible"
+          className="w-full max-w-sm pb-20 md:pb-0"
+        >
+          <motion.div variants={formItemVariants}>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
+              Sign in to your account
+            </h1>
+            <p className="text-sm text-slate-500 mt-1.5 mb-8">
+              Enter your credentials to continue
+            </p>
+          </motion.div>
+
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto', marginBottom: 24 }}
+                exit={{ opacity: 0, y: -8, height: 0, marginBottom: 0 }}
+                transition={{ duration: 0.2 }}
+                className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2"
+              >
+                <span className="flex-1">{error}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
+            <motion.div variants={formItemVariants} className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium text-slate-700">
                 Email
               </Label>
               <Input
@@ -137,16 +206,16 @@ const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 placeholder="you@company.com"
-                className={`w-full h-12 px-4 border-2 transition-all duration-200 focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/20 ${
-                  error ? 'border-red-300' : 'border-gray-200'
+                className={`w-full h-11 px-4 rounded-lg border bg-white text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/20 ${
+                  error ? 'border-red-300' : 'border-slate-300'
                 }`}
                 disabled={isSubmitting}
               />
-            </div>
+            </motion.div>
 
-            <div className="space-y-2">
+            <motion.div variants={formItemVariants} className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
+                <Label htmlFor="password" className="text-sm font-medium text-slate-700">
                   Password
                 </Label>
                 <button
@@ -154,7 +223,7 @@ const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
                   onClick={() => setShowForgotPassword(true)}
                   className="text-sm text-[#1E3A5F] hover:text-[#152b47] font-medium transition-colors"
                 >
-                  Forgot Password?
+                  Forgot password?
                 </button>
               </div>
               <div className="relative">
@@ -164,15 +233,15 @@ const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   placeholder="Enter your password"
-                  className={`w-full h-12 px-4 pr-12 border-2 transition-all duration-200 focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/20 ${
-                    error ? 'border-red-300' : 'border-gray-200'
+                  className={`w-full h-11 px-4 pr-12 rounded-lg border bg-white text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/20 ${
+                    error ? 'border-red-300' : 'border-slate-300'
                   }`}
                   disabled={isSubmitting}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   disabled={isSubmitting}
                 >
                   {showPassword ? (
@@ -182,112 +251,128 @@ const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
                   )}
                 </button>
               </div>
-            </div>
+            </motion.div>
 
-            <button
-              type="submit"
-              disabled={!isFormValid || isSubmitting}
-              className="w-full h-12 bg-[#1E3A5F] text-white font-semibold rounded-lg shadow-md hover:bg-[#152b47] hover:shadow-lg active:scale-[0.98] disabled:bg-gray-300 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-200 flex items-center justify-center gap-2 mt-8"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Signing In...
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </button>
+            <motion.div variants={formItemVariants}>
+              <button
+                type="submit"
+                disabled={!isFormValid || isSubmitting}
+                className="w-full h-11 bg-[#1E3A5F] text-white font-semibold rounded-lg hover:bg-[#162D4A] hover:shadow-lg hover:shadow-[#1E3A5F]/20 active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-200 flex items-center justify-center gap-2 mt-8"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign in'
+                )}
+              </button>
+            </motion.div>
           </form>
 
-          {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-gray-200 text-center">
-            <p className="text-sm text-gray-600">
+          <motion.div variants={formItemVariants} className="mt-8 pt-6 border-t border-slate-100 text-center">
+            <p className="text-xs text-slate-400">
               Need help?{' '}
               <a href="mailto:rpasha@marinegroupbw.com" className="text-[#1E3A5F] hover:text-[#152b47] font-medium transition-colors">
                 Contact Support
               </a>
             </p>
-          </div>
-        </CardContent>
-      </Card>
+          </motion.div>
+        </motion.div>
+      </div>
 
-      {/* Forgot Password Modal */}
-      {showForgotPassword && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-md p-8 rounded-2xl shadow-2xl border bg-white">
-            <CardHeader className="text-center p-0 mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Reset Password</h2>
-              <p className="text-gray-600 mt-2">
-                {resetEmailSent
-                  ? "Check your email for reset instructions"
-                  : "Enter your email to receive a password reset link"}
-              </p>
-            </CardHeader>
-
-            <CardContent>
-              {resetEmailSent ? (
-                <div className="text-center space-y-6">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-700">
-                    If an account exists with this email, you will receive password reset instructions shortly.
+      {/* ── Forgot Password Modal ── */}
+      <AnimatePresence>
+        {showForgotPassword && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Card className="w-full max-w-md p-8 rounded-2xl shadow-2xl border bg-white">
+                <CardHeader className="text-center p-0 mb-6">
+                  <h2 className="text-2xl font-bold text-slate-900">Reset Password</h2>
+                  <p className="text-slate-500 mt-2">
+                    {resetEmailSent
+                      ? "Check your email for reset instructions"
+                      : "Enter your email to receive a password reset link"}
                   </p>
-                  <button
-                    onClick={handleCloseForgotPassword}
-                    className="w-full h-12 bg-[#1E3A5F] text-white font-semibold rounded-lg shadow-md hover:bg-[#152b47] transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleForgotPassword} className="space-y-4">
-                  {resetError && (
-                    <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
-                      {resetError}
+                </CardHeader>
+
+                <CardContent>
+                  {resetEmailSent ? (
+                    <div className="text-center space-y-6">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                        <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <p className="text-slate-600">
+                        If an account exists with this email, you will receive password reset instructions shortly.
+                      </p>
+                      <button
+                        onClick={handleCloseForgotPassword}
+                        className="w-full h-11 bg-[#1E3A5F] text-white font-semibold rounded-lg hover:bg-[#162D4A] transition-colors"
+                      >
+                        Close
+                      </button>
                     </div>
+                  ) : (
+                    <form onSubmit={handleForgotPassword} className="space-y-4">
+                      {resetError && (
+                        <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                          {resetError}
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <Label htmlFor="reset-email" className="text-sm font-medium text-slate-700">
+                          Email Address
+                        </Label>
+                        <Input
+                          id="reset-email"
+                          type="email"
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                          placeholder="you@company.com"
+                          className="w-full h-11 px-4 rounded-lg border border-slate-300 bg-white transition-all duration-200 focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/20"
+                          required
+                        />
+                      </div>
+
+                      <div className="flex gap-3 mt-6">
+                        <button
+                          type="button"
+                          onClick={handleCloseForgotPassword}
+                          className="flex-1 h-11 border border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={!resetEmail.trim()}
+                          className="flex-1 h-11 bg-[#1E3A5F] text-white font-semibold rounded-lg hover:bg-[#162D4A] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Send Reset Link
+                        </button>
+                      </div>
+                    </form>
                   )}
-
-                  <div className="space-y-2">
-                    <Label htmlFor="reset-email" className="text-sm font-semibold text-gray-700">
-                      Email Address
-                    </Label>
-                    <Input
-                      id="reset-email"
-                      type="email"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      placeholder="you@company.com"
-                      className="w-full h-12 px-4 border-2 transition-all duration-200 focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/20"
-                      required
-                    />
-                  </div>
-
-                  <div className="flex gap-3 mt-6">
-                    <button
-                      type="button"
-                      onClick={handleCloseForgotPassword}
-                      className="flex-1 h-12 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={!resetEmail.trim()}
-                      className="flex-1 h-12 bg-[#1E3A5F] text-white font-semibold rounded-lg shadow-md hover:bg-[#152b47] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Send Reset Link
-                    </button>
-                  </div>
-                </form>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
