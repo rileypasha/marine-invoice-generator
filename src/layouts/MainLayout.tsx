@@ -94,7 +94,7 @@ const SidebarContent = () => {
     <div key={idx} className="relative">
       {isActive(link.href) && (
         <div
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-gray-900 rounded-r-full"
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-white rounded-r-full"
           style={{ animation: 'fadeScaleIn 150ms ease-out' }}
         />
       )}
@@ -103,15 +103,15 @@ const SidebarContent = () => {
           ...link,
           icon: React.cloneElement(link.icon as React.ReactElement, {
             className: `h-[18px] w-[18px] flex-shrink-0 transition-colors duration-150 ${
-              isActive(link.href) ? 'text-gray-900' : 'text-gray-400'
+              isActive(link.href) ? 'text-white' : 'text-white/50'
             }`,
             strokeWidth: isActive(link.href) ? 2 : 1.75,
           })
         }}
         className={`pr-2 py-[7px] ml-1 mr-1 rounded-md relative z-20 transition-all duration-150 ${
           isActive(link.href)
-            ? 'bg-gray-100/70 text-gray-900'
-            : 'hover:bg-gray-100/50 text-gray-500 hover:text-gray-700'
+            ? 'bg-white/15 text-white'
+            : 'hover:bg-white/10 text-white/60 hover:text-white'
         }`}
       />
     </div>
@@ -135,8 +135,8 @@ const SidebarContent = () => {
             <div className={`flex items-center transition-opacity duration-200 ${!open && (isLogoHovered || isSidebarHovered) ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <img
                 className={`flex-shrink-0 ${open ? 'h-7 w-auto' : 'h-8 w-8'}`}
-                src={open ? '/mgbw_logo.svg' : '/collapsed_logo.svg'}
-                alt="Marine Group Boat Works"
+                src={open ? '/marine_group_global_services_vector_logo_white-01.svg' : '/marine_group_global_services_vector_logo_white_cropped-01-02.svg'}
+                alt="Marine Group Global Services"
               />
             </div>
 
@@ -146,7 +146,7 @@ const SidebarContent = () => {
                 onClick={toggleSidebar}
                 className="absolute inset-y-0 left-0 flex items-center pl-[7px] transition-colors duration-150"
               >
-                <PanelLeftOpen className="h-[18px] w-[18px] text-gray-400" />
+                <PanelLeftOpen className="h-[18px] w-[18px] text-white/50" />
               </button>
             )}
           </div>
@@ -154,7 +154,7 @@ const SidebarContent = () => {
           {open && (
             <button
               onClick={toggleSidebar}
-              className="p-1.5 rounded-md hover:bg-gray-100/80 text-gray-400 hover:text-gray-600 transition-all duration-150 flex-shrink-0"
+              className="p-1.5 rounded-md hover:bg-white/10 text-white/50 hover:text-white transition-all duration-150 flex-shrink-0"
             >
               <PanelLeftClose className="h-4 w-4" />
             </button>
@@ -168,13 +168,13 @@ const SidebarContent = () => {
               <button
                 className={`flex items-center w-full py-[7px] ${
                   open ? 'gap-2.5 pl-3 pr-2' : 'pl-[7px]'
-                } rounded-md relative z-20 transition-all duration-150 hover:bg-gray-100/50 text-gray-600 hover:text-gray-800 group`}
+                } rounded-md relative z-20 transition-all duration-150 hover:bg-white/10 text-white/60 hover:text-white group`}
               >
                 <SquarePen
-                  className="h-[18px] w-[18px] flex-shrink-0 text-gray-400 group-hover:text-gray-600 transition-colors duration-150"
+                  className="h-[18px] w-[18px] flex-shrink-0 text-white/50 group-hover:text-white transition-colors duration-150"
                 />
                 <span
-                  className="text-[13px] font-medium text-gray-700 whitespace-pre"
+                  className="text-[13px] font-medium text-white whitespace-pre"
                   style={{ display: open ? 'inline-block' : 'none' }}
                 >
                   New
@@ -195,13 +195,13 @@ const SidebarContent = () => {
         </div>
 
         {/* Separator */}
-        <div className="mx-3 my-1.5 border-t border-gray-200/60" />
+        <div className="mx-3 my-1.5 border-t border-white/15" />
 
         {/* Navigation section */}
         {open && (
           <div className="px-3 pt-2 pb-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400/80 select-none">
-              Navigation
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40 select-none">
+              Documents
             </span>
           </div>
         )}
@@ -212,8 +212,8 @@ const SidebarContent = () => {
         {/* Workspace section */}
         {open && (
           <div className="px-3 pt-4 pb-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400/80 select-none">
-              Workspace
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40 select-none">
+              Directory
             </span>
           </div>
         )}
@@ -224,14 +224,14 @@ const SidebarContent = () => {
 
       {/* Bottom section: User profile */}
       <div className="mt-auto pt-2">
-        <div className="mx-3 mb-2 border-t border-gray-200/60" />
+        <div className="mx-3 mb-2 border-t border-white/15" />
 
         <div
-          className={`flex items-center ${open ? 'justify-between px-3 py-2' : 'justify-center py-2'} rounded-md mx-1 hover:bg-gray-100/50 transition-colors duration-150 cursor-pointer group`}
+          className={`flex items-center ${open ? 'justify-between px-3 py-2' : 'justify-center py-2'} rounded-md mx-1 hover:bg-white/10 transition-colors duration-150 cursor-pointer group`}
           onClick={() => { navigate('/settings'); handleLinkClick(); }}
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 ring-1 ring-gray-200/80">
+            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center overflow-hidden flex-shrink-0 ring-1 ring-white/20">
               {currentUser?.avatarUrl ? (
                 <img
                   src={currentUser.avatarUrl}
@@ -240,7 +240,7 @@ const SidebarContent = () => {
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               ) : (
-                <span className="text-xs font-medium text-gray-500">
+                <span className="text-xs font-medium text-white">
                   {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
                 </span>
               )}
@@ -248,10 +248,10 @@ const SidebarContent = () => {
 
             {open && (
               <div className="flex flex-col min-w-0">
-                <span className="text-[13px] font-medium text-gray-900 truncate leading-tight">
+                <span className="text-[13px] font-medium text-white truncate leading-tight">
                   {currentUser?.name || 'User'}
                 </span>
-                <span className="text-[11px] text-gray-400 truncate leading-tight">
+                <span className="text-[11px] text-white/50 truncate leading-tight">
                   {currentUser?.email || ''}
                 </span>
               </div>
@@ -265,7 +265,7 @@ const SidebarContent = () => {
                 navigate('/settings');
                 handleLinkClick();
               }}
-              className="p-1 rounded-md hover:bg-gray-200/60 text-gray-400 hover:text-gray-600 transition-all duration-150 opacity-0 group-hover:opacity-100 flex-shrink-0"
+              className="p-1 rounded-md hover:bg-white/10 text-white/50 hover:text-white transition-all duration-150 opacity-0 group-hover:opacity-100 flex-shrink-0"
               aria-label="Settings"
             >
               <Settings className="h-4 w-4" />
