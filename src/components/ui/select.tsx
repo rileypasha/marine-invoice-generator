@@ -143,6 +143,31 @@ function SelectContent({ className, children, isOpen, onClose, onValueChange, va
     return null;
   }
 
+  // Recursively process children to find SelectItem components
+  // even when wrapped in React.Fragment or other elements
+  function processChildren(nodes: React.ReactNode): React.ReactNode {
+    return React.Children.map(nodes, child => {
+      if (!React.isValidElement(child)) return child;
+
+      if (child.type === SelectItem) {
+        return React.cloneElement(child, {
+          onSelect: () => {
+            onValueChange?.(child.props.value);
+            onClose?.();
+          },
+          isSelected: value === child.props.value
+        } as any);
+      }
+
+      // Recurse into Fragments and other wrapper elements
+      if ((child.props as any).children) {
+        return React.cloneElement(child, {}, processChildren((child.props as any).children));
+      }
+
+      return child;
+    });
+  }
+
   return (
     <div
       className={cn(
@@ -151,18 +176,7 @@ function SelectContent({ className, children, isOpen, onClose, onValueChange, va
       )}
     >
       <div className="p-1">
-        {React.Children.map(children, child => {
-          if (React.isValidElement(child) && child.type === SelectItem) {
-            return React.cloneElement(child, {
-              onSelect: () => {
-                onValueChange?.(child.props.value);
-                onClose?.();
-              },
-              isSelected: value === child.props.value
-            } as any);
-          }
-          return child;
-        })}
+        {processChildren(children)}
       </div>
     </div>
   );
