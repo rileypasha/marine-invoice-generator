@@ -120,7 +120,7 @@ const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
   const isFormValid = formData.email.trim() && formData.password.trim();
 
   return (
-    <div className="fixed inset-0 flex flex-col md:grid md:grid-cols-[45fr_55fr]">
+    <div className="fixed inset-0 flex flex-col md:grid md:grid-cols-2">
 
       {/* ── Desktop Hero Panel ── */}
       <motion.div
@@ -134,9 +134,9 @@ const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            src="/bw_logo.svg"
-            alt="Marine Group Boat Works"
-            className="w-64 max-w-full h-auto brightness-0 invert"
+            src="/marine_group_global_services_vector_logo.svg"
+            alt="Marine Group Global Services"
+            className="w-80 max-w-full h-auto brightness-0 invert"
           />
           <motion.div
             initial={{ scaleX: 0 }}
@@ -158,19 +158,19 @@ const EmployeeLoginPortal: React.FC<EmployeeLoginPortalProps> = ({
       {/* ── Mobile Header ── */}
       <div className="flex md:hidden items-center justify-center py-8 px-6 bg-gradient-to-r from-[#0F1D30] to-[#1E3A5F]">
         <img
-          src="/bw_logo.svg"
-          alt="Marine Group Boat Works"
-          className="w-52 h-auto brightness-0 invert"
+          src="/marine_group_global_services_vector_logo.svg"
+          alt="Marine Group Global Services"
+          className="w-64 h-auto brightness-0 invert"
         />
       </div>
 
       {/* ── Form Panel ── */}
-      <div className="flex-1 flex items-start md:items-center justify-center px-6 py-10 md:py-0 overflow-y-auto bg-white">
+      <div className="flex-1 grid place-items-center px-6 py-10 md:py-0 overflow-y-auto md:overflow-visible bg-white">
         <motion.div
           variants={formContainerVariants}
           initial="hidden"
           animate="visible"
-          className="w-full max-w-sm pb-20 md:pb-0"
+          className="w-[384px] max-w-[calc(100%-3rem)] pb-20 md:pb-0"
         >
           <motion.div variants={formItemVariants}>
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
