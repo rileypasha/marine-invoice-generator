@@ -162,7 +162,7 @@ export const SidebarLink = ({
         onMouseLeave={() => setShowTooltip(false)}
         className={cn(
           `flex items-center py-[7px] justify-start ${
-            open ? 'gap-2.5 pl-3' : 'gap-0 pl-0'
+            open ? 'gap-2.5 pl-3' : 'gap-0 pl-[7px]'
           }`,
           className
         )}

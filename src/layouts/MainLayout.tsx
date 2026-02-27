@@ -183,7 +183,7 @@ const SidebarContent = () => {
               <DropdownMenuTrigger asChild>
                 <button
                   className={`flex items-center w-full py-[7px] ${
-                    open ? 'gap-2.5 pl-3 pr-2' : 'pl-0'
+                    open ? 'gap-2.5 pl-3 pr-2' : 'pl-[7px]'
                   } ml-1 mr-1 rounded-md relative z-20 transition-all duration-150 hover:bg-white/[0.12] text-white/60 hover:text-white group`}
                 >
                   <SquarePen
