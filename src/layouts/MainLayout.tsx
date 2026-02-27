@@ -111,16 +111,14 @@ const SidebarContent = () => {
         link={{
           ...link,
           icon: React.cloneElement(link.icon as React.ReactElement, {
-            className: `h-[18px] w-[18px] flex-shrink-0 transition-colors duration-150 ${
-              isActive(link.href) ? 'text-white' : 'text-white/60'
-            }`,
+            className: `h-[18px] w-[18px] flex-shrink-0 transition-colors duration-150 text-white`,
             strokeWidth: isActive(link.href) ? 2 : 1.75,
           })
         }}
         className={`pr-2 py-[7px] ml-1 mr-1 rounded-md relative z-20 transition-all duration-150 ${
           isActive(link.href)
             ? 'text-white'
-            : 'hover:bg-white/5 text-white/60 hover:text-white'
+            : 'hover:bg-white/[0.12] text-white hover:text-white'
         }`}
       />
     </div>
@@ -163,7 +161,7 @@ const SidebarContent = () => {
           {open && (
             <button
               onClick={toggleSidebar}
-              className="p-1.5 rounded-md hover:bg-white/5 text-white/60 hover:text-white transition-all duration-150 flex-shrink-0"
+              className="p-1.5 rounded-md hover:bg-white/[0.12] text-white/60 hover:text-white transition-all duration-150 flex-shrink-0"
             >
               <PanelLeftClose className="h-4 w-4" />
             </button>
@@ -173,7 +171,7 @@ const SidebarContent = () => {
         {/* Create section */}
         {open && (
           <div className="px-3 pt-2 pb-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40 select-none">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/55 select-none">
               Create
             </span>
           </div>
@@ -186,10 +184,10 @@ const SidebarContent = () => {
                 <button
                   className={`flex items-center w-full py-[7px] ${
                     open ? 'gap-2.5 pl-3 pr-2' : 'pl-0'
-                  } ml-1 mr-1 rounded-md relative z-20 transition-all duration-150 hover:bg-white/5 text-white/60 hover:text-white group`}
+                  } ml-1 mr-1 rounded-md relative z-20 transition-all duration-150 hover:bg-white/[0.12] text-white/60 hover:text-white group`}
                 >
                   <SquarePen
-                    className="h-[18px] w-[18px] flex-shrink-0 text-white/60 group-hover:text-white transition-colors duration-150"
+                    className="h-[18px] w-[18px] flex-shrink-0 text-white transition-colors duration-150"
                   />
                   <span
                     className="text-[13px] font-medium text-white whitespace-pre"
@@ -218,7 +216,7 @@ const SidebarContent = () => {
         {/* Navigation section */}
         {open && (
           <div className="px-3 pt-2 pb-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40 select-none">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/55 select-none">
               Documents
             </span>
           </div>
@@ -230,7 +228,7 @@ const SidebarContent = () => {
         {/* Workspace section */}
         {open && (
           <div className="px-3 pt-4 pb-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40 select-none">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/55 select-none">
               Directory
             </span>
           </div>
@@ -245,7 +243,7 @@ const SidebarContent = () => {
         {open && <div className="mx-3 mb-2 border-t border-white/10" />}
 
         <div
-          className={`flex items-center ${open ? 'justify-between px-3 py-2' : 'justify-center py-2'} rounded-md mx-1 hover:bg-white/5 transition-colors duration-150 cursor-pointer group`}
+          className={`flex items-center ${open ? 'justify-between px-3 py-2' : 'justify-center py-2'} rounded-md mx-1 hover:bg-white/[0.12] transition-colors duration-150 cursor-pointer group`}
           onClick={() => { navigate('/settings'); handleLinkClick(); }}
         >
           <div className="flex items-center gap-2.5 min-w-0">
@@ -283,7 +281,7 @@ const SidebarContent = () => {
                 navigate('/settings');
                 handleLinkClick();
               }}
-              className="p-1 rounded-md hover:bg-white/5 text-white/60 hover:text-white transition-all duration-150 opacity-0 group-hover:opacity-100 flex-shrink-0"
+              className="p-1 rounded-md hover:bg-white/[0.12] text-white/60 hover:text-white transition-all duration-150 opacity-0 group-hover:opacity-100 flex-shrink-0"
               aria-label="Settings"
             >
               <Settings className="h-4 w-4" />
