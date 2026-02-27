@@ -64,7 +64,7 @@ const SimpleTableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b border-slate-100 bg-white transition-colors duration-150 hover:bg-slate-50/70 data-[state=selected]:bg-blue-50/40",
+      "border-b border-slate-100 bg-white hover:bg-slate-50/70 data-[state=selected]:bg-blue-50/40",
       className
     )}
     {...props}

@@ -357,51 +357,50 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
       const invoice = row.original;
 
       return (
-        <div className="flex items-center justify-start">
-          <button
-            aria-label="Row actions"
-            data-row-actions-trigger
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        <button
+          aria-label="Row actions"
+          data-row-actions-trigger
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
 
-              const dropdownWidth = 150;
-              const buttonRight = r.right + window.scrollX;
-              const viewportWidth = window.innerWidth;
+            const dropdownWidth = 150;
+            const buttonRight = r.right + window.scrollX;
+            const viewportWidth = window.innerWidth;
 
-              const left = (buttonRight + dropdownWidth > viewportWidth)
-                ? buttonRight - dropdownWidth
-                : r.left + window.scrollX;
+            const left = (buttonRight + dropdownWidth > viewportWidth)
+              ? buttonRight - dropdownWidth
+              : r.left + window.scrollX;
 
-              actions.openRowActions?.({
-                rowId: invoice.id,
-                pos: { top: r.bottom + window.scrollY, left },
-                handlers: {
-                  view: () => actions.onView?.(invoice),
-                  edit: () => actions.onEdit?.(invoice),
-                  createInvoice: actions.onCreateInvoice
-                    ? () => actions.onCreateInvoice?.(invoice)
-                    : undefined,
-                  exportPdf: actions.onExportPdf
-                    ? () => actions.onExportPdf?.(invoice)
-                    : undefined,
-                  exportCsv: actions.onExportCsv
-                    ? () => actions.onExportCsv?.(invoice)
-                    : undefined,
-                  del: () => actions.onDelete?.(invoice),
-                }
-              });
-            }}
-            className="inline-flex items-center justify-center rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-slate-100 h-8 w-8 p-0 transition-colors"
-          >
-            <MoreVertical className="h-4 w-4 text-slate-400" />
-          </button>
-        </div>
+            actions.openRowActions?.({
+              rowId: invoice.id,
+              pos: { top: r.bottom + window.scrollY, left },
+              handlers: {
+                view: () => actions.onView?.(invoice),
+                edit: () => actions.onEdit?.(invoice),
+                createInvoice: actions.onCreateInvoice
+                  ? () => actions.onCreateInvoice?.(invoice)
+                  : undefined,
+                exportPdf: actions.onExportPdf
+                  ? () => actions.onExportPdf?.(invoice)
+                  : undefined,
+                exportCsv: actions.onExportCsv
+                  ? () => actions.onExportCsv?.(invoice)
+                  : undefined,
+                del: () => actions.onDelete?.(invoice),
+              }
+            });
+          }}
+          className="flex items-center justify-center w-full cursor-pointer select-none"
+          style={{ transition: 'none', margin: '-0.75rem', padding: '0.75rem' }}
+        >
+          <MoreVertical className="h-4 w-4 text-slate-400" style={{ pointerEvents: 'none' }} />
+        </button>
       );
     },
     enableSorting: false,
     enableHiding: false,
-    meta: { width: 'w-16' },
+    meta: { width: 'w-16', className: 'cursor-pointer' },
   },
 ];

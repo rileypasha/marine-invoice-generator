@@ -205,7 +205,7 @@ export function DataTable<TData, TValue>({
       )}
       {searchColumn && (
         <div className="flex justify-end -mt-2 pb-4">
-          <div className={`flex items-center border border-slate-200 rounded-lg transition-all duration-300 ease-in-out overflow-hidden ${
+          <div className={`flex items-center border border-slate-200 rounded-lg transition-[width,background-color,box-shadow] duration-300 ease-in-out overflow-hidden ${
             showSearch
               ? 'w-64 bg-white shadow-sm'
               : 'w-8 bg-white hover:bg-slate-50'

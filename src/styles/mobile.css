@@ -159,7 +159,7 @@ body {
 .touch-active:active {
   opacity: 0.7;
   transform: scale(0.98);
-  transition: all 0.1s ease;
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 /* Pull-to-Refresh Visual Indicator */
