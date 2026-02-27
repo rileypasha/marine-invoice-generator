@@ -469,8 +469,12 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
         OR: [
           { [numberField]: { contains: search as string, mode: 'insensitive' } },
           { title: { contains: search as string, mode: 'insensitive' } },
+          { contactName: { contains: search as string, mode: 'insensitive' } },
+          { customerName: { contains: search as string, mode: 'insensitive' } },
           { customer: { display_name: { contains: search as string, mode: 'insensitive' } } },
+          { vesselName: { contains: search as string, mode: 'insensitive' } },
           { vessel: { name: { contains: search as string, mode: 'insensitive' } } },
+          { userName: { contains: search as string, mode: 'insensitive' } },
         ],
       });
     }

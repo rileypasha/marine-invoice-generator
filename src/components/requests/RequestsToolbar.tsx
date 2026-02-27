@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Plus, MoreHorizontal, Printer, Upload, Download, ChevronDown } from 'lucide-react';
 import { SimpleButton as Button } from '@/components/ui/simple-button';
 import {
@@ -58,9 +58,9 @@ export function RequestsToolbar({
     set({ month: newMonth });
   };
 
-  const handleSearchChange = (newQ: string) => {
+  const handleSearchChange = useCallback((newQ: string) => {
     set({ q: newQ });
-  };
+  }, [set]);
 
   const handleGroupByChange = (newGroupBy: any) => {
     set({ groupBy: newGroupBy });
