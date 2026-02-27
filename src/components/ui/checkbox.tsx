@@ -32,9 +32,8 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         />
         <div
           className={cn(
-            "h-4 w-4 shrink-0 rounded-sm border border-gray-300 bg-white shadow-sm cursor-pointer",
-            "flex items-center justify-center transition-colors",
-            "hover:border-gray-400",
+            "h-4 w-4 shrink-0 rounded-sm border border-gray-300 bg-white shadow-sm",
+            "flex items-center justify-center",
             isChecked && "bg-blue-600 border-blue-600 text-white",
             isIndeterminate && "bg-blue-600 border-blue-600 text-white",
             disabled && "opacity-50 cursor-not-allowed",

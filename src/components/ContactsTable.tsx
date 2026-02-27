@@ -395,51 +395,58 @@ export function ContactsTable({
   return (
     <>
       <div className="screen-only">
-        {/* Bulk selection toolbar */}
-        {selectedRows.length > 0 && (
-          <div className="flex items-center justify-between border-b border-slate-200 px-6 py-3 bg-blue-50/50">
-            <div className="flex items-center">
-              <span className="text-sm font-medium text-slate-700">
-                {selectedRows.length} item{selectedRows.length === 1 ? '' : 's'} selected
-              </span>
-            </div>
-            <div className="flex items-center gap-2 ml-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.resetRowSelection()}
-                className="h-8 px-2 text-xs transition-none"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear
-              </Button>
-              {onBulkDelete && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => onBulkDelete(selectedCustomers)}
-                  className="h-8 px-2 text-xs transition-none"
-                >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Delete
-                </Button>
-              )}
-              {onBulkExport && (
+        <div className="overflow-x-auto border-t-0 relative">
+          {/* Bulk action bar — overlays header row */}
+          {selectedRows.length > 0 && (
+            <div className="absolute top-0 left-0 right-0 z-20 h-[45px] bg-white flex items-center border-b border-slate-200">
+              <div className="flex items-center pl-6 gap-3">
+                <TableCheckbox
+                  checked={
+                    table.getIsAllPageRowsSelected() ||
+                    (table.getIsSomePageRowsSelected() && "indeterminate")
+                  }
+                  onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                  aria-label="Select all"
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  {selectedRows.length} item{selectedRows.length === 1 ? '' : 's'} selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2 ml-auto pr-6">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => onBulkExport(selectedCustomers)}
-                  className="h-8 px-2 text-xs transition-none"
+                  onClick={() => table.resetRowSelection()}
+                  className="h-7 px-2 text-xs transition-none"
                 >
-                  <Download className="h-3 w-3 mr-1" />
-                  Export
+                  <X className="h-3 w-3 mr-1" />
+                  Clear
                 </Button>
-              )}
+                {onBulkDelete && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onBulkDelete(selectedCustomers)}
+                    className="h-7 px-2 text-xs transition-none"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Delete
+                  </Button>
+                )}
+                {onBulkExport && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onBulkExport(selectedCustomers)}
+                    className="h-7 px-2 text-xs transition-none"
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    Export
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-
-        <div className="overflow-x-auto border-t-0">
+          )}
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (

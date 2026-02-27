@@ -16,6 +16,7 @@ import {
 import { ArrowUpDown, ChevronDown, MoreHorizontal, Plus, Printer, Upload, Download, Trash2, X, Search } from "lucide-react"
 
 import { SimpleButton as Button } from "@/components/ui/simple-button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -105,16 +106,14 @@ export function DataTable<TData, TValue>({
 
   const selectedRows = table.getFilteredSelectedRowModel().rows.map(row => row.original)
   const hasSelectedRows = selectedRows.length > 0
-  const hasTopBar = hasSelectedRows || !!title || showAddButton || onPrint || onImport || onExport
+  const hasTopBar = !!title || showAddButton || onPrint || onImport || onExport
 
   return (
     <div className="w-full">
       {hasTopBar && (
-        <div className={`flex items-center ${hasSelectedRows ? 'py-2' : 'py-1'}`}>
-          {!hasSelectedRows ? (
-            <>
-              {title && <div className="flex-1">{title}</div>}
-              <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center py-1">
+          {title && <div className="flex-1">{title}</div>}
+          <div className="flex items-center gap-2 ml-auto">
             {(onPrint || onImport || onExport) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -144,63 +143,13 @@ export function DataTable<TData, TValue>({
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-                {showAddButton && (
-                  <Button onClick={onAddClick} className="h-8 px-3 text-xs transition-none !bg-[#1E3A5F] !text-white hover:!bg-[#152b47]">
-                    <Plus className="h-3 w-3 mr-1" />
-                    {addButtonText}
-                  </Button>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center pl-6">
-                {title && <div className="mr-4">{title}</div>}
-                <span className="text-sm font-medium text-slate-700">
-                  {selectedRows.length} item{selectedRows.length === 1 ? '' : 's'} selected
-                </span>
-              </div>
-              <div className="flex items-center gap-2 ml-auto pr-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.resetRowSelection()}
-                  className="h-8 px-2 text-xs transition-none"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Clear
-                </Button>
-                {onBulkDelete && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => onBulkDelete(selectedRows)}
-                    className="h-8 px-2 text-xs transition-none"
-                  >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    Delete
-                  </Button>
-                )}
-                {onBulkExport && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onBulkExport(selectedRows)}
-                    className="h-8 px-2 text-xs transition-none"
-                  >
-                    <Download className="h-3 w-3 mr-1" />
-                    Export
-                  </Button>
-                )}
-                {showAddButton && (
-                  <Button onClick={onAddClick} className="h-8 px-3 text-xs transition-none !bg-[#1E3A5F] !text-white hover:!bg-[#152b47]">
-                    <Plus className="h-3 w-3 mr-1" />
-                    {addButtonText}
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
+            {showAddButton && (
+              <Button onClick={onAddClick} className="h-8 px-3 text-xs transition-none !bg-[#1E3A5F] !text-white hover:!bg-[#152b47]">
+                <Plus className="h-3 w-3 mr-1" />
+                {addButtonText}
+              </Button>
+            )}
+          </div>
         </div>
       )}
       {searchColumn && (
@@ -232,7 +181,58 @@ export function DataTable<TData, TValue>({
         </div>
       )}
       {/* Clean table container */}
-      <div className="bg-white rounded-b-lg">
+      <div className="bg-white rounded-b-lg relative">
+        {/* Bulk action bar — overlays header row when rows are selected */}
+        {hasSelectedRows && (
+          <div className="absolute top-0 left-0 right-0 z-20 h-[45px] bg-white flex items-center border-b border-slate-200">
+            <div className="flex items-center pl-6 gap-3">
+              <Checkbox
+                checked={
+                  table.getIsAllPageRowsSelected() ||
+                  (table.getIsSomePageRowsSelected() && "indeterminate")
+                }
+                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                aria-label="Select all"
+              />
+              <span className="text-sm font-medium text-slate-700">
+                {selectedRows.length} item{selectedRows.length === 1 ? '' : 's'} selected
+              </span>
+            </div>
+            <div className="flex items-center gap-2 ml-auto pr-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.resetRowSelection()}
+                className="h-7 px-2 text-xs transition-none"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear
+              </Button>
+              {onBulkDelete && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onBulkDelete(selectedRows)}
+                  className="h-7 px-2 text-xs transition-none"
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Delete
+                </Button>
+              )}
+              {onBulkExport && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onBulkExport(selectedRows)}
+                  className="h-7 px-2 text-xs transition-none"
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Export
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
         <div style={{ minWidth: '1200px' }}>
           <Table className="w-full table-fixed border-collapse bg-white">
             {colWidths && (
