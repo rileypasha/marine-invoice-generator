@@ -4718,8 +4718,12 @@ const CreateInvoice: React.FC = () => {
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 text-xs">
                                       <div>
-                                        <span className="text-slate-500">Cost:</span>
-                                        <span className={cn("ml-1 text-slate-700", isFieldInBackendDiff(`/services/${index}/manualCost`) && 'text-green-600 font-semibold')}>{formatCurrency(service.baseCost)}</span>
+                                        <span className="text-slate-500">Qty:</span>
+                                        <span className="ml-1 text-slate-700">{service.quantity}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Rate:</span>
+                                        <span className={cn("ml-1 text-slate-700", isFieldInBackendDiff(`/services/${index}/manualCost`) && 'text-green-600 font-semibold')}>{formatCurrency(service.quantity > 0 ? service.baseCost / service.quantity : service.baseCost)}</span>
                                       </div>
                                       <div>
                                         <span className="text-slate-500">Markup:</span>
@@ -4729,7 +4733,7 @@ const CreateInvoice: React.FC = () => {
                                         <span className="text-slate-500">Tax:</span>
                                         <span className={cn("ml-1 text-slate-700", isFieldInBackendDiff(`/services/${index}/taxStatus`) && 'text-green-600 font-semibold')}>{formatCurrency(service.taxAmount)}</span>
                                       </div>
-                                      <div className="font-medium">
+                                      <div className="font-medium col-span-2">
                                         <span className="text-slate-500">Total:</span>
                                         <span className="ml-1 text-slate-900">{formatCurrency(service.total)}</span>
                                       </div>
@@ -4742,18 +4746,20 @@ const CreateInvoice: React.FC = () => {
 
                               {/* Desktop: Table Layout */}
                               <div className="hidden md:block overflow-hidden rounded-lg border border-slate-200">
-                                <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                <div className="grid grid-cols-[2fr_0.6fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
                                   <span>Item</span>
-                                  <span className="text-right">Cost</span>
+                                  <span className="text-right">Qty</span>
+                                  <span className="text-right">Rate</span>
                                   <span className="text-right">Markup</span>
                                   <span className="text-right">Tax</span>
                                   <span className="text-right">Total</span>
                                 </div>
                                 {previewSummary.services.map((service, index) => {
                                   const serviceIsNew = isNewService(service.id);
+                                  const unitRate = service.quantity > 0 ? service.baseCost / service.quantity : service.baseCost;
                                   return (
                                   <div key={service.id} className={cn(
-                                    "grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm",
+                                    "grid grid-cols-[2fr_0.6fr_1fr_1fr_1fr_1fr] items-center border-t px-4 py-3 text-sm",
                                     serviceIsNew && "bg-green-50 border-l-4 border-l-green-500"
                                   )}>
                                     <div>
@@ -4767,7 +4773,8 @@ const CreateInvoice: React.FC = () => {
                                       </p>
                                       <p className={cn("text-xs text-muted-foreground", isFieldInBackendDiff(`/services/${index}/jobType`) && 'text-green-600 font-semibold')}>{service.jobType}</p>
                                     </div>
-                                    <div className={cn("text-right text-slate-700", isFieldInBackendDiff(`/services/${index}/manualCost`) && 'text-green-600 font-semibold')}>{formatCurrency(service.baseCost)}</div>
+                                    <div className="text-right text-slate-700">{service.quantity}</div>
+                                    <div className={cn("text-right text-slate-700", isFieldInBackendDiff(`/services/${index}/manualCost`) && 'text-green-600 font-semibold')}>{formatCurrency(unitRate)}</div>
                                     <div className={cn("text-right text-slate-700", isFieldInBackendDiff(`/services/${index}/markupType`) && 'text-green-600 font-semibold')}>{formatCurrency(service.markupAmount)}</div>
                                     <div className={cn("text-right text-slate-700", isFieldInBackendDiff(`/services/${index}/taxStatus`) && 'text-green-600 font-semibold')}>{formatCurrency(service.taxAmount)}</div>
                                     <div className="text-right font-medium text-slate-900">{formatCurrency(service.total)}</div>

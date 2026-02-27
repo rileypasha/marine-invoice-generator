@@ -120,16 +120,16 @@ const UploadPdf: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Upload PDF</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900">Upload PDF</h1>
+        <p className="text-sm text-slate-500 mt-1">
           Upload a vendor invoice PDF and we'll extract the data into a new invoice or estimate.
         </p>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
         {/* Document Type Selection */}
-        <div className="p-6 border-b border-gray-200">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+        <div className="p-6 border-b border-slate-200">
+          <label className="block text-sm font-medium text-slate-700 mb-3">
             Create as
           </label>
           <div className="flex gap-3">
@@ -138,8 +138,8 @@ const UploadPdf: React.FC = () => {
               onClick={() => setDocumentType('invoice')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                 documentType === 'invoice'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                  ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white'
+                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
               }`}
             >
               <FileText className="h-4 w-4" />
@@ -150,8 +150,8 @@ const UploadPdf: React.FC = () => {
               onClick={() => setDocumentType('estimate')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                 documentType === 'estimate'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                  ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white'
+                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
               }`}
             >
               <ClipboardList className="h-4 w-4" />
@@ -171,15 +171,15 @@ const UploadPdf: React.FC = () => {
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-colors ${
                 dragActive
-                  ? 'border-blue-400 bg-blue-50'
-                  : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                  ? 'border-[#1E3A5F] bg-[#1E3A5F]/5'
+                  : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
               }`}
             >
-              <Upload className={`h-10 w-10 mx-auto mb-3 ${dragActive ? 'text-blue-500' : 'text-gray-400'}`} />
-              <p className="text-sm font-medium text-gray-700">
+              <Upload className={`h-10 w-10 mx-auto mb-3 ${dragActive ? 'text-[#1E3A5F]' : 'text-slate-400'}`} />
+              <p className="text-sm font-medium text-slate-700">
                 Drag and drop your PDF here, or click to browse
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 PDF, PNG, or JPEG up to 10MB
               </p>
               <input
@@ -191,20 +191,20 @@ const UploadPdf: React.FC = () => {
               />
             </div>
           ) : (
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <FileText className="h-5 w-5 text-blue-600" />
+                <div className="p-2 bg-[#1E3A5F]/10 rounded-lg">
+                  <FileText className="h-5 w-5 text-[#1E3A5F]" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                  <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                  <p className="text-sm font-medium text-slate-900">{file.name}</p>
+                  <p className="text-xs text-slate-500">{formatFileSize(file.size)}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleClearFile}
-                className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                className="p-1 text-slate-400 hover:text-slate-600 rounded"
                 disabled={isParsing}
               >
                 <X className="h-4 w-4" />
@@ -229,7 +229,7 @@ const UploadPdf: React.FC = () => {
             type="button"
             onClick={handleParse}
             disabled={!file || isParsing}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1E3A5F] text-white text-sm font-medium rounded-lg hover:bg-[#152b47] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isParsing ? (
               <>
