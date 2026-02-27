@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation, Outlet } from 'react-router-dom';
+import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
   FileText,
   User,
@@ -18,6 +18,12 @@ import {
   useSidebar,
   MobileBottomNav,
 } from '../components/ui/sidebar';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '../components/ui/dropdown-menu';
 import { AppHeader } from '../components/layout/AppHeader';
 import { useAuth } from '../context/AuthContext';
 
@@ -27,6 +33,7 @@ interface MainLayoutProps {
 
 const SidebarContent = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { open, setOpen } = useSidebar();
   const [isLogoHovered, setIsLogoHovered] = React.useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = React.useState(false);
@@ -62,12 +69,6 @@ const SidebarContent = () => {
 
   // Build navigation links for Magic UI sidebar
   const links = [
-    {
-      label: 'New',
-      href: '/requests/new',
-      icon: <SquarePen className="text-gray-700 h-4 w-4 flex-shrink-0" />,
-      onClick: handleLinkClick,
-    },
     {
       label: 'Invoices',
       href: '/requests',
@@ -191,6 +192,38 @@ const SidebarContent = () => {
 
         {/* Navigation Links */}
         <div className="mt-1 flex flex-col gap-2">
+          {/* New button with dropdown picker */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={`flex items-center py-2 justify-start ${
+                  open ? 'gap-2' : 'gap-0'
+                } pl-1 pr-2 ml-0 rounded-lg relative z-20 transition-colors duration-300 hover:bg-gray-50 text-gray-600`}
+              >
+                <SquarePen
+                  className="h-5 w-5 flex-shrink-0 text-gray-600"
+                  style={{ marginLeft: '8px' }}
+                />
+                <span
+                  className="text-gray-900 text-sm whitespace-pre inline-block !p-0 !m-0"
+                  style={{ display: open ? 'inline-block' : 'none' }}
+                >
+                  New
+                </span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="start" sideOffset={8}>
+              <DropdownMenuItem onSelect={() => { navigate('/requests/new'); handleLinkClick(); }}>
+                <FileText className="mr-2 h-4 w-4" />
+                New Invoice
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => { navigate('/estimates/new'); handleLinkClick(); }}>
+                <ClipboardList className="mr-2 h-4 w-4" />
+                New Estimate
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {links.filter(link => link.label !== 'Settings').map((link, idx) => (
             <SidebarLink
               key={idx}
@@ -284,6 +317,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       label: 'New',
       href: '/requests/new',
       icon: SquarePen,
+      menuItems: [
+        { label: 'New Invoice', href: '/requests/new', icon: FileText },
+        { label: 'New Estimate', href: '/estimates/new', icon: ClipboardList },
+      ],
     },
     {
       id: 'requests',

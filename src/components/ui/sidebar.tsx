@@ -5,6 +5,12 @@ import { Link, useLocation } from "react-router-dom";
 import React, { useState, createContext, useContext } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "./dropdown-menu";
 
 interface Links {
   label: string;
@@ -195,6 +201,7 @@ interface TabItem {
   icon: React.ElementType;
   href: string;
   badge?: number;
+  menuItems?: { label: string; href: string; icon?: React.ElementType }[];
 }
 
 interface MobileBottomNavProps {
@@ -222,23 +229,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       <div className="flex items-center justify-around h-16 max-w-screen-xl mx-auto px-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          // Exact match for the tab href
           const isActive = currentPath === tab.href;
 
-          return (
-            <Link
-              key={tab.id}
-              to={tab.href}
-              className={cn(
-                'flex flex-col items-center justify-center flex-1 h-full',
-                'relative transition-all duration-200 ease-out',
-                'active:scale-95 touch-manipulation',
-                'min-w-0 px-1',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg'
-              )}
-              aria-label={tab.label}
-              aria-current={isActive ? 'page' : undefined}
-            >
+          const tabContent = (
+            <>
               <div className="relative">
                 <Icon
                   className={cn(
@@ -284,6 +278,51 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                   }}
                 />
               )}
+            </>
+          );
+
+          const tabClasses = cn(
+            'flex flex-col items-center justify-center flex-1 h-full',
+            'relative transition-all duration-200 ease-out',
+            'active:scale-95 touch-manipulation',
+            'min-w-0 px-1',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg'
+          );
+
+          if (tab.menuItems) {
+            return (
+              <DropdownMenu key={tab.id}>
+                <DropdownMenuTrigger asChild>
+                  <button className={tabClasses} aria-label={tab.label}>
+                    {tabContent}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="center" sideOffset={8}>
+                  {tab.menuItems.map((item) => {
+                    const ItemIcon = item.icon;
+                    return (
+                      <DropdownMenuItem key={item.href} asChild>
+                        <Link to={item.href} className="flex items-center gap-2">
+                          {ItemIcon && <ItemIcon className="h-4 w-4" />}
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
+          }
+
+          return (
+            <Link
+              key={tab.id}
+              to={tab.href}
+              className={tabClasses}
+              aria-label={tab.label}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              {tabContent}
             </Link>
           );
         })}
