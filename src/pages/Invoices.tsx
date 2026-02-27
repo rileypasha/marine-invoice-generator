@@ -316,11 +316,11 @@ const Invoices: React.FC<InvoicesProps> = ({
       </div>
 
       {/* Scrollable Table Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-auto">
         {isLoading ? (
           <div className="w-full">
             {/* Skeleton table header */}
-            <div className="flex items-center px-5 py-3 border-b border-gray-100 bg-gray-50/40">
+            <div className="sticky top-0 z-10 flex items-center px-5 py-3 border-b border-gray-100 bg-gray-50/40">
               <div className="w-10 flex-shrink-0"><div className="h-4 w-5 bg-gray-200/60 rounded skeleton-shimmer" /></div>
               <div className="flex-[1] min-w-0 pr-3"><div className="h-3 w-12 bg-gray-200/50 rounded skeleton-shimmer" /></div>
               <div className="flex-[2] min-w-0 pr-3"><div className="h-3 w-16 bg-gray-200/50 rounded skeleton-shimmer" /></div>

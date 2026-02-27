@@ -22,7 +22,7 @@ export interface RequestFilters {
 }
 
 export interface RequestsQueryState {
-  month: string; // 'all' | 'YYYY-MM'
+  month: string; // 'all' | 'today' | 'this-week' | 'this-month' | 'this-quarter' | 'this-year' | 'last-week' | 'last-month' | 'last-quarter' | 'last-year'
   view: RequestView;
   q: string;
   groupBy: RequestGroupBy;
@@ -30,12 +30,18 @@ export interface RequestsQueryState {
   filters: RequestFilters;
 }
 
+export interface DateRangeOption {
+  value: string;
+  label: string;
+  group?: string;
+}
+
 export interface UseRequestsQueryStateReturn extends RequestsQueryState {
   set: (updates: Partial<RequestsQueryState>) => void;
   setAll: (state: RequestsQueryState) => void;
   resetFilters: () => void;
   resetAll: () => void;
-  getRollingMonths: (count: number) => Array<{ value: string; label: string }>;
+  getDateRangeOptions: () => DateRangeOption[];
 }
 
 const DEFAULT_STATE: RequestsQueryState = {
@@ -47,23 +53,97 @@ const DEFAULT_STATE: RequestsQueryState = {
   filters: {}
 };
 
-// Generate fixed months for invoice requests
-export function getRollingMonths(count: number): Array<{ value: string; label: string }> {
+// Date range preset options
+export function getDateRangeOptions(): DateRangeOption[] {
   return [
     { value: 'all', label: 'All' },
-    { value: '2025-09', label: 'September 2025' },
-    { value: '2025-10', label: 'October 2025' },
-    { value: '2025-11', label: 'November 2025' },
-    { value: '2025-12', label: 'December 2025' },
-    { value: '2026-01', label: 'January 2026' },
-    { value: '2026-02', label: 'February 2026' },
-    { value: '2026-03', label: 'March 2026' },
-    { value: '2026-04', label: 'April 2026' },
-    { value: '2026-05', label: 'May 2026' },
-    { value: '2026-06', label: 'June 2026' },
-    { value: '2026-07', label: 'July 2026' },
-    { value: '2026-08', label: 'August 2026' }
+    { value: 'today', label: 'Today', group: 'Current' },
+    { value: 'this-week', label: 'This Week', group: 'Current' },
+    { value: 'this-month', label: 'This Month', group: 'Current' },
+    { value: 'this-quarter', label: 'This Quarter', group: 'Current' },
+    { value: 'this-year', label: 'This Year', group: 'Current' },
+    { value: 'last-week', label: 'Last Week', group: 'Previous' },
+    { value: 'last-month', label: 'Last Month', group: 'Previous' },
+    { value: 'last-quarter', label: 'Last Quarter', group: 'Previous' },
+    { value: 'last-year', label: 'Last Year', group: 'Previous' },
   ];
+}
+
+// Resolve a date range option to start/end dates
+export function resolveDateRange(option: string): { startDate: Date; endDate: Date } | null {
+  if (option === 'all') return null;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  switch (option) {
+    case 'today': {
+      const end = new Date(today);
+      end.setHours(23, 59, 59, 999);
+      return { startDate: today, endDate: end };
+    }
+    case 'this-week': {
+      const start = new Date(today);
+      start.setDate(today.getDate() - today.getDay());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      return { startDate: start, endDate: end };
+    }
+    case 'this-month': {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      return { startDate: start, endDate: end };
+    }
+    case 'this-quarter': {
+      const qStart = Math.floor(now.getMonth() / 3) * 3;
+      const start = new Date(now.getFullYear(), qStart, 1);
+      const end = new Date(now.getFullYear(), qStart + 3, 0, 23, 59, 59, 999);
+      return { startDate: start, endDate: end };
+    }
+    case 'this-year': {
+      const start = new Date(now.getFullYear(), 0, 1);
+      const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+      return { startDate: start, endDate: end };
+    }
+    case 'last-week': {
+      const thisWeekStart = new Date(today);
+      thisWeekStart.setDate(today.getDate() - today.getDay());
+      const end = new Date(thisWeekStart);
+      end.setDate(thisWeekStart.getDate() - 1);
+      end.setHours(23, 59, 59, 999);
+      const start = new Date(end);
+      start.setDate(end.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+      return { startDate: start, endDate: end };
+    }
+    case 'last-month': {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      return { startDate: start, endDate: end };
+    }
+    case 'last-quarter': {
+      const curQStart = Math.floor(now.getMonth() / 3) * 3;
+      const start = new Date(now.getFullYear(), curQStart - 3, 1);
+      const end = new Date(now.getFullYear(), curQStart, 0, 23, 59, 59, 999);
+      return { startDate: start, endDate: end };
+    }
+    case 'last-year': {
+      const start = new Date(now.getFullYear() - 1, 0, 1);
+      const end = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+      return { startDate: start, endDate: end };
+    }
+    default: {
+      // Backward compatibility: handle legacy YYYY-MM format
+      if (/^\d{4}-\d{2}$/.test(option)) {
+        const [year, monthNum] = option.split('-');
+        const start = new Date(parseInt(year), parseInt(monthNum) - 1, 1);
+        const end = new Date(parseInt(year), parseInt(monthNum), 0, 23, 59, 59, 999);
+        return { startDate: start, endDate: end };
+      }
+      return null;
+    }
+  }
 }
 
 export function useRequestsQueryState(): UseRequestsQueryStateReturn {
@@ -213,6 +293,6 @@ export function useRequestsQueryState(): UseRequestsQueryStateReturn {
     setAll,
     resetFilters,
     resetAll,
-    getRollingMonths
+    getDateRangeOptions
   };
 }

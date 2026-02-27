@@ -232,7 +232,7 @@ export function DataTable<TData, TValue>({
         </div>
       )}
       {/* Clean table container */}
-      <div className="overflow-x-auto overflow-y-visible bg-white rounded-b-lg">
+      <div className="bg-white rounded-b-lg">
         <div style={{ minWidth: '1200px' }}>
           <Table className="w-full table-fixed border-collapse bg-white">
             {colWidths && (
@@ -242,15 +242,15 @@ export function DataTable<TData, TValue>({
                 ))}
               </colgroup>
             )}
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-10 bg-white">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="border-b border-slate-200 hover:bg-white">
+            <TableRow key={headerGroup.id} className="border-b border-slate-200 hover:bg-white bg-white">
               {headerGroup.headers.map((header) => {
                 const columnMeta = header.column.columnDef.meta as any
                 return (
                   <TableHead
                     key={header.id}
-                    className={`px-3 py-3 first:pl-6 last:pr-6 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
+                    className={`px-3 py-3 first:pl-6 last:pr-6 bg-white ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
                   >
                     {header.isPlaceholder
                       ? null

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, FileText, MoreHorizontal, Printer, Upload, Download, ChevronDown } from 'lucide-react';
+import { Plus, MoreHorizontal, Printer, Upload, Download, ChevronDown } from 'lucide-react';
 import { SimpleButton as Button } from '@/components/ui/simple-button';
 import {
   DropdownMenu,
@@ -14,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { ExpandingSearch } from '../contacts/ExpandingSearch';
 import { useRequestsQueryState } from '@/hooks/useRequestsQueryState';
 import { RequestsMenus } from './RequestsMenus';
@@ -50,11 +49,10 @@ export function RequestsToolbar({
     sort,
     filters,
     set,
-    getRollingMonths
+    getDateRangeOptions
   } = useRequestsQueryState();
 
-  // Generate rolling months (12 months)
-  const monthOptions = getRollingMonths(12);
+  const dateRangeOptions = getDateRangeOptions();
 
   const handleMonthChange = (newMonth: string) => {
     set({ month: newMonth });
@@ -77,107 +75,110 @@ export function RequestsToolbar({
   };
 
   return (
-    <div className={`bg-white border-b border-gray-200 ${className}`}>
-      <div>
-        {/* Row 1: Title + Overflow Menu + New Invoice Button */}
-        <div className="flex items-center justify-between py-1 pt-0 md:pt-6 px-2 md:px-6 -mt-1 md:mt-0">
-          <div className="flex items-center gap-2">
-            <h2 className="flex items-center gap-2 text-xl md:text-2xl font-semibold text-gray-900">
-              <FileText className="h-4 w-4 md:h-5 md:w-5" />
-              <span className="hidden sm:inline">{isEstimate ? 'Estimates' : 'Invoices'}</span>
-              <span className="sm:hidden">{isEstimate ? 'Estimates' : 'Invoices'}</span>
-            </h2>
-          </div>
+    <div className={`bg-white border-b border-gray-100 ${className}`}>
+      {/* Single unified header row */}
+      <div className="flex items-center justify-between gap-3 px-3 md:px-6 pt-1 md:pt-5 pb-3 md:pb-4">
+        {/* Left: Title + Month filter */}
+        <div className="flex items-center gap-3 min-w-0">
+          <h1 className="text-lg md:text-xl font-semibold text-gray-900 tracking-tight whitespace-nowrap">
+            {isEstimate ? 'Estimates' : 'Invoices'}
+          </h1>
 
-          <div className="flex items-center gap-2">
-            {/* Overflow menu for print/import/export */}
-            {(onPrint || onImport || onExport) && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-8 px-2 text-xs">
-                    <MoreHorizontal className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {onPrint && (
-                    <DropdownMenuItem onClick={onPrint}>
-                      <Printer className="mr-2 h-4 w-4" />
-                      Print this page
-                    </DropdownMenuItem>
-                  )}
-                  {onImport && (
-                    <DropdownMenuItem onClick={onImport}>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Import data from CSV
-                    </DropdownMenuItem>
-                  )}
-                  {onExport && (
-                    <DropdownMenuItem onClick={onExport}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Export data as CSV
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            {/* Add Button */}
-            <Button
-              onClick={onAddClick}
-              className="h-8 px-3 text-xs transition-none !bg-[#1E3A5F] !text-white hover:!bg-[#152b47]"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              <span className="hidden sm:inline">Add {singularLabel}</span>
-              <span className="sm:hidden">Add</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Row 2: Month Selector & Controls */}
-        <div className="flex items-center justify-between gap-2 py-2 px-2 md:px-6">
-          {/* Month Dropdown - All Screens */}
+          {/* Date Range Dropdown */}
           <div className="flex-shrink-0">
             <Select key={month} value={month} onValueChange={handleMonthChange}>
-              <SelectTrigger className="inline-flex items-center gap-1.5 h-8 px-3 text-sm text-gray-900 rounded-md border border-gray-300 bg-white hover:bg-gray-50 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 w-auto [&>svg:last-child]:hidden">
+              <SelectTrigger className="inline-flex items-center gap-1.5 h-7 px-2.5 text-[13px] text-gray-600 rounded-md border-0 bg-gray-100/80 hover:bg-gray-100 transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-gray-300 w-auto [&>svg:last-child]:hidden">
                 <span>
-                  {month === 'all' ? 'All Months' : monthOptions.find(opt => opt.value === month)?.label || 'Month'}
+                  {dateRangeOptions.find(opt => opt.value === month)?.label || 'All'}
                 </span>
-                <ChevronDown className="h-3 w-3 text-gray-500 flex-shrink-0" />
+                <ChevronDown className="h-3 w-3 text-gray-400 flex-shrink-0" />
               </SelectTrigger>
               <SelectContent className="min-w-[160px]">
-                {monthOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.value === 'all' ? 'All Months' : option.label}
-                  </SelectItem>
-                ))}
+                {dateRangeOptions.map((option, idx) => {
+                  const prevOption = idx > 0 ? dateRangeOptions[idx - 1] : null;
+                  const showGroupLabel = option.group && option.group !== prevOption?.group;
+                  return (
+                    <React.Fragment key={option.value}>
+                      {showGroupLabel && (
+                        <div className="px-2 pt-2 pb-1 text-[11px] font-medium text-gray-400 uppercase tracking-wider select-none">
+                          {option.group}
+                        </div>
+                      )}
+                      <SelectItem value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    </React.Fragment>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
+        </div>
 
-          {/* Controls */}
-          <div className="flex items-center gap-2">
-            {/* Spacer to push right controls to the right */}
-            <div className="flex-1 md:hidden" />
+        {/* Right: Controls + Actions */}
+        <div className="flex items-center gap-1.5">
+          {/* Group/Filter/Sort menus */}
+          <RequestsMenus
+            activeGroupBy={groupBy}
+            onGroupByChange={handleGroupByChange}
+            activeFilters={filters}
+            onFiltersChange={handleFiltersChange}
+            activeSort={sort}
+            onSortChange={handleSortChange}
+          />
 
-            {/* Group/Filter/Sort menus */}
-            <RequestsMenus
-              activeGroupBy={groupBy}
-              onGroupByChange={handleGroupByChange}
-              activeFilters={filters}
-              onFiltersChange={handleFiltersChange}
-              activeSort={sort}
-              onSortChange={handleSortChange}
-            />
+          {/* Search */}
+          <ExpandingSearch
+            value={q}
+            onChange={handleSearchChange}
+            placeholder={isEstimate ? 'Search estimates...' : 'Search requests...'}
+            autoFocus={true}
+            debounceMs={250}
+          />
 
-            {/* Expanding search */}
-            <ExpandingSearch
-              value={q}
-              onChange={handleSearchChange}
-              placeholder={isEstimate ? 'Search estimates...' : 'Search requests...'}
-              autoFocus={true}
-              debounceMs={250}
-            />
-          </div>
+          {/* Subtle divider */}
+          <div className="hidden md:block w-px h-4 bg-gray-200 mx-1" />
+
+          {/* Overflow menu */}
+          {(onPrint || onImport || onExport) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-7 w-7 p-0 text-gray-400 hover:text-gray-600 hover:bg-gray-100/80">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {onPrint && (
+                  <DropdownMenuItem onClick={onPrint}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print this page
+                  </DropdownMenuItem>
+                )}
+                {onImport && (
+                  <DropdownMenuItem onClick={onImport}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import data from CSV
+                  </DropdownMenuItem>
+                )}
+                {onExport && (
+                  <DropdownMenuItem onClick={onExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export data as CSV
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Add Button */}
+          <Button
+            onClick={onAddClick}
+            className="h-8 px-3 text-[13px] font-medium transition-colors !bg-[#1E3A5F] !text-white hover:!bg-[#152b47] rounded-lg"
+          >
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            <span className="hidden sm:inline">{singularLabel}</span>
+            <span className="sm:hidden">New</span>
+          </Button>
         </div>
       </div>
     </div>

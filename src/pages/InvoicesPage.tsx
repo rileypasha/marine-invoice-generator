@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Invoices from './Invoices';
 import { Pagination } from '../components/ui/pagination';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
-import { useRequestsQueryState } from '../hooks/useRequestsQueryState';
+import { useRequestsQueryState, resolveDateRange } from '../hooks/useRequestsQueryState';
 import { useRequestSection } from '../hooks/useRequestSection';
 import { useToast } from '../components/ui/toast';
 
@@ -126,13 +126,13 @@ const InvoicesPage: React.FC = () => {
       }
       searchParams.append('documentType', documentTypeParam);
 
-      // Add month filter (convert to date range)
+      // Add date range filter
       if (currentMonth && currentMonth !== 'all') {
-        const [year, monthNum] = currentMonth.split('-');
-        const startDate = new Date(parseInt(year), parseInt(monthNum) - 1, 1);
-        const endDate = new Date(parseInt(year), parseInt(monthNum), 0, 23, 59, 59);
-        searchParams.append('startDate', startDate.toISOString());
-        searchParams.append('endDate', endDate.toISOString());
+        const dateRange = resolveDateRange(currentMonth);
+        if (dateRange) {
+          searchParams.append('startDate', dateRange.startDate.toISOString());
+          searchParams.append('endDate', dateRange.endDate.toISOString());
+        }
       }
 
       // Add status filter
