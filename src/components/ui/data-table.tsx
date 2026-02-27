@@ -156,7 +156,7 @@ export function DataTable<TData, TValue>({
             <>
               <div className="flex items-center pl-6">
                 {title && <div className="mr-4">{title}</div>}
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium text-slate-700">
                   {selectedRows.length} item{selectedRows.length === 1 ? '' : 's'} selected
                 </span>
               </div>
@@ -205,13 +205,13 @@ export function DataTable<TData, TValue>({
       )}
       {searchColumn && (
         <div className="flex justify-end -mt-2 pb-4">
-          <div className={`flex items-center border border-gray-300 rounded-md transition-all duration-300 ease-in-out overflow-hidden ${
+          <div className={`flex items-center border border-slate-200 rounded-lg transition-all duration-300 ease-in-out overflow-hidden ${
             showSearch
-              ? 'w-64 bg-white'
-              : 'w-8 bg-white hover:bg-gray-100'
+              ? 'w-64 bg-white shadow-sm'
+              : 'w-8 bg-white hover:bg-slate-50'
           }`}>
             <input
-              className={`flex-1 h-6 outline-none transition-all duration-300 bg-transparent ${
+              className={`flex-1 h-6 outline-none transition-all duration-300 bg-transparent text-sm ${
                 showSearch ? 'opacity-100 px-3' : 'opacity-0 w-0 px-0'
               }`}
               placeholder={showSearch ? searchPlaceholder : ''}
@@ -223,18 +223,18 @@ export function DataTable<TData, TValue>({
             />
             <button
               onClick={() => setShowSearch(!showSearch)}
-              className="h-8 w-8 flex items-center justify-center flex-shrink-0 hover:bg-gray-100 transition-colors"
+              className="h-8 w-8 flex items-center justify-center flex-shrink-0 hover:bg-slate-100 transition-colors rounded-lg"
               type="button"
             >
-              <Search className="h-3 w-3" />
+              <Search className="h-3 w-3 text-slate-400" />
             </button>
           </div>
         </div>
       )}
-      {/* Airtable-style table without card wrapper - wrapped for mobile horizontal scroll */}
-      <div className="overflow-x-auto overflow-y-visible bg-gray-50">
+      {/* Clean table container */}
+      <div className="overflow-x-auto overflow-y-visible bg-white rounded-b-lg">
         <div style={{ minWidth: '1200px' }}>
-          <Table className="w-full table-fixed border-collapse bg-gray-50">
+          <Table className="w-full table-fixed border-collapse bg-white">
             {colWidths && (
               <colgroup>
                 {colWidths.map(col => (
@@ -242,15 +242,15 @@ export function DataTable<TData, TValue>({
                 ))}
               </colgroup>
             )}
-            <TableHeader className="sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
+            <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
+            <TableRow key={headerGroup.id} className="border-b border-slate-200 hover:bg-white">
               {headerGroup.headers.map((header) => {
                 const columnMeta = header.column.columnDef.meta as any
                 return (
                   <TableHead
                     key={header.id}
-                    className={`font-medium text-muted-foreground tracking-wide px-6 py-3 md:px-4 xl:px-6 first:pl-6 last:pr-6 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
+                    className={`px-3 py-3 first:pl-6 last:pr-6 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
                   >
                     {header.isPlaceholder
                       ? null
@@ -264,22 +264,19 @@ export function DataTable<TData, TValue>({
             </TableRow>
           ))}
         </TableHeader>
-        <TableBody className="text-[13.5px]">
+        <TableBody>
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row, index) => (
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                className={`border-b border-gray-200 ${
-                  index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/50 hover:bg-gray-100'
-                }`}
               >
                 {row.getVisibleCells().map((cell) => {
                   const columnMeta = cell.column.columnDef.meta as any
                   return (
                     <TableCell
                       key={cell.id}
-                      className={`text-sm text-foreground align-middle px-6 py-3 md:px-4 xl:px-6 first:pl-6 last:pr-6 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
+                      className={`text-sm align-middle px-3 py-3 first:pl-6 last:pr-6 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
@@ -294,7 +291,7 @@ export function DataTable<TData, TValue>({
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="h-24 text-center py-2.5 px-3"
+                className="h-24 text-center py-2.5 px-3 text-slate-400"
               >
                 No results.
               </TableCell>

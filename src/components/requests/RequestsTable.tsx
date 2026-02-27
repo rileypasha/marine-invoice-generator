@@ -7,34 +7,39 @@ import { useRequestsRowActionsStore } from "@/features/requests/state/rowActions
 import { useRequestSection } from "@/hooks/useRequestSection";
 
 // Column width definitions - use actual column IDs from InvoiceTableColumns
-// Desktop widths - reduced left columns to give more space to right columns
 const REQUESTS_COLS = [
-  { id: 'select', w: '3%' },   // Checkbox column
-  { id: 'invoice_number', w: '9%' }, // Request # column
-  { id: 'customer', w: '9%' }, // Contact column
-  { id: 'vessel', w: '8%' },  // Vessel column
-  { id: 'amount', w: '6%' },   // Amount column
-  { id: 'created_by', w: '8%' }, // Created by column
-  { id: 'created_at', w: '11%' },  // Created at column
-  { id: 'modified_by', w: '12%' }, // Modified by column (needs space for full names)
-  { id: 'updated_at', w: '11%' }, // Last modified column
-  { id: 'status', w: '25%' },   // Status column (needs space for "Change Requested")
-  { id: 'actions', w: '1%' }   // Actions column
+  { id: 'select', w: '3%' },
+  { id: 'invoice_number', w: '7%' },
+  { id: 'vessel', w: '8%' },
+  { id: 'customer', w: '7%' },
+  { id: 'qty', w: '4%' },
+  { id: 'rate', w: '7%' },
+  { id: 'markup', w: '7%' },
+  { id: 'subtotal', w: '8%' },
+  { id: 'tax', w: '7%' },
+  { id: 'amount', w: '8%' },
+  { id: 'modified', w: '8%' },
+  { id: 'created_at', w: '8%' },
+  { id: 'status', w: '9%' },
+  { id: 'actions', w: '4%' }
 ];
 
-// Mobile-specific widths - totals ~104% to prevent overflow past last column
+// Mobile-specific widths
 const REQUESTS_COLS_MOBILE = [
-  { id: 'select', w: '4%' },     // Checkbox column
-  { id: 'invoice_number', w: '12%' },    // Request # column
-  { id: 'customer', w: '14%' },    // Contact column
-  { id: 'vessel', w: '10%' },     // Vessel column
-  { id: 'amount', w: '9%' },     // Amount column
-  { id: 'created_by', w: '10%' },  // Created by column (hidden but needs space)
-  { id: 'created_at', w: '10%' },    // Created at column (hidden but needs space)
-  { id: 'modified_by', w: '12%' }, // Modified by column
-  { id: 'updated_at', w: '11%' },  // Last modified column
-  { id: 'status', w: '18%' },    // Status column (for "Change Requested")
-  { id: 'actions', w: '4%' }    // Actions column
+  { id: 'select', w: '3%' },
+  { id: 'invoice_number', w: '7%' },
+  { id: 'vessel', w: '8%' },
+  { id: 'customer', w: '7%' },
+  { id: 'qty', w: '4%' },
+  { id: 'rate', w: '7%' },
+  { id: 'markup', w: '7%' },
+  { id: 'subtotal', w: '8%' },
+  { id: 'tax', w: '7%' },
+  { id: 'amount', w: '8%' },
+  { id: 'modified', w: '8%' },
+  { id: 'created_at', w: '8%' },
+  { id: 'status', w: '9%' },
+  { id: 'actions', w: '4%' }
 ];
 
 interface Invoice {
@@ -170,8 +175,10 @@ export function RequestsTable({
     onExportCsv,
     onDelete,
     openRowActions,
-    numberColumnLabel: `${singularLabel} #`
+    numberColumnLabel: 'Num'
   }), [onView, onEdit, handleEditWrapper, onCreateInvoice, onPrint, onExportPdf, onExportCsv, onDelete, openRowActions, singularLabel]);
+
+  const colWidths = isMobile ? REQUESTS_COLS_MOBILE : REQUESTS_COLS;
 
   return (
     <DataTable
@@ -180,6 +187,7 @@ export function RequestsTable({
       onBulkDelete={onBulkDelete}
       onBulkExport={onBulkExport}
       title={title}
+      colWidths={colWidths}
     />
   )
 }

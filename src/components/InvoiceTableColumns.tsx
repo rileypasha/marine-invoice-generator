@@ -3,17 +3,14 @@
 import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Avatar, AvatarFallback, AvatarImage } from "./magic/index"
 import { MoreVertical } from "lucide-react"
-
-// Fixed Avatar import path
 
 interface Invoice {
   id: string;
   invoiceNumber?: string;
   customerName?: string;
   invoice_number?: string;
-  contactName?: string;  // Manually entered contact name (not linked to Customer)
+  contactName?: string;
   customer?: {
     company_name?: string;
     display_name?: string;
@@ -32,6 +29,11 @@ interface Invoice {
   modifiedByUserName?: string;
   modifiedByUserAvatar?: string;
   total_amount?: number;
+  subtotal?: number;
+  tax_amount?: number;
+  gross_profit?: number;
+  profit_percent?: number;
+  total_quantity?: number;
   invoice_date?: string;
   updated_at?: string;
   status?: 'requested' | 'change_requested' | 'approved';
@@ -49,13 +51,16 @@ interface InvoiceTableActionsProps {
   numberColumnLabel?: string;
 }
 
-// Create formatters once outside component to prevent recreation on every render
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD'
 });
 
-const dateFormatter = new Intl.DateTimeFormat('en-US');
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric'
+});
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return '-';
@@ -67,7 +72,6 @@ const formatCurrency = (amount?: number) => {
   return currencyFormatter.format(amount);
 };
 
-// Helper to get user initials
 const getInitials = (name?: string) => {
   if (!name) return '?';
   const parts = name.trim().split(' ');
@@ -77,21 +81,23 @@ const getInitials = (name?: string) => {
   return name.substring(0, 2).toUpperCase();
 };
 
-// Hoist status config outside to prevent recreation
 const STATUS_CONFIG = {
   requested: {
-    bgColor: '#d2e5fe',
-    textColor: '#5d6885',
-    label: 'Pending Approval'
+    bg: 'bg-blue-50',
+    text: 'text-blue-700',
+    dot: 'bg-blue-500',
+    label: 'Pending'
   },
   change_requested: {
-    bgColor: '#ffe9ae',
-    textColor: '#988a6d',
-    label: 'Changes Needed'
+    bg: 'bg-violet-50',
+    text: 'text-violet-700',
+    dot: 'bg-violet-500',
+    label: 'Revision'
   },
   approved: {
-    bgColor: '#d1f5d1',
-    textColor: '#2c270f',
+    bg: 'bg-emerald-50',
+    text: 'text-emerald-700',
+    dot: 'bg-emerald-500',
     label: 'Approved'
   }
 } as const;
@@ -101,11 +107,27 @@ const getStatusBadge = (status?: string) => {
 
   return (
     <span
-      className="inline-flex px-2 py-1 text-xs rounded-full"
-      style={{ backgroundColor: config.bgColor, color: config.textColor }}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${config.bg} ${config.text}`}
     >
+      <span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />
       {config.label}
     </span>
+  );
+};
+
+const AvatarCell = ({ name, avatarUrl }: { name: string; avatarUrl?: string }) => {
+  const initials = getInitials(name);
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 ring-1 ring-slate-200/60">
+        {avatarUrl ? (
+          <img src={avatarUrl} alt={name} className="h-full w-full object-cover" />
+        ) : (
+          <span className="text-[10px] font-semibold text-slate-500">{initials}</span>
+        )}
+      </div>
+      <span className="truncate text-slate-600">{name}</span>
+    </div>
   );
 };
 
@@ -141,188 +163,176 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
     ),
     cell: ({ row }) => {
       const invoice = row.original;
+      const num = (invoice.invoice_number || `#${invoice.id}`).replace(/^(REQ-|EST-|INV-)/i, '');
       return (
-        <div className="font-medium !pl-3 truncate min-w-0 text-foreground">
-          {invoice.invoice_number || `#${invoice.id}`}
+        <div className="!pl-3 truncate min-w-0 text-slate-900">
+          {num}
         </div>
       );
     },
-    meta: { width: 'min-w-[120px]', className: '!pl-3' },
-  },
-  {
-    accessorKey: "customer.display_name",
-    id: "customer",
-    header: () => (
-      <span className="font-medium">Contact</span>
-    ),
-    cell: ({ row }) => {
-      const invoice = row.original;
-
-      // TEMPORARY DEBUG - log first 3 rows
-      if (row.index < 3) {
-        console.log(`[InvoiceTableColumns] Row ${row.index}:`, {
-          id: invoice.id,
-          invoiceNumber: invoice.invoiceNumber || invoice.invoice_number,
-          contactName: invoice.contactName,
-          customerName: invoice.customerName,
-          customer: invoice.customer,
-          customerContactName: invoice.customer?.contact_name,
-          customerDisplayName: invoice.customer?.display_name,
-          customerCompanyName: invoice.customer?.company_name,
-        });
-      }
-
-      // Display contact: prioritize manually entered contactName over linked customer
-      const displayContact = invoice.contactName || invoice.customer?.display_name || invoice.customer?.company_name || '-';
-
-      return (
-        <div className="truncate min-w-0">
-          <div className="text-foreground">
-            {displayContact}
-          </div>
-        </div>
-      );
-    },
-    meta: { width: 'min-w-[180px]' },
+    meta: { className: '!pl-3' },
   },
   {
     accessorKey: "vessel.name",
     id: "vessel",
     header: () => (
-      <span className="font-medium">Vessel</span>
+      <span>Vessel</span>
     ),
     cell: ({ row }) => {
       const invoice = row.original;
       return (
-        <div className="truncate min-w-0 text-foreground">
+        <div className="truncate min-w-0 text-slate-700">
           {invoice.vessel?.name || '-'}
         </div>
       );
     },
-    meta: { width: 'min-w-[140px]' },
+    meta: {},
+  },
+  {
+    accessorKey: "customer.display_name",
+    id: "customer",
+    header: () => (
+      <span>Contact</span>
+    ),
+    cell: ({ row }) => {
+      const invoice = row.original;
+      const displayContact = invoice.contactName || invoice.customer?.display_name || invoice.customer?.company_name || '-';
+
+      return (
+        <div className="truncate min-w-0 text-slate-700">
+          {displayContact}
+        </div>
+      );
+    },
+    meta: {},
+  },
+  {
+    accessorKey: "total_quantity",
+    id: "qty",
+    header: () => (
+      <div className="text-center pl-6">Qty</div>
+    ),
+    cell: ({ row }) => {
+      const invoice = row.original;
+      return (
+        <div className="text-center pl-6 tabular-nums text-slate-700">
+          {invoice.total_quantity || 0}
+        </div>
+      );
+    },
+    meta: {},
+  },
+  {
+    id: "rate",
+    header: () => (
+      <div className="text-right">Rate</div>
+    ),
+    cell: ({ row }) => {
+      const invoice = row.original;
+      const baseCost = (invoice.subtotal || 0) - (invoice.gross_profit || 0);
+      return (
+        <div className="text-right tabular-nums text-slate-700">
+          {formatCurrency(baseCost)}
+        </div>
+      );
+    },
+    meta: {},
+  },
+  {
+    accessorKey: "gross_profit",
+    id: "markup",
+    header: () => (
+      <div className="text-right">Markup</div>
+    ),
+    cell: ({ row }) => {
+      const invoice = row.original;
+      return (
+        <div className="text-right tabular-nums text-slate-700">
+          {formatCurrency(invoice.gross_profit)}
+        </div>
+      );
+    },
+    meta: {},
+  },
+  {
+    accessorKey: "subtotal",
+    id: "subtotal",
+    header: () => (
+      <div className="text-right">Subtotal</div>
+    ),
+    cell: ({ row }) => {
+      const invoice = row.original;
+      return (
+        <div className="text-right tabular-nums text-slate-700">
+          {formatCurrency(invoice.subtotal)}
+        </div>
+      );
+    },
+    meta: {},
+  },
+  {
+    accessorKey: "tax_amount",
+    id: "tax",
+    header: () => (
+      <div className="text-right">Tax</div>
+    ),
+    cell: ({ row }) => {
+      const invoice = row.original;
+      return (
+        <div className="text-right tabular-nums text-slate-700">
+          {formatCurrency(invoice.tax_amount)}
+        </div>
+      );
+    },
+    meta: {},
   },
   {
     accessorKey: "total_amount",
     id: "amount",
     header: () => (
-      <div className="text-left">Amount</div>
+      <div className="text-right">Total</div>
     ),
     cell: ({ row }) => {
       const invoice = row.original;
       return (
-        <div className="text-left tabular-nums">
+        <div className="text-right tabular-nums text-slate-900">
           {formatCurrency(invoice.total_amount)}
         </div>
       );
     },
-    meta: { width: 'min-w-[110px]', className: 'text-left' },
+    meta: { className: 'text-right' },
   },
   {
-    accessorKey: "user.name",
-    id: "created_by",
+    accessorKey: "updated_at",
+    id: "modified",
     header: () => (
-      <div className="text-left hidden md:table-cell">Created by</div>
+      <div className="text-right">Modified</div>
     ),
     cell: ({ row }) => {
       const invoice = row.original;
-      const userName = invoice.user?.name || invoice.userName || '-';
-      const avatarUrl = invoice.user?.avatarUrl || invoice.userAvatar;
-      const initials = getInitials(userName);
-
       return (
-        <div className="text-sm text-gray-600 text-left hidden md:table-cell">
-          {userName !== '-' && (
-            <span className="inline-flex items-center gap-2">
-              <span className="inline-flex h-6 w-6 rounded-full bg-gray-200 items-center justify-center overflow-hidden flex-shrink-0">
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={userName}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="text-xs font-medium text-gray-700">
-                    {initials}
-                  </span>
-                )}
-              </span>
-              <span className="truncate">{userName}</span>
-            </span>
-          )}
-          {userName === '-' && <span>{userName}</span>}
+        <div className="text-slate-500 text-right tabular-nums">
+          {formatDate(invoice.updated_at)}
         </div>
       );
     },
-    meta: { width: 'min-w-[160px]', className: 'hidden md:table-cell' },
+    meta: {},
   },
   {
     accessorKey: "invoice_date",
     id: "created_at",
     header: () => (
-      <div className="text-right hidden md:table-cell">Created at</div>
+      <div className="text-right">Created</div>
     ),
     cell: ({ row }) => {
       const invoice = row.original;
       return (
-        <div className="text-sm text-gray-600 text-right tabular-nums hidden md:table-cell">
+        <div className="text-slate-500 text-right tabular-nums">
           {formatDate(invoice.invoice_date)}
         </div>
       );
     },
-    meta: { width: 'min-w-[120px]', className: 'hidden md:table-cell' },
-  },
-  {
-    accessorKey: "modifiedByUserName",
-    id: "modified_by",
-    header: () => (
-      <span className="text-left">Modified by</span>
-    ),
-    cell: ({ row }) => {
-      const invoice = row.original;
-      const modifiedBy = invoice.modifiedByUserName || '-';
-      const avatarUrl = invoice.modifiedByUserAvatar;
-      const initials = getInitials(invoice.modifiedByUserName);
-
-      return (
-        <div className="flex items-center gap-2 text-sm text-gray-600 text-left whitespace-nowrap">
-          {modifiedBy !== '-' && (
-            <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={modifiedBy}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="text-xs font-medium text-gray-700">
-                  {initials}
-                </span>
-              )}
-            </div>
-          )}
-          <span className="truncate">{modifiedBy}</span>
-        </div>
-      );
-    },
-    meta: { width: 'min-w-[160px]' },
-  },
-  {
-    accessorKey: "updated_at",
-    id: "updated_at",
-    header: () => (
-      <div className="text-right whitespace-nowrap">Last modified</div>
-    ),
-    cell: ({ row }) => {
-      const invoice = row.original;
-      return (
-        <div className="text-sm text-gray-600 text-right tabular-nums">
-          {invoice.updated_at && invoice.updated_at !== invoice.invoice_date
-            ? formatDate(invoice.updated_at)
-            : formatDate(invoice.invoice_date)}
-        </div>
-      );
-    },
-    meta: { width: 'min-w-[120px]' },
+    meta: {},
   },
   {
     accessorKey: "status",
@@ -338,7 +348,7 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
         </div>
       );
     },
-    meta: { width: 'min-w-[150px]' },
+    meta: {},
   },
   {
     id: "actions",
@@ -356,28 +366,20 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
               e.stopPropagation();
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
 
-              // Smart positioning to prevent dropdown overflow
-              const dropdownWidth = 150; // Estimated width of dropdown menu
+              const dropdownWidth = 150;
               const buttonRight = r.right + window.scrollX;
               const viewportWidth = window.innerWidth;
 
-              // If dropdown would overflow right edge, align it to the right of the button
               const left = (buttonRight + dropdownWidth > viewportWidth)
-                ? buttonRight - dropdownWidth  // Align right edges
-                : r.left + window.scrollX;      // Default: align left edges
+                ? buttonRight - dropdownWidth
+                : r.left + window.scrollX;
 
               actions.openRowActions?.({
                 rowId: invoice.id,
                 pos: { top: r.bottom + window.scrollY, left },
                 handlers: {
-                  view: () => {
-                    console.log('[InvoiceTableColumns] View handler called', { invoice, onView: actions.onView });
-                    actions.onView?.(invoice);
-                  },
-                  edit: () => {
-                    console.log('[InvoiceTableColumns] Edit handler called', { invoice, onEdit: actions.onEdit });
-                    actions.onEdit?.(invoice);
-                  },
+                  view: () => actions.onView?.(invoice),
+                  edit: () => actions.onEdit?.(invoice),
                   createInvoice: actions.onCreateInvoice
                     ? () => actions.onCreateInvoice?.(invoice)
                     : undefined,
@@ -387,16 +389,13 @@ export const createInvoiceColumns = (actions: InvoiceTableActionsProps): ColumnD
                   exportCsv: actions.onExportCsv
                     ? () => actions.onExportCsv?.(invoice)
                     : undefined,
-                  del: () => {
-                    console.log('[InvoiceTableColumns] Delete handler called', { invoice, onDelete: actions.onDelete });
-                    actions.onDelete?.(invoice);
-                  },
+                  del: () => actions.onDelete?.(invoice),
                 }
               });
             }}
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-gray-100 hover:bg-gray-200 h-8 w-8 p-0"
+            className="inline-flex items-center justify-center rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-slate-100 h-8 w-8 p-0 transition-colors"
           >
-            <MoreVertical className="h-4 w-4 text-gray-600 pointer-events-none" />
+            <MoreVertical className="h-4 w-4 text-slate-400" />
           </button>
         </div>
       );

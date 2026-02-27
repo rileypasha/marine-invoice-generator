@@ -33,6 +33,11 @@ interface ApiInvoice {
   title: string;
   status: 'requested' | 'change_requested' | 'approved';
   total: number;
+  subtotal?: number;
+  taxAmount?: number;
+  grossProfit?: number;
+  profitPercent?: number;
+  totalQuantity?: number;
   createdAt: string;
   updatedAt: string;
   customerName?: string;
@@ -77,6 +82,11 @@ interface Invoice {
   modifiedByUserName?: string;
   modifiedByUserAvatar?: string;
   total_amount?: number;
+  subtotal?: number;
+  tax_amount?: number;
+  gross_profit?: number;
+  profit_percent?: number;
+  total_quantity?: number;
   invoice_date?: string;
   updated_at?: string;
   status?: 'requested' | 'change_requested' | 'approved';
@@ -198,8 +208,8 @@ const InvoicesPage: React.FC = () => {
     return rawInvoices.map((apiInvoice) => ({
       id: apiInvoice.id,
       invoice_number: apiInvoice.invoiceNumber || `#${apiInvoice.id.substring(0, 8)}`,
-      contactName: apiInvoice.contactName,  // Pass through manually entered contact name
-      customer: apiInvoice.customer ? {  // Only create customer object if there's a linked customer
+      contactName: apiInvoice.contactName,
+      customer: apiInvoice.customer ? {
         display_name: apiInvoice.customer.display_name,
         company_name: apiInvoice.customer.legal_name,
       } : undefined,
@@ -211,6 +221,11 @@ const InvoicesPage: React.FC = () => {
       modifiedByUserName: apiInvoice.modifiedByUserName,
       modifiedByUserAvatar: apiInvoice.modifiedByUserAvatar,
       total_amount: apiInvoice.total,
+      subtotal: apiInvoice.subtotal,
+      tax_amount: apiInvoice.taxAmount,
+      gross_profit: apiInvoice.grossProfit,
+      profit_percent: apiInvoice.profitPercent,
+      total_quantity: apiInvoice.totalQuantity,
       invoice_date: apiInvoice.createdAt,
       updated_at: apiInvoice.updatedAt,
       status: apiInvoice.status

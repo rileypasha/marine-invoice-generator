@@ -524,6 +524,11 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
           title: true,
           status: true,
           total: true,
+          subtotal: true,
+          taxAmount: true,
+          grossProfit: true,
+          profitPercent: true,
+          data: true,
           createdAt: true,
           updatedAt: true,
           contactName: true,
@@ -537,7 +542,6 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
           customerId: true,
           vesselId: true,
           userId: true,
-          // Explicitly exclude data field to avoid sending receipt images
           customer: { select: { display_name: true, legal_name: true } },
           vessel: { select: { name: true } },
           user: { select: { name: true, email: true, avatarUrl: true } },
@@ -600,19 +604,30 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
         });
       }
 
+      // Compute total quantity from line items in data JSON
+      let totalQuantity = 0;
+      try {
+        const parsed = typeof invoice.data === 'string' ? JSON.parse(invoice.data) : invoice.data;
+        const lineItems = parsed?.scope?.lineItems || [];
+        totalQuantity = lineItems.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0);
+      } catch {
+        totalQuantity = 0;
+      }
+
+      // Strip raw data field (contains receipt images) but keep computed fields
+      const { data: _data, ...invoiceWithoutData } = invoice;
+
       return {
-        ...invoice,
+        ...invoiceWithoutData,
         userName: invoice.userName || invoice.user?.name || null,
         userEmail: invoice.userEmail || invoice.user?.email || null,
-        // For existing invoices without modifiedByUserName, use the creator's name as fallback
         modifiedByUserName: invoice.modifiedByUserName || invoice.user?.name || invoice.userName || null,
         modifiedByUserEmail: invoice.modifiedByUserEmail || invoice.user?.email || invoice.userEmail || null,
-        // Include avatar URL from modifiedByUser lookup
         modifiedByUserAvatar: invoice.modifiedByUserId
           ? (modifiedByUserMap.get(invoice.modifiedByUserId) || null)
           : (invoice.user?.avatarUrl || null),
-        // Transform customer to include contact_name from contactName field
         customer: transformedCustomer,
+        totalQuantity,
       };
     });
 

@@ -1,8 +1,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-// Simple HTML table components compatible with TanStack Table
-// These avoid the React Aria Components conflicts
+// Premium table components for a modern SaaS look
 
 const SimpleTable = React.forwardRef<
   HTMLTableElement,
@@ -26,7 +25,7 @@ const SimpleTableHeader = React.forwardRef<
   <thead
     ref={ref}
     className={cn(
-      "sticky top-0 z-30 bg-gray-50 [&_tr]:border-b",
+      "sticky top-0 z-30 bg-white border-b border-slate-200",
       className
     )}
     {...props}
@@ -52,7 +51,7 @@ const SimpleTableFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tfoot
     ref={ref}
-    className={cn("bg-gray-900 font-medium text-gray-50 dark:bg-gray-50 dark:text-gray-900", className)}
+    className={cn("bg-slate-50 font-medium text-slate-900", className)}
     {...props}
   />
 ))
@@ -65,7 +64,7 @@ const SimpleTableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b transition-colors hover:bg-gray-50/50 data-[state=selected]:bg-gray-100",
+      "border-b border-slate-100 bg-white transition-colors duration-150 hover:bg-slate-50/70 data-[state=selected]:bg-blue-50/40",
       className
     )}
     {...props}
@@ -80,7 +79,7 @@ const SimpleTableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "sticky top-0 z-20 h-12 px-4 text-left align-middle font-medium text-gray-500 bg-gray-50 [&:has([role=checkbox])]:pr-0",
+      "sticky top-0 z-20 h-11 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wider text-slate-500 bg-white border-b border-slate-200 [&:has([role=checkbox])]:pr-0",
       className
     )}
     {...props}
@@ -94,7 +93,7 @@ const SimpleTableCell = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <td
     ref={ref}
-    className={cn("p-4 align-middle text-gray-900 [&:has([role=checkbox])]:pr-0", className)}
+    className={cn("px-4 py-3 align-middle text-slate-700 [&:has([role=checkbox])]:pr-0", className)}
     {...props}
   />
 ))
@@ -106,7 +105,7 @@ const SimpleTableCaption = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <caption
     ref={ref}
-    className={cn("mt-4 text-sm text-gray-500", className)}
+    className={cn("mt-4 text-sm text-slate-500", className)}
     {...props}
   />
 ))

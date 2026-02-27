@@ -26,19 +26,6 @@ import { useRowActionsStore } from "@/features/vessels/state/rowActions.store";
 import { bucketBySize, bucketByActivity, bucketByMonthlyActivity, formatGroupSubtotal, formatCurrency } from "@/features/vessels/grouping";
 import { Button } from "@/components/ui/button";
 
-// Column width definitions for consistent spacing across all tables
-const VESSELS_COLS = [
-  { id: 'select', w: '4%' },            // Checkbox column
-  { id: 'name', w: '20%' },             // Vessel name column
-  { id: 'length', w: '12%' },           // Length column (right-aligned)
-  { id: 'weight', w: '12%' },           // Weight column (right-aligned)
-  { id: 'monthly_invoices', w: '10%' }, // Monthly invoices count column (centered)
-  { id: 'monthly_total', w: '14%' },    // Monthly total amount column (centered)
-  { id: 'invoices', w: '10%' },         // Invoices count column (centered)
-  { id: 'total', w: '12%' },            // Total amount column (centered)
-  { id: 'actions', w: '6%' }            // Actions column
-];
-
 interface Vessel {
   id: string;
   name?: string;
@@ -59,7 +46,6 @@ interface VesselsTableProps {
   sort?: VesselSort | null;
   groupBy?: 'size' | 'activity' | 'monthlyActivity' | 'none';
 
-  // Controlled state props
   grouping?: GroupingState;
   expanded?: ExpandedState;
   onGroupingChange?: (grouping: GroupingState) => void;
@@ -73,6 +59,13 @@ interface VesselsTableProps {
   onNewInvoice?: (vessel: Vessel) => void;
   title?: React.ReactNode;
 }
+
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD'
+});
+
+const numberFormatter = new Intl.NumberFormat('en-US');
 
 export function VesselsTable({
   vessels,
@@ -93,16 +86,11 @@ export function VesselsTable({
   const navigate = useNavigate();
   const openRowActions = useRowActionsStore((s) => s.openAt);
 
-  // Row selection state
   const [rowSelection, setRowSelection] = useState({});
 
-  // Use controlled state or fallback to defaults
   const grouping = controlledGrouping ?? [];
   const expanded = controlledExpanded ?? {};
 
-  // Note: No useEffect needed - parent manages grouping state synchronization
-
-  // Sort vessels based on the sort prop
   const sortedVessels = useMemo(() => {
     if (!sort) return vessels;
 
@@ -110,13 +98,11 @@ export function VesselsTable({
       let aValue: any = a[sort.field as keyof Vessel];
       let bValue: any = b[sort.field as keyof Vessel];
 
-      // Handle null/undefined values
       if (aValue == null) aValue = '';
       if (bValue == null) bValue = '';
 
-      // Convert to string for comparison (except for numbers)
       if (typeof aValue === 'number' && typeof bValue === 'number') {
-        // Keep as numbers for proper numeric sorting
+        // Keep as numbers
       } else {
         aValue = String(aValue).toLowerCase();
         bValue = String(bValue).toLowerCase();
@@ -130,14 +116,12 @@ export function VesselsTable({
     });
   }, [vessels, sort]);
 
-  // Handle single vessel delete
   const handleSingleDelete = useCallback((vessel: Vessel) => {
     if (onDelete) {
       onDelete(vessel);
     }
   }, [onDelete]);
 
-  // Handle new invoice for vessel
   const handleNewInvoice = useCallback((vessel: Vessel) => {
     if (onNewInvoice) {
       onNewInvoice(vessel);
@@ -152,14 +136,12 @@ export function VesselsTable({
     }
   }, [onNewInvoice, navigate]);
 
-  // Handle view invoices click
   const handleViewInvoices = useCallback((vessel: Vessel) => {
     if (onViewInvoices) {
       onViewInvoices(vessel);
     }
   }, [onViewInvoices]);
 
-  // Define columns for DataTable - wrapped in useMemo to prevent recreation on every render
   const columns: ColumnDef<Vessel>[] = useMemo(() => [
     {
       id: "select",
@@ -190,7 +172,7 @@ export function VesselsTable({
         <div className="!pl-3">Vessel</div>
       ),
       cell: ({ row }) => (
-        <div className="font-medium !pl-3">{row.getValue("name") || '-'}</div>
+        <div className="font-semibold text-slate-900 !pl-3">{row.getValue("name") || '-'}</div>
       ),
       meta: { width: 'w-48', className: '!pl-3' },
     },
@@ -198,8 +180,8 @@ export function VesselsTable({
       accessorKey: "length_ft",
       header: "Length",
       cell: ({ row }) => {
-        const length = row.getValue("length_ft") as number
-        return <div>{length ? `${length} ft` : '-'}</div>
+        const length = row.getValue("length_ft") as number;
+        return <div className={`tabular-nums ${length ? 'text-slate-700' : 'text-slate-400'}`}>{length ? `${numberFormatter.format(length)} ft` : '-'}</div>;
       },
       aggregationFn: 'mean',
       meta: { width: 'w-32' },
@@ -208,70 +190,64 @@ export function VesselsTable({
       accessorKey: "weight_tons",
       header: "Weight",
       cell: ({ row }) => {
-        const weight = row.getValue("weight_tons") as number
-        return <div>{weight ? `${weight} tons` : '-'}</div>
+        const weight = row.getValue("weight_tons") as number;
+        return <div className={`tabular-nums ${weight ? 'text-slate-700' : 'text-slate-400'}`}>{weight ? `${numberFormatter.format(weight)} tons` : '-'}</div>;
       },
       aggregationFn: 'mean',
       meta: { width: 'w-32' },
     },
     {
       accessorKey: "monthly_invoice_count",
-      header: ({ column }) => (
-        <div className="text-center">Monthly Invoices</div>
+      header: () => (
+        <div className="text-center">Monthly Inv.</div>
       ),
       cell: ({ row }) => {
-        const count = row.getValue("monthly_invoice_count") as number
-        return <div className="text-center">{count || 0}</div>
+        const count = row.getValue("monthly_invoice_count") as number;
+        return <div className={`text-center tabular-nums ${count ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>{count || 0}</div>;
       },
       aggregationFn: 'sum',
       meta: { width: 'w-32' },
     },
     {
       accessorKey: "monthly_invoice_total",
-      header: ({ column }) => (
-        <div className="text-center">Monthly Amount</div>
+      header: () => (
+        <div className="text-center">Monthly Amt.</div>
       ),
       cell: ({ row }) => {
-        const total = row.getValue("monthly_invoice_total") as number
+        const total = row.getValue("monthly_invoice_total") as number;
         return (
-          <div className="text-center">
-            {(total || 0).toLocaleString('en-US', {
-              style: 'currency',
-              currency: 'USD'
-            })}
+          <div className={`text-center tabular-nums ${total ? 'text-slate-900 font-semibold' : 'text-slate-400'}`}>
+            {currencyFormatter.format(total || 0)}
           </div>
-        )
+        );
       },
       aggregationFn: 'sum',
       meta: { width: 'w-32' },
     },
     {
       accessorKey: "invoice_count",
-      header: ({ column }) => (
-        <div className="text-center">Total Invoices</div>
+      header: () => (
+        <div className="text-center">Total Inv.</div>
       ),
       cell: ({ row }) => {
-        const count = row.getValue("invoice_count") as number
-        return <div className="text-center">{count || 0}</div>
+        const count = row.getValue("invoice_count") as number;
+        return <div className={`text-center tabular-nums ${count ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>{count || 0}</div>;
       },
       aggregationFn: 'sum',
       meta: { width: 'w-28' },
     },
     {
       accessorKey: "invoice_total",
-      header: ({ column }) => (
-        <div className="text-center">Total Amount</div>
+      header: () => (
+        <div className="text-center">Total Amt.</div>
       ),
       cell: ({ row }) => {
-        const total = row.getValue("invoice_total") as number
+        const total = row.getValue("invoice_total") as number;
         return (
-          <div className="text-center">
-            {(total || 0).toLocaleString('en-US', {
-              style: 'currency',
-              currency: 'USD'
-            })}
+          <div className={`text-center tabular-nums ${total ? 'text-slate-900 font-semibold' : 'text-slate-400'}`}>
+            {currencyFormatter.format(total || 0)}
           </div>
-        )
+        );
       },
       aggregationFn: 'sum',
       meta: { width: 'w-32' },
@@ -294,30 +270,28 @@ export function VesselsTable({
                 e.stopPropagation();
                 const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
 
-                // Smart positioning to prevent dropdown overflow
-                const dropdownWidth = 150; // Estimated width of dropdown menu
+                const dropdownWidth = 150;
                 const buttonRight = r.right + window.scrollX;
                 const viewportWidth = window.innerWidth;
 
-                // If dropdown would overflow right edge, align it to the right of the button
                 const left = (buttonRight + dropdownWidth > viewportWidth)
-                  ? buttonRight - dropdownWidth  // Align right edges
-                  : r.left + window.scrollX;      // Default: align left edges
+                  ? buttonRight - dropdownWidth
+                  : r.left + window.scrollX;
 
                 openRowActions({
                   rowId: vessel.id,
                   pos: { top: r.bottom + window.scrollY, left },
                   handlers: {
-                    viewInvoices: (id) => handleViewInvoices(vessel),
-                    newInvoice: (id) => handleNewInvoice(vessel),
-                    edit: (id) => onEdit?.(vessel.id) || navigate(`/vessels/${vessel.id}/edit`),
-                    del: (id) => handleSingleDelete(vessel),
+                    viewInvoices: (id: string) => handleViewInvoices(vessel),
+                    newInvoice: (id: string) => handleNewInvoice(vessel),
+                    edit: (id: string) => onEdit?.(vessel.id) || navigate(`/vessels/${vessel.id}/edit`),
+                    del: (id: string) => handleSingleDelete(vessel),
                   }
                 });
               }}
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-gray-100 hover:bg-gray-200 h-7 w-4 p-0"
+              className="inline-flex items-center justify-center rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-slate-100 h-8 w-8 p-0 transition-colors"
             >
-              <MoreVertical className="h-4 w-4 text-gray-600" />
+              <MoreVertical className="h-4 w-4 text-slate-400" />
             </button>
           </div>
         );
@@ -329,7 +303,7 @@ export function VesselsTable({
       header: 'Size',
       accessorFn: (row) => bucketBySize(row.length_ft).label,
       enableGrouping: true,
-      cell: ({ row }) => null, // Hidden in normal rows
+      cell: ({ row }) => null,
       enableSorting: false,
       enableHiding: false,
     },
@@ -338,7 +312,7 @@ export function VesselsTable({
       header: 'Activity',
       accessorFn: (row) => bucketByActivity(row.invoice_count).label,
       enableGrouping: true,
-      cell: ({ row }) => null, // Hidden in normal rows
+      cell: ({ row }) => null,
       enableSorting: false,
       enableHiding: false,
     },
@@ -347,13 +321,12 @@ export function VesselsTable({
       header: 'Monthly Activity',
       accessorFn: (row) => bucketByMonthlyActivity(row.monthly_invoice_count).label,
       enableGrouping: true,
-      cell: ({ row }) => null, // Hidden in normal rows
+      cell: ({ row }) => null,
       enableSorting: false,
       enableHiding: false,
     },
-  ], []); // Stable column definitions - callbacks captured in closure
+  ], []);
 
-  // TanStack Table setup with grouping
   const table = useReactTable({
     data: sortedVessels,
     columns,
@@ -362,7 +335,7 @@ export function VesselsTable({
       expanded,
       rowSelection,
     },
-    getRowId: (row) => row.id, // Stable unique ID for proper expansion state
+    getRowId: (row) => row.id,
     onGroupingChange: (updater) => {
       if (!onGroupingChange) return;
       const next = typeof updater === 'function' ? updater(grouping) : updater;
@@ -380,24 +353,21 @@ export function VesselsTable({
     getSortedRowModel: getSortedRowModel(),
     enableGrouping: true,
     enableRowSelection: true,
-    // CRITICAL: prevent resets that collapse groups
     autoResetAll: false,
     autoResetExpanded: false,
   });
 
-  // Get selected vessels
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedVessels = selectedRows.map(row => row.original);
 
   return (
     <>
-      {/* Screen-only interactive table with Airtable-style layout */}
       <div className="screen-only">
         {/* Bulk selection toolbar */}
         {selectedRows.length > 0 && (
-          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-3">
+          <div className="flex items-center justify-between border-b border-slate-200 px-6 py-3 bg-blue-50/50">
             <div className="flex items-center">
-              <span className="text-sm font-medium">
+              <span className="text-sm font-medium text-slate-700">
                 {selectedRows.length} item{selectedRows.length === 1 ? '' : 's'} selected
               </span>
             </div>
@@ -437,13 +407,12 @@ export function VesselsTable({
           </div>
         )}
 
-        <div className="border-r border-b overflow-x-auto">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
+                <TableRow key={headerGroup.id} className="hover:bg-white">
                   {headerGroup.headers.map((header) => {
-                    // Skip virtual grouping columns in header
                     if (header.column.id === 'sizeBucket' || header.column.id === 'activityBucket' || header.column.id === 'monthlyActivityBucket') {
                       return null;
                     }
@@ -471,15 +440,12 @@ export function VesselsTable({
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 (() => {
-                  let visibleRowIndex = 0;
                   return table.getRowModel().rows.map((row) => {
                   if (row.getIsGrouped()) {
-                    // Group header row
                     const groupingValue = row.groupingValue as string;
                     const subRowsCount = row.subRows.length;
                     const isExpanded = row.getIsExpanded();
 
-                    // Calculate aggregated values for group
                     const totalRevenue = row.subRows.reduce((sum, subRow) =>
                       sum + (subRow.original.invoice_total || 0), 0);
                     const avgLength = row.subRows.length > 0
@@ -492,9 +458,9 @@ export function VesselsTable({
                     return (
                       <TableRow
                         key={row.id}
-                        className="sticky top-[48px] z-10 bg-gray-50 hover:bg-gray-100 border-b-2 border-gray-200"
+                        className="sticky top-[44px] z-10 bg-slate-50 hover:bg-slate-100/80 border-b border-slate-200"
                       >
-                        <TableCell colSpan={columns.length - 2} className="py-3">
+                        <TableCell colSpan={columns.length - 2} className="py-2.5">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -502,22 +468,22 @@ export function VesselsTable({
                               e.stopPropagation();
                               row.getToggleExpandedHandler()();
                             }}
-                            className="flex items-center justify-between w-full text-left focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded p-1 -m-1"
+                            className="flex items-center justify-between w-full text-left focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-md p-1 -m-1"
                             aria-expanded={isExpanded}
                             aria-controls={`group-${row.id}`}
                           >
                             <div className="flex items-center gap-3">
                               {isExpanded ? (
-                                <ChevronDown className="h-4 w-4 text-gray-500 pointer-events-none" />
+                                <ChevronDown className="h-4 w-4 text-slate-400" />
                               ) : (
-                                <ChevronRight className="h-4 w-4 text-gray-500 pointer-events-none" />
+                                <ChevronRight className="h-4 w-4 text-slate-400" />
                               )}
-                              <span className="font-medium text-gray-900">{groupingValue}</span>
-                              <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
+                              <span className="font-semibold text-slate-800 text-sm">{groupingValue}</span>
+                              <span className="text-xs text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded-full font-medium">
                                 {subRowsCount}
                               </span>
                             </div>
-                            <div className="text-sm text-gray-600">
+                            <div className="text-xs text-slate-500 font-medium">
                               {formatGroupSubtotal(subRowsCount, totalRevenue, avgLength, avgWeight)}
                             </div>
                           </button>
@@ -526,22 +492,16 @@ export function VesselsTable({
                     );
                   }
 
-                  // Regular data row - only show if parent is expanded or no grouping
                   if (row.depth > 0 && !row.getParentRow()?.getIsExpanded()) {
                     return null;
                   }
 
-                  const currentIndex = visibleRowIndex++;
                   return (
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
-                      className={`border-b border-gray-200 ${
-                        currentIndex % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/50 hover:bg-gray-100'
-                      }`}
                     >
                       {row.getVisibleCells().map((cell) => {
-                        // Skip virtual grouping columns in data rows
                         if (cell.column.id === 'sizeBucket' || cell.column.id === 'activityBucket' || cell.column.id === 'monthlyActivityBucket') {
                           return null;
                         }
@@ -564,7 +524,7 @@ export function VesselsTable({
                 })()
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <TableCell colSpan={columns.length} className="h-24 text-center text-slate-400">
                     No results.
                   </TableCell>
                 </TableRow>
