@@ -8,7 +8,8 @@ import {
   SquarePen,
   ClipboardList,
   PanelLeftOpen,
-  PanelLeftClose
+  PanelLeftClose,
+  Upload
 } from 'lucide-react';
 import {
   Sidebar,
@@ -77,6 +78,12 @@ const SidebarContent = () => {
       label: 'Estimates',
       href: '/estimates',
       icon: <ClipboardList className="text-gray-700 h-4 w-4 flex-shrink-0" />,
+      onClick: handleLinkClick,
+    },
+    {
+      label: 'Upload PDF',
+      href: '/upload-pdf',
+      icon: <Upload className="text-gray-700 h-4 w-4 flex-shrink-0" />,
       onClick: handleLinkClick,
     },
     {
@@ -331,6 +338,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         return 'Vessel Directory';
       case '/settings':
         return 'Settings';
+      case '/upload-pdf':
+        return 'Upload PDF';
       default:
         if (location.pathname.startsWith('/requests/')) {
           return 'Request Details';

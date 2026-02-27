@@ -36,6 +36,7 @@ const CreateCustomer = lazy(() => import('./pages/CreateCustomer'))
 const CreateVessel = lazy(() => import('./pages/CreateVessel'))
 const InvoiceView = lazy(() => import('./pages/InvoiceView'))
 const Settings = lazy(() => import('./pages/Settings'))
+const UploadPdf = lazy(() => import('./pages/UploadPdf'))
 
 // Prefetch critical routes (most commonly accessed)
 const prefetchRoute = (importFn: () => Promise<any>) => {
@@ -347,6 +348,16 @@ function App() {
                   <ProtectedRoute>
                     <MainLayout>
                       <Settings />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/upload-pdf"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <UploadPdf />
                     </MainLayout>
                   </ProtectedRoute>
                 }

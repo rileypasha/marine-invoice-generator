@@ -88,6 +88,68 @@ async function generateNextInvoiceNumber(documentType: DocumentType): Promise<st
   return `${prefix}${maxNumber + 1}`;
 }
 
+// POST /api/v1/invoice/parse-pdf
+router.post('/parse-pdf', async (req: InvoiceRequest, res: Response) => {
+  const correlationId = req.correlationId!;
+
+  try {
+    const { pdfBase64, mimeType } = req.body;
+
+    if (!pdfBase64) {
+      return res.status(400).json({
+        code: 'MISSING_PDF',
+        message: 'No PDF data provided',
+        correlationId,
+      });
+    }
+
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+    const normalizedMimeType = (mimeType || 'application/pdf').toLowerCase();
+    if (!allowedTypes.includes(normalizedMimeType)) {
+      return res.status(400).json({
+        code: 'INVALID_FILE_TYPE',
+        message: 'File must be a PDF or image (PNG, JPEG)',
+        correlationId,
+      });
+    }
+
+    logger.info('Parsing PDF with Gemini', { correlationId, mimeType: normalizedMimeType });
+
+    const { parsePdfWithGemini } = await import('../services/pdfParser.service');
+    const result = await parsePdfWithGemini(pdfBase64, normalizedMimeType);
+
+    if (!result.success) {
+      return res.status(422).json({
+        code: 'PARSE_FAILED',
+        message: result.error || 'Failed to parse PDF',
+        correlationId,
+      });
+    }
+
+    logger.info('PDF parsed successfully', {
+      correlationId,
+      serviceCount: result.data?.services?.length || 0,
+    });
+
+    return res.json({
+      success: true,
+      data: result.data,
+      correlationId,
+    });
+  } catch (error: any) {
+    logger.error('PDF parse endpoint error', {
+      error: error.message,
+      stack: error.stack,
+      correlationId,
+    });
+    return res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: 'An error occurred while parsing the PDF',
+      correlationId,
+    });
+  }
+});
+
 // POST /api/v1/invoice/save
 router.post('/save', async (req: InvoiceRequest, res: Response) => {
   const correlationId = req.correlationId!;

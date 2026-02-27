@@ -128,8 +128,8 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         ws: true,
-        timeout: 10000,
-        proxyTimeout: 10000,
+        timeout: 120000,
+        proxyTimeout: 120000,
         configure: (proxy, _options) => {
           proxy.on('error', (err, req, res) => {
             console.log('Proxy error:', err.message);

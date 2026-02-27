@@ -117,6 +117,7 @@ interface ServiceSummaryItem {
   type: string;
   quantity: number;
   cost: number;
+  unitCost: number;
   markupAmount: number;
   markupPercentage: number;
   taxAmount: number;
@@ -802,7 +803,7 @@ const InvoiceView: React.FC = () => {
     yPos += 8;
 
     const tableColumnX = [20, 64, 96, 122, 142, 162, 182];
-    const tableHeaders = ['Item', 'Type', 'Qty', 'Cost', 'Markup', 'Tax', 'Total'];
+    const tableHeaders = ['Item', 'Type', 'Qty', 'Rate', 'Markup', 'Tax', 'Total'];
 
     pdf.setFontSize(8);
     pdf.setTextColor(71, 85, 105);
@@ -837,7 +838,7 @@ const InvoiceView: React.FC = () => {
       pdf.text((service.description || '').slice(0, 28), tableColumnX[0], yPos);
       pdf.text((service.type || '').slice(0, 16), tableColumnX[1], yPos);
       pdf.text(String(service.quantity ?? 0), tableColumnX[2], yPos, { align: 'right' });
-      pdf.text(formatCurrency(service.cost), tableColumnX[3], yPos, { align: 'right' });
+      pdf.text(formatCurrency(service.unitCost), tableColumnX[3], yPos, { align: 'right' });
       pdf.text(formatCurrency(service.markupAmount), tableColumnX[4], yPos, { align: 'right' });
       pdf.text(formatCurrency(service.taxAmount), tableColumnX[5], yPos, { align: 'right' });
       pdf.text(formatCurrency(service.total), tableColumnX[6], yPos, { align: 'right' });
@@ -1218,6 +1219,7 @@ const InvoiceView: React.FC = () => {
           } as Record<string, string>)[item.jobType || item.itemType || item.type || ''] || item.jobType || item.itemType || item.type || 'Service',
           quantity,
           cost,
+          unitCost: quantity > 0 ? cost / quantity : cost,
           markupAmount,
           markupPercentage,
           taxAmount,
@@ -1551,8 +1553,8 @@ const InvoiceView: React.FC = () => {
                             <span className="ml-1 text-slate-700">{service.quantity}</span>
                           </div>
                           <div>
-                            <span className="text-slate-500">Cost:</span>
-                            <span className="ml-1 text-slate-700">{formatCurrency(service.cost)}</span>
+                            <span className="text-slate-500">Rate:</span>
+                            <span className="ml-1 text-slate-700">{formatCurrency(service.unitCost)}</span>
                           </div>
                         <div>
                           <span className="text-slate-500">Markup:</span>
@@ -1578,7 +1580,7 @@ const InvoiceView: React.FC = () => {
                     <div className="grid grid-cols-[2fr_0.6fr_1fr_1fr_1fr_1fr] bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
                       <span>Item</span>
                       <span className="text-right">Qty</span>
-                      <span className="text-right">Cost</span>
+                      <span className="text-right">Rate</span>
                       <span className="text-right">Markup</span>
                       <span className="text-right">Tax</span>
                       <span className="text-right">Total</span>
@@ -1726,7 +1728,7 @@ const InvoiceView: React.FC = () => {
                     <span className="text-right">
                       <ChangedValue
                         path={`/lineItems/${index}/cost`}
-                        value={formatCurrency(service.cost)}
+                        value={formatCurrency(service.unitCost)}
                         diff={diffIndex}
                         status={invoice.status}
                         isNewItem={isNewItem}
