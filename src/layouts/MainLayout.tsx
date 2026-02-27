@@ -1,12 +1,12 @@
 import React from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  FileText,
-  User,
+  Receipt,
+  Users,
   Ship,
   Settings,
-  SquarePen,
-  ClipboardList,
+  Plus,
+  Calculator,
   PanelLeftOpen,
   PanelLeftClose,
   Upload
@@ -56,7 +56,7 @@ const SidebarContent = () => {
     {
       label: 'New',
       href: '#new',
-      icon: <SquarePen className="h-[18px] w-[18px] flex-shrink-0" />,
+      icon: <Plus className="h-[18px] w-[18px] flex-shrink-0" />,
       onClick: handleLinkClick,
     },
     {
@@ -71,13 +71,13 @@ const SidebarContent = () => {
     {
       label: 'Invoices',
       href: '/requests',
-      icon: <FileText className="h-[18px] w-[18px] flex-shrink-0" />,
+      icon: <Receipt className="h-[18px] w-[18px] flex-shrink-0" />,
       onClick: handleLinkClick,
     },
     {
       label: 'Estimates',
       href: '/estimates',
-      icon: <ClipboardList className="h-[18px] w-[18px] flex-shrink-0" />,
+      icon: <Calculator className="h-[18px] w-[18px] flex-shrink-0" />,
       onClick: handleLinkClick,
     },
   ];
@@ -86,7 +86,7 @@ const SidebarContent = () => {
     {
       label: 'Contacts',
       href: '/contacts',
-      icon: <User className="h-[18px] w-[18px] flex-shrink-0" />,
+      icon: <Users className="h-[18px] w-[18px] flex-shrink-0" />,
       onClick: handleLinkClick,
     },
     {
@@ -186,7 +186,7 @@ const SidebarContent = () => {
                     open ? 'gap-2.5 pl-3 pr-2' : 'pl-[7px]'
                   } ml-1 mr-1 rounded-md relative z-20 transition-all duration-150 hover:bg-white/[0.12] text-white/60 hover:text-white group`}
                 >
-                  <SquarePen
+                  <Plus
                     className="h-[18px] w-[18px] flex-shrink-0 text-white transition-colors duration-150"
                   />
                   <span
@@ -199,11 +199,11 @@ const SidebarContent = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent side="right" align="start" sideOffset={8}>
                 <DropdownMenuItem onSelect={() => { navigate('/requests/new'); handleLinkClick(); }}>
-                  <FileText className="mr-2 h-4 w-4" />
+                  <Receipt className="mr-2 h-4 w-4" />
                   New Invoice
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => { navigate('/estimates/new'); handleLinkClick(); }}>
-                  <ClipboardList className="mr-2 h-4 w-4" />
+                  <Calculator className="mr-2 h-4 w-4" />
                   New Estimate
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -335,29 +335,29 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       id: 'new',
       label: 'New',
       href: '/requests/new',
-      icon: SquarePen,
+      icon: Plus,
       menuItems: [
-        { label: 'New Invoice', href: '/requests/new', icon: FileText },
-        { label: 'New Estimate', href: '/estimates/new', icon: ClipboardList },
+        { label: 'New Invoice', href: '/requests/new', icon: Receipt },
+        { label: 'New Estimate', href: '/estimates/new', icon: Calculator },
       ],
     },
     {
       id: 'requests',
       label: 'Invoices',
       href: '/requests',
-      icon: FileText,
+      icon: Receipt,
     },
     {
       id: 'estimates',
       label: 'Estimates',
       href: '/estimates',
-      icon: ClipboardList,
+      icon: Calculator,
     },
     {
       id: 'contacts',
       label: 'Contacts',
       href: '/contacts',
-      icon: User,
+      icon: Users,
     },
     {
       id: 'vessels',
