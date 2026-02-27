@@ -66,18 +66,67 @@ function GroupMenu({ activeGroupBy, onGroupByChange }: GroupMenuProps) {
       count={groupCount}
       ariaLabel={ariaLabel}
     >
-      <DropdownMenuLabel>Group by</DropdownMenuLabel>
-      <DropdownMenuSeparator />
-      {groupOptions.map((option) => (
-        <DropdownMenuItem
-          key={option.key}
-          onClick={() => onGroupByChange(option.key)}
-          className={activeGroupBy === option.key ? 'bg-gray-100' : ''}
-        >
-          {option.icon}
-          <span className="ml-2">{option.label}</span>
-        </DropdownMenuItem>
-      ))}
+      <div
+        className="w-[220px]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
+          <span className="text-[13px] font-semibold text-gray-900">Group by</span>
+          {groupCount > 0 && (
+            <button
+              onClick={() => onGroupByChange('none')}
+              className="text-[12px] text-gray-400 hover:text-red-500 transition-colors"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+
+        {/* Active group chip */}
+        {groupCount > 0 && (
+          <div className="px-3 pb-2.5">
+            <span className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 text-[11px] font-medium bg-[#1E3A5F]/[0.08] text-[#1E3A5F] rounded-md">
+              {groupOptions.find(o => o.key === activeGroupBy)?.label}
+              <button
+                onClick={() => onGroupByChange('none')}
+                className="p-0.5 rounded hover:bg-[#1E3A5F]/[0.1] transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          </div>
+        )}
+
+        <div className="h-px bg-gray-100" />
+
+        {/* Options */}
+        <div className="px-1.5 py-1.5 space-y-0.5">
+          {groupOptions.map((option) => {
+            const isActive = activeGroupBy === option.key;
+            return (
+              <button
+                key={option.key}
+                onClick={() => onGroupByChange(option.key)}
+                className={cn(
+                  "flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors",
+                  isActive
+                    ? "bg-[#1E3A5F]/[0.08] text-[#1E3A5F] font-medium"
+                    : "text-gray-600 hover:bg-gray-50"
+                )}
+              >
+                <span className={cn(
+                  "flex-shrink-0",
+                  isActive ? "text-[#1E3A5F]" : "text-gray-400"
+                )}>
+                  {option.icon}
+                </span>
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </ToolbarMenuButtonWithBadge>
   );
 }
@@ -330,33 +379,67 @@ function SortMenu({ activeSort, onSortChange }: SortMenuProps) {
       count={sortCount}
       ariaLabel={ariaLabel}
     >
-      <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-      <DropdownMenuSeparator />
+      <div
+        className="w-[220px]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
+          <span className="text-[13px] font-semibold text-gray-900">Sort by</span>
+          {sortCount > 0 && (
+            <button
+              onClick={() => onSortChange(null)}
+              className="text-[12px] text-gray-400 hover:text-red-500 transition-colors"
+            >
+              Reset
+            </button>
+          )}
+        </div>
 
-      {sortOptions.map((option) => (
-        <DropdownMenuItem
-          key={option.field}
-          onClick={() => handleSortChange(option.field)}
-          className={activeSort?.field === option.field ? 'bg-gray-100' : ''}
-        >
-          <div className="flex items-center justify-between w-full">
-            <span>{option.label}</span>
-            {getSortIcon(option.field)}
+        {/* Active sort chip */}
+        {activeSort && (
+          <div className="px-3 pb-2.5">
+            <span className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 text-[11px] font-medium bg-[#1E3A5F]/[0.08] text-[#1E3A5F] rounded-md">
+              {sortOptions.find(o => o.field === activeSort.field)?.label}
+              {activeSort.direction === 'asc' ? ' (A→Z)' : ' (Z→A)'}
+              <button
+                onClick={() => onSortChange(null)}
+                className="p-0.5 rounded hover:bg-[#1E3A5F]/[0.1] transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
           </div>
-        </DropdownMenuItem>
-      ))}
+        )}
 
-      {activeSort && (
-        <>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => onSortChange(null)}
-            className="text-red-600"
-          >
-            Clear sorting
-          </DropdownMenuItem>
-        </>
-      )}
+        <div className="h-px bg-gray-100" />
+
+        {/* Options */}
+        <div className="px-1.5 py-1.5 space-y-0.5">
+          {sortOptions.map((option) => {
+            const isActive = activeSort?.field === option.field;
+            return (
+              <button
+                key={option.field}
+                onClick={() => handleSortChange(option.field)}
+                className={cn(
+                  "flex items-center justify-between w-full px-2.5 py-2 text-[13px] rounded-md transition-colors",
+                  isActive
+                    ? "bg-[#1E3A5F]/[0.08] text-[#1E3A5F] font-medium"
+                    : "text-gray-600 hover:bg-gray-50"
+                )}
+              >
+                <span>{option.label}</span>
+                {isActive && (
+                  <span className="text-[#1E3A5F]">
+                    {getSortIcon(option.field)}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </ToolbarMenuButtonWithBadge>
   );
 }

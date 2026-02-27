@@ -107,9 +107,9 @@ const InvoicesPage: React.FC = () => {
   const { toast } = useToast();
 
   // Use the query state hook to get filters from URL
-  const { month, q: searchTerm, filters } = useRequestsQueryState();
+  const { month, q: searchTerm, filters, sort } = useRequestsQueryState();
 
-  const fetchInvoices = useCallback(async (page: number, currentMonth: string, search: string, currentFilters: any) => {
+  const fetchInvoices = useCallback(async (page: number, currentMonth: string, search: string, currentFilters: any, currentSort: { field: string; direction: string } | null) => {
     if (!isAuthenticated || !csrfToken) return;
 
     const fetchId = ++latestFetchIdRef.current;
@@ -161,6 +161,12 @@ const InvoicesPage: React.FC = () => {
       }
       if (currentFilters.modifiedBy) {
         searchParams.append('modifiedBy', currentFilters.modifiedBy);
+      }
+
+      // Add sort parameters
+      if (currentSort) {
+        searchParams.append('sortField', currentSort.field);
+        searchParams.append('sortDirection', currentSort.direction);
       }
 
       const response = await fetch(`/api/v1/invoice?${searchParams}`, {
@@ -249,7 +255,7 @@ const InvoicesPage: React.FC = () => {
 
     const doFetch = async () => {
       if (!cancelled) {
-        await fetchInvoices(currentPage, month, searchTerm, filters);
+        await fetchInvoices(currentPage, month, searchTerm, filters, sort);
       }
     };
 
@@ -258,12 +264,12 @@ const InvoicesPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, csrfToken, fetchInvoices, month, searchTerm, filters, currentPage]);
+  }, [isAuthenticated, csrfToken, fetchInvoices, month, searchTerm, filters, sort, currentPage]);
 
-  // Reset to page 1 when filters or section type changes.
+  // Reset to page 1 when filters, sort, or section type changes.
   useEffect(() => {
     setCurrentPage(1);
-  }, [month, searchTerm, filters, documentTypeParam]);
+  }, [month, searchTerm, filters, sort, documentTypeParam]);
 
   // Avoid rendering stale rows when switching between requests and estimates.
   useEffect(() => {
@@ -304,7 +310,7 @@ const InvoicesPage: React.FC = () => {
 
       if (response.ok) {
         // Refresh the list
-        fetchInvoices(currentPage, month, searchTerm, filters);
+        fetchInvoices(currentPage, month, searchTerm, filters, sort);
       } else {
         toast(`Failed to delete ${singularLabel.toLowerCase()}`, 'error');
       }
@@ -358,7 +364,7 @@ const InvoicesPage: React.FC = () => {
 
       await Promise.all(deletePromises);
       // Refresh the list
-      fetchInvoices(currentPage, month, searchTerm, filters);
+      fetchInvoices(currentPage, month, searchTerm, filters, sort);
     } catch (error) {
       console.error('Error deleting invoices:', error);
       toast(`Error deleting ${pluralLabel.toLowerCase()}`, 'error');
@@ -382,7 +388,7 @@ const InvoicesPage: React.FC = () => {
         throw new Error(`Failed to create invoice: ${response.status}`);
       }
 
-      await fetchInvoices(currentPage, month, searchTerm, filters);
+      await fetchInvoices(currentPage, month, searchTerm, filters, sort);
       toast('Invoice created from estimate successfully.');
     } catch (error) {
       console.error('Error creating invoice from estimate:', error);

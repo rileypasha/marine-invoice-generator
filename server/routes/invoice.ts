@@ -444,7 +444,7 @@ router.get('/:id', async (req: InvoiceRequest, res: Response) => {
 router.get('/', async (req: InvoiceRequest, res: Response) => {
   const correlationId = req.correlationId!;
   const userId = req.userId!;
-  const { page = 1, limit = 10, status, search, startDate, endDate, customerId, vesselId, minAmount, maxAmount, contact, vessel, createdBy, modifiedBy } = req.query;
+  const { page = 1, limit = 10, status, search, startDate, endDate, customerId, vesselId, minAmount, maxAmount, contact, vessel, createdBy, modifiedBy, sortField, sortDirection } = req.query;
   const documentType = getDocumentType(req);
 
   try {
@@ -551,13 +551,50 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
       where.AND.push({ total: totalFilter });
     }
 
+    // Build dynamic orderBy
+    const dir = sortDirection === 'asc' ? 'asc' : 'desc';
+    const isNumericSort = sortField === 'invoice_number';
+    const sortFieldMap: Record<string, any> = {
+      'customer.display_name': { customer: { display_name: dir } },
+      'vessel.name': { vessel: { name: dir } },
+      'total_amount': { total: dir },
+      'invoice_date': { createdAt: dir },
+      'updated_at': { updatedAt: dir },
+      'status': { status: dir },
+    };
+    const orderBy = (!isNumericSort && sortField && sortFieldMap[sortField as string]) || { createdAt: 'desc' };
+
+    // For invoice_number sort, we need numeric ordering since Prisma sorts
+    // strings lexicographically ("9" > "23"). Fetch all matching IDs with
+    // their number, sort numerically in JS, then paginate.
+    let sortedIds: string[] | null = null;
+    if (isNumericSort) {
+      const allIds: { id: string; num: string | null }[] = await model.findMany({
+        where,
+        select: { id: true, [numberField]: true },
+      }).then((rows: any[]) => rows.map((r: any) => ({
+        id: r.id,
+        num: r[numberField] as string | null,
+      })));
+
+      // Extract numeric portion and sort
+      allIds.sort((a: { num: string | null }, b: { num: string | null }) => {
+        const numA = parseInt((a.num || '0').replace(/[^0-9]/g, ''), 10) || 0;
+        const numB = parseInt((b.num || '0').replace(/[^0-9]/g, ''), 10) || 0;
+        return dir === 'asc' ? numA - numB : numB - numA;
+      });
+
+      // Paginate the sorted IDs
+      sortedIds = allIds.slice(skip, skip + Number(limit)).map((r: { id: string }) => r.id);
+    }
+
     // Execute all queries in parallel for maximum performance
     const [rawInvoices, total, stats] = await Promise.all([
       model.findMany({
-        where,
-        skip,
-        take: Number(limit),
-        orderBy: { createdAt: 'desc' },
+        where: sortedIds ? { ...where, id: { in: sortedIds } } : where,
+        skip: sortedIds ? undefined : skip,
+        take: sortedIds ? undefined : Number(limit),
+        orderBy: sortedIds ? undefined : orderBy,
         select: {
           id: true,
           [numberField]: true,
@@ -670,6 +707,12 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
         totalQuantity,
       };
     });
+
+    // Re-order results to match the numerically sorted IDs
+    if (sortedIds) {
+      const idOrder = new Map(sortedIds.map((id, i) => [id, i]));
+      invoices.sort((a: any, b: any) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0));
+    }
 
     // Build stats map from groupBy results (no additional query needed)
     const statsMap = {
