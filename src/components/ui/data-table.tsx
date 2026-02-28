@@ -9,7 +9,6 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
@@ -22,7 +21,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import {
   SimpleTable as Table,
   SimpleTableBody as TableBody,
@@ -31,13 +29,6 @@ import {
   SimpleTableHeader as TableHeader,
   SimpleTableRow as TableRow,
 } from "@/components/ui/simple-table"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -53,7 +44,6 @@ interface DataTableProps<TData, TValue> {
   onExport?: () => void
   onBulkDelete?: (selectedRows: TData[]) => void
   onBulkExport?: (selectedRows: TData[]) => void
-  initialPageSize?: number
   title?: React.ReactNode
   colWidths?: Array<{ id: string; w: string }>
 }
@@ -72,7 +62,6 @@ export function DataTable<TData, TValue>({
   onExport,
   onBulkDelete,
   onBulkExport,
-  initialPageSize = 25,
   title,
   colWidths,
 }: DataTableProps<TData, TValue>) {

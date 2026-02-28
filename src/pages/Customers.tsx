@@ -19,7 +19,6 @@ import { ContactsToolbar } from '../components/contacts/ContactsToolbar';
 import { useContactsQueryState, ContactGroupBy, ContactActivity } from '../hooks/useContactsQueryState';
 import { useFileInput } from '../components/hooks/use-file-input';
 import ContactsRowActionsLayer from '../features/contacts/components/ContactsRowActionsLayer';
-import { Pagination } from '../components/ui/pagination';
 
 interface Customer {
   id: string;
@@ -70,8 +69,6 @@ const Customers: React.FC = () => {
   // State management
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
 
   // Table state management (controlled)
   const [grouping, setGrouping] = useState<GroupingState>([]);
@@ -116,7 +113,7 @@ const Customers: React.FC = () => {
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
 
   // Fetch all customers from API with URL-driven filtering
-  const fetchCustomers = useCallback(async (page = 1) => {
+  const fetchCustomers = useCallback(async () => {
     if (!isAuthenticated || !csrfToken) return;
 
     try {
@@ -124,8 +121,7 @@ const Customers: React.FC = () => {
 
       // Build query parameters
       const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '25',
+        limit: '10000',
       });
 
       if (queryState.q.trim()) {
@@ -148,16 +144,7 @@ const Customers: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setCustomers(data.customers || []);
-
-        // Update pagination state
-        if (data.pagination) {
-          setTotalCustomers(data.pagination.total);
-          setTotalPages(data.pagination.totalPages || 1);
-          setCurrentPage(page);
-        } else {
-          setTotalCustomers(data.customers?.length || 0);
-          setTotalPages(1);
-        }
+        setTotalCustomers(data.pagination?.total || data.customers?.length || 0);
       } else {
         console.error('Failed to fetch customers');
       }
@@ -211,15 +198,8 @@ const Customers: React.FC = () => {
 
   // Load customers on mount and when URL state changes
   useEffect(() => {
-    setCurrentPage(1);
-    fetchCustomers(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryState.q, queryState.activity, queryState.fleet, queryState.segment]);
-
-  // Fetch customers when page changes
-  useEffect(() => {
-    fetchCustomers(currentPage);
-  }, [currentPage, fetchCustomers]);
+    fetchCustomers();
+  }, [fetchCustomers]);
 
   // Initialize grouping, activity, and fleet from URL on mount only
   useEffect(() => {
@@ -904,13 +884,6 @@ const Customers: React.FC = () => {
             onNewInvoice={handleNewInvoice}
             onBulkDelete={handleBulkDelete}
             onBulkExport={handleBulkExport}
-          />
-
-          {/* Pagination */}
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
           />
           </>
             )}

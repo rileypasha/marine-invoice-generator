@@ -47,7 +47,6 @@ interface InvoicesProps {
   onBulkDelete?: (invoices: Invoice[]) => void | Promise<void>;
   onBulkExport?: (invoices: Invoice[]) => void;
   isLoading?: boolean;
-  paginationComponent?: React.ReactNode;
 }
 
 const Invoices: React.FC<InvoicesProps> = ({
@@ -63,7 +62,6 @@ const Invoices: React.FC<InvoicesProps> = ({
   onBulkDelete,
   onBulkExport,
   isLoading = false,
-  paginationComponent
 }) => {
   const navigate = useNavigate();
   const { groupBy } = useRequestsQueryState();
@@ -408,8 +406,6 @@ const Invoices: React.FC<InvoicesProps> = ({
                 />
               ))}
             </div>
-            {/* Pagination */}
-            {paginationComponent}
           </>
         )}
       </div>

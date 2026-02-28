@@ -10,7 +10,6 @@ import {
 } from '../components/magic/index';
 import { VesselsToolbar } from '../components/vessels/VesselsToolbar';
 import { VesselsTable } from '../components/vessels/VesselsTable';
-import { Pagination } from '../components/ui/pagination';
 import { useVesselsQueryState, VesselGroupBy, VesselSegment } from '../hooks/useVesselsQueryState';
 
 interface Vessel {
@@ -57,8 +56,6 @@ const Vessels: React.FC = () => {
   // Vessel data management
   const [vessels, setVessels] = useState<Vessel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
 
   // Table state management (controlled)
   const [grouping, setGrouping] = useState<GroupingState>([]);
@@ -139,7 +136,7 @@ const Vessels: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/v1/vessels?page=${currentPage}&limit=25`, {
+      const response = await fetch(`/api/v1/vessels?limit=10000`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -151,8 +148,6 @@ const Vessels: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setVessels(data.vessels || []);
-        const totalVessels = data.pagination?.total || data.vessels?.length || 0;
-        setTotalPages(data.pagination?.totalPages || 1);
       } else {
         console.error('Failed to fetch vessels:', response.statusText);
       }
@@ -166,7 +161,7 @@ const Vessels: React.FC = () => {
   // Fetch vessels on component mount
   useEffect(() => {
     fetchVessels();
-  }, [isAuthenticated, csrfToken, currentPage]);
+  }, [isAuthenticated, csrfToken]);
 
   // Initialize grouping, segment, and fleet from URL on mount only
   useEffect(() => {
@@ -673,11 +668,6 @@ const Vessels: React.FC = () => {
             onBulkExport={handleBulkExport}
             onViewInvoices={handleViewInvoices}
             onNewInvoice={handleNewInvoice}
-          />
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
           />
           </>
         )}

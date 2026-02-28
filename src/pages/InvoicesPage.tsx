@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Invoices from './Invoices';
-import { Pagination } from '../components/ui/pagination';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
 import { useRequestsQueryState, resolveDateRange } from '../hooks/useRequestsQueryState';
 import { useRequestSection } from '../hooks/useRequestSection';
@@ -96,8 +95,6 @@ const InvoicesPage: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [rawInvoices, setRawInvoices] = useState<ApiInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const latestFetchIdRef = useRef(0);
   const { isAuthenticated, csrfToken } = useAuth();
   const navigate = useNavigate();
@@ -109,15 +106,14 @@ const InvoicesPage: React.FC = () => {
   // Use the query state hook to get filters from URL
   const { month, q: searchTerm, filters, sort } = useRequestsQueryState();
 
-  const fetchInvoices = useCallback(async (page: number, currentMonth: string, search: string, currentFilters: any, currentSort: { field: string; direction: string } | null) => {
+  const fetchInvoices = useCallback(async (currentMonth: string, search: string, currentFilters: any, currentSort: { field: string; direction: string } | null) => {
     if (!isAuthenticated || !csrfToken) return;
 
     const fetchId = ++latestFetchIdRef.current;
     setIsLoading(true);
     try {
       const searchParams = new URLSearchParams({
-        page: page.toString(),
-        limit: '25'
+        limit: '10000'
       });
 
       // Add search parameter
@@ -191,11 +187,6 @@ const InvoicesPage: React.FC = () => {
       // Store raw API data - transformation happens in useMemo
       setRawInvoices(data.invoices || []);
 
-      const currentPageNum = data.pagination?.page || 1;
-      const totalPagesNum = data.pagination?.totalPages || 1;
-      setCurrentPage(currentPageNum);
-      setTotalPages(totalPagesNum);
-
     } catch (error) {
       if (fetchId !== latestFetchIdRef.current) {
         return;
@@ -255,7 +246,7 @@ const InvoicesPage: React.FC = () => {
 
     const doFetch = async () => {
       if (!cancelled) {
-        await fetchInvoices(currentPage, month, searchTerm, filters, sort);
+        await fetchInvoices(month, searchTerm, filters, sort);
       }
     };
 
@@ -264,12 +255,7 @@ const InvoicesPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, csrfToken, fetchInvoices, month, searchTerm, filters, sort, currentPage]);
-
-  // Reset to page 1 when filters, sort, or section type changes.
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [month, searchTerm, filters, sort, documentTypeParam]);
+  }, [isAuthenticated, csrfToken, fetchInvoices, month, searchTerm, filters, sort]);
 
   // Avoid rendering stale rows when switching between requests and estimates.
   useEffect(() => {
@@ -310,7 +296,7 @@ const InvoicesPage: React.FC = () => {
 
       if (response.ok) {
         // Refresh the list
-        fetchInvoices(currentPage, month, searchTerm, filters, sort);
+        fetchInvoices(month, searchTerm, filters, sort);
       } else {
         toast(`Failed to delete ${singularLabel.toLowerCase()}`, 'error');
       }
@@ -318,7 +304,7 @@ const InvoicesPage: React.FC = () => {
       console.error('Error deleting invoice:', error);
       toast(`Error deleting ${singularLabel.toLowerCase()}`, 'error');
     }
-  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, currentPage, searchTerm, filters, singularLabel, documentTypeParam, toast]);
+  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, month, searchTerm, filters, sort, singularLabel, documentTypeParam, toast]);
 
   const handlePrint = useCallback((invoice: Invoice) => {
     // Navigate to invoice view page with print parameter to auto-trigger print
@@ -364,12 +350,12 @@ const InvoicesPage: React.FC = () => {
 
       await Promise.all(deletePromises);
       // Refresh the list
-      fetchInvoices(currentPage, month, searchTerm, filters, sort);
+      fetchInvoices(month, searchTerm, filters, sort);
     } catch (error) {
       console.error('Error deleting invoices:', error);
       toast(`Error deleting ${pluralLabel.toLowerCase()}`, 'error');
     }
-  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, currentPage, searchTerm, filters, singularLabel, pluralLabel, documentTypeParam, toast]);
+  }, [isAuthenticated, csrfToken, confirm, fetchInvoices, month, searchTerm, filters, sort, singularLabel, pluralLabel, documentTypeParam, toast]);
 
   const handleCreateInvoiceFromEstimate = useCallback(async (invoice: Invoice) => {
     if (!isAuthenticated || !csrfToken || !isEstimate) return;
@@ -388,13 +374,13 @@ const InvoicesPage: React.FC = () => {
         throw new Error(`Failed to create invoice: ${response.status}`);
       }
 
-      await fetchInvoices(currentPage, month, searchTerm, filters, sort);
+      await fetchInvoices(month, searchTerm, filters, sort);
       toast('Invoice created from estimate successfully.');
     } catch (error) {
       console.error('Error creating invoice from estimate:', error);
       toast('Failed to create invoice from estimate', 'error');
     }
-  }, [isAuthenticated, csrfToken, isEstimate, fetchInvoices, currentPage, month, searchTerm, filters, toast]);
+  }, [isAuthenticated, csrfToken, isEstimate, fetchInvoices, month, searchTerm, filters, toast]);
 
   const handleBulkExport = useCallback((invoices: Invoice[]) => {
     const headers = [`${singularLabel} #`, 'Contact', 'Vessel', 'Amount', 'Created At', 'Status'];
@@ -436,13 +422,6 @@ const InvoicesPage: React.FC = () => {
         onBulkDelete={handleBulkDelete}
         onBulkExport={handleBulkExport}
         isLoading={isLoading}
-        paginationComponent={
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
-        }
       />
       {dialog}
     </>
