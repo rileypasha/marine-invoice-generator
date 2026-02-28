@@ -197,7 +197,7 @@ export function DataTable<TData, TValue>({
       <div className="bg-white rounded-b-lg relative">
         {/* Bulk action bar — overlays header row when rows are selected */}
         {hasSelectedRows && (
-          <div className="absolute top-0 left-0 right-0 z-20 h-[45px] bg-white flex items-center border-b border-slate-200">
+          <div className="absolute top-0 left-0 right-0 z-20 h-9 bg-white flex items-center border-b border-slate-200">
             <div className="flex items-center pl-6 gap-3">
               <Checkbox
                 checked={
@@ -254,7 +254,7 @@ export function DataTable<TData, TValue>({
                 return (
                   <TableHead
                     key={header.id}
-                    className={`px-3 py-3 first:pl-6 last:pr-6 bg-white ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
+                    className={`px-3 py-2 first:pl-6 last:pr-6 bg-white ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
                   >
                     {header.isPlaceholder
                       ? null
@@ -280,7 +280,7 @@ export function DataTable<TData, TValue>({
                   return (
                     <TableCell
                       key={cell.id}
-                      className={`text-sm align-middle px-3 py-3 first:pl-6 last:pr-6 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
+                      className={`text-[13px] align-middle px-3 py-2 first:pl-6 last:pr-6 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
                     >
                       {flexRender(
                         cell.column.columnDef.cell,

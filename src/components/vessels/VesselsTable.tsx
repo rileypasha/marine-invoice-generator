@@ -366,7 +366,7 @@ export function VesselsTable({
         <div className="overflow-x-auto relative">
           {/* Bulk action bar — overlays header row */}
           {selectedRows.length > 0 && (
-            <div className="absolute top-0 left-0 right-0 z-20 h-[45px] bg-white flex items-center border-b border-slate-200">
+            <div className="absolute top-0 left-0 right-0 z-20 h-9 bg-white flex items-center border-b border-slate-200">
               <div className="flex items-center pl-6 gap-3">
                 <TableCheckbox
                   checked={
@@ -456,7 +456,7 @@ export function VesselsTable({
                     return (
                       <TableRow
                         key={row.id}
-                        className="sticky top-[44px] z-10 bg-slate-50 hover:bg-slate-100/80 border-b border-slate-200"
+                        className="sticky top-[36px] z-10 bg-slate-50 hover:bg-slate-100/80 border-b border-slate-200"
                       >
                         <TableCell colSpan={columns.length - 2} className="py-2.5">
                           <button

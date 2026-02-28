@@ -68,7 +68,7 @@ export function VirtualizedDataTable<TData, TValue>({
   onBulkExport,
   title,
   colWidths,
-  rowHeight = 45, // Default row height in pixels
+  rowHeight = 37, // Default row height in pixels
 }: VirtualizedDataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -262,7 +262,7 @@ export function VirtualizedDataTable<TData, TValue>({
                       return (
                         <TableHead
                           key={header.id}
-                          className={`font-medium text-muted-foreground tracking-wide px-6 py-3 md:px-4 xl:px-6 first:pl-6 last:pr-6 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
+                          className={`font-medium text-muted-foreground tracking-wide px-6 py-2 md:px-4 xl:px-6 first:pl-6 last:pr-6 ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
                         >
                           {header.isPlaceholder
                             ? null
@@ -277,7 +277,7 @@ export function VirtualizedDataTable<TData, TValue>({
                 ))}
               </TableHeader>
               <TableBody
-                className="text-[13.5px]"
+                className="text-[13px]"
                 style={{
                   height: `${rowVirtualizer.getTotalSize()}px`,
                   position: 'relative',
@@ -303,7 +303,7 @@ export function VirtualizedDataTable<TData, TValue>({
                           return (
                             <TableCell
                               key={cell.id}
-                              className={`text-sm text-foreground align-middle px-6 py-3 md:px-4 xl:px-6 first:pl-6 last:pr-6 truncate ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
+                              className={`text-[13px] text-foreground align-middle px-6 py-2 md:px-4 xl:px-6 first:pl-6 last:pr-6 truncate ${columnMeta?.width || ''} ${columnMeta?.minWidth || ''} ${columnMeta?.className || ''}`}
                             >
                               {flexRender(
                                 cell.column.columnDef.cell,
