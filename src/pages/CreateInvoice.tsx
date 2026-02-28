@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { SquarePen } from 'lucide-react';
+import { SquarePen, GripVertical, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useRequestSection } from '../hooks/useRequestSection';
 import { gatherInvoiceData } from '../utils/invoiceData';
@@ -2486,6 +2486,23 @@ const CreateInvoice: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
+  const reorderService = (dragId: string, dropId: string) => {
+    if (dragId === dropId) return;
+    setInvoiceData(prev => {
+      const services = [...prev.services];
+      const fromIndex = services.findIndex(s => s.id === dragId);
+      const toIndex = services.findIndex(s => s.id === dropId);
+      if (fromIndex === -1 || toIndex === -1) return prev;
+      const [moved] = services.splice(fromIndex, 1);
+      services.splice(toIndex, 0, moved);
+      return { ...prev, services };
+    });
+    setHasUnsavedChanges(true);
+  };
+
+  const [draggedServiceId, setDraggedServiceId] = useState<string | null>(null);
+  const [dragOverServiceId, setDragOverServiceId] = useState<string | null>(null);
+
   // Form validation function to check required fields
   const getFormValidation = () => {
     const missingFields = [];
@@ -4100,15 +4117,12 @@ const CreateInvoice: React.FC = () => {
                   )}
                 </CardHeader>
                 <CardContent className="space-y-5 pt-5">
-                  {invoiceData.services
-                    .filter(service => {
-                      // If approved, filter out deleted items
-                      if (invoiceStatus === 'approved' && service._deleted) {
-                        return false;
-                      }
+                  {(() => {
+                    const visibleServices = invoiceData.services.filter(service => {
+                      if (invoiceStatus === 'approved' && service._deleted) return false;
                       return true;
-                    })
-                    .map((service, index) => {
+                    });
+                    return visibleServices.map((service, index) => {
                     const isDeleted = service._deleted;
                     const isLaborHoursEntry =
                       service.jobType === 'Manual Entry' && service.itemType === 'Labor';
@@ -4127,15 +4141,52 @@ const CreateInvoice: React.FC = () => {
                     return (
                       <div
                         key={service.id}
+                        draggable={!isDeleted && visibleServices.length > 1}
+                        onDragStart={(e) => {
+                          setDraggedServiceId(service.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                          if (e.currentTarget instanceof HTMLElement) {
+                            e.currentTarget.style.opacity = '0.5';
+                          }
+                        }}
+                        onDragEnd={(e) => {
+                          setDraggedServiceId(null);
+                          setDragOverServiceId(null);
+                          if (e.currentTarget instanceof HTMLElement) {
+                            e.currentTarget.style.opacity = '';
+                          }
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          if (!isDeleted) setDragOverServiceId(service.id);
+                        }}
+                        onDragLeave={() => {
+                          setDragOverServiceId(prev => prev === service.id ? null : prev);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (draggedServiceId && !isDeleted) {
+                            reorderService(draggedServiceId, service.id);
+                          }
+                          setDraggedServiceId(null);
+                          setDragOverServiceId(null);
+                        }}
                         className={cn(
-                          "border border-border/60 rounded-xl p-5 space-y-5 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-shadow duration-200",
-                          isDeleted && "bg-red-50 border-red-300 opacity-75 shadow-none"
+                          "border border-border/60 rounded-xl p-5 space-y-5 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-200",
+                          isDeleted && "bg-red-50 border-red-300 opacity-75 shadow-none",
+                          dragOverServiceId === service.id && draggedServiceId !== service.id && "border-[#1E3A5F] border-2 shadow-[0_0_0_1px_rgba(30,58,95,0.15)]"
                         )}
                       >
                         <div className="flex items-center justify-between">
-                          <h4 className={cn("text-[13px] font-semibold text-slate-700 uppercase tracking-wide", isDeleted && "text-red-600 line-through")}>
-                            {isDeleted ? `Deleted Item #${index + 1}` : `Item #${index + 1}`}
-                          </h4>
+                          <div className="flex items-center gap-2">
+                            {visibleServices.length > 1 && !isDeleted && (
+                              <GripVertical className="h-4 w-4 text-slate-300 cursor-grab active:cursor-grabbing flex-shrink-0" />
+                            )}
+                            <h4 className={cn("text-[13px] font-semibold text-slate-700 uppercase tracking-wide", isDeleted && "text-red-600 line-through")}>
+                              {isDeleted ? `Deleted Item #${index + 1}` : `Item #${index + 1}`}
+                            </h4>
+                          </div>
                           <Button
                             variant="outline"
                             size="sm"
@@ -4648,7 +4699,8 @@ const CreateInvoice: React.FC = () => {
                         </div>
                       </div>
                     );
-                  })}
+                  });
+                  })()}
 
                   <Button onClick={addService} variant="outline" className="w-full h-11 border-dashed border-2 border-slate-200 text-slate-500 hover:text-[#1E3A5F] hover:border-[#1E3A5F]/30 hover:bg-[#1E3A5F]/[0.02] rounded-xl transition-all duration-200">
                     <svg
@@ -4952,6 +5004,35 @@ const CreateInvoice: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* Previous / Next Navigation */}
+            <div className="flex items-center justify-between pt-2">
+              {activeTabIndex > 0 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setActiveTab(tabOrder[activeTabIndex - 1])}
+                  className="gap-1.5 border-slate-300 text-slate-700 hover:bg-slate-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous: {tabLabels[tabOrder[activeTabIndex - 1]]}
+                </Button>
+              ) : (
+                <div />
+              )}
+              {activeTabIndex < tabOrder.length - 1 ? (
+                <Button
+                  type="button"
+                  onClick={() => setActiveTab(tabOrder[activeTabIndex + 1])}
+                  className="gap-1.5 bg-[#1E3A5F] hover:bg-[#152b47] text-white"
+                >
+                  Next: {tabLabels[tabOrder[activeTabIndex + 1]]}
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <div />
+              )}
+            </div>
           </div>
 
           {/* Summary Sidebar */}

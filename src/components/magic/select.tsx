@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 
 interface SelectProps {
   value?: string | number;
@@ -40,16 +41,19 @@ const SelectContext = React.createContext<{
   setOpen: (open: boolean) => void;
   selectedText: string;
   setSelectedText: (text: string) => void;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
 }>({
   open: false,
   setOpen: () => {},
   selectedText: '',
-  setSelectedText: () => {}
+  setSelectedText: () => {},
+  triggerRef: { current: null }
 });
 
 export const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
   const [open, setOpen] = useState(false);
   const [selectedText, setSelectedText] = useState('');
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
 
   return (
     <SelectContext.Provider value={{
@@ -58,7 +62,8 @@ export const Select: React.FC<SelectProps> = ({ value, onValueChange, children }
       open,
       setOpen,
       selectedText,
-      setSelectedText
+      setSelectedText,
+      triggerRef
     }}>
       <div className="relative">
         {children}
@@ -68,10 +73,11 @@ export const Select: React.FC<SelectProps> = ({ value, onValueChange, children }
 };
 
 export const SelectTrigger: React.FC<SelectTriggerProps> = ({ children, className = '', onClick, id, style, disabled }) => {
-  const { open, setOpen } = React.useContext(SelectContext);
+  const { open, setOpen, triggerRef } = React.useContext(SelectContext);
 
   return (
     <button
+      ref={triggerRef}
       id={id}
       type="button"
       style={style}
@@ -111,33 +117,65 @@ export const SelectValue: React.FC<SelectValueProps> = ({ placeholder = 'Select.
 };
 
 export const SelectContent: React.FC<SelectContentProps> = ({ children, className = '', style }) => {
-  const { open, setOpen } = React.useContext(SelectContext);
+  const { open, setOpen, triggerRef } = React.useContext(SelectContext);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
+
+  const updatePosition = useCallback(() => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom,
+        left: rect.left,
+        width: rect.width
+      });
+    }
+  }, [triggerRef]);
 
   useEffect(() => {
     if (open) {
+      updatePosition();
+
       const handleClickOutside = (event: MouseEvent) => {
-        if (contentRef.current && !contentRef.current.contains(event.target as Node)) {
+        const target = event.target as Node;
+        if (
+          contentRef.current && !contentRef.current.contains(target) &&
+          triggerRef.current && !triggerRef.current.contains(target)
+        ) {
           setOpen(false);
         }
       };
       document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
     }
-  }, [open, setOpen]);
+  }, [open, setOpen, triggerRef, updatePosition]);
 
   if (!open) return null;
 
-  return (
+  return ReactDOM.createPortal(
     <div
       ref={contentRef}
-      className={`absolute top-full left-0 right-0 z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md ${className}`}
-      style={style}
+      className={`fixed z-[9999] min-w-[8rem] overflow-auto max-h-[min(300px,40vh)] rounded-md border bg-popover text-popover-foreground shadow-md ${className}`}
+      style={{
+        top: position.top,
+        left: position.left,
+        width: position.width,
+        ...style
+      }}
     >
       <div className="p-1">
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
