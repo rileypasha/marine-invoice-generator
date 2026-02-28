@@ -3612,23 +3612,10 @@ const CreateInvoice: React.FC = () => {
   const taxAmount = previewSummary.totalTax;
   const total = previewSummary.finalTotal;
 
-  const TabButton = ({ id, label, isActive, onClick }: {
-    id: string;
-    label: string;
-    isActive: boolean;
-    onClick: () => void;
-  }) => (
-    <button
-      onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-        isActive
-          ? 'bg-[#1E3A5F] text-white'
-          : 'bg-muted text-muted-foreground hover:bg-muted/80'
-      }`}
-    >
-      {label}
-    </button>
-  );
+  const tabOrder = ['vessel', 'customer', 'services', 'notes'] as const;
+  const tabLabels: Record<string, string> = { vessel: 'Vessel', customer: 'Contact', services: 'Items', notes: 'Notes' };
+  const tabNumbers: Record<string, string> = { vessel: '1', customer: '2', services: '3', notes: '4' };
+  const activeTabIndex = tabOrder.indexOf(activeTab as typeof tabOrder[number]);
 
   // Loading state for edit mode
   if (isFetchingData) {
@@ -3714,31 +3701,31 @@ const CreateInvoice: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header Bar */}
-      <div className="sticky top-[56px] md:static md:top-0 z-[2999] w-full border-b bg-white/95 md:bg-background backdrop-blur-[10px] backdrop-saturate-[180%] md:backdrop-blur-none shadow-sm pt-4 md:pt-0">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-2 md:px-6 pt-0 md:pt-6 pb-2 -mt-1 md:mt-0">
+      <div className="sticky top-[56px] md:static md:top-0 z-[2999] w-full border-b bg-white/95 md:bg-background backdrop-blur-[10px] backdrop-saturate-[180%] md:backdrop-blur-none shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] pt-4 md:pt-0">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 md:px-6 pt-0 md:pt-8 pb-3 -mt-1 md:mt-0">
           {/* Left: Title + Status Badges */}
-          <div className="flex items-center gap-2">
-            <h1 className="flex items-center gap-2 text-xl md:text-2xl font-semibold text-foreground">
-              <SquarePen className="h-5 w-5" />
+          <div className="flex items-center gap-3">
+            <h1 className="flex items-center gap-2 text-xl md:text-2xl font-bold tracking-tight text-foreground">
+              <SquarePen className="h-5 w-5 text-[#1E3A5F]" />
               {isEditMode ? `Edit ${singularLabel}` : `New ${singularLabel}`}
             </h1>
 
             {/* Unsaved Changes Indicator */}
             {hasUnsavedChanges && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-xs animate-pulse bg-amber-50 text-amber-700 border border-amber-200">
                 Unsaved
               </Badge>
             )}
           </div>
 
           {/* Right: Action Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {/* Clear Button */}
             <Button
               onClick={() => setShowClearConfirmation(true)}
               disabled={isLoading}
               variant="outline"
-              className="inline-flex items-center gap-1 rounded-md h-8 px-3 text-xs font-medium shadow-sm text-slate-900"
+              className="inline-flex items-center gap-1 rounded-lg h-9 px-3.5 text-xs font-medium text-slate-600 hover:text-slate-900 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all duration-150"
             >
               <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -3750,7 +3737,7 @@ const CreateInvoice: React.FC = () => {
             <Button
               onClick={handleSave}
               disabled={isLoading}
-              className={`inline-flex items-center gap-2 rounded-md bg-[#1E3A5F] h-9 px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#152b47] focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]/50 ${hasUnsavedChanges ? 'shadow-lg' : ''}`}
+              className={`inline-flex items-center gap-2 rounded-lg bg-[#1E3A5F] h-10 px-5 text-sm font-semibold text-white hover:bg-[#152b47] focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]/40 focus:ring-offset-2 transition-all duration-150 ${hasUnsavedChanges ? 'shadow-lg shadow-[#1E3A5F]/20 ring-2 ring-[#1E3A5F]/20' : 'shadow-sm'}`}
             >
               {isLoading ? (
                 <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -3769,52 +3756,76 @@ const CreateInvoice: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="w-full px-4 py-4 sm:px-6 sm:py-6 pb-32">
-        <div className={`mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:gap-8 ${activeTab === 'notes' ? '' : 'lg:grid-cols-[minmax(0,6fr)_minmax(320px,1fr)]'}`}>
+      <div className="w-full px-4 py-6 sm:px-6 sm:py-8 pb-32">
+        <div className={`mx-auto grid max-w-6xl grid-cols-1 gap-8 sm:gap-10 ${activeTab === 'notes' ? '' : 'lg:grid-cols-[minmax(0,6fr)_minmax(320px,1fr)]'}`}>
 
           {/* Main Form Area */}
           <div className="space-y-6">
-            {/* Tabs */}
-            <div className="grid grid-cols-4 gap-1 p-1 bg-muted rounded-lg">
-              <TabButton
-                id="vessel"
-                label="Vessel"
-                isActive={activeTab === 'vessel'}
-                onClick={() => setActiveTab('vessel')}
-              />
-              <TabButton
-                id="customer"
-                label="Contact"
-                isActive={activeTab === 'customer'}
-                onClick={() => setActiveTab('customer')}
-              />
-              <TabButton
-                id="services"
-                label="Items"
-                isActive={activeTab === 'services'}
-                onClick={() => setActiveTab('services')}
-              />
-              <TabButton
-                id="notes"
-                label="Notes"
-                isActive={activeTab === 'notes'}
-                onClick={() => setActiveTab('notes')}
-              />
+            {/* Step Indicator Navigation */}
+            <div className="flex items-start px-4 py-4">
+              {tabOrder.map((id, index) => {
+                const isActive = activeTab === id;
+                const isCompleted = index < activeTabIndex;
+                const isUpcoming = index > activeTabIndex;
+                const isLast = index === tabOrder.length - 1;
+
+                return (
+                  <div className="flex items-center flex-1" key={id}>
+                    <button
+                      onClick={() => setActiveTab(id)}
+                      className="flex flex-col items-center gap-1.5 group relative z-10"
+                    >
+                      <div
+                        className={cn(
+                          "flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all duration-200 ring-4 ring-background",
+                          isActive && "bg-[#1E3A5F] text-white shadow-md shadow-[#1E3A5F]/25",
+                          isCompleted && "bg-[#1E3A5F]/10 text-[#1E3A5F] border-2 border-[#1E3A5F]",
+                          isUpcoming && "bg-muted text-muted-foreground border-2 border-border"
+                        )}
+                      >
+                        {isCompleted ? (
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          tabNumbers[id]
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          "text-xs font-medium transition-colors duration-200",
+                          isActive && "text-[#1E3A5F] font-semibold",
+                          isCompleted && "text-[#1E3A5F]/70",
+                          isUpcoming && "text-muted-foreground"
+                        )}
+                      >
+                        {tabLabels[id]}
+                      </span>
+                    </button>
+                    {!isLast && (
+                      <div className={cn(
+                        "flex-1 h-0.5 mx-2 mt-[-18px] rounded-full transition-colors duration-200",
+                        index < activeTabIndex ? "bg-[#1E3A5F]/30" : "bg-border"
+                      )} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Vessel Tab */}
             {activeTab === 'vessel' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Vessel Information</CardTitle>
-                  <CardDescription>
-                    Enter details about the vessel for this invoice
+              <Card className="shadow-sm border-border/60 overflow-hidden">
+                <CardHeader className="bg-slate-50/50 border-b border-border/40 pb-4">
+                  <CardTitle className="text-[15px] font-semibold tracking-tight">Vessel Information</CardTitle>
+                  <CardDescription className="text-[13px]">
+                    Enter details about the vessel for this {singularLabel.toLowerCase()}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-5 pt-5">
                   {/* Link to Existing Vessel */}
                   <div className="space-y-2">
-                    <Label htmlFor="vessel-link" className="!text-black font-medium">Link to Existing Vessel</Label>
+                    <Label htmlFor="vessel-link" className="!text-slate-800 font-medium text-[13px]">Link to Existing Vessel</Label>
                     <Select
                       value={selectedVesselObject?.name || ""}
                       onValueChange={(value) => {
@@ -3864,9 +3875,9 @@ const CreateInvoice: React.FC = () => {
                     </Select>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-name" className={isFieldMissing("Vessel Name") ? "!text-red-600 font-medium" : "!text-black font-medium"}>
+                      <Label htmlFor="vessel-name" className={isFieldMissing("Vessel Name") ? "!text-red-600 font-medium text-[13px]" : "!text-slate-800 font-medium text-[13px]"}>
                         Vessel <span className="text-red-600">*</span>
                       </Label>
                       <Input
@@ -3885,7 +3896,7 @@ const CreateInvoice: React.FC = () => {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-weight" className="!text-black font-medium">
+                      <Label htmlFor="vessel-weight" className="!text-slate-800 font-medium text-[13px]">
                         Weight
                       </Label>
                       <div className="relative">
@@ -3900,13 +3911,13 @@ const CreateInvoice: React.FC = () => {
                           value={formatNumberWithSeparators(invoiceData.vessel.weight)}
                           onChange={(e) => handleVesselChange('weight', e.target.value)}
                         />
-                        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
+                        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">
                           tons
                         </span>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="vessel-beam" className="!text-black font-medium">Length</Label>
+                      <Label htmlFor="vessel-beam" className="!text-slate-800 font-medium text-[13px]">Length</Label>
                       <div className="relative">
                         <Input
                           id="vessel-beam"
@@ -3916,7 +3927,7 @@ const CreateInvoice: React.FC = () => {
                           value={formatNumberWithSeparators(invoiceData.vessel.beam)}
                           onChange={(e) => handleVesselChange('beam', e.target.value)}
                         />
-                        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
+                        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">
                           ft
                         </span>
                       </div>
@@ -3928,17 +3939,17 @@ const CreateInvoice: React.FC = () => {
 
             {/* Customer Tab */}
             {activeTab === 'customer' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Contact Information</CardTitle>
-                  <CardDescription>
-                    Enter contact details for this invoice
+              <Card className="shadow-sm border-border/60 overflow-hidden">
+                <CardHeader className="bg-slate-50/50 border-b border-border/40 pb-4">
+                  <CardTitle className="text-[15px] font-semibold tracking-tight">Contact Information</CardTitle>
+                  <CardDescription className="text-[13px]">
+                    Enter contact details for this {singularLabel.toLowerCase()}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-5 pt-5">
                   {/* Link to Existing Customer */}
                   <div className="space-y-2">
-                    <Label htmlFor="customer-link" className="!text-black font-medium">Link to Existing Contact</Label>
+                    <Label htmlFor="customer-link" className="!text-slate-800 font-medium text-[13px]">Link to Existing Contact</Label>
                     <Select
                       value={selectedCustomerObject?.display_name || ""}
                       onValueChange={(value) => {
@@ -3991,9 +4002,9 @@ const CreateInvoice: React.FC = () => {
                     </Select>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-2">
-                      <Label htmlFor="contact-name" className="!text-black font-medium">
+                      <Label htmlFor="contact-name" className="!text-slate-800 font-medium text-[13px]">
                         Contact Name
                       </Label>
                       <Input
@@ -4006,7 +4017,7 @@ const CreateInvoice: React.FC = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="customer-email" className="!text-black font-medium">Email Address</Label>
+                      <Label htmlFor="customer-email" className="!text-slate-800 font-medium text-[13px]">Email Address</Label>
                       <Input
                         id="customer-email"
                         type="email"
@@ -4030,7 +4041,7 @@ const CreateInvoice: React.FC = () => {
                       />
                     </div>
                     <div className="space-y-2 md:-mt-1">
-                      <Label htmlFor="customer-address" className="!text-black font-medium">Address</Label>
+                      <Label htmlFor="customer-address" className="!text-slate-800 font-medium text-[13px]">Address</Label>
                       <div className="relative">
                         <Input
                           id="customer-address"
@@ -4076,19 +4087,19 @@ const CreateInvoice: React.FC = () => {
 
             {/* Services Tab */}
             {activeTab === 'services' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className={isFieldMissing("At least one service") ? "text-base text-red-600" : "text-base"}>
+              <Card className="shadow-sm border-border/60 overflow-hidden">
+                <CardHeader className="bg-slate-50/50 border-b border-border/40 pb-4">
+                  <CardTitle className={isFieldMissing("At least one service") ? "text-[15px] font-semibold tracking-tight text-red-600" : "text-[15px] font-semibold tracking-tight"}>
                     Items <span className="text-red-600">*</span>
                   </CardTitle>
-                  <CardDescription>
-                    Add services, labor, and materials for this invoice
+                  <CardDescription className="text-[13px]">
+                    Add services, labor, and materials for this {singularLabel.toLowerCase()}
                   </CardDescription>
                   {isFieldMissing("At least one service") && (
                     <p className="text-xs text-red-600 mt-2">At least one service is required</p>
                   )}
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-5 pt-5">
                   {invoiceData.services
                     .filter(service => {
                       // If approved, filter out deleted items
@@ -4117,28 +4128,28 @@ const CreateInvoice: React.FC = () => {
                       <div
                         key={service.id}
                         className={cn(
-                          "border rounded-lg p-4 space-y-4",
-                          isDeleted && "bg-red-50 border-red-300 opacity-75"
+                          "border border-border/60 rounded-xl p-5 space-y-5 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-shadow duration-200",
+                          isDeleted && "bg-red-50 border-red-300 opacity-75 shadow-none"
                         )}
                       >
                         <div className="flex items-center justify-between">
-                          <h4 className={cn("text-sm font-medium", isDeleted && "text-red-600 line-through")}>
+                          <h4 className={cn("text-[13px] font-semibold text-slate-700 uppercase tracking-wide", isDeleted && "text-red-600 line-through")}>
                             {isDeleted ? `Deleted Item #${index + 1}` : `Item #${index + 1}`}
                           </h4>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => removeService(service.id)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                            className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150"
                             disabled={isDeleted}
                           >
                             ×
                           </Button>
                         </div>
 
-                        <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", isDeleted && "pointer-events-none opacity-60")}>
+                        <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-5", isDeleted && "pointer-events-none opacity-60")}>
                           <div className="space-y-2">
-                            <Label htmlFor={`service-job-type-${index}`} className={isDeleted ? "line-through text-red-600" : "!text-black font-medium"}>Item Type <span className="text-red-600">*</span></Label>
+                            <Label htmlFor={`service-job-type-${index}`} className={isDeleted ? "line-through text-red-600" : "!text-slate-800 font-medium text-[13px]"}>Item Type <span className="text-red-600">*</span></Label>
                             <Select
                               value={service.jobType || ''}
                               onValueChange={(value) => updateService(service.id, 'jobType', value)}
@@ -4174,7 +4185,7 @@ const CreateInvoice: React.FC = () => {
 
                           {service.jobType === 'Manual Entry' && (
                             <div className="space-y-2">
-                              <Label htmlFor={`service-item-type-${index}`} className="!text-black font-medium">Item Type <span className="text-red-600">*</span></Label>
+                              <Label htmlFor={`service-item-type-${index}`} className="!text-slate-800 font-medium text-[13px]">Item Type <span className="text-red-600">*</span></Label>
                               <Select
                                 value={service.itemType || ''}
                                 onValueChange={(value) => updateService(service.id, 'itemType', value)}
@@ -4193,7 +4204,7 @@ const CreateInvoice: React.FC = () => {
                         </div>
 
                         {(isLaborHoursEntry || isAgentServices) && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="space-y-2">
                               <Label
                                 htmlFor={`service-labor-hours-${index}`}
@@ -4201,7 +4212,7 @@ const CreateInvoice: React.FC = () => {
                                   ((service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Regular Hours (Service ${index + 1})`)) ||
                                   (service.jobType === 'Agent Services' && isFieldMissing(`Agent Services Regular Hours (Service ${index + 1})`)))
                                     ? "!text-red-600 font-medium"
-                                    : "!text-black font-medium"
+                                    : "!text-slate-800 font-medium text-[13px]"
                                 }
                               >
                                 Regular Hours {((service.jobType === 'Manual Entry' && service.itemType === 'Labor') || service.jobType === 'Agent Services') && <span className="text-red-600">*</span>}
@@ -4232,7 +4243,7 @@ const CreateInvoice: React.FC = () => {
                                     (service.jobType === 'Agent Services' && isFieldMissing(`Agent Services Regular Hours (Service ${index + 1})`))) && "border-red-500 focus:ring-red-500"
                                   )}
                                 />
-                                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
+                                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">
                                   hours
                                 </span>
                               </div>
@@ -4248,7 +4259,7 @@ const CreateInvoice: React.FC = () => {
                                   ((service.jobType === 'Manual Entry' && service.itemType === 'Labor' && isFieldMissing(`Overtime Hours (Service ${index + 1})`)) ||
                                   (service.jobType === 'Agent Services' && isFieldMissing(`Agent Services Overtime Hours (Service ${index + 1})`)))
                                     ? "!text-red-600 font-medium"
-                                    : "!text-black font-medium"
+                                    : "!text-slate-800 font-medium text-[13px]"
                                 }
                               >
                                 Overtime Hours {((service.jobType === 'Manual Entry' && service.itemType === 'Labor') || service.jobType === 'Agent Services') && <span className="text-red-600">*</span>}
@@ -4279,7 +4290,7 @@ const CreateInvoice: React.FC = () => {
                                     (service.jobType === 'Agent Services' && isFieldMissing(`Agent Services Overtime Hours (Service ${index + 1})`))) && "border-red-500 focus:ring-red-500"
                                   )}
                                 />
-                                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tracking-wide text-muted-foreground">
+                                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">
                                   hours
                                 </span>
                               </div>
@@ -4292,10 +4303,10 @@ const CreateInvoice: React.FC = () => {
                         )}
 
                         {shouldShowManualCostInputs && (
-                          <div className={cn(shouldShowQuantity ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-2")}>
+                          <div className={cn(shouldShowQuantity ? "grid grid-cols-1 md:grid-cols-2 gap-5" : "space-y-2")}>
                             {shouldShowQuantity && (
                               <div className="space-y-2">
-                                <Label htmlFor={`service-quantity-${index}`} className="!text-black font-medium">
+                                <Label htmlFor={`service-quantity-${index}`} className="!text-slate-800 font-medium text-[13px]">
                                   Quantity
                                 </Label>
                                 <Input
@@ -4336,7 +4347,7 @@ const CreateInvoice: React.FC = () => {
                                   (service.jobType === 'Provisioning Services' && isFieldMissing(`Provisioning Services Cost (Service ${index + 1})`)) ||
                                   (service.jobType === 'Shipping Services' && isFieldMissing(`Shipping Services Cost (Service ${index + 1})`))
                                     ? "!text-red-600 font-medium"
-                                    : "!text-black font-medium"
+                                    : "!text-slate-800 font-medium text-[13px]"
                                 }
                               >
                                 {shouldShowQuantity ? 'Rate' : 'Cost'} {(service.jobType === 'Clearance Fee' || service.jobType === 'Pilotage' || service.jobType === 'Car Rental' || service.jobType === 'Trash Removal' || service.jobType === 'Good Stew' || service.jobType === 'Crew Placement' || service.jobType === 'Consulting Services' || service.jobType === 'Fueling Services' || service.jobType === 'Provisioning Services' || service.jobType === 'Shipping Services' || (service.jobType === 'Manual Entry' && (service.itemType === 'Material' || service.itemType === 'Subcontractor'))) && <span className="text-red-600">*</span>}
@@ -4399,7 +4410,7 @@ const CreateInvoice: React.FC = () => {
                         {/* Description field */}
                         {(
                           <div className="space-y-2">
-                            <Label htmlFor={`service-description-${index}`} className="!text-black font-medium">Description</Label>
+                            <Label htmlFor={`service-description-${index}`} className="!text-slate-800 font-medium text-[13px]">Description</Label>
                             <Textarea
                               id={`service-description-${index}`}
                               value={service.description}
@@ -4422,7 +4433,7 @@ const CreateInvoice: React.FC = () => {
                         {/* Receipt upload - show for all service types except Agent Services, Manual Entry > Labor, and Clearance Fee */}
                         {!(service.jobType === 'Agent Services' || (service.jobType === 'Manual Entry' && service.itemType === 'Labor') || service.jobType === 'Clearance Fee') && (
                           <div className="space-y-2">
-                            <Label htmlFor={`service-receipt-${index}`} className="!text-black font-medium">Receipt</Label>
+                            <Label htmlFor={`service-receipt-${index}`} className="!text-slate-800 font-medium text-[13px]">Receipt</Label>
                             <div className="flex items-center gap-3">
                               <input
                                 id={`service-receipt-${index}`}
@@ -4510,9 +4521,9 @@ const CreateInvoice: React.FC = () => {
 
                         {!shouldHideTaxAndMarkup && (
                           <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                               <div className="space-y-2">
-                                <Label htmlFor={`service-tax-status-${index}`} className="!text-black font-medium">Tax Status</Label>
+                                <Label htmlFor={`service-tax-status-${index}`} className="!text-slate-800 font-medium text-[13px]">Tax Status</Label>
                                 {service.jobType === 'Clearance Fee' ? (
                                   <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
                                     Non-Taxable
@@ -4541,7 +4552,7 @@ const CreateInvoice: React.FC = () => {
                                 )}
                               </div>
                               <div className="space-y-2">
-                                <Label htmlFor={`service-markup-${index}`} className="!text-black font-medium">Markup</Label>
+                                <Label htmlFor={`service-markup-${index}`} className="!text-slate-800 font-medium text-[13px]">Markup</Label>
                                 {service.jobType === 'Clearance Fee' ? (
                                   <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
                                     No Markup
@@ -4583,7 +4594,7 @@ const CreateInvoice: React.FC = () => {
                               !service.isMarkupExempt &&
                               service.jobType !== 'Clearance Fee' && (
                                 <div className="space-y-2">
-                                  <Label htmlFor={`service-markup-rate-${index}`} className="!text-black font-medium">Custom Markup</Label>
+                                  <Label htmlFor={`service-markup-rate-${index}`} className="!text-slate-800 font-medium text-[13px]">Custom Markup</Label>
                                   <div className="relative">
                                     <Input
                                       id={`service-markup-rate-${index}`}
@@ -4606,19 +4617,19 @@ const CreateInvoice: React.FC = () => {
                           </>
                         )}
 
-                        <div className="border-t pt-2">
-                          <div className="flex justify-between items-center text-sm font-medium">
-                            <span>Item Total:</span>
-                            <span className="text-lg">{formatCurrency(service.total)}</span>
+                        <div className="border-t border-border/40 pt-3 mt-1">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-slate-500 font-medium">Item Total</span>
+                            <span className="text-lg font-semibold text-slate-900 tabular-nums">{formatCurrency(service.total)}</span>
                           </div>
-                          <div className="flex flex-wrap gap-2 mt-2">
+                          <div className="flex flex-wrap gap-1.5 mt-2.5">
                             {service.isMarkupExempt && (
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="secondary" className="text-[11px] font-medium">
                                 No Markup
                               </Badge>
                             )}
                             {service.isTaxExempt && (
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="secondary" className="text-[11px] font-medium">
                                 Non-Taxable
                               </Badge>
                             )}
@@ -4628,7 +4639,7 @@ const CreateInvoice: React.FC = () => {
                               const isManuallyOverridden = currentCost !== autoCalculatedAmount;
 
                               return (
-                                <Badge variant={isManuallyOverridden ? "secondary" : "outline"} className="text-xs">
+                                <Badge variant={isManuallyOverridden ? "secondary" : "outline"} className="text-[11px] font-medium">
                                   {isManuallyOverridden ? 'Manually Overridden' : 'Auto-Calculated'}
                                 </Badge>
                               );
@@ -4639,7 +4650,7 @@ const CreateInvoice: React.FC = () => {
                     );
                   })}
 
-                  <Button onClick={addService} variant="outline" className="w-full">
+                  <Button onClick={addService} variant="outline" className="w-full h-11 border-dashed border-2 border-slate-200 text-slate-500 hover:text-[#1E3A5F] hover:border-[#1E3A5F]/30 hover:bg-[#1E3A5F]/[0.02] rounded-xl transition-all duration-200">
                     <svg
                       className="w-4 h-4 mr-2"
                       fill="none"
@@ -4657,9 +4668,9 @@ const CreateInvoice: React.FC = () => {
             {/* Notes Tab */}
             {activeTab === 'notes' && (
               <Card className="border-none shadow-none">
-                <CardHeader className="px-0">
-                  <CardTitle className="text-base">Comments & Preview</CardTitle>
-                  <CardDescription>
+                <CardHeader className="px-0 pb-4">
+                  <CardTitle className="text-[15px] font-semibold tracking-tight">Comments & Preview</CardTitle>
+                  <CardDescription className="text-[13px]">
                     <span className="hidden lg:inline">Highlight the invoice preview to leave contextual comments for collaborators.</span>
                     <span className="lg:hidden">Tap and hold a line item to add a comment.</span>
                   </CardDescription>
@@ -4946,30 +4957,30 @@ const CreateInvoice: React.FC = () => {
           {/* Summary Sidebar */}
           {activeTab !== 'notes' && (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Summary</CardTitle>
+            <Card className="shadow-sm border-border/60 overflow-hidden sticky top-[120px]">
+              <CardHeader className="bg-gradient-to-b from-slate-50/80 to-white border-b border-border/40 pb-4">
+                <CardTitle className="text-[15px] font-semibold tracking-tight">Summary</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatCurrency(subtotal)}</span>
+              <CardContent className="space-y-3 pt-4">
+                <div className="flex justify-between text-sm py-1">
+                  <span className="text-slate-500">Subtotal</span>
+                  <span className="font-medium tabular-nums">{formatCurrency(subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax</span>
-                  <span>{formatCurrency(taxAmount)}</span>
+                <div className="flex justify-between text-sm py-1">
+                  <span className="text-slate-500">Tax</span>
+                  <span className="font-medium tabular-nums">{formatCurrency(taxAmount)}</span>
                 </div>
-                <div className="flex justify-between font-semibold text-lg">
-                  <span>Total</span>
-                  <span>{formatCurrency(total)}</span>
+                <div className="flex justify-between items-baseline pt-3 mt-2 border-t border-border">
+                  <span className="text-sm font-semibold text-slate-700">Total</span>
+                  <span className="text-xl font-bold text-[#1E3A5F] tabular-nums">{formatCurrency(total)}</span>
                 </div>
               </CardContent>
             </Card>
 
             {isEditMode && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{`Attach ${singularLabel}`}</CardTitle>
+              <Card className="shadow-sm border-border/60 overflow-hidden">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-[15px] font-semibold tracking-tight">{`Attach ${singularLabel}`}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Show read-only original attachment when re-approving */}
@@ -5153,8 +5164,8 @@ const CreateInvoice: React.FC = () => {
       </div>
 
       {showEmailDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg shadow-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-background rounded-2xl shadow-2xl p-6 w-full max-w-md border border-border/40">
             <h2 className="text-lg font-semibold mb-4">{`Send ${singularLabel} Email`}</h2>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -5187,8 +5198,8 @@ const CreateInvoice: React.FC = () => {
       )}
 
       {showClearConfirmation && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg shadow-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-background rounded-2xl shadow-2xl p-6 w-full max-w-md border border-border/40">
             <h2 className="text-lg font-semibold mb-4 text-slate-900">Clear All Fields?</h2>
             <p className="text-sm text-muted-foreground mb-6">
               Are you sure you want to clear all fields? This will reset all form data including services, vessel info, contact info, and notes. This action cannot be undone.
