@@ -66,7 +66,7 @@ export default function RequestsRowActionsLayer() {
     border: '1px solid rgba(0,0,0,0.08)',
     borderRadius: 8,
     boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-    padding: 6
+    padding: 0
   };
 
   // Mobile bottom sheet styles
@@ -201,66 +201,77 @@ export default function RequestsRowActionsLayer() {
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <button
-        role="menuitem"
-        className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-        onClick={handleAction(() => handlers.view(rowId))}
-        type="button"
-      >
-        <Eye className="h-4 w-4 text-gray-600" />
-        <span>View</span>
-      </button>
-      <button
-        role="menuitem"
-        className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-        onClick={handleAction(() => handlers.edit(rowId))}
-        type="button"
-      >
-        <Edit className="h-4 w-4 text-gray-600" />
-        <span>Edit</span>
-      </button>
-      {handlers.createInvoice && (
-        <button
-          role="menuitem"
-          className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-          onClick={handleAction(() => handlers.createInvoice!(rowId))}
-          type="button"
-        >
-          <PlusCircle className="h-4 w-4 text-gray-600" />
-          <span>Create Invoice</span>
-        </button>
-      )}
-      {handlers.exportPdf && (
-        <button
-          role="menuitem"
-          className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-          onClick={handleAction(() => handlers.exportPdf!(rowId))}
-          type="button"
-        >
-          <FileText className="h-4 w-4 text-gray-600" />
-          <span>Export PDF</span>
-        </button>
-      )}
-      {handlers.exportCsv && (
-        <button
-          role="menuitem"
-          className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-          onClick={handleAction(() => handlers.exportCsv!(rowId))}
-          type="button"
-        >
-          <FileSpreadsheet className="h-4 w-4 text-gray-600" />
-          <span>Export CSV</span>
-        </button>
-      )}
-      <button
-        role="menuitem"
-        className="flex items-center gap-2 text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap text-red-600"
-        onClick={handleAction(() => handlers.del(rowId))}
-        type="button"
-      >
-        <Trash2 className="h-4 w-4" />
-        <span>Delete</span>
-      </button>
+      <div className="w-[180px]">
+        <div className="px-3 pt-2.5 pb-2">
+          <span className="text-[13px] font-semibold text-gray-900">Actions</span>
+        </div>
+        <div className="h-px bg-gray-100" />
+        <div className="px-1.5 py-1.5 space-y-0.5">
+          <button
+            role="menuitem"
+            className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+            onClick={handleAction(() => handlers.view(rowId))}
+            type="button"
+          >
+            <Eye className="h-4 w-4 text-gray-400 flex-shrink-0" />
+            View
+          </button>
+          <button
+            role="menuitem"
+            className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+            onClick={handleAction(() => handlers.edit(rowId))}
+            type="button"
+          >
+            <Edit className="h-4 w-4 text-gray-400 flex-shrink-0" />
+            Edit
+          </button>
+          {handlers.createInvoice && (
+            <button
+              role="menuitem"
+              className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+              onClick={handleAction(() => handlers.createInvoice!(rowId))}
+              type="button"
+            >
+              <PlusCircle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              Create Invoice
+            </button>
+          )}
+          {handlers.exportPdf && (
+            <button
+              role="menuitem"
+              className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+              onClick={handleAction(() => handlers.exportPdf!(rowId))}
+              type="button"
+            >
+              <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              Export PDF
+            </button>
+          )}
+          {handlers.exportCsv && (
+            <button
+              role="menuitem"
+              className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+              onClick={handleAction(() => handlers.exportCsv!(rowId))}
+              type="button"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              Export CSV
+            </button>
+          )}
+        </div>
+        <div className="h-px bg-gray-100" />
+        <div className="px-1.5 py-1.5">
+          <button
+            role="menuitem"
+            className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-red-600 hover:bg-red-50"
+            onClick={handleAction(() => handlers.del(rowId))}
+            type="button"
+          >
+            <Trash2 className="h-4 w-4 flex-shrink-0" />
+            Delete
+          </button>
+        </div>
+      </div>
     </div>,
     document.body
   );

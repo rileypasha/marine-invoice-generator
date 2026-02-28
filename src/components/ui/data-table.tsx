@@ -19,11 +19,7 @@ import { SimpleButton as Button } from "@/components/ui/simple-button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
@@ -122,24 +118,41 @@ export function DataTable<TData, TValue>({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {onPrint && (
-                    <DropdownMenuItem onClick={onPrint}>
-                      <Printer className="mr-2 h-4 w-4" />
-                      Print this page
-                    </DropdownMenuItem>
-                  )}
-                  {onImport && (
-                    <DropdownMenuItem onClick={onImport}>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Import data from CSV
-                    </DropdownMenuItem>
-                  )}
-                  {onExport && (
-                    <DropdownMenuItem onClick={onExport}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Export data as CSV
-                    </DropdownMenuItem>
-                  )}
+                <div className="w-[200px]" onClick={(e) => e.stopPropagation()}>
+                  <div className="px-3 pt-2.5 pb-2">
+                    <span className="text-[13px] font-semibold text-gray-900">Actions</span>
+                  </div>
+                  <div className="h-px bg-gray-100" />
+                  <div className="px-1.5 py-1.5 space-y-0.5">
+                    {onPrint && (
+                      <button
+                        onClick={onPrint}
+                        className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+                      >
+                        <Printer className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        Print this page
+                      </button>
+                    )}
+                    {onImport && (
+                      <button
+                        onClick={onImport}
+                        className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+                      >
+                        <Upload className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        Import from CSV
+                      </button>
+                    )}
+                    {onExport && (
+                      <button
+                        onClick={onExport}
+                        className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+                      >
+                        <Download className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        Export as CSV
+                      </button>
+                    )}
+                  </div>
+                </div>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}

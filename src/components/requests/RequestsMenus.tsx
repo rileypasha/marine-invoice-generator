@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Ship, Receipt, Hash, ArrowUp, ArrowDown, X, UserCog, Search } from 'lucide-react';
+import { Users, Ship, CheckCircle2, Ban, ArrowUp, ArrowDown, X, UserCog, Search, Hash, DollarSign, Calendar, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -49,12 +49,12 @@ interface GroupMenuProps {
 
 function GroupMenu({ activeGroupBy, onGroupByChange }: GroupMenuProps) {
   const groupOptions = [
-    { key: 'none' as RequestGroupBy, label: 'No grouping', icon: <Hash className="h-4 w-4" /> },
+    { key: 'none' as RequestGroupBy, label: 'None', icon: <Ban className="h-4 w-4" /> },
     { key: 'contact' as RequestGroupBy, label: 'Contact', icon: <Users className="h-4 w-4" /> },
     { key: 'vessel' as RequestGroupBy, label: 'Vessel', icon: <Ship className="h-4 w-4" /> },
-    { key: 'createdBy' as RequestGroupBy, label: 'Created By', icon: <UserCog className="h-4 w-4" /> },
-    { key: 'modifiedBy' as RequestGroupBy, label: 'Modified By', icon: <UserCog className="h-4 w-4" /> },
-    { key: 'status' as RequestGroupBy, label: 'Status', icon: <Receipt className="h-4 w-4" /> },
+    { key: 'createdBy' as RequestGroupBy, label: 'Created', icon: <UserCog className="h-4 w-4" /> },
+    { key: 'modifiedBy' as RequestGroupBy, label: 'Modified', icon: <UserCog className="h-4 w-4" /> },
+    { key: 'status' as RequestGroupBy, label: 'Status', icon: <CheckCircle2 className="h-4 w-4" /> },
   ];
 
   const groupCount = activeGroupBy !== 'none' ? 1 : 0;
@@ -186,8 +186,8 @@ function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
   const textFilters = [
     { key: 'contact', label: 'Contact', icon: Users, value: contactInput, setValue: setContactInput, placeholder: 'Filter by name...' },
     { key: 'vessel', label: 'Vessel', icon: Ship, value: vesselInput, setValue: setVesselInput, placeholder: 'Filter by vessel...' },
-    { key: 'createdBy', label: 'Created by', icon: UserCog, value: createdByInput, setValue: setCreatedByInput, placeholder: 'Filter by creator...' },
-    { key: 'modifiedBy', label: 'Modified by', icon: UserCog, value: modifiedByInput, setValue: setModifiedByInput, placeholder: 'Filter by modifier...' },
+    { key: 'createdBy', label: 'Created', icon: UserCog, value: createdByInput, setValue: setCreatedByInput, placeholder: 'Filter by creator...' },
+    { key: 'modifiedBy', label: 'Modified', icon: UserCog, value: modifiedByInput, setValue: setModifiedByInput, placeholder: 'Filter by modifier...' },
   ];
 
   return (
@@ -203,7 +203,7 @@ function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
-          <span className="text-[13px] font-semibold text-gray-900">Filters</span>
+          <span className="text-[13px] font-semibold text-gray-900">Filter by</span>
           {filterCount > 0 && (
             <button
               onClick={clearAll}
@@ -219,8 +219,8 @@ function FilterMenu({ activeFilters, onFiltersChange }: FilterMenuProps) {
           <div className="flex flex-wrap gap-1.5 px-3 pb-2.5">
             {Object.entries(activeFilters).map(([key, value]) => {
               const labelMap: Record<string, string> = {
-                contact: 'Contact', vessel: 'Vessel', createdBy: 'Created by',
-                modifiedBy: 'Modified by', status: 'Status',
+                contact: 'Contact', vessel: 'Vessel', createdBy: 'Created',
+                modifiedBy: 'Modified', status: 'Status',
               };
               const displayValue = key === 'status'
                 ? (statusOptions.find(s => s.value === value)?.label || value)
@@ -342,13 +342,13 @@ interface SortMenuProps {
 
 function SortMenu({ activeSort, onSortChange }: SortMenuProps) {
   const sortOptions = [
-    { field: 'invoice_number', label: 'Invoice #' },
-    { field: 'customer.display_name', label: 'Contact' },
-    { field: 'vessel.name', label: 'Vessel' },
-    { field: 'total_amount', label: 'Amount' },
-    { field: 'invoice_date', label: 'Created At' },
-    { field: 'updated_at', label: 'Last Modified' },
-    { field: 'status', label: 'Status' },
+    { field: 'invoice_number', label: 'Num', icon: <Hash className="h-4 w-4" /> },
+    { field: 'customer.display_name', label: 'Contact', icon: <Users className="h-4 w-4" /> },
+    { field: 'vessel.name', label: 'Vessel', icon: <Ship className="h-4 w-4" /> },
+    { field: 'total_amount', label: 'Total', icon: <DollarSign className="h-4 w-4" /> },
+    { field: 'invoice_date', label: 'Created', icon: <Calendar className="h-4 w-4" /> },
+    { field: 'updated_at', label: 'Modified', icon: <Clock className="h-4 w-4" /> },
+    { field: 'status', label: 'Status', icon: <CheckCircle2 className="h-4 w-4" /> },
   ];
 
   const sortCount = activeSort ? 1 : 0;
@@ -429,7 +429,15 @@ function SortMenu({ activeSort, onSortChange }: SortMenuProps) {
                     : "text-gray-600 hover:bg-gray-50"
                 )}
               >
-                <span>{option.label}</span>
+                <span className="flex items-center gap-2">
+                  <span className={cn(
+                    "flex-shrink-0",
+                    isActive ? "text-[#1E3A5F]" : "text-gray-400"
+                  )}>
+                    {option.icon}
+                  </span>
+                  {option.label}
+                </span>
                 {isActive && (
                   <span className="text-[#1E3A5F]">
                     {getSortIcon(option.field)}

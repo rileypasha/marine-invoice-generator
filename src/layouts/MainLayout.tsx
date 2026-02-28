@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
-  Receipt,
+  FileText,
   Users,
   Ship,
   Settings,
@@ -22,7 +22,6 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuItem,
 } from '../components/ui/dropdown-menu';
 import { AppHeader } from '../components/layout/AppHeader';
 import { useAuth } from '../context/AuthContext';
@@ -71,7 +70,7 @@ const SidebarContent = () => {
     {
       label: 'Invoices',
       href: '/requests',
-      icon: <Receipt className="h-[18px] w-[18px] flex-shrink-0" />,
+      icon: <FileText className="h-[18px] w-[18px] flex-shrink-0" />,
       onClick: handleLinkClick,
     },
     {
@@ -161,7 +160,7 @@ const SidebarContent = () => {
           {open && (
             <button
               onClick={toggleSidebar}
-              className="p-1.5 rounded-md hover:bg-white/[0.12] text-white/60 hover:text-white transition-all duration-150 flex-shrink-0"
+              className="p-1.5 mr-1 rounded-md hover:bg-white/[0.12] text-white/60 hover:text-white transition-all duration-150 flex-shrink-0"
             >
               <PanelLeftClose className="h-4 w-4" />
             </button>
@@ -198,14 +197,28 @@ const SidebarContent = () => {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="right" align="start" sideOffset={8}>
-                <DropdownMenuItem onSelect={() => { navigate('/requests/new'); handleLinkClick(); }}>
-                  <Receipt className="mr-2 h-4 w-4" />
-                  New Invoice
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => { navigate('/estimates/new'); handleLinkClick(); }}>
-                  <Calculator className="mr-2 h-4 w-4" />
-                  New Estimate
-                </DropdownMenuItem>
+                <div className="w-[180px]" onClick={(e) => e.stopPropagation()}>
+                  <div className="px-3 pt-2.5 pb-2">
+                    <span className="text-[13px] font-semibold text-gray-900">Create new</span>
+                  </div>
+                  <div className="h-px bg-gray-100" />
+                  <div className="px-1.5 py-1.5 space-y-0.5">
+                    <button
+                      onClick={() => { navigate('/requests/new'); handleLinkClick(); }}
+                      className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+                    >
+                      <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      Invoice
+                    </button>
+                    <button
+                      onClick={() => { navigate('/estimates/new'); handleLinkClick(); }}
+                      className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+                    >
+                      <Calculator className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      Estimate
+                    </button>
+                  </div>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -337,7 +350,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       href: '/requests/new',
       icon: Plus,
       menuItems: [
-        { label: 'New Invoice', href: '/requests/new', icon: Receipt },
+        { label: 'New Invoice', href: '/requests/new', icon: FileText },
         { label: 'New Estimate', href: '/estimates/new', icon: Calculator },
       ],
     },
@@ -345,7 +358,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       id: 'requests',
       label: 'Invoices',
       href: '/requests',
-      icon: Receipt,
+      icon: FileText,
     },
     {
       id: 'estimates',

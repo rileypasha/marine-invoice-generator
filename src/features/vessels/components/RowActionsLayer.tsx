@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Eye, FileText, Edit, Trash2 } from 'lucide-react';
 import { useRowActionsStore } from '../state/rowActions.store';
 
 export default function RowActionsLayer() {
@@ -28,20 +29,43 @@ export default function RowActionsLayer() {
   const style: React.CSSProperties = {
     position:'absolute', top: pos.top, left: pos.left, zIndex: 1000,
     display: 'flex', flexDirection: 'column', background:'white', border:'1px solid rgba(0,0,0,0.08)',
-    borderRadius: 8, boxShadow:'0 8px 24px rgba(0,0,0,0.12)', padding: 6
+    borderRadius: 8, boxShadow:'0 8px 24px rgba(0,0,0,0.12)', padding: 0
   };
 
   return createPortal(
     <div ref={boxRef} role="menu" aria-label={`Row ${rowId} actions`} data-row-actions style={style}
          onPointerDown={(e)=>e.stopPropagation()} onClick={(e)=>e.stopPropagation()}>
-      <button role="menuitem" className="block text-left px-2 py-1.5 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-              onClick={()=>{ handlers.viewInvoices(rowId); close(); }}>View invoices</button>
-      <button role="menuitem" className="block text-left px-2 py-1.5 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-              onClick={()=>{ handlers.newInvoice(rowId); close(); }}>New invoice</button>
-      <button role="menuitem" className="block text-left px-2 py-1.5 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap"
-              onClick={()=>{ handlers.edit(rowId); close(); }}>Edit vessel</button>
-      <button role="menuitem" className="block text-left px-2 py-1.5 text-sm rounded-md hover:bg-gray-100 whitespace-nowrap text-red-600"
-              onClick={()=>{ handlers.del(rowId); close(); }}>Delete vessel</button>
+      <div className="w-[180px]">
+        <div className="px-3 pt-2.5 pb-2">
+          <span className="text-[13px] font-semibold text-gray-900">Actions</span>
+        </div>
+        <div className="h-px bg-gray-100" />
+        <div className="px-1.5 py-1.5 space-y-0.5">
+          <button role="menuitem" className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+                  onClick={()=>{ handlers.viewInvoices(rowId); close(); }}>
+            <Eye className="h-4 w-4 text-gray-400 flex-shrink-0" />
+            View invoices
+          </button>
+          <button role="menuitem" className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+                  onClick={()=>{ handlers.newInvoice(rowId); close(); }}>
+            <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+            New invoice
+          </button>
+          <button role="menuitem" className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+                  onClick={()=>{ handlers.edit(rowId); close(); }}>
+            <Edit className="h-4 w-4 text-gray-400 flex-shrink-0" />
+            Edit vessel
+          </button>
+        </div>
+        <div className="h-px bg-gray-100" />
+        <div className="px-1.5 py-1.5">
+          <button role="menuitem" className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-red-600 hover:bg-red-50"
+                  onClick={()=>{ handlers.del(rowId); close(); }}>
+            <Trash2 className="h-4 w-4 flex-shrink-0" />
+            Delete vessel
+          </button>
+        </div>
+      </div>
     </div>,
     document.body
   );
