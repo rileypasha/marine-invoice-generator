@@ -2058,7 +2058,7 @@ const CreateInvoice: React.FC = () => {
     if (service.taxStatus === 'Taxable') {
       const defaultTaxRate =
         (invoiceData.metadata.taxRate != null && invoiceData.metadata.taxRate !== 0) ? invoiceData.metadata.taxRate / 100 : 0.0875;
-      const taxRate = typeof service.taxRate === 'number' ? service.taxRate : defaultTaxRate;
+      const taxRate = (typeof service.taxRate === 'number' && service.taxRate > 0) ? service.taxRate : defaultTaxRate;
       const taxAmount = totalWithMarkup * taxRate;
       console.log('[calculateTax] TAXABLE - calculating:', {
         desc: service.description,
