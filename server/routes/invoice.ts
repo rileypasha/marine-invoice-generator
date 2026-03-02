@@ -715,7 +715,7 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
 
           // applyMarkup
           let costWithMarkup = cost;
-          const isExempt = item.isMarkupExempt || item.markupType === 'No Markup' || item.markupType === 'exempt' || item.jobType === 'Clearance Fee';
+          const isExempt = item.isMarkupExempt || !item.markupType || item.markupType === 'No Markup' || item.markupType === 'exempt' || item.jobType === 'Clearance Fee';
           if (!isExempt) {
             let markupPercent = 0;
             if (item.markupType === '2.5%' || item.markupType === 'preset-2.5') {

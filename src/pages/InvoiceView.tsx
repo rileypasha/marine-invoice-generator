@@ -1131,8 +1131,8 @@ const InvoiceView: React.FC = () => {
   }, [invoice, lineItems, sessionStorageBaseline]);
 
   const applyMarkup = (cost: number, item: LineItem, scope: any): number => {
-    // Check if item is markup exempt
-    if (item.isMarkupExempt || item.markupType === 'No Markup' || item.markupType === 'exempt' || item.jobType === 'Clearance Fee') {
+    // Check if item is markup exempt or has no markup type set
+    if (item.isMarkupExempt || !item.markupType || item.markupType === 'No Markup' || item.markupType === 'exempt' || item.jobType === 'Clearance Fee') {
       return cost;
     }
 
