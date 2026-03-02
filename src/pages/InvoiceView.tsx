@@ -1232,13 +1232,11 @@ const InvoiceView: React.FC = () => {
       });
 
       const derivedFinalTotal = subtotalWithMarkup + totalTax;
-      const hasPersistedSubtotal = Number.isFinite(invoice?.subtotal);
-      const hasPersistedTaxAmount = Number.isFinite(invoice?.taxAmount);
-      const hasPersistedTotal = Number.isFinite(invoice?.total);
 
-      const effectiveSubtotal = hasPersistedSubtotal ? Number(invoice?.subtotal) : subtotalWithMarkup;
-      const effectiveTax = hasPersistedTaxAmount ? Number(invoice?.taxAmount) : totalTax;
-      const effectiveFinalTotal = hasPersistedTotal ? Number(invoice?.total) : derivedFinalTotal;
+      // Always use derived values from line items so the summary matches the displayed table
+      const effectiveSubtotal = subtotalWithMarkup;
+      const effectiveTax = totalTax;
+      const effectiveFinalTotal = derivedFinalTotal;
       const grossProfit = effectiveSubtotal - baseCostTotal;
       const grossProfitPercent = baseCostTotal > 0 ? (grossProfit / baseCostTotal) * 100 : 0;
 
@@ -1263,7 +1261,7 @@ const InvoiceView: React.FC = () => {
         grossProfitPercent: 0,
       };
     }
-  }, [lineItems, scope, invoice?.subtotal, invoice?.taxAmount, invoice?.total]);
+  }, [lineItems, scope]);
 
   const comments: InvoiceComment[] = useMemo(() => {
     try {
