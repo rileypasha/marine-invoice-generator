@@ -685,13 +685,85 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
         });
       }
 
-      // Compute total quantity from line items in data JSON
+      // Compute totals from line items in data JSON so the list always matches detail view
       let totalQuantity = 0;
+      let derivedBaseCost = 0;
+      let derivedSubtotal = 0;
+      let derivedTax = 0;
+      let derivedTotal = 0;
+      let derivedGrossProfit = 0;
       try {
         const parsed = typeof invoice.data === 'string' ? JSON.parse(invoice.data) : invoice.data;
-        const lineItems = parsed?.scope?.lineItems || [];
-        totalQuantity = lineItems.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0);
+        const lineItems: any[] = parsed?.scope?.lineItems || [];
+        const scope = parsed?.scope;
+
+        for (const item of lineItems) {
+          if (!item || item._deleted) continue;
+
+          // calculateLineItemCost
+          const quantity = Number.isFinite(item.quantity) ? Number(item.quantity) : 1;
+          let cost = item.cost !== undefined ? parseFloat(String(item.cost)) : 0;
+          if (Number.isNaN(cost)) cost = 0;
+          if (!(cost > 0)) {
+            if (item.manualCost != null && item.manualCost !== 0) {
+              const mc = parseFloat(String(item.manualCost)) || 0;
+              cost = item.jobType === 'Clearance Fee' ? mc : mc * quantity;
+            } else {
+              cost = 0;
+            }
+          }
+
+          // applyMarkup
+          let costWithMarkup = cost;
+          const isExempt = item.isMarkupExempt || item.markupType === 'No Markup' || item.markupType === 'exempt' || item.jobType === 'Clearance Fee';
+          if (!isExempt) {
+            let markupPercent = 0;
+            if (item.markupType === '2.5%' || item.markupType === 'preset-2.5') {
+              markupPercent = 2.5;
+            } else if (item.markupType === '12.5%' || item.markupType === 'preset-12.5') {
+              markupPercent = 12.5;
+            } else if (item.markupType === 'custom' && item.markupRate !== undefined) {
+              markupPercent = parseFloat(String(item.markupRate));
+              if (Number.isNaN(markupPercent)) markupPercent = 0;
+              if (markupPercent > 0 && markupPercent <= 1) markupPercent *= 100;
+            } else if (item.markupRate !== undefined) {
+              markupPercent = parseFloat(String(item.markupRate));
+              if (Number.isNaN(markupPercent)) markupPercent = 0;
+              if (markupPercent > 0 && markupPercent <= 1) markupPercent *= 100;
+            } else if (scope?.markupRate !== undefined) {
+              markupPercent = parseFloat(String(scope.markupRate));
+              if (Number.isNaN(markupPercent)) markupPercent = 0;
+              if (markupPercent > 0 && markupPercent <= 1) markupPercent *= 100;
+            }
+            costWithMarkup = cost * (1 + markupPercent / 100);
+          }
+
+          // calculateTax
+          let taxAmount = 0;
+          if (item.jobType !== 'Clearance Fee' && !item.isTaxExempt) {
+            const status = typeof item.taxStatus === 'string' ? item.taxStatus.toLowerCase() : '';
+            if (status === 'taxable') {
+              const taxRate = (typeof item.taxRate === 'number' && item.taxRate > 0)
+                ? item.taxRate
+                : (item.taxRate !== undefined ? parseFloat(String(item.taxRate)) : 0.0875);
+              taxAmount = costWithMarkup * (taxRate > 0 ? taxRate : 0.0875);
+            }
+          }
+
+          totalQuantity += quantity;
+          derivedBaseCost += cost;
+          derivedSubtotal += costWithMarkup;
+          derivedTax += taxAmount;
+        }
+        derivedTotal = derivedSubtotal + derivedTax;
+        derivedGrossProfit = derivedSubtotal - derivedBaseCost;
       } catch {
+        // Fall back to persisted values if line item parsing fails
+        derivedBaseCost = 0;
+        derivedSubtotal = invoice.subtotal || 0;
+        derivedTax = invoice.taxAmount || 0;
+        derivedTotal = invoice.total || 0;
+        derivedGrossProfit = invoice.grossProfit || 0;
         totalQuantity = 0;
       }
 
@@ -700,6 +772,11 @@ router.get('/', async (req: InvoiceRequest, res: Response) => {
 
       return {
         ...invoiceWithoutData,
+        subtotal: derivedSubtotal,
+        taxAmount: derivedTax,
+        total: derivedTotal,
+        grossProfit: derivedGrossProfit,
+        profitPercent: derivedBaseCost > 0 ? (derivedGrossProfit / derivedBaseCost) * 100 : 0,
         userName: invoice.userName || invoice.user?.name || null,
         userEmail: invoice.userEmail || invoice.user?.email || null,
         modifiedByUserName: invoice.modifiedByUserName || invoice.user?.name || invoice.userName || null,
