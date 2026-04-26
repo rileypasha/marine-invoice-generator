@@ -3,7 +3,18 @@ import { createPortal } from 'react-dom';
 import { Eye, Edit, FileSpreadsheet, FileText, PlusCircle, Trash2 } from 'lucide-react';
 import { useRequestsRowActionsStore } from '../state/rowActions.store';
 
-const prefetchEditRoute = () => import('../../../pages/CreateInvoice');
+let editRoutePrefetched = false;
+const prefetchEditRoute = () => {
+  if (editRoutePrefetched) return;
+  editRoutePrefetched = true;
+  const idle: (cb: () => void) => void =
+    (window as any).requestIdleCallback?.bind(window) ?? ((cb) => setTimeout(cb, 200));
+  idle(() => {
+    import('../../../pages/CreateInvoice').catch(() => {
+      editRoutePrefetched = false;
+    });
+  });
+};
 
 export default function RequestsRowActionsLayer() {
   const { open, pos, rowId, handlers, close } = useRequestsRowActionsStore();
@@ -32,7 +43,7 @@ export default function RequestsRowActionsLayer() {
       setArmed(false);
       isProcessingActionRef.current = false;
       requestAnimationFrame(() => setArmed(true));
-      prefetchEditRoute().catch(() => {});
+      prefetchEditRoute();
     }
   }, [open]);
 

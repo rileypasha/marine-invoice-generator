@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 
 interface SelectProps {
@@ -132,10 +132,12 @@ export const SelectContent: React.FC<SelectContentProps> = ({ children, classNam
     }
   }, [triggerRef]);
 
+  useLayoutEffect(() => {
+    if (open) updatePosition();
+  }, [open, updatePosition]);
+
   useEffect(() => {
     if (open) {
-      updatePosition();
-
       const handleClickOutside = (event: MouseEvent) => {
         const target = event.target as Node;
         if (

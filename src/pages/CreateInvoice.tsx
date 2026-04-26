@@ -1995,8 +1995,8 @@ const CreateInvoice: React.FC = () => {
       return (laborHours * 85) + (otHours * 125);
     }
 
-    // Agent Services calculation
-    if (service.jobType === 'Agent Services') {
+    // Agent Services calculation (Labor sub-type uses hours; Material uses manualCost handled above)
+    if (service.jobType === 'Agent Services' && (!service.itemType || service.itemType === 'Labor')) {
       const laborHours = parseFloat(String(service.laborHours)) || 0;
       const otHours = parseFloat(String(service.otHours)) || 0;
       return (laborHours * 85) + (otHours * 125);
@@ -2025,7 +2025,7 @@ const CreateInvoice: React.FC = () => {
     if (service.isMarkupExempt ||
         service.markupType === 'No Markup' ||
         service.jobType === 'Clearance Fee' ||
-        service.jobType === 'Agent Services' ||
+        (service.jobType === 'Agent Services' && (!service.itemType || service.itemType === 'Labor')) ||
         (service.jobType === 'Manual Entry' && service.itemType === 'Labor')) {
       return cost;
     }
@@ -2399,6 +2399,7 @@ const CreateInvoice: React.FC = () => {
             // Set exemptions based on job type
             if (value === 'Agent Services') {
               updated.isMarkupExempt = true;
+              updated.itemType = 'Labor';
               // Don't set markupType, leave it as undefined to show placeholder
             } else if (value === 'Clearance Fee') {
               updated.manualCost = clearanceFeeAmount;
@@ -2431,6 +2432,21 @@ const CreateInvoice: React.FC = () => {
           } else if (field === 'itemType' && updated.jobType === 'Manual Entry' && value !== 'Labor') {
             updated.isMarkupExempt = false;
             // Don't set markupType, leave it as undefined
+          }
+
+          // Reset opposite input fields and adjust markup exemption when switching Agent Services sub-type
+          if (field === 'itemType' && updated.jobType === 'Agent Services') {
+            if (value === 'Labor') {
+              updated.manualCost = 0;
+              updated.manualCostInput = '';
+              updated.isMarkupExempt = true;
+            } else if (value === 'Material') {
+              updated.laborHours = 0;
+              updated.laborHoursInput = '';
+              updated.otHours = 0;
+              updated.otHoursInput = '';
+              updated.isMarkupExempt = false;
+            }
           }
 
           if (updated.manualCostInput === undefined || updated.manualCostInput === null) {
@@ -2630,9 +2646,10 @@ const CreateInvoice: React.FC = () => {
       }
     });
 
-    // Check Agent Services require hours fields
+    // Check Agent Services - Labor sub-type requires hours; Material sub-type requires cost
     invoiceData.services.forEach((service, index) => {
-      if (service.jobType === 'Agent Services') {
+      if (service.jobType !== 'Agent Services') return;
+      if (!service.itemType || service.itemType === 'Labor') {
         const laborHours = normalizeHours(service.laborHours);
         const otHours = normalizeHours(service.otHours);
         if (laborHours < 0) {
@@ -2640,6 +2657,10 @@ const CreateInvoice: React.FC = () => {
         }
         if (otHours < 0) {
           missingFields.push(`Agent Services Overtime Hours (Service ${index + 1})`);
+        }
+      } else if (service.itemType === 'Material') {
+        if (service.manualCost == null || service.manualCost < 0) {
+          missingFields.push(`Agent Services Material Cost (Service ${index + 1})`);
         }
       }
     });
@@ -4127,11 +4148,16 @@ const CreateInvoice: React.FC = () => {
                     const isLaborHoursEntry =
                       service.jobType === 'Manual Entry' && service.itemType === 'Labor';
                     const isAgentServices = service.jobType === 'Agent Services';
-                    const shouldHideTaxAndMarkup = isLaborHoursEntry || isAgentServices;
+                    const isAgentServicesLabor =
+                      isAgentServices && (!service.itemType || service.itemType === 'Labor');
+                    const isAgentServicesMaterial =
+                      isAgentServices && service.itemType === 'Material';
+                    const shouldHideTaxAndMarkup = isLaborHoursEntry || isAgentServicesLabor;
                     const shouldShowManualCostInputs =
                       (service.jobType === 'Manual Entry' &&
                         service.itemType &&
                         service.itemType !== 'Labor') ||
+                      isAgentServicesMaterial ||
                       (service.jobType &&
                         service.jobType !== 'Manual Entry' &&
                         service.jobType !== 'Agent Services');
@@ -4252,9 +4278,27 @@ const CreateInvoice: React.FC = () => {
                               </Select>
                             </div>
                           )}
+
+                          {isAgentServices && (
+                            <div className="space-y-2">
+                              <Label htmlFor={`service-item-type-${index}`} className="!text-slate-800 font-medium text-[13px]">Item Type <span className="text-red-600">*</span></Label>
+                              <Select
+                                value={service.itemType || 'Labor'}
+                                onValueChange={(value) => updateService(service.id, 'itemType', value)}
+                              >
+                                <SelectTrigger id={`service-item-type-${index}`}>
+                                  <SelectValue placeholder="Select item type..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Labor">Labor</SelectItem>
+                                  <SelectItem value="Material">Material</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
                         </div>
 
-                        {(isLaborHoursEntry || isAgentServices) && (
+                        {(isLaborHoursEntry || isAgentServicesLabor) && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="space-y-2">
                               <Label
@@ -4481,8 +4525,8 @@ const CreateInvoice: React.FC = () => {
                           </div>
                         )}
 
-                        {/* Receipt upload - show for all service types except Agent Services, Manual Entry > Labor, and Clearance Fee */}
-                        {!(service.jobType === 'Agent Services' || (service.jobType === 'Manual Entry' && service.itemType === 'Labor') || service.jobType === 'Clearance Fee') && (
+                        {/* Receipt upload - show for all service types except Agent Services > Labor, Manual Entry > Labor, and Clearance Fee */}
+                        {!(isAgentServicesLabor || (service.jobType === 'Manual Entry' && service.itemType === 'Labor') || service.jobType === 'Clearance Fee') && (
                           <div className="space-y-2">
                             <Label htmlFor={`service-receipt-${index}`} className="!text-slate-800 font-medium text-[13px]">Receipt</Label>
                             <div className="flex items-center gap-3">

@@ -62,20 +62,37 @@ const RowActionsLayer = lazy(() => import('./features/vessels/components/RowActi
 const RequestsRowActionsLayer = lazy(() => import('./features/requests/components/RowActionsLayer'))
 const ContactsRowActionsLayer = lazy(() => import('./features/contacts/components/ContactsRowActionsLayer'))
 
-// Wrappers to defer loading until actually opened
+// Wrappers to defer loading until actually opened.
+// Each wraps its own Suspense with a null fallback so the lazy chunk load
+// doesn't trip the parent route-level Suspense and flash the PageLoader.
 const ConditionalRequestsRowActions = () => {
   const { open } = useRequestsRowActionsStore()
-  return open ? <RequestsRowActionsLayer /> : null
+  if (!open) return null
+  return (
+    <Suspense fallback={null}>
+      <RequestsRowActionsLayer />
+    </Suspense>
+  )
 }
 
 const ConditionalVesselsRowActions = () => {
   const { open } = useVesselsRowActionsStore()
-  return open ? <RowActionsLayer /> : null
+  if (!open) return null
+  return (
+    <Suspense fallback={null}>
+      <RowActionsLayer />
+    </Suspense>
+  )
 }
 
 const ConditionalContactsRowActions = () => {
   const { open } = useContactsRowActionsStore()
-  return open ? <ContactsRowActionsLayer /> : null
+  if (!open) return null
+  return (
+    <Suspense fallback={null}>
+      <ContactsRowActionsLayer />
+    </Suspense>
+  )
 }
 
 // Modern SaaS page loader — skeleton UI with shimmer

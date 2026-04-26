@@ -580,7 +580,6 @@ const InvoiceView: React.FC = () => {
         'Product/Service Quantity', 'Product/Service Rate', 'Product/Service Amount',
         'Product/Service Service Date', 'Product/Service Class',
         'Product/Service Sales Tax Code', 'Product/Service Taxable',
-        'Markup Price', 'Markup Percentage',
         'Other ', 'Other 1', 'Other 2', 'Sales Tax Item', 'Customer Sales Tax Code', 'Template', 'AR Account',
         'Amount Received', 'Currency', 'Exchange Rate'
       ];
@@ -627,8 +626,6 @@ const InvoiceView: React.FC = () => {
         // 46 Product/Service Class — empty
         row[47] = service.taxAmount > 0 ? 'TAX' : 'NON';           // Sales Tax Code
         row[48] = service.taxAmount > 0 ? 'T' : 'F';               // Taxable
-        row[49] = service.markupAmount > 0 ? service.markupAmount.toFixed(2) : '';  // Markup Price
-        row[50] = service.markupPercentage > 0 ? service.markupPercentage.toFixed(2) : '';  // Markup Percentage
       };
 
       csvRows = [];

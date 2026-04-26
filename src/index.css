@@ -705,3 +705,18 @@ body {
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* Prevent Radix popper flash at (0,0) before Floating UI positions content.
+   On first render the wrapper has only `position: fixed; left: 0; top: 0;` —
+   the `transform: translate(...)` is added by Floating UI in a layout effect.
+   We hide the wrapper until that transform appears. The `tailwindcss-animate`
+   plugin isn't installed in this project, so the `data-[state=open]:fade-in-0`
+   classes on Radix content do nothing — the content would otherwise be fully
+   opaque at (0,0) for one frame. */
+[data-radix-popper-content-wrapper] {
+  visibility: hidden;
+}
+
+[data-radix-popper-content-wrapper][style*="translate"] {
+  visibility: visible;
+}
