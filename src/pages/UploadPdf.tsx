@@ -1,15 +1,17 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Upload, FileText, ClipboardList, Loader2, AlertCircle, X, CheckCircle } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Upload, Loader2, AlertCircle, X, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const UploadPdf: React.FC = () => {
   const navigate = useNavigate();
   const { csrfToken } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchParams] = useSearchParams();
+  const documentType: 'invoice' | 'estimate' =
+    searchParams.get('type') === 'estimate' ? 'estimate' : 'invoice';
 
   const [file, setFile] = useState<File | null>(null);
-  const [documentType, setDocumentType] = useState<'invoice' | 'estimate'>('invoice');
   const [isParsing, setIsParsing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -120,46 +122,15 @@ const UploadPdf: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Upload PDF</h1>
+        <h1 className="text-2xl font-bold text-slate-900">
+          Upload {documentType === 'estimate' ? 'Estimate' : 'Invoice'} PDF
+        </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Upload a vendor invoice PDF and we'll extract the data into a new invoice or estimate.
+          Upload a vendor PDF and we'll extract the data into a new {documentType === 'estimate' ? 'estimate' : 'invoice'}.
         </p>
       </div>
 
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-        {/* Document Type Selection */}
-        <div className="p-6 border-b border-slate-200">
-          <label className="block text-sm font-medium text-slate-700 mb-3">
-            Create as
-          </label>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => setDocumentType('invoice')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
-                documentType === 'invoice'
-                  ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white'
-                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <FileText className="h-4 w-4" />
-              Invoice
-            </button>
-            <button
-              type="button"
-              onClick={() => setDocumentType('estimate')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
-                documentType === 'estimate'
-                  ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white'
-                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <ClipboardList className="h-4 w-4" />
-              Estimate
-            </button>
-          </div>
-        </div>
-
         {/* File Upload Area */}
         <div className="p-6">
           {!file ? (

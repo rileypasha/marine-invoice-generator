@@ -22,6 +22,7 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  DropdownMenuItem,
 } from '../components/ui/dropdown-menu';
 import { AppHeader } from '../components/layout/AppHeader';
 import { useAuth } from '../context/AuthContext';
@@ -172,12 +173,18 @@ const SidebarContent = () => {
         <div className="flex flex-col gap-0.5 px-1">
           {/* New (with dropdown) */}
           <div className="relative">
+            {(location.pathname === '/requests/new' || location.pathname === '/estimates/new') && (
+              <div
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-white rounded-r-full"
+                style={{ animation: 'fadeScaleIn 150ms ease-out' }}
+              />
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   className={`flex items-center w-full py-[7px] ${
                     open ? 'gap-2.5 pl-3 pr-2' : 'pl-[7px]'
-                  } ml-1 mr-1 rounded-md relative z-20 transition-all duration-150 hover:bg-white/[0.12] text-white/60 hover:text-white group`}
+                  } ml-1 mr-1 rounded-md relative z-20 transition-all duration-150 hover:bg-white/[0.12] text-white/60 hover:text-white group focus:outline-none focus-visible:outline-none`}
                 >
                   <Plus
                     className="h-[18px] w-[18px] flex-shrink-0 text-white transition-colors duration-150"
@@ -190,34 +197,84 @@ const SidebarContent = () => {
                   </span>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="start" sideOffset={8}>
-                <div className="w-[180px]" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuContent side="right" align="start" sideOffset={8} onCloseAutoFocus={(e) => e.preventDefault()}>
+                <div className="w-[180px]">
                   <div className="px-3 pt-2.5 pb-2">
                     <span className="text-[13px] font-semibold text-gray-900">Create new</span>
                   </div>
                   <div className="h-px bg-gray-100" />
                   <div className="px-1.5 py-1.5 space-y-0.5">
-                    <button
-                      onClick={() => { navigate('/requests/new'); handleLinkClick(); }}
-                      className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+                    <DropdownMenuItem
+                      onSelect={() => { navigate('/requests/new'); handleLinkClick(); }}
+                      className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50 cursor-pointer"
                     >
                       <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
                       Invoice
-                    </button>
-                    <button
-                      onClick={() => { navigate('/estimates/new'); handleLinkClick(); }}
-                      className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50"
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => { navigate('/estimates/new'); handleLinkClick(); }}
+                      className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50 cursor-pointer"
                     >
                       <Calculator className="h-4 w-4 text-gray-400 flex-shrink-0" />
                       Estimate
-                    </button>
+                    </DropdownMenuItem>
                   </div>
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          {/* Upload PDF */}
-          {renderLink(createLinks[1], 1)}
+          {/* Upload PDF (with dropdown) */}
+          <div className="relative">
+            {location.pathname === '/upload-pdf' && (
+              <div
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-white rounded-r-full"
+                style={{ animation: 'fadeScaleIn 150ms ease-out' }}
+              />
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`flex items-center w-full py-[7px] ${
+                    open ? 'gap-2.5 pl-3 pr-2' : 'pl-[7px]'
+                  } ml-1 mr-1 rounded-md relative z-20 transition-all duration-150 hover:bg-white/[0.12] text-white/60 hover:text-white group focus:outline-none focus-visible:outline-none`}
+                >
+                  <Upload
+                    className="h-[18px] w-[18px] flex-shrink-0 text-white transition-colors duration-150"
+                  />
+                  <span
+                    className="text-[13px] font-medium text-white whitespace-pre"
+                    style={{ display: open ? 'inline-block' : 'none' }}
+                  >
+                    Upload
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="start" sideOffset={8} onCloseAutoFocus={(e) => e.preventDefault()}>
+                <div className="w-[180px]">
+                  <div className="px-3 pt-2.5 pb-2">
+                    <span className="text-[13px] font-semibold text-gray-900">Upload as</span>
+                  </div>
+                  <div className="h-px bg-gray-100" />
+                  <div className="px-1.5 py-1.5 space-y-0.5">
+                    <DropdownMenuItem
+                      onSelect={() => { navigate('/upload-pdf?type=invoice'); handleLinkClick(); }}
+                      className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50 cursor-pointer"
+                    >
+                      <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      Invoice
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => { navigate('/upload-pdf?type=estimate'); handleLinkClick(); }}
+                      className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors text-gray-600 hover:bg-gray-50 cursor-pointer"
+                    >
+                      <Calculator className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      Estimate
+                    </DropdownMenuItem>
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         {/* Navigation section */}

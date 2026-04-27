@@ -795,6 +795,7 @@ const CreateInvoice: React.FC = () => {
   const [selectedVesselId, setSelectedVesselId] = useState<string>('');
   const [selectedVesselObject, setSelectedVesselObject] = useState<DatabaseVessel | null>(null);
   const [vesselSearchQuery, setVesselSearchQuery] = useState('');
+  const [showVesselSuggestions, setShowVesselSuggestions] = useState(false);
 
   // Customer linking state
   const [availableCustomers, setAvailableCustomers] = useState<DatabaseCustomer[]>([]);
@@ -3853,7 +3854,7 @@ const CreateInvoice: React.FC = () => {
 
             {/* Vessel Tab */}
             {activeTab === 'vessel' && (
-              <Card className="shadow-sm border-border/60 overflow-hidden">
+              <Card className="shadow-sm border-border/60 overflow-visible">
                 <CardHeader className="bg-slate-50/50 border-b border-border/40 pb-4">
                   <CardTitle className="text-[15px] font-semibold tracking-tight">Vessel Information</CardTitle>
                   <CardDescription className="text-[13px]">
@@ -3861,108 +3862,117 @@ const CreateInvoice: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5 pt-5">
-                  {/* Link to Existing Vessel */}
-                  <div className="space-y-2">
-                    <Label htmlFor="vessel-link" className="!text-slate-800 font-medium text-[13px]">Link to Existing Vessel</Label>
-                    <Select
-                      value={selectedVesselObject?.name || ""}
-                      onValueChange={(value) => {
-                        setSelectedVesselId(value);
-                        if (value && value !== '') {
-                          const selectedVessel = availableVessels.find(v => v.id === value);
-                          if (selectedVessel) {
-                            setSelectedVesselObject(selectedVessel); // Save the vessel object
-                            const linkedCustomer = (selectedVessel as any).customer as
-                              | {
-                                  id?: string;
-                                  display_name?: string | null;
-                                  legal_name?: string | null;
-                                  email?: string | null;
-                                  phone?: string | null;
-                                  address_line1?: string | null;
-                                  address_line2?: string | null;
-                                  city?: string | null;
-                                  state?: string | null;
-                                  postal_code?: string | null;
-                                  country?: string | null;
-                                }
-                              | null
-                              | undefined;
-                            setInvoiceData(prev => ({
-                              ...prev,
-                              vessel: {
-                                ...prev.vessel,
-                                id: selectedVessel.id,
-                                name: selectedVessel.name,
-                                weight: selectedVessel.weight_tons?.toString() || '',
-                                beam: selectedVessel.length_ft?.toString() || ''
-                              },
-                              customer: linkedCustomer
-                                ? {
-                                    ...prev.customer,
-                                    id: linkedCustomer.id || prev.customer.id,
-                                    // Contact Name shows the bill-to entity (legal_name) — the vessel-name convention
-                                    // means display_name == vessel.name, which would just duplicate the vessel.
-                                    contactName: linkedCustomer.legal_name || prev.customer.contactName,
-                                    customerName: linkedCustomer.legal_name || prev.customer.customerName,
-                                    customerEmail: linkedCustomer.email || prev.customer.customerEmail,
-                                    customerPhone: normalizePhoneNumber(linkedCustomer.phone) || prev.customer.customerPhone,
-                                    customerAddress: formatAddress(linkedCustomer) || prev.customer.customerAddress,
-                                  }
-                                : prev.customer
-                            }));
-                            if (linkedCustomer) {
-                              setSelectedCustomerId(linkedCustomer.id || '');
-                              setSelectedCustomerObject(linkedCustomer as any);
-                              setCustomerPhoneError('');
-                            }
-                          }
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Search for a vessel..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <div className="p-2">
-                          <Input
-                            placeholder="Type to search vessels..."
-                            value={vesselSearchQuery}
-                            onChange={(e) => {
-                              setVesselSearchQuery(e.target.value);
-                              searchVessels(e.target.value);
-                            }}
-                          />
-                        </div>
-                        {isLoadingVessels ? (
-                          <div className="p-2 text-center">Loading...</div>
-                        ) : (
-                          availableVessels.map(vessel => (
-                            <SelectItem key={vessel.id} value={vessel.id}>
-                              {vessel.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div className="space-y-2">
                       <Label htmlFor="vessel-name" className={isFieldMissing("Vessel Name") ? "!text-red-600 font-medium text-[13px]" : "!text-slate-800 font-medium text-[13px]"}>
                         Vessel <span className="text-red-600">*</span>
                       </Label>
-                      <Input
-                        id="vessel-name"
-                        value={invoiceData.vessel.name}
-                        onChange={(e) => handleVesselChange('name', e.target.value)}
-                        placeholder="e.g. The Sea Serpent"
-                        className={cn(
-                          getChangedFieldClasses('/vesselName', ['vessel', 'name']),
-                          isFieldMissing("Vessel Name") && "border-red-500 focus:ring-red-500"
+                      <div className="relative">
+                        <Input
+                          id="vessel-name"
+                          autoComplete="off"
+                          value={invoiceData.vessel.name}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            handleVesselChange('name', value);
+                            // Typing a different name breaks the link to the previously-selected vessel
+                            if (selectedVesselObject && value !== selectedVesselObject.name) {
+                              setSelectedVesselId('');
+                              setSelectedVesselObject(null);
+                            }
+                            setVesselSearchQuery(value);
+                            searchVessels(value);
+                            setShowVesselSuggestions(true);
+                          }}
+                          onFocus={() => {
+                            if (invoiceData.vessel.name && availableVessels.length > 0) {
+                              setShowVesselSuggestions(true);
+                            }
+                          }}
+                          onBlur={() => setTimeout(() => setShowVesselSuggestions(false), 150)}
+                          placeholder="e.g. The Sea Serpent"
+                          className={cn(
+                            getChangedFieldClasses('/vesselName', ['vessel', 'name']),
+                            isFieldMissing("Vessel Name") && "border-red-500 focus:ring-red-500"
+                          )}
+                          style={getChangedFieldStyles('/vesselName', ['vessel', 'name'])}
+                        />
+                        {showVesselSuggestions && availableVessels.length > 0 && (
+                          <div className="absolute z-50 w-full bg-background border border-input rounded-md shadow-lg mt-1 max-h-72 overflow-auto">
+                            {isLoadingVessels && (
+                              <div className="px-3 py-2 text-xs text-muted-foreground">Searching…</div>
+                            )}
+                            {availableVessels.map((vessel) => {
+                              const linkedCustomer = (vessel as any).customer as
+                                | { display_name?: string | null; legal_name?: string | null; email?: string | null; city?: string | null }
+                                | null
+                                | undefined;
+                              const subtitle = linkedCustomer
+                                ? [linkedCustomer.legal_name, linkedCustomer.city].filter(Boolean).join(' • ')
+                                : '';
+                              return (
+                                <div
+                                  key={vessel.id}
+                                  className="px-3 py-2 text-sm cursor-pointer hover:bg-muted"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault(); // keep input focus until we're done
+                                    const fullCustomer = (vessel as any).customer as
+                                      | {
+                                          id?: string;
+                                          display_name?: string | null;
+                                          legal_name?: string | null;
+                                          email?: string | null;
+                                          phone?: string | null;
+                                          address_line1?: string | null;
+                                          address_line2?: string | null;
+                                          city?: string | null;
+                                          state?: string | null;
+                                          postal_code?: string | null;
+                                          country?: string | null;
+                                        }
+                                      | null
+                                      | undefined;
+                                    setSelectedVesselId(vessel.id);
+                                    setSelectedVesselObject(vessel);
+                                    setInvoiceData(prev => ({
+                                      ...prev,
+                                      vessel: {
+                                        ...prev.vessel,
+                                        id: vessel.id,
+                                        name: vessel.name,
+                                        weight: vessel.weight_tons?.toString() || '',
+                                        beam: vessel.length_ft?.toString() || ''
+                                      },
+                                      customer: fullCustomer
+                                        ? {
+                                            ...prev.customer,
+                                            id: fullCustomer.id || prev.customer.id,
+                                            contactName: fullCustomer.legal_name || prev.customer.contactName,
+                                            customerName: fullCustomer.legal_name || prev.customer.customerName,
+                                            customerEmail: fullCustomer.email || prev.customer.customerEmail,
+                                            customerPhone: normalizePhoneNumber(fullCustomer.phone) || prev.customer.customerPhone,
+                                            customerAddress: formatAddress(fullCustomer) || prev.customer.customerAddress,
+                                          }
+                                        : prev.customer
+                                    }));
+                                    if (fullCustomer) {
+                                      setSelectedCustomerId(fullCustomer.id || '');
+                                      setSelectedCustomerObject(fullCustomer as any);
+                                      setCustomerPhoneError('');
+                                    }
+                                    setShowVesselSuggestions(false);
+                                  }}
+                                >
+                                  <div className="font-medium text-slate-900">{vessel.name}</div>
+                                  {subtitle && (
+                                    <div className="text-xs text-slate-500 truncate">{subtitle}</div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
-                        style={getChangedFieldStyles('/vesselName', ['vessel', 'name'])}
-                      />
+                      </div>
                       {isFieldMissing("Vessel Name") && (
                         <p className="text-xs text-red-600">Vessel name is required</p>
                       )}
