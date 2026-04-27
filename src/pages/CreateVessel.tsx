@@ -23,6 +23,30 @@ interface Vessel {
   beam: string;
 }
 
+interface ContactDraft {
+  legalName: string;
+  email: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+
+const emptyContact = (): ContactDraft => ({
+  legalName: '',
+  email: '',
+  phone: '',
+  addressLine1: '',
+  addressLine2: '',
+  city: '',
+  state: '',
+  postalCode: '',
+  country: '',
+});
+
 
 const CreateVessel: React.FC = () => {
   const navigate = useNavigate();
@@ -35,6 +59,7 @@ const CreateVessel: React.FC = () => {
     beam: '',
     id: null
   });
+  const [contactData, setContactData] = useState<ContactDraft>(emptyContact());
 
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(isEditMode);
@@ -67,6 +92,20 @@ const CreateVessel: React.FC = () => {
           weight: data.vessel.weight_tons?.toString() || '',
           beam: data.vessel.length_ft?.toString() || '',
         });
+        const c = data.vessel.customer;
+        if (c) {
+          setContactData({
+            legalName: c.legal_name || '',
+            email: c.email || '',
+            phone: c.phone || '',
+            addressLine1: c.address_line1 || '',
+            addressLine2: c.address_line2 || '',
+            city: c.city || '',
+            state: c.state || '',
+            postalCode: c.postal_code || '',
+            country: c.country || '',
+          });
+        }
       } else {
         console.error('Failed to fetch vessel data');
         alert('Failed to load vessel data');
@@ -109,11 +148,28 @@ const CreateVessel: React.FC = () => {
     setIsLoading(true);
     try {
       // Map frontend fields to backend expected fields (camelCase for validation)
+      const trimOrNull = (v: string) => {
+        const t = (v || '').trim();
+        return t.length === 0 ? null : t;
+      };
+      const customerPayload = {
+        // display_name is derived from vessel name on the server when omitted
+        legal_name: trimOrNull(contactData.legalName),
+        email: trimOrNull(contactData.email),
+        phone: trimOrNull(contactData.phone),
+        address_line1: trimOrNull(contactData.addressLine1),
+        address_line2: trimOrNull(contactData.addressLine2),
+        city: trimOrNull(contactData.city),
+        state: trimOrNull(contactData.state),
+        postal_code: trimOrNull(contactData.postalCode),
+        country: trimOrNull(contactData.country),
+      };
       const vesselPayload = {
         userId: currentUser?.id,
         name: vesselData.name.trim(),
         lengthFt: vesselData.beam ? parseFloat(vesselData.beam) : null,
         weightTons: vesselData.weight ? parseFloat(vesselData.weight) : null,
+        customer: customerPayload,
       };
 
       const method = isEditMode ? 'PUT' : 'POST';
@@ -170,11 +226,28 @@ const CreateVessel: React.FC = () => {
     setIsLoading(true);
     try {
       // Map frontend fields to backend expected fields (camelCase for validation)
+      const trimOrNull = (v: string) => {
+        const t = (v || '').trim();
+        return t.length === 0 ? null : t;
+      };
+      const customerPayload = {
+        // display_name is derived from vessel name on the server when omitted
+        legal_name: trimOrNull(contactData.legalName),
+        email: trimOrNull(contactData.email),
+        phone: trimOrNull(contactData.phone),
+        address_line1: trimOrNull(contactData.addressLine1),
+        address_line2: trimOrNull(contactData.addressLine2),
+        city: trimOrNull(contactData.city),
+        state: trimOrNull(contactData.state),
+        postal_code: trimOrNull(contactData.postalCode),
+        country: trimOrNull(contactData.country),
+      };
       const vesselPayload = {
         userId: currentUser?.id,
         name: vesselData.name.trim(),
         lengthFt: vesselData.beam ? parseFloat(vesselData.beam) : null,
         weightTons: vesselData.weight ? parseFloat(vesselData.weight) : null,
+        customer: customerPayload,
       };
 
       const method = isEditMode ? 'PUT' : 'POST';
@@ -201,6 +274,7 @@ const CreateVessel: React.FC = () => {
           beam: '',
           id: null
         });
+        setContactData(emptyContact());
 
       } else {
         const error = await response.json();
@@ -238,6 +312,11 @@ const CreateVessel: React.FC = () => {
       beam: '',
       id: null
     });
+    setContactData(emptyContact());
+  };
+
+  const updateContact = <K extends keyof ContactDraft>(field: K, value: string) => {
+    setContactData(prev => ({ ...prev, [field]: value }));
   };
 
   const isFormValid = vesselData.name.trim() !== '';
@@ -374,6 +453,118 @@ const CreateVessel: React.FC = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Contact / Billing */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Contact &amp; Billing</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                These details auto-populate the customer fields whenever this vessel is linked to an invoice or estimate.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3" style={{ paddingRight: 0 }}>
+              <div className="space-y-2 max-w-[95%]">
+                <Label htmlFor="contact-legal-name">Bill-To Name</Label>
+                <Input
+                  id="contact-legal-name"
+                  type="text"
+                  placeholder="e.g. Fairwinds Marine Ventures LTD"
+                  value={contactData.legalName}
+                  onChange={(e) => updateContact('legalName', e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-[95%]">
+                <div className="space-y-2">
+                  <Label htmlFor="contact-email">Email</Label>
+                  <Input
+                    id="contact-email"
+                    type="email"
+                    placeholder="captain@example.com"
+                    value={contactData.email}
+                    onChange={(e) => updateContact('email', e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-phone">Phone</Label>
+                  <Input
+                    id="contact-phone"
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    value={contactData.phone}
+                    onChange={(e) => updateContact('phone', e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2 max-w-[95%]">
+                <Label htmlFor="contact-address1">Address Line 1</Label>
+                <Input
+                  id="contact-address1"
+                  type="text"
+                  placeholder="945 Las Olas Blvd"
+                  value={contactData.addressLine1}
+                  onChange={(e) => updateContact('addressLine1', e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="space-y-2 max-w-[95%]">
+                <Label htmlFor="contact-address2">Address Line 2</Label>
+                <Input
+                  id="contact-address2"
+                  type="text"
+                  placeholder="Suite, unit, etc. (optional)"
+                  value={contactData.addressLine2}
+                  onChange={(e) => updateContact('addressLine2', e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-[95%]">
+                <div className="space-y-2">
+                  <Label htmlFor="contact-city">City</Label>
+                  <Input
+                    id="contact-city"
+                    type="text"
+                    value={contactData.city}
+                    onChange={(e) => updateContact('city', e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-state">State</Label>
+                  <Input
+                    id="contact-state"
+                    type="text"
+                    value={contactData.state}
+                    onChange={(e) => updateContact('state', e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-zip">ZIP / Postal</Label>
+                  <Input
+                    id="contact-zip"
+                    type="text"
+                    value={contactData.postalCode}
+                    onChange={(e) => updateContact('postalCode', e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2 max-w-[95%]">
+                <Label htmlFor="contact-country">Country</Label>
+                <Input
+                  id="contact-country"
+                  type="text"
+                  placeholder="US"
+                  value={contactData.country}
+                  onChange={(e) => updateContact('country', e.target.value)}
+                  disabled={isLoading}
+                />
               </div>
             </CardContent>
           </Card>

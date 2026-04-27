@@ -170,6 +170,7 @@ model Customer {
   updated_at    DateTime
   invoices      Invoice[]
   estimates     Estimate[]
+  vessels       Vessel[]
 
   @@index([display_name])
   @@index([email])
@@ -197,14 +198,17 @@ model Vessel {
   is_active           Boolean   @default(true)
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
+  customerId          String?   @map("customerId")
   invoices            Invoice[]
   estimates           Estimate[]
   user                User      @relation(fields: [userId], references: [id])
+  customer            Customer? @relation(fields: [customerId], references: [id])
 
   @@unique([userId, registration_number])
   @@index([userId, is_active])
   @@index([userId, name])
   @@index([userId, name, registration_number], map: "vessel_search_idx")
+  @@index([customerId])
   @@map("Vessel")
 }
 

@@ -83,12 +83,6 @@ const SidebarContent = () => {
 
   const workspaceLinks = [
     {
-      label: 'Contacts',
-      href: '/contacts',
-      icon: <Users className="h-[18px] w-[18px] flex-shrink-0" />,
-      onClick: handleLinkClick,
-    },
-    {
       label: 'Vessels',
       href: '/vessels',
       icon: <Ship className="h-[18px] w-[18px] flex-shrink-0" />,
@@ -367,12 +361,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       icon: Calculator,
     },
     {
-      id: 'contacts',
-      label: 'Contacts',
-      href: '/contacts',
-      icon: Users,
-    },
-    {
       id: 'vessels',
       label: 'Vessels',
       href: '/vessels',
@@ -397,10 +385,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         return 'Invoices';
       case '/estimates':
         return 'Estimates';
-      case '/contacts':
-        return 'Contact Directory';
-      case '/contacts/create':
-        return 'Contact Directory';
       case '/vessels':
         return 'Vessel Directory';
       case '/vessels/create':
@@ -416,9 +400,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         if (location.pathname.startsWith('/estimates/')) {
           return 'Estimate Details';
         }
-        if (location.pathname.startsWith('/contacts/') && location.pathname.endsWith('/edit')) {
-          return 'Contact Directory';
-        }
         return 'Dashboard';
     }
   };
@@ -426,7 +407,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // Check if current route needs full-width layout (Airtable-style)
   const isFullWidthRoute = () => {
     if (
-      location.pathname === '/contacts' ||
       location.pathname === '/vessels' ||
       location.pathname === '/requests' ||
       location.pathname === '/estimates'

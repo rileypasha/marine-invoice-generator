@@ -39,6 +39,15 @@ interface Vessel {
   invoice_total?: number;
   monthly_invoice_count?: number;
   monthly_invoice_total?: number;
+  customer?: {
+    id?: string;
+    display_name?: string | null;
+    legal_name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    city?: string | null;
+    state?: string | null;
+  } | null;
 }
 
 interface VesselsTableProps {
@@ -175,6 +184,26 @@ export function VesselsTable({
         <div className="font-semibold text-slate-900 !pl-3">{row.getValue("name") || '-'}</div>
       ),
       meta: { width: 'w-48', className: '!pl-3' },
+    },
+    {
+      id: "contact",
+      header: "Contact",
+      cell: ({ row }) => {
+        const c = (row.original as Vessel).customer;
+        if (!c) return <div className="text-slate-400">-</div>;
+        const cityState = [c.city, c.state].filter(Boolean).join(', ');
+        const primary = c.legal_name || c.display_name || '';
+        return (
+          <div className="leading-tight">
+            {primary && <div className="text-slate-900">{primary}</div>}
+            {c.email && <div className="text-xs text-slate-500 truncate">{c.email}</div>}
+            {cityState && <div className="text-xs text-slate-400">{cityState}</div>}
+            {!primary && !c.email && !cityState && <div className="text-slate-400">-</div>}
+          </div>
+        );
+      },
+      enableSorting: false,
+      meta: { width: 'w-64' },
     },
     {
       accessorKey: "length_ft",

@@ -181,8 +181,7 @@ const PageLoader = () => (
 )
 
 const RedirectCustomerEdit = () => {
-  const { id } = useParams<{ id: string }>();
-  return <Navigate to={`/contacts/${id}/edit`} replace />;
+  return <Navigate to="/vessels" replace />;
 };
 
 /**
@@ -292,17 +291,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/contacts"
-                element={
-                  <ProtectedRoute>
-                    <MainLayout>
-                      <Customers />
-                      <ConditionalContactsRowActions />
-                    </MainLayout>
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/contacts" element={<Navigate to="/vessels" replace />} />
               <Route
                 path="/vessels"
                 element={
@@ -334,26 +323,8 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/contacts/create"
-                element={
-                  <ProtectedRoute>
-                    <MainLayout>
-                      <CreateCustomer />
-                    </MainLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/contacts/:id/edit"
-                element={
-                  <ProtectedRoute>
-                    <MainLayout>
-                      <CreateCustomer />
-                    </MainLayout>
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/contacts/create" element={<Navigate to="/vessels/create" replace />} />
+              <Route path="/contacts/:id/edit" element={<Navigate to="/vessels" replace />} />
               <Route
                 path="/vessels/create"
                 element={
@@ -460,10 +431,10 @@ function App() {
               <Route path="/invoices/:id" element={<Navigate to="/requests/:id" replace />} />
               <Route path="/invoices/:id/edit" element={<Navigate to="/requests/:id/edit" replace />} />
               <Route path="/invoices/preview" element={<Navigate to="/requests/preview" replace />} />
-              <Route path="/customers" element={<Navigate to="/contacts" replace />} />
-              <Route path="/customers/create" element={<Navigate to="/contacts/create" replace />} />
-              <Route path="/clients" element={<Navigate to="/contacts" replace />} />
-              <Route path="/clients/create" element={<Navigate to="/contacts/create" replace />} />
+              <Route path="/customers" element={<Navigate to="/vessels" replace />} />
+              <Route path="/customers/create" element={<Navigate to="/vessels/create" replace />} />
+              <Route path="/clients" element={<Navigate to="/vessels" replace />} />
+              <Route path="/clients/create" element={<Navigate to="/vessels/create" replace />} />
               <Route path="/clients/:id/edit" element={<RedirectCustomerEdit />} />
               <Route path="/customers/:id/edit" element={<RedirectCustomerEdit />} />
                   </Routes>

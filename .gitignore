@@ -22,6 +22,9 @@ pids
 .env.test.local
 .env.production.local
 
+# One-off backfill data (contains customer PII; regenerate from source xlsx)
+scripts/vessels-contacts.json
+
 # IDE files
 .vscode/
 .idea/

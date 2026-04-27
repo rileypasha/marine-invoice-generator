@@ -5,6 +5,94 @@ import { randomUUID } from 'crypto';
 
 const router = Router();
 
+const customerSelect = {
+  id: true,
+  display_name: true,
+  legal_name: true,
+  email: true,
+  phone: true,
+  address_line1: true,
+  address_line2: true,
+  city: true,
+  state: true,
+  postal_code: true,
+  country: true,
+} as const;
+
+type CustomerInput = Partial<{
+  display_name: string;
+  legal_name: string | null;
+  email: string | null;
+  phone: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+}>;
+
+const trimOrNull = (v: unknown): string | null => {
+  if (typeof v !== 'string') return null;
+  const t = v.trim();
+  return t.length === 0 ? null : t;
+};
+
+const hasCustomerSignal = (c: CustomerInput | undefined | null): boolean => {
+  if (!c) return false;
+  return Boolean(
+    trimOrNull(c.display_name) ||
+    trimOrNull(c.legal_name) ||
+    trimOrNull(c.email) ||
+    trimOrNull(c.phone) ||
+    trimOrNull(c.address_line1) ||
+    trimOrNull(c.city)
+  );
+};
+
+// Upsert a Customer keyed on display_name (which is unique). When the caller
+// doesn't supply display_name we fall back to the vessel name so the
+// spreadsheet's "Customer = vessel" convention holds.
+async function upsertCustomerForVessel(
+  customer: CustomerInput | undefined | null,
+  fallbackDisplayName: string
+): Promise<string | null> {
+  if (!hasCustomerSignal(customer)) return null;
+  const c = customer!;
+  const displayName = trimOrNull(c.display_name) || fallbackDisplayName.trim();
+  if (!displayName) return null;
+
+  const data = {
+    legal_name: trimOrNull(c.legal_name ?? null),
+    email: trimOrNull(c.email ?? null),
+    phone: trimOrNull(c.phone ?? null),
+    address_line1: trimOrNull(c.address_line1 ?? null),
+    address_line2: trimOrNull(c.address_line2 ?? null),
+    city: trimOrNull(c.city ?? null),
+    state: trimOrNull(c.state ?? null),
+    postal_code: trimOrNull(c.postal_code ?? null),
+    country: trimOrNull(c.country ?? null) ?? 'US',
+  };
+
+  const existing = await prisma.customer.findUnique({ where: { display_name: displayName } });
+  if (existing) {
+    await prisma.customer.update({
+      where: { id: existing.id },
+      data: { ...data, updated_at: new Date() },
+    });
+    return existing.id;
+  }
+  const created = await prisma.customer.create({
+    data: {
+      id: randomUUID(),
+      display_name: displayName,
+      ...data,
+      updated_at: new Date(),
+    },
+  });
+  return created.id;
+}
+
 interface VesselRequest extends Request {
   userId?: string;
   correlationId?: string;
@@ -107,6 +195,8 @@ router.get('/search', async (req: VesselRequest, res: Response) => {
               { registration_number: { contains: searchQuery as string, mode: 'insensitive' } },
               { home_port: { contains: searchQuery as string, mode: 'insensitive' } },
               { owner_name: { contains: searchQuery as string, mode: 'insensitive' } },
+              { customer: { display_name: { contains: searchQuery as string, mode: 'insensitive' } } },
+              { customer: { email: { contains: searchQuery as string, mode: 'insensitive' } } },
             ],
           },
         ],
@@ -120,6 +210,8 @@ router.get('/search', async (req: VesselRequest, res: Response) => {
         weight_tons: true,
         home_port: true,
         owner_name: true,
+        customerId: true,
+        customer: { select: customerSelect },
       },
       take: parseInt(limit as string),
       orderBy: { name: 'asc' },
@@ -175,6 +267,9 @@ router.get('/', async (req: VesselRequest, res: Response) => {
         { registration_number: { contains: search as string, mode: 'insensitive' } },
         { home_port: { contains: search as string, mode: 'insensitive' } },
         { owner_name: { contains: search as string, mode: 'insensitive' } },
+        { customer: { display_name: { contains: search as string, mode: 'insensitive' } } },
+        { customer: { email: { contains: search as string, mode: 'insensitive' } } },
+        { customer: { city: { contains: search as string, mode: 'insensitive' } } },
       ];
     }
 
@@ -199,6 +294,8 @@ router.get('/', async (req: VesselRequest, res: Response) => {
           owner_name: true,
           created_at: true,
           updated_at: true,
+          customerId: true,
+          customer: { select: customerSelect },
         },
       }),
       prisma.vessel.count({ where }),
@@ -287,6 +384,7 @@ router.get('/:id', async (req: VesselRequest, res: Response) => {
     const vessel = await prisma.vessel.findUnique({
       where: { id: vesselId },
       include: {
+        customer: { select: customerSelect },
         invoices: {
           select: {
             id: true,
@@ -360,18 +458,20 @@ router.post('/', async (req: VesselRequest, res: Response) => {
       });
     }
 
-    // Create vessel (shared across all users)
+    // Upsert linked customer first (if provided), then create vessel
+    const customerId = await upsertCustomerForVessel(vesselData.customer, vesselData.name);
+
     const vessel = await prisma.vessel.create({
       data: {
         id: randomUUID(),
         name: vesselData.name,
         length_ft: vesselData.lengthFt,
         weight_tons: vesselData.weightTons,
-        user: {
-          connect: { id: vesselData.userId }
-        },
+        user: { connect: { id: vesselData.userId } },
+        ...(customerId ? { customer: { connect: { id: customerId } } } : {}),
         // Don't include updated_at - let Prisma handle it automatically
       },
+      include: { customer: { select: customerSelect } },
     });
 
     logger.info('Vessel created successfully', {
@@ -474,7 +574,11 @@ router.put('/:id', async (req: VesselRequest, res: Response) => {
 
     // Vessels are shared across all users - no ownership check needed
 
-    // Update vessel
+    // Upsert linked customer if provided; otherwise keep existing link as-is
+    const newCustomerId = hasCustomerSignal(vesselData.customer)
+      ? await upsertCustomerForVessel(vesselData.customer, vesselData.name)
+      : existingVessel.customerId;
+
     const vessel = await prisma.vessel.update({
       where: { id: vesselId },
       data: {
@@ -482,8 +586,10 @@ router.put('/:id', async (req: VesselRequest, res: Response) => {
         name: vesselData.name,
         length_ft: vesselData.lengthFt,
         weight_tons: vesselData.weightTons,
+        customerId: newCustomerId,
         // Don't include updated_at - let Prisma handle it automatically
       },
+      include: { customer: { select: customerSelect } },
     });
 
     logger.info('Vessel updated successfully', {

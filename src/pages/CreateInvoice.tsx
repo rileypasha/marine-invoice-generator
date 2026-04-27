@@ -3872,6 +3872,22 @@ const CreateInvoice: React.FC = () => {
                           const selectedVessel = availableVessels.find(v => v.id === value);
                           if (selectedVessel) {
                             setSelectedVesselObject(selectedVessel); // Save the vessel object
+                            const linkedCustomer = (selectedVessel as any).customer as
+                              | {
+                                  id?: string;
+                                  display_name?: string | null;
+                                  legal_name?: string | null;
+                                  email?: string | null;
+                                  phone?: string | null;
+                                  address_line1?: string | null;
+                                  address_line2?: string | null;
+                                  city?: string | null;
+                                  state?: string | null;
+                                  postal_code?: string | null;
+                                  country?: string | null;
+                                }
+                              | null
+                              | undefined;
                             setInvoiceData(prev => ({
                               ...prev,
                               vessel: {
@@ -3880,8 +3896,26 @@ const CreateInvoice: React.FC = () => {
                                 name: selectedVessel.name,
                                 weight: selectedVessel.weight_tons?.toString() || '',
                                 beam: selectedVessel.length_ft?.toString() || ''
-                              }
+                              },
+                              customer: linkedCustomer
+                                ? {
+                                    ...prev.customer,
+                                    id: linkedCustomer.id || prev.customer.id,
+                                    // Contact Name shows the bill-to entity (legal_name) — the vessel-name convention
+                                    // means display_name == vessel.name, which would just duplicate the vessel.
+                                    contactName: linkedCustomer.legal_name || prev.customer.contactName,
+                                    customerName: linkedCustomer.legal_name || prev.customer.customerName,
+                                    customerEmail: linkedCustomer.email || prev.customer.customerEmail,
+                                    customerPhone: normalizePhoneNumber(linkedCustomer.phone) || prev.customer.customerPhone,
+                                    customerAddress: formatAddress(linkedCustomer) || prev.customer.customerAddress,
+                                  }
+                                : prev.customer
                             }));
+                            if (linkedCustomer) {
+                              setSelectedCustomerId(linkedCustomer.id || '');
+                              setSelectedCustomerObject(linkedCustomer as any);
+                              setCustomerPhoneError('');
+                            }
                           }
                         }
                       }}
@@ -3985,61 +4019,6 @@ const CreateInvoice: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5 pt-5">
-                  {/* Link to Existing Customer */}
-                  <div className="space-y-2">
-                    <Label htmlFor="customer-link" className="!text-slate-800 font-medium text-[13px]">Link to Existing Contact</Label>
-                    <Select
-                      value={selectedCustomerObject?.display_name || ""}
-                      onValueChange={(value) => {
-                        setSelectedCustomerId(value);
-                        if (value) {
-                          const selectedCustomer = availableCustomers.find(c => c.id === value);
-                          if (selectedCustomer) {
-                            setSelectedCustomerObject(selectedCustomer); // Save the customer object
-                            setInvoiceData(prev => ({
-                              ...prev,
-                              customer: {
-                                ...prev.customer,
-                                id: selectedCustomer.id,
-                                contactName: selectedCustomer.display_name,
-                                customerName: selectedCustomer.legal_name || selectedCustomer.display_name,
-                                customerEmail: selectedCustomer.email || '',
-                                customerPhone: normalizePhoneNumber(selectedCustomer.phone),
-                                customerAddress: formatAddress(selectedCustomer)
-                              }
-                            }));
-                            setCustomerPhoneError('');
-                          }
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Search for a contact..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <div className="p-2">
-                          <Input
-                            placeholder="Type to search contacts..."
-                            value={customerSearchQuery}
-                            onChange={(e) => {
-                              setCustomerSearchQuery(e.target.value);
-                              searchCustomers(e.target.value);
-                            }}
-                          />
-                        </div>
-                        {isLoadingCustomers ? (
-                          <div className="p-2 text-center">Loading...</div>
-                        ) : (
-                          availableCustomers.map(customer => (
-                            <SelectItem key={customer.id} value={customer.id}>
-                              {customer.display_name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-2">
                       <Label htmlFor="contact-name" className="!text-slate-800 font-medium text-[13px]">
